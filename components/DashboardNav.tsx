@@ -14,7 +14,8 @@ import {
   X,
   Calendar,
   FileText,
-  GitBranch
+  GitBranch,
+  Info
 } from "lucide-react";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
@@ -39,6 +40,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
     { name: "Timetable", href: "/dashboard/timetable", icon: Calendar },
     { name: "Progress", href: "/dashboard/progress", icon: BarChart3 },
     { name: "Documents", href: "/dashboard/documents", icon: FileText },
+    { name: "Academics", href: "/dashboard/academics", icon: Info },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
