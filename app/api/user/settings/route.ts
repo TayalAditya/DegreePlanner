@@ -19,6 +19,8 @@ export async function GET(req: NextRequest) {
         enrollmentId: true,
         branch: true,
         role: true,
+        doingMTP: true,
+        doingISTP: true,
         createdAt: true,
       },
     });
@@ -45,13 +47,13 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, enrollmentId, branch } = body;
+    const { name, enrollmentId, branch, doingMTP, doingISTP } = body;
 
     // Validate branch if provided
     if (branch) {
       const validBranches = [
-        "CSE", "ECE", "EEE", "MECH", "CIVIL", "CHE", 
-        "BIO", "PHARMA", "ENI", "CHEM", "MATH", "BS"
+        "CSE", "DSE", "EE", "ME", "CE", "BE", 
+        "EP", "MnC", "MSE", "GE", "VLSI", "CS"
       ];
       if (!validBranches.includes(branch)) {
         return NextResponse.json(
@@ -67,6 +69,8 @@ export async function PATCH(req: NextRequest) {
         ...(name && { name }),
         ...(enrollmentId !== undefined && { enrollmentId }),
         ...(branch && { branch }),
+        ...(doingMTP !== undefined && { doingMTP }),
+        ...(doingISTP !== undefined && { doingISTP }),
       },
       select: {
         id: true,
@@ -75,6 +79,8 @@ export async function PATCH(req: NextRequest) {
         enrollmentId: true,
         branch: true,
         role: true,
+        doingMTP: true,
+        doingISTP: true,
       },
     });
 
