@@ -44,6 +44,11 @@ export class CreditCalculator {
       throw new Error("Program not found");
     }
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { doingMTP: true, doingISTP: true },
+    });
+
     const enrollments = await prisma.courseEnrollment.findMany({
       where: {
         userId,
@@ -54,13 +59,42 @@ export class CreditCalculator {
       },
     });
 
+    // Check if user has completed MTP-1
+    const mtp1Completed = enrollments.some(
+      (e) => e.status === EnrollmentStatus.COMPLETED && 
+      e.course.code.endsWith("498P") // MTP-1 course code pattern
+    );
+
+    // Adjust credit requirements based on user preferences
+    let deCredits = program.deCredits;
+    let freeElectiveCredits = program.freeElectiveCredits;
+    let mtpCredits = program.mtpCredits;
+    let istpCredits = program.istpCredits;
+
+    // If ISTP is skipped, add 4 credits to FE
+    if (!user?.doingISTP) {
+      freeElectiveCredits += istpCredits; // +4 credits
+      istpCredits = 0;
+    }
+
+    // If MTP is skipped completely, add 8 credits to DE
+    if (!user?.doingMTP) {
+      deCredits += mtpCredits; // +8 credits
+      mtpCredits = 0;
+    }
+    // If MTP-1 is done but MTP-2 will be skipped, add 5 credits to DE
+    else if (mtp1Completed && !user?.doingMTP) {
+      deCredits += 5; // +5 credits for MTP-2
+      mtpCredits = 3; // Only MTP-1 (3 credits) counts
+    }
+
     const required: CreditBreakdown = {
       core: program.coreCredits,
-      de: program.deCredits,
+      de: deCredits,
       pe: program.peCredits,
-      freeElective: program.freeElectiveCredits,
-      mtp: program.mtpCredits,
-      istp: program.istpCredits,
+      freeElective: freeElectiveCredits,
+      mtp: mtpCredits,
+      istp: istpCredits,
       total: program.totalCreditsRequired,
     };
 

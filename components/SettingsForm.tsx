@@ -20,6 +20,8 @@ export function SettingsForm({ user }: SettingsFormProps) {
     email: user.email || "",
     enrollmentId: user.enrollmentId || "",
     branch: user.branch || "",
+    doingMTP: user.doingMTP ?? true,
+    doingISTP: user.doingISTP ?? true,
   });
 
   const updateMutation = useMutation({
@@ -150,6 +152,63 @@ export function SettingsForm({ user }: SettingsFormProps) {
                   </ul>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+
+        {/* Project Preferences */}
+        <div className="bg-surface dark:bg-surface rounded-lg border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">
+            Terminal Project Preferences
+          </h3>
+          
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 p-4 bg-background-secondary dark:bg-background rounded-lg border border-border">
+              <input
+                type="checkbox"
+                id="doingMTP"
+                checked={formData.doingMTP}
+                onChange={(e) => setFormData({ ...formData, doingMTP: e.target.checked })}
+                className="mt-1 w-4 h-4 text-primary border-border rounded focus:ring-primary"
+              />
+              <div className="flex-1">
+                <label htmlFor="doingMTP" className="block font-medium text-foreground cursor-pointer">
+                  Major Technical Project (MTP)
+                </label>
+                <p className="text-sm text-foreground-secondary mt-1">
+                  8 credits (MTP-1: 3 credits + MTP-2: 5 credits)
+                </p>
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                  ⚠️ If unchecked: +8 credits will be added to Discipline Electives (DE)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 p-4 bg-background-secondary dark:bg-background rounded-lg border border-border">
+              <input
+                type="checkbox"
+                id="doingISTP"
+                checked={formData.doingISTP}
+                onChange={(e) => setFormData({ ...formData, doingISTP: e.target.checked })}
+                className="mt-1 w-4 h-4 text-primary border-border rounded focus:ring-primary"
+              />
+              <div className="flex-1">
+                <label htmlFor="doingISTP" className="block font-medium text-foreground cursor-pointer">
+                  Interactive Socio-Technical Practicum (ISTP)
+                </label>
+                <p className="text-sm text-foreground-secondary mt-1">
+                  4 credits (6th semester practicum)
+                </p>
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                  ⚠️ If unchecked: +4 credits will be added to Free Electives (FE)
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <p className="text-sm text-blue-900 dark:text-blue-100">
+                <strong>Note:</strong> These preferences affect your credit distribution. You can change them anytime before course registration.
+              </p>
             </div>
           </div>
         </div>
