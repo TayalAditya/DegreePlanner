@@ -27,6 +27,10 @@ model User {
   branch        String?   // Branch code (CSE, ECE, etc.)
   batch         Int?      // Year of joining
   
+  // Academic preferences
+  doingMTP      Boolean   @default(true)
+  doingISTP     Boolean   @default(true)
+  
   // Relations
   programs      UserProgram[]
   enrollments   CourseEnrollment[]
