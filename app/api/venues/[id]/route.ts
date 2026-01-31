@@ -29,7 +29,7 @@ const venueUpdateSchema = z.object({
 // GET /api/venues/[id] - Get single venue
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -41,8 +41,9 @@ export async function GET(
       );
     }
 
+    const { id } = await params;
     const venue = await prisma.venue.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!venue) {
@@ -65,7 +66,7 @@ export async function GET(
 // PATCH /api/venues/[id] - Update venue
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -77,6 +78,7 @@ export async function PATCH(
       );
     }
 
+    const { id } = await params;
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: { id: true, role: true },
@@ -90,7 +92,7 @@ export async function PATCH(
     }
 
     const venue = await prisma.venue.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!venue) {
@@ -126,7 +128,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.venue.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
     });
 
@@ -150,7 +152,7 @@ export async function PATCH(
 // DELETE /api/venues/[id] - Delete venue
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -162,6 +164,7 @@ export async function DELETE(
       );
     }
 
+    const { id } = await params;
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: { id: true, role: true },
@@ -175,7 +178,7 @@ export async function DELETE(
     }
 
     const venue = await prisma.venue.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!venue) {
@@ -202,7 +205,7 @@ export async function DELETE(
     }
 
     await prisma.venue.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

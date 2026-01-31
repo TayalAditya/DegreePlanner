@@ -83,7 +83,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
                 className="w-full px-4 py-2 border border-border rounded-md bg-background-secondary dark:bg-background text-foreground-secondary cursor-not-allowed"
               />
               <p className="mt-1 text-xs text-foreground-secondary">
-                Email cannot be changed as it's linked to your Google account
+                Email cannot be changed as it&apos;s linked to your Google account
               </p>
             </div>
           </div>
