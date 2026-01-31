@@ -1,0 +1,402 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User management
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // User validation
+  isApproved    Boolean   @default(false)
+  role          UserRole  @default(STUDENT)
+  
+  // Academic info
+  enrollmentId  String?   @unique
+  department    String?
+  branch        String?   // Branch code (CSE, ECE, etc.)
+  batch         Int?      // Year of joining
+  
+  // Relations
+  programs      UserProgram[]
+  enrollments   CourseEnrollment[]
+  timetableEntries TimetableEntry[]
+  documents     Document[]
+  accounts      Account[]
+  sessions      Session[]
+  
+  @@index([email])
+  @@index([enrollmentId])
+  @@index([branch])
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Programs (Major/Minor)
+model Program {
+  id                  String       @id @default(cuid())
+  name                String
+  code                String       @unique
+  type                ProgramType
+  department          String
+  totalCreditsRequired Int
+  description         String?
+  
+  // Credit distribution
+  coreCredits         Int          @default(0)
+  deCredits           Int          @default(0) // Discipline Electives
+  peCredits           Int          @default(0) // Program Electives
+  freeElectiveCredits Int          @default(0)
+  
+  // MTP/ISTP requirements
+  mtpRequired         Boolean      @default(false)
+  mtpCredits          Int          @default(0)
+  istpAllowed         Boolean      @default(false)
+  istpCredits         Int          @default(0)
+  
+  // Minimum credits before MTP/ISTP
+  minCreditsForMtp    Int?
+  minSemesterForMtp   Int?
+  
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  
+  // Relations
+  courses             ProgramCourse[]
+  userPrograms        UserProgram[]
+  
+  @@index([code])
+  @@index([type])
+}
+
+enum ProgramType {
+  MAJOR
+  MINOR
+  DOUBLE_MAJOR
+}
+
+// User's enrolled programs
+model UserProgram {
+  id              String   @id @default(cuid())
+  userId          String
+  programId       String
+  programType     ProgramType
+  isPrimary       Boolean  @default(false)
+  startSemester   Int      // Semester number when started
+  status          ProgramStatus @default(ACTIVE)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  program         Program  @relation(fields: [programId], references: [id])
+  
+  @@unique([userId, programId])
+  @@index([userId])
+}
+
+enum ProgramStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+}
+
+// Course catalog
+model Course {
+  id              String   @id @default(cuid())
+  code            String   @unique
+  name            String
+  credits         Int
+  department      String
+  level           Int      // 100, 200, 300, 400 level
+  description     String?
+  
+  // Course offering
+  offeredInFall   Boolean  @default(false)
+  offeredInSpring Boolean  @default(false)
+  offeredInSummer Boolean  @default(false)
+  
+  isActive        Boolean  @default(true)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Relations
+  programCourses  ProgramCourse[]
+  prerequisites   CoursePrerequisite[] @relation("CoursePrerequisites")
+  prerequisiteFor CoursePrerequisite[] @relation("PrerequisiteFor")
+  enrollments     CourseEnrollment[]
+  timetableEntries TimetableEntry[]
+  
+  @@index([code])
+  @@index([department])
+}
+
+// Prerequisites
+model CoursePrerequisite {
+  id              String   @id @default(cuid())
+  courseId        String
+  prerequisiteId  String
+  
+  course          Course   @relation("CoursePrerequisites", fields: [courseId], references: [id], onDelete: Cascade)
+  prerequisite    Course   @relation("PrerequisiteFor", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+  
+  @@unique([courseId, prerequisiteId])
+}
+
+// Courses in a program
+model ProgramCourse {
+  id              String      @id @default(cuid())
+  programId       String
+  courseId        String
+  courseType      CourseType
+  isRequired      Boolean     @default(false)
+  semester        Int?        // Recommended semester
+  
+  program         Program     @relation(fields: [programId], references: [id], onDelete: Cascade)
+  course          Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  @@unique([programId, courseId])
+  @@index([programId])
+}
+
+enum CourseType {
+  CORE
+  DE  // Discipline Elective
+  PE  // Program Elective
+  FREE_ELECTIVE
+  MTP
+  ISTP
+}
+
+// Student course enrollments
+model CourseEnrollment {
+  id              String           @id @default(cuid())
+  userId          String
+  courseId        String
+  semester        Int              // Which semester number (1, 2, 3...)
+  year            Int              // Academic year
+  term            Term
+  
+  courseType      CourseType
+  programId       String?          // Which program this counts towards
+  
+  grade           String?
+  status          EnrollmentStatus @default(IN_PROGRESS)
+  
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course          Course           @relation(fields: [courseId], references: [id])
+  
+  @@unique([userId, courseId, semester, year, term])
+  @@index([userId])
+  @@index([semester])
+}
+
+enum Term {
+  FALL
+  SPRING
+  SUMMER
+}
+
+enum EnrollmentStatus {
+  IN_PROGRESS
+  COMPLETED
+  DROPPED
+  FAILED
+}
+
+// Approved users list (from Excel)
+model ApprovedUser {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  enrollmentId    String?  @unique
+  name            String?
+  department      String?
+  branch          String?
+  batch           Int?
+  allowedPrograms String[] // Array of program codes
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([email])
+  @@index([enrollmentId])
+  @@index([branch])
+}
+
+// Timetable management
+model TimetableEntry {
+  id              String   @id @default(cuid())
+  userId          String
+  courseId        String
+  semester        Int
+  year            Int
+  term            Term
+  
+  // Scheduling details
+  dayOfWeek       DayOfWeek
+  startTime       String   // HH:MM format
+  endTime         String   // HH:MM format
+  venue           String?
+  roomNumber      String?
+  building        String?
+  
+  // Class type
+  classType       ClassType @default(LECTURE)
+  
+  // Optional notes
+  instructor      String?
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course          Course   @relation(fields: [courseId], references: [id])
+  
+  @@index([userId])
+  @@index([courseId])
+  @@index([semester])
+  @@index([dayOfWeek])
+}
+
+enum DayOfWeek {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum ClassType {
+  LECTURE
+  LAB
+  TUTORIAL
+  SEMINAR
+  WORKSHOP
+}
+
+// Venue management for custom locations
+model Venue {
+  id              String   @id @default(cuid())
+  name            String
+  code            String?  @unique // e.g., "LHC-101", "Lib-201"
+  building        String?
+  floor           String?
+  capacity        Int?
+  type            VenueType @default(CLASSROOM)
+  facilities      String[] // ["Projector", "AC", "Whiteboard"]
+  
+  isActive        Boolean  @default(true)
+  isCustom        Boolean  @default(false) // User-added venues
+  
+  // Who can use this venue
+  isPublic        Boolean  @default(true)
+  createdBy       String?  // User ID for custom venues
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([code])
+  @@index([building])
+  @@index([type])
+  @@index([isActive])
+}
+
+enum VenueType {
+  CLASSROOM
+  LAB
+  LECTURE_HALL
+  TUTORIAL_ROOM
+  SEMINAR_ROOM
+  LIBRARY
+  AUDITORIUM
+  ONLINE
+  OTHER
+}
+
+// Document management
+model Document {
+  id              String       @id @default(cuid())
+  userId          String
+  title           String
+  description     String?
+  category        DocumentCategory
+  fileUrl         String?
+  fileName        String?
+  fileSize        Int?         // in bytes
+  mimeType        String?
+  
+  // Access control
+  isPublic        Boolean      @default(false)
+  
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([category])
+}
+
+enum DocumentCategory {
+  FORMS
+  PROCEDURES
+  GUIDES
+  CERTIFICATES
+  TRANSCRIPTS
+  OTHER
+}
