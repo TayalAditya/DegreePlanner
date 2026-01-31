@@ -175,6 +175,7 @@ model Course {
   prerequisiteFor CoursePrerequisite[] @relation("PrerequisiteFor")
   enrollments     CourseEnrollment[]
   timetableEntries TimetableEntry[]
+  branchMappings  CourseBranchMapping[]
   
   @@index([code])
   @@index([department])
@@ -215,6 +216,39 @@ enum CourseType {
   FREE_ELECTIVE
   MTP
   ISTP
+}
+
+// Course-Branch Mapping for curriculum management
+model CourseBranchMapping {
+  id              String             @id @default(cuid())
+  courseId        String
+  branch          String             // Branch code (CSE, EE, ME, etc.)
+  courseCategory  CourseCategoryType // IC, IC-BASKET, DC, DE, FE, HSS, IKS
+  isRequired      Boolean            @default(false)
+  semester        Int?               // Recommended semester for this branch
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  
+  course          Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  @@unique([courseId, branch])
+  @@index([courseId])
+  @@index([branch])
+  @@index([courseCategory])
+}
+
+enum CourseCategoryType {
+  IC              // Institute Core
+  IC_BASKET       // IC Basket
+  DC              // Discipline Core
+  DE              // Discipline Elective
+  FE              // Free Elective
+  HSS             // Humanities & Social Sciences
+  IKS             // Indian Knowledge System
+  MTP             // Major Technical Project
+  ISTP            // Interactive Socio-Technical Practicum
+  NA              // Not Applicable
 }
 
 // Student course enrollments

@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   Calendar,
-  FileText
+  FileText,
+  GitBranch
 } from "lucide-react";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
@@ -23,6 +24,7 @@ interface DashboardNavProps {
     name?: string | null;
     email?: string | null;
     image?: string | null;
+    role?: string | null;
   };
 }
 
@@ -40,6 +42,10 @@ export function DashboardNav({ user }: DashboardNavProps) {
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
+  const adminNavigation = [
+    { name: "Course Mappings", href: "/dashboard/course-mappings", icon: GitBranch },
+  ];
+
   return (
     <nav className="bg-surface dark:bg-surface border-b border-border no-print sticky top-0 z-50 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,6 +60,24 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
             <div className="hidden lg:ml-8 lg:flex lg:space-x-4">
               {navigation.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors ${
+                      isActive
+                        ? "border-primary text-foreground"
+                        : "border-transparent text-foreground-secondary hover:border-border hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 mr-2" />
+                    <span className="hidden xl:inline">{item.name}</span>
+                  </Link>
+                );
+              })}
+              {user.role === "ADMIN" && adminNavigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
                 return (

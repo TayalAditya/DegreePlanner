@@ -77,33 +77,45 @@ async function importUsers() {
         
         if (userInfo.branch) {
           const b = userInfo.branch.toLowerCase();
-          if (b.includes('chemical') || b.includes('chemistry')) {
-            branchCode = 'CHM';
-            department = 'School of Basic Sciences';
-          } else if (b.includes('physics')) {
-            branchCode = 'PHY';
-            department = 'School of Basic Sciences';
-          } else if (b.includes('math')) {
-            branchCode = 'MTH';
-            department = 'School of Basic Sciences';
-          } else if (b.includes('computer') || b.includes('cse')) {
+          if (b.includes('computer science') || b.includes('cse') || b.includes('b.tech') && b.includes('computer')) {
             branchCode = 'CSE';
-            department = 'School of Computing and Electrical Engineering';
-          } else if (b.includes('electronics') || b.includes('ece')) {
-            branchCode = 'ECE';
-            department = 'School of Computing and Electrical Engineering';
-          } else if (b.includes('electrical') || b.includes('ee')) {
+            department = 'School of Computing & Electrical Engineering';
+          } else if (b.includes('data science') || b.includes('dse')) {
+            branchCode = 'DSE';
+            department = 'School of Computing & Electrical Engineering';
+          } else if (b.includes('mathematics and computing') || b.includes('mnc')) {
+            branchCode = 'MNC';
+            department = 'School of Mathematics & Statistical Science';
+          } else if (b.includes('microelectronics') || b.includes('vlsi') || b.includes('mevlsi')) {
+            branchCode = 'MEVLSI';
+            department = 'School of Computing & Electrical Engineering';
+          } else if (b.includes('electrical') || b.includes('ee') && !b.includes('ece')) {
             branchCode = 'EE';
-            department = 'School of Computing and Electrical Engineering';
-          } else if (b.includes('mechanical') || b.includes('me')) {
+            department = 'School of Computing & Electrical Engineering';
+          } else if (b.includes('mechanical') || b.includes('me') && !b.includes('mse')) {
             branchCode = 'ME';
             department = 'School of Mechanical and Materials Engineering';
-          } else if (b.includes('civil') || b.includes('ce')) {
+          } else if (b.includes('civil') || b.includes('ce') && !b.includes('ece')) {
             branchCode = 'CE';
-            department = 'School of Civil and Environmental Engineering';
-          } else if (b.includes('bio')) {
-            branchCode = 'BIO';
-            department = 'School of Biosciences and Bioengineering';
+            department = 'School of Environmental and Natural Sciences';
+          } else if (b.includes('geological') || b.includes('ge') && !b.includes('engineering physics')) {
+            branchCode = 'GE';
+            department = 'School of Mechanical and Materials Engineering';
+          } else if (b.includes('engineering physics') || b.includes('ep')) {
+            branchCode = 'EP';
+            department = 'School of Physical Sciences';
+          } else if (b.includes('bioengineering') || b.includes('biological') || b.includes('be') && !b.includes('mse')) {
+            branchCode = 'BE';
+            department = 'School of Bioengineering';
+          } else if (b.includes('materials science') || b.includes('mse')) {
+            branchCode = 'MSE';
+            department = 'School of Mechanical and Materials Engineering';
+          } else if (b.includes('chemical sciences') || b.includes('chemistry') || b.includes('bs') && b.includes('chemical')) {
+            branchCode = 'CS';
+            department = 'School of Chemical Sciences';
+          } else if (b.includes('electronics') || b.includes('ece')) {
+            branchCode = 'ECE';
+            department = 'School of Computing & Electrical Engineering';
           }
         }
 
