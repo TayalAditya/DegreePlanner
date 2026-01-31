@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,8 +13,9 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const entry = await prisma.timetableEntry.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         course: {
           select: {
@@ -47,7 +48,7 @@ export async function GET(
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -55,9 +56,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await req.json();
     const existing = await prisma.timetableEntry.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existing) {
@@ -77,7 +79,7 @@ export async function PATCH(
       const conflicts = await prisma.timetableEntry.findMany({
         where: {
           userId: session.user.id,
-          id: { not: params.id },
+          id: { not: id },
           dayOfWeek,
           OR: [
             {
@@ -105,7 +107,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.timetableEntry.update({
-      where: { id: params.id },
+      where: { id },
       data: body,
       include: {
         course: {
@@ -131,7 +133,7 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -139,8 +141,9 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const entry = await prisma.timetableEntry.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!entry) {
@@ -152,7 +155,7 @@ export async function DELETE(
     }
 
     await prisma.timetableEntry.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

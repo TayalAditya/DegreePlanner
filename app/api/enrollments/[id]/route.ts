@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
 
@@ -14,8 +14,9 @@ export async function GET(
   }
 
   try {
+    const { id } = await params;
     const enrollment = await prisma.courseEnrollment.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         course: true,
       },
@@ -37,7 +38,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
 
@@ -46,11 +47,12 @@ export async function PATCH(
   }
 
   try {
+    const { id } = await params;
     const body = await request.json();
     const { grade, status, courseType } = body;
 
     const enrollment = await prisma.courseEnrollment.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!enrollment || enrollment.userId !== session.user.id) {
@@ -58,7 +60,7 @@ export async function PATCH(
     }
 
     const updated = await prisma.courseEnrollment.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(grade !== undefined && { grade }),
         ...(status !== undefined && { status }),
@@ -81,7 +83,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
 
@@ -90,8 +92,9 @@ export async function DELETE(
   }
 
   try {
+    const { id } = await params;
     const enrollment = await prisma.courseEnrollment.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!enrollment || enrollment.userId !== session.user.id) {
@@ -99,7 +102,7 @@ export async function DELETE(
     }
 
     await prisma.courseEnrollment.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });
