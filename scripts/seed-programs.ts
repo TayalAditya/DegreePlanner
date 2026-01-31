@@ -5,7 +5,9 @@ const prisma = new PrismaClient();
 async function seedPrograms() {
   console.log("🌱 Seeding all IIT Mandi programs...\n");
 
-  // Delete existing programs first
+  // Delete existing user enrollments first
+  await prisma.userProgram.deleteMany({});
+  // Then delete programs
   await prisma.program.deleteMany({});
 
   const programs = [
