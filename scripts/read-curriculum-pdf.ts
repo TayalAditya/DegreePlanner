@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import pdf from 'pdf-parse';
+const pdf = require('pdf-parse');
 
 async function readPDF() {
   const dataBuffer = fs.readFileSync('docs/Aditya Tayal UG Batch 2023.pdf');
