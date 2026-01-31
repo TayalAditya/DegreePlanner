@@ -41,6 +41,7 @@ export const authOptions: NextAuthOptions = {
             isApproved: true,
             enrollmentId: approvedUser.enrollmentId,
             department: approvedUser.department,
+            branch: approvedUser.branch,
             batch: approvedUser.batch,
           },
         });
@@ -58,6 +59,7 @@ export const authOptions: NextAuthOptions = {
             role: true,
             enrollmentId: true,
             department: true,
+            branch: true,
             batch: true,
           },
         });
@@ -68,6 +70,7 @@ export const authOptions: NextAuthOptions = {
           session.user.role = dbUser.role;
           session.user.enrollmentId = dbUser.enrollmentId;
           session.user.department = dbUser.department;
+          session.user.branch = dbUser.branch;
           session.user.batch = dbUser.batch;
         }
       }

@@ -9,6 +9,7 @@ declare module "next-auth" {
       role: UserRole;
       enrollmentId?: string | null;
       department?: string | null;
+      branch?: string | null;
       batch?: number | null;
     } & DefaultSession["user"];
   }
@@ -18,6 +19,7 @@ declare module "next-auth" {
     role: UserRole;
     enrollmentId?: string | null;
     department?: string | null;
+    branch?: string | null;
     batch?: number | null;
   }
 }
