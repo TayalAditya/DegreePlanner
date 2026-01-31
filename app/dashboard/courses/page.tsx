@@ -95,70 +95,74 @@ export default function CoursesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Courses</h1>
-        <p className="text-foreground-secondary mt-2">
-          Browse and manage your enrolled courses
-        </p>
+      {/* Header with gradient */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 rounded-2xl p-8 shadow-xl">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="relative z-10">
+          <h1 className="text-4xl font-bold text-white mb-2">My Courses</h1>
+          <p className="text-white/90">
+            Browse your enrollments and explore the course catalog
+          </p>
+        </div>
       </div>
 
-      {/* Stats */}
+      {/* Animated Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-surface rounded-lg border border-border p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-              <Award className="w-6 h-6 text-primary" />
+        <div className="group relative overflow-hidden bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-2">
+              <Award className="w-8 h-8 text-white/90" />
+              <span className="text-sm text-white/80 font-medium">Completed</span>
             </div>
-            <div>
-              <p className="text-sm text-foreground-secondary">Credits Earned</p>
-              <p className="text-2xl font-bold text-foreground">{totalCredits}</p>
-            </div>
+            <p className="text-4xl font-bold text-white">{totalCredits}</p>
+            <p className="text-white/80 text-sm mt-1">Credits Earned</p>
           </div>
         </div>
 
-        <div className="bg-surface rounded-lg border border-border p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-blue-500" />
+        <div className="group relative overflow-hidden bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-2">
+              <Clock className="w-8 h-8 text-white/90" />
+              <span className="text-sm text-white/80 font-medium">Active</span>
             </div>
-            <div>
-              <p className="text-sm text-foreground-secondary">In Progress</p>
-              <p className="text-2xl font-bold text-foreground">{inProgressCredits}</p>
-            </div>
+            <p className="text-4xl font-bold text-white">{inProgressCredits}</p>
+            <p className="text-white/80 text-sm mt-1">In Progress</p>
           </div>
         </div>
 
-        <div className="bg-surface rounded-lg border border-border p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-green-500" />
+        <div className="group relative overflow-hidden bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-2">
+              <BookOpen className="w-8 h-8 text-white/90" />
+              <span className="text-sm text-white/80 font-medium">Total</span>
             </div>
-            <div>
-              <p className="text-sm text-foreground-secondary">Total Courses</p>
-              <p className="text-2xl font-bold text-foreground">{enrollments.length}</p>
-            </div>
+            <p className="text-4xl font-bold text-white">{enrollments.length}</p>
+            <p className="text-white/80 text-sm mt-1">All Courses</p>
           </div>
         </div>
       </div>
 
-      {/* View Toggle */}
-      <div className="flex gap-2 border-b border-border">
+      {/* Modern View Toggle */}
+      <div className="flex gap-2 p-1 bg-surface rounded-xl border border-border shadow-sm w-fit">
         <button
           onClick={() => setView("enrolled")}
-          className={`px-4 py-2 font-medium transition-colors ${
+          className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
             view === "enrolled"
-              ? "border-b-2 border-primary text-primary"
-              : "text-foreground-secondary hover:text-foreground"
+              ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/30"
+              : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
           }`}
         >
           My Enrollments ({enrollments.length})
         </button>
         <button
           onClick={() => setView("catalog")}
-          className={`px-4 py-2 font-medium transition-colors ${
+          className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
             view === "catalog"
-              ? "border-b-2 border-primary text-primary"
-              : "text-foreground-secondary hover:text-foreground"
+              ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/30"
+              : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
           }`}
         >
           Course Catalog ({allCourses.length})
@@ -177,39 +181,46 @@ export default function CoursesPage() {
             enrollments.map((enrollment) => (
               <div
                 key={enrollment.id}
-                className="bg-surface rounded-lg border border-border p-6 hover:border-primary transition-colors"
+                className="group relative overflow-hidden bg-surface rounded-xl border border-border p-6 hover:border-primary hover:shadow-xl transition-all duration-300"
               >
-                <div className="flex items-start justify-between">
+                <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <div className="relative z-10 flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-foreground">
+                    <div className="flex items-center gap-3 mb-3">
+                      <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
                         {enrollment.course.code}
                       </h3>
-                      <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">
+                      <span className="px-3 py-1 bg-gradient-to-r from-primary/20 to-primary/10 text-primary text-sm font-semibold rounded-full border border-primary/20">
                         {enrollment.course.credits} Credits
                       </span>
                       <span
-                        className={`px-2 py-1 text-xs rounded-full ${
+                        className={`px-3 py-1 text-sm font-semibold rounded-full ${
                           enrollment.status === "COMPLETED"
-                            ? "bg-green-500/10 text-green-500"
+                            ? "bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-600 border border-green-500/30"
                             : enrollment.status === "IN_PROGRESS"
-                            ? "bg-blue-500/10 text-blue-500"
-                            : "bg-gray-500/10 text-gray-500"
+                            ? "bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-600 border border-blue-500/30"
+                            : "bg-gray-500/20 text-gray-600 border border-gray-500/30"
                         }`}
                       >
                         {enrollment.status}
                       </span>
                     </div>
-                    <p className="text-foreground mb-1">{enrollment.course.name}</p>
-                    <p className="text-sm text-foreground-secondary">
-                      {enrollment.term} {enrollment.year} • Semester {enrollment.semester} •{" "}
-                      {enrollment.course.department}
+                    <p className="text-lg text-foreground mb-2 font-medium">{enrollment.course.name}</p>
+                    <p className="text-sm text-foreground-secondary flex items-center gap-2">
+                      <span className="px-2 py-1 bg-surface-hover rounded">{enrollment.term} {enrollment.year}</span>
+                      <span>•</span>
+                      <span className="px-2 py-1 bg-surface-hover rounded">Semester {enrollment.semester}</span>
+                      <span>•</span>
+                      <span className="px-2 py-1 bg-surface-hover rounded">{enrollment.course.department}</span>
                     </p>
                   </div>
                   {enrollment.grade && (
                     <div className="text-right">
-                      <p className="text-sm text-foreground-secondary">Grade</p>
-                      <p className="text-2xl font-bold text-primary">{enrollment.grade}</p>
+                      <p className="text-sm text-foreground-secondary mb-1">Grade</p>
+                      <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg">
+                        <p className="text-3xl font-bold text-white">{enrollment.grade}</p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -219,22 +230,22 @@ export default function CoursesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Search and Filter */}
+          {/* Modern Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground-secondary" />
+            <div className="flex-1 relative group">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-foreground-secondary group-focus-within:text-primary transition-colors" />
               <input
                 type="text"
-                placeholder="Search by code or name..."
+                placeholder="Search courses by code or name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
+                className="w-full pl-12 pr-4 py-3 bg-surface border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground placeholder-foreground-secondary transition-all shadow-sm hover:shadow-md"
               />
             </div>
             <select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
-              className="px-4 py-2 bg-surface border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground"
+              className="px-6 py-3 bg-surface border-2 border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground font-medium shadow-sm hover:shadow-md transition-all cursor-pointer"
             >
               <option value="all">All Departments</option>
               {departments.map((dept) => (
@@ -256,34 +267,50 @@ export default function CoursesPage() {
               filteredCourses.map((course) => (
                 <div
                   key={course.id}
-                  className="bg-surface rounded-lg border border-border p-5 hover:border-primary transition-colors"
+                  className="group relative overflow-hidden bg-surface rounded-xl border border-border p-6 hover:border-primary hover:shadow-xl transition-all duration-300"
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  
+                  <div className="relative z-10 flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-lg font-semibold text-foreground">
+                      <div className="flex items-center gap-2 mb-3">
+                        <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
                           {course.code}
                         </h3>
-                        <span className="px-2 py-1 bg-primary/10 text-primary text-xs rounded-full">
+                        <span className="px-3 py-1 bg-gradient-to-r from-primary/20 to-primary/10 text-primary text-sm font-semibold rounded-full border border-primary/20">
                           {course.credits} Credits
                         </span>
-                        <span className="px-2 py-1 bg-gray-500/10 text-gray-500 text-xs rounded-full">
+                        <span className="px-3 py-1 bg-gray-500/10 text-gray-600 text-sm font-semibold rounded-full border border-gray-500/20">
                           Level {course.level}
                         </span>
                       </div>
-                      <p className="text-foreground mb-2">{course.name}</p>
+                      <p className="text-lg font-medium text-foreground mb-3">{course.name}</p>
                       {course.description && (
-                        <p className="text-sm text-foreground-secondary mb-2">
+                        <p className="text-sm text-foreground-secondary mb-3 line-clamp-2">
                           {course.description}
                         </p>
                       )}
-                      <div className="flex items-center gap-3 text-sm text-foreground-secondary">
-                        <span>{course.department}</span>
-                        <span>•</span>
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="px-3 py-1 bg-surface-hover rounded-lg font-medium text-foreground">
+                          {course.department}
+                        </span>
+                        <span className="text-foreground-secondary">•</span>
                         <div className="flex gap-2">
-                          {course.offeredInFall && <span className="text-orange-500">Fall</span>}
-                          {course.offeredInSpring && <span className="text-green-500">Spring</span>}
-                          {course.offeredInSummer && <span className="text-blue-500">Summer</span>}
+                          {course.offeredInFall && (
+                            <span className="px-2 py-1 bg-orange-500/10 text-orange-600 rounded-lg text-xs font-semibold">
+                              Fall
+                            </span>
+                          )}
+                          {course.offeredInSpring && (
+                            <span className="px-2 py-1 bg-green-500/10 text-green-600 rounded-lg text-xs font-semibold">
+                              Spring
+                            </span>
+                          )}
+                          {course.offeredInSummer && (
+                            <span className="px-2 py-1 bg-blue-500/10 text-blue-600 rounded-lg text-xs font-semibold">
+                              Summer
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
