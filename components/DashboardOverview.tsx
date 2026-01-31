@@ -64,17 +64,19 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
   if (programs.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-        <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+      <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-12 text-center">
+        <div className="w-20 h-20 bg-warning/10 dark:bg-warning/20 rounded-full flex items-center justify-center mx-auto mb-6">
+          <AlertCircle className="w-10 h-10 text-warning" />
+        </div>
+        <h2 className="text-2xl font-bold text-foreground mb-3">
           No Programs Enrolled
         </h2>
-        <p className="text-gray-600 mb-6">
-          Get started by enrolling in your major program
+        <p className="text-foreground-secondary mb-8 max-w-md mx-auto">
+          Get started by enrolling in your major program to begin tracking your academic progress
         </p>
         <a
           href="/dashboard/programs"
-          className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          className="inline-flex items-center px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all shadow-sm hover:shadow-md"
         >
           <BookOpen className="w-5 h-5 mr-2" />
           Browse Programs
@@ -99,47 +101,49 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-6 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Current Semester</p>
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="text-sm text-foreground-secondary font-medium mb-1">Current Semester</p>
+              <p className="text-4xl font-bold text-primary">
                 {currentSemester}
               </p>
             </div>
-            <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-indigo-600" />
+            <div className="w-14 h-14 bg-primary/10 dark:bg-primary/20 rounded-xl flex items-center justify-center">
+              <BookOpen className="w-7 h-7 text-primary" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-6 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Courses This Semester</p>
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="text-sm text-foreground-secondary font-medium mb-1">This Semester</p>
+              <p className="text-4xl font-bold text-success">
                 {currentSemesterEnrollments?.length || 0}
               </p>
             </div>
-            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-green-600" />
+            <div className="w-14 h-14 bg-success/10 dark:bg-success/20 rounded-xl flex items-center justify-center">
+              <TrendingUp className="w-7 h-7 text-success" />
             </div>
           </div>
+          <p className="text-xs text-foreground-secondary mt-2">Active courses</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-6 hover:shadow-md transition-all sm:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Completed Courses</p>
-              <p className="text-3xl font-bold text-gray-900">
+              <p className="text-sm text-foreground-secondary font-medium mb-1">Completed</p>
+              <p className="text-4xl font-bold text-info">
                 {completedCourses?.length || 0}
               </p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-blue-600" />
+            <div className="w-14 h-14 bg-info/10 dark:bg-info/20 rounded-xl flex items-center justify-center">
+              <BookOpen className="w-7 h-7 text-info" />
             </div>
           </div>
+          <p className="text-xs text-foreground-secondary mt-2">Total courses</p>
         </div>
       </div>
 
@@ -168,33 +172,34 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
       {/* Available DE Courses */}
       {progressData?.availableDECourses && progressData.availableDECourses.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+            <span className="w-1 h-6 bg-primary rounded-full mr-3"></span>
             Available Discipline Electives
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {progressData.availableDECourses.slice(0, 6).map((course: any) => (
               <div
                 key={course.id}
-                className="border border-gray-200 rounded-lg p-4 hover:border-indigo-500 transition-colors cursor-pointer"
+                className="border border-border rounded-lg p-4 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all cursor-pointer group"
               >
-                <p className="font-mono text-sm text-indigo-600 mb-1">
+                <p className="font-mono text-sm text-primary mb-1 font-semibold">
                   {course.code}
                 </p>
-                <p className="font-medium text-gray-900 text-sm mb-2">
+                <p className="font-medium text-foreground text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">
                   {course.name}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-foreground-secondary">
                   {course.credits} credits
                 </p>
               </div>
             ))}
           </div>
           {progressData.availableDECourses.length > 6 && (
-            <div className="mt-4 text-center">
+            <div className="mt-6 text-center">
               <a
                 href="/dashboard/courses"
-                className="text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+                className="text-primary hover:text-primary-hover font-medium text-sm inline-flex items-center gap-2 hover:gap-3 transition-all"
               >
                 View all {progressData.availableDECourses.length} available courses →
               </a>
