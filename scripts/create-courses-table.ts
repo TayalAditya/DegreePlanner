@@ -228,8 +228,10 @@ async function createCoursesTable() {
           code: course.code,
           name: course.name,
           credits: course.credits,
-          semester: 1, // Default, will be updated later
+          department: 'To be assigned',
+          level: 100,
           description: '',
+          isActive: true,
         },
       });
       console.log(`Added: ${course.code} - ${course.name}`);
