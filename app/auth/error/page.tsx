@@ -24,15 +24,15 @@ function AuthErrorContent() {
     },
     batch_not_supported: {
       title: "Batch Not Supported",
-      description: "Currently, we're only operating for Batch 2023 students (enrollment IDs starting with B23). We might expand to other batches later. Please check back soon!",
+      description: "Currently, we're only operating for Batch 2023 students. We might expand to other batches later. Please check back soon!",
     },
     domain_not_allowed: {
       title: "Email Domain Not Allowed",
       description: "Your email domain is not authorized to access this application. Please use your institutional email address.",
     },
     user_not_approved: {
-      title: "User Not Approved",
-      description: "Your account has not been approved yet. Please contact your administrator for access.",
+      title: "Access Restricted",
+      description: "This app is only for IIT Mandi Batch 2023 students. Your account is not on the approved list.",
     },
     Default: {
       title: "Authentication Error",
@@ -70,9 +70,6 @@ function AuthErrorContent() {
           {error === "batch_not_supported" && (
             <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <p className="text-sm text-amber-800">
-                <strong>Currently Serving Batch 2023:</strong> Your enrollment ID should start with <code className="bg-amber-100 px-2 py-1 rounded">B23</code>.
-                <br />
-                <br />
                 We're gradually expanding to other batches. Stay tuned!
               </p>
             </div>
@@ -81,8 +78,7 @@ function AuthErrorContent() {
           {error === "user_not_approved" && (
             <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <p className="text-sm text-yellow-800">
-                <strong>Approval Pending:</strong> Your account hasn't been approved yet.
-                This typically happens within 24 hours of first login. Please try again later or contact support if this persists.
+                <strong>IIT Mandi B23 Students Only:</strong> Please sign in with your institute Google account (<code className="bg-yellow-100 px-1 rounded">b23xxxxx@students.iitmandi.ac.in</code>). Other accounts are not permitted.
               </p>
             </div>
           )}

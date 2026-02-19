@@ -52,8 +52,8 @@ export async function PATCH(req: NextRequest) {
     // Validate branch if provided
     if (branch) {
       const validBranches = [
-        "CSE", "DSE", "EE", "ME", "CE", "BE", 
-        "EP", "MnC", "MSE", "GE", "VLSI", "CS"
+        "CSE", "DSE", "EE", "ME", "CE", "BE",
+        "EP", "MNC", "MSE", "GE", "MEVLSI", "BSCS"
       ];
       if (!validBranches.includes(branch)) {
         return NextResponse.json(
