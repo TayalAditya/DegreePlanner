@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -29,13 +30,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // Map curriculum category codes to CourseType enum values
+    const categoryToCourseType: Record<string, "CORE" | "DE" | "PE" | "FREE_ELECTIVE" | "MTP" | "ISTP"> = {
+      IC: "CORE",
+      ICB: "CORE",
+      DC: "CORE",
+      HSS: "CORE",
+      IKS: "CORE",
+      DE: "DE",
+      FE: "FREE_ELECTIVE",
+      MTP: "MTP",
+      ISTP: "ISTP",
+      INTERNSHIP: "FREE_ELECTIVE",
+    };
+
     // Process enrollments in batches
     const results = [];
     const errors = [];
 
     for (const enrollment of enrollments) {
       try {
-        const { courseCode, semester, courseType, grade } = enrollment;
+        const { courseCode, semester, grade } = enrollment;
+        // Normalize courseType: map category codes to valid enum values
+        const rawType = enrollment.courseType as string;
+        const courseType = categoryToCourseType[rawType] ?? "CORE";
 
         // Find the course by code
         const course = await prisma.course.findUnique({
@@ -76,7 +94,7 @@ export async function POST(req: NextRequest) {
               semester,
               year: new Date().getFullYear(),
               term: semester % 2 === 0 ? "SPRING" : "FALL",
-              courseType: courseType || "FE",
+              courseType: courseType || "CORE",
               grade,
               status: grade ? "COMPLETED" : "IN_PROGRESS",
             },
