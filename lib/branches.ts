@@ -32,7 +32,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 22,    // Free Electives
     mtpIstpCredits: 12, // MTP(8) + ISTP(4)
     minCreditsForMTP: 90,
-    minSemesterForMTP: 6,
+    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
   DSE: {
@@ -47,7 +47,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 22,
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
-    minSemesterForMTP: 6,
+    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
   MEVLSI: {
@@ -62,7 +62,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 22,
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
-    minSemesterForMTP: 6,
+    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
   EE: {
@@ -77,7 +77,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 17,    // FE=17 (SPECIAL: not 22)
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
-    minSemesterForMTP: 6,
+    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
   MNC: {
@@ -92,7 +92,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 22,
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
-    minSemesterForMTP: 6,
+    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
   CE: {
@@ -107,7 +107,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 22,
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
-    minSemesterForMTP: 6,
+    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
   BE: {
@@ -122,7 +122,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 22,
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
-    minSemesterForMTP: 6,
+    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
   EP: {
@@ -137,7 +137,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 22,
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
-    minSemesterForMTP: 6,
+    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
   GE: {
@@ -152,7 +152,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 22,
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
-    minSemesterForMTP: 6,
+    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
   ME: {
@@ -167,7 +167,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 22,
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
-    minSemesterForMTP: 6,
+    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
   MSE: {
@@ -182,7 +182,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 22,
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
-    minSemesterForMTP: 6,
+    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
   // BS Program - Different structure
