@@ -22,6 +22,18 @@ function AuthErrorContent() {
       title: "Verification Error",
       description: "The verification token has expired or has already been used.",
     },
+    batch_not_supported: {
+      title: "Batch Not Supported",
+      description: "Currently, we're only operating for Batch 2023 students (enrollment IDs starting with B23). We might expand to other batches later. Please check back soon!",
+    },
+    domain_not_allowed: {
+      title: "Email Domain Not Allowed",
+      description: "Your email domain is not authorized to access this application. Please use your institutional email address.",
+    },
+    user_not_approved: {
+      title: "User Not Approved",
+      description: "Your account has not been approved yet. Please contact your administrator for access.",
+    },
     Default: {
       title: "Authentication Error",
       description: "An error occurred during authentication. Please try again.",
@@ -49,8 +61,28 @@ function AuthErrorContent() {
           {error === "AccessDenied" && (
             <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">
-                <strong>Note:</strong> Only users with approved institutional emails can access this application. 
+                <strong>Note:</strong> Only users with approved institutional emails can access this application.
                 If you believe this is an error, please contact your administrator.
+              </p>
+            </div>
+          )}
+
+          {error === "batch_not_supported" && (
+            <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-sm text-amber-800">
+                <strong>Currently Serving Batch 2023:</strong> Your enrollment ID should start with <code className="bg-amber-100 px-2 py-1 rounded">B23</code>.
+                <br />
+                <br />
+                We're gradually expanding to other batches. Stay tuned!
+              </p>
+            </div>
+          )}
+
+          {error === "user_not_approved" && (
+            <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                <strong>Approval Pending:</strong> Your account hasn't been approved yet.
+                This typically happens within 24 hours of first login. Please try again later or contact support if this persists.
               </p>
             </div>
           )}
