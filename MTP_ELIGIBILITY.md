@@ -72,8 +72,10 @@ Assuming ~15-17 credits per semester in a normal B.Tech program:
 ### MTP (Major Technical Project)
 
 **Credits**: 8 total
-- **MTP-1**: 3 credits (usually Semester 6)
-- **MTP-2**: 5 credits (usually Semester 7)
+- **MTP-1**: 3 credits (Semester 7)
+- **MTP-2**: 5 credits (Semester 8)
+
+**Timeline**: Final year (Semesters 7 & 8)
 
 **Requirement**: Mandatory for all BTech students
 
@@ -83,9 +85,16 @@ Assuming ~15-17 credits per semester in a normal B.Tech program:
 
 **Credits**: 4 total (counts as one course)
 
-**Requirement**: Optional alternative to MTP
+**Timeline**: **OPTIONAL** - Either Semester 6 OR Semester 8
+- **Semester 6**: Take ISTP early (instead of regular course)
+- **Semester 8**: Take ISTP in final year (with MTP-2)
+- **Not required**: Can skip entirely
+
+**Requirement**: Optional - students choose whether to do ISTP
 
 **Focus**: Societal impact, community engagement, sustainability
+
+**Note**: If ISTP is not taken, those 4 credits go to Free Electives
 
 ---
 
@@ -93,11 +102,12 @@ Assuming ~15-17 credits per semester in a normal B.Tech program:
 
 If a student **skips or doesn't take** MTP/ISTP components:
 
-| Scenario | Action | Credit Redistribution |
+| Scenario | Timing | Credit Redistribution |
 |----------|--------|----------------------|
-| Skip ISTP (4 cr) | - | +4 to Free Electives |
-| Skip MTP (8 cr) | - | +8 to Discipline Electives |
-| Skip MTP-2 (5 cr) | Complete MTP-1 only | +5 to Discipline Electives |
+| Skip ISTP entirely | N/A | +4 to Free Electives |
+| Do ISTP in Sem 6 | Semester 6 | Replaces 1 elective course |
+| Do ISTP in Sem 8 | Semester 8 | Replaces 1 elective course (with MTP-2) |
+| Skip MTP-2 only | Complete MTP-1 (sem 7) | +5 to Discipline Electives |
 
 ---
 
@@ -165,6 +175,15 @@ A: Yes. If you haven't completed MTP-1 in semester 7, you can complete MTP-2 in 
 
 **Q: What if I do MTP-1 (sem 7) but not MTP-2 (sem 8)?**
 A: MTP-2 credits (+5) redistribute to Discipline Electives.
+
+**Q: Can I do ISTP in semester 6?**
+A: Yes! ISTP is optional and can be taken in Semester 6 OR Semester 8 (or skipped entirely).
+
+**Q: If I take ISTP in sem 6, do I still do MTP in sem 7 & 8?**
+A: Yes. ISTP (4 cr) in sem 6 + MTP-1 (3 cr) in sem 7 + MTP-2 (5 cr) in sem 8 = 12 credits total.
+
+**Q: Can I skip ISTP entirely?**
+A: Yes! ISTP is completely optional. If you skip it, you get +4 credits for Free Electives.
 
 **Q: Does BS program have MTP?**
 A: No. BS has 14-credit Research Projects instead (no semester restrictions).
