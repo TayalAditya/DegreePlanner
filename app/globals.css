@@ -51,103 +51,124 @@
   }
 }
 
-/* Modern, professional color scheme - no generic AI look */
+/* Modern, vibrant color scheme with depth and personality */
 :root {
-  /* Backgrounds */
-  --background: #fafafa;
-  --background-secondary: #f5f5f5;
+  /* Backgrounds - Warm, inviting tones */
+  --background: #fcfcfd;
+  --background-secondary: #f8f9fa;
   --surface: #ffffff;
   --surface-elevated: #ffffff;
+  --surface-hover: #f8f9fa;
   
-  /* Text */
-  --foreground: #1a1a1a;
-  --foreground-secondary: #737373;
-  --foreground-muted: #a3a3a3;
+  /* Text - High contrast for readability */
+  --foreground: #0f172a;
+  --foreground-secondary: #64748b;
+  --foreground-muted: #94a3b8;
   
-  /* Borders & Dividers */
-  --border: #e5e5e5;
-  --border-strong: #d4d4d4;
+  /* Borders & Dividers - Subtle but visible */
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
   
-  /* Brand Colors - Modern, vibrant but professional */
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-light: #dbeafe;
+  /* Brand Colors - Vibrant, modern, professional */
+  --primary: #6366f1;        /* Indigo - modern and trustworthy */
+  --primary-hover: #4f46e5;
+  --primary-light: #eef2ff;
   --primary-foreground: #ffffff;
   
-  --secondary: #7c3aed;
-  --secondary-hover: #6d28d9;
-  --secondary-light: #ede9fe;
+  --secondary: #ec4899;      /* Pink - energetic and friendly */
+  --secondary-hover: #db2777;
+  --secondary-light: #fce7f3;
   
-  --accent: #0891b2;
-  --accent-hover: #0e7490;
-  --accent-light: #cffafe;
+  --accent: #14b8a6;         /* Teal - fresh and professional */
+  --accent-hover: #0d9488;
+  --accent-light: #ccfbf1;
   
-  /* Semantic Colors */
-  --success: #16a34a;
-  --success-light: #dcfce7;
-  --warning: #ea580c;
-  --warning-light: #fed7aa;
-  --error: #dc2626;
+  /* Semantic Colors - Clear and meaningful */
+  --success: #10b981;        /* Emerald green */
+  --success-light: #d1fae5;
+  --warning: #f59e0b;        /* Amber */
+  --warning-light: #fef3c7;
+  --error: #ef4444;          /* Red */
   --error-light: #fee2e2;
-  --info: #0284c7;
-  --info-light: #e0f2fe;
+  --info: #3b82f6;           /* Blue */
+  --info-light: #dbeafe;
   
   /* Interactive States */
-  --hover: #f5f5f5;
-  --active: #e5e5e5;
-  --focus-ring: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  --hover: #f8fafc;
+  --active: #e2e8f0;
+  --focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.15);
   
-  /* Shadows */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  /* Shadows - Soft and natural */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --gradient-info: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 }
 
-/* Dark mode with rich, deep colors */
+/* Dark mode - Rich, deep colors with excellent contrast */
 .dark {
-  /* Backgrounds - True dark with subtle warmth */
-  --background: #0a0a0a;
-  --background-secondary: #141414;
-  --surface: #1a1a1a;
-  --surface-elevated: #262626;
+  /* Backgrounds - True dark with depth */
+  --background: #0f172a;
+  --background-secondary: #1e293b;
+  --surface: #1e293b;
+  --surface-elevated: #334155;
+  --surface-hover: #334155;
   
-  /* Text */
-  --foreground: #fafafa;
-  --foreground-secondary: #a3a3a3;
-  --foreground-muted: #525252;
+  /* Text - Excellent readability */
+  --foreground: #f1f5f9;
+  --foreground-secondary: #cbd5e1;
+  --foreground-muted: #64748b;
   
   /* Borders & Dividers */
-  --border: #262626;
-  --border-strong: #404040;
+  --border: #334155;
+  --border-strong: #475569;
   
-  /* Brand Colors - Brighter for dark backgrounds */
-  --primary: #3b82f6;
-  --primary-hover: #60a5fa;
-  --primary-light: #1e3a8a;
+  /* Brand Colors - Vibrant and eye-catching on dark */
+  --primary: #818cf8;        /* Lighter indigo for dark mode */
+  --primary-hover: #a5b4fc;
+  --primary-light: #312e81;
   --primary-foreground: #ffffff;
   
-  --secondary: #8b5cf6;
-  --secondary-hover: #a78bfa;
-  --secondary-light: #4c1d95;
+  --secondary: #f472b6;      /* Lighter pink */
+  --secondary-hover: #f9a8d4;
+  --secondary-light: #831843;
   
-  --accent: #06b6d4;
-  --accent-hover: #22d3ee;
-  --accent-light: #164e63;
+  --accent: #2dd4bf;         /* Lighter teal */
+  --accent-hover: #5eead4;
+  --accent-light: #134e4a;
   
   /* Semantic Colors */
-  --success: #22c55e;
-  --success-light: #14532d;
-  --warning: #f97316;
-  --warning-light: #7c2d12;
-  --error: #ef4444;
+  --success: #34d399;
+  --success-light: #064e3b;
+  --warning: #fbbf24;
+  --warning-light: #78350f;
+  --error: #f87171;
   --error-light: #7f1d1d;
-  --info: #0ea5e9;
-  --info-light: #0c4a6e;
+  --info: #60a5fa;
+  --info-light: #1e3a8a;
   
   /* Interactive States */
-  --hover: #262626;
-  --active: #404040;
+  --hover: #334155;
+  --active: #475569;
+  --focus-ring: 0 0 0 3px rgba(129, 140, 248, 0.2);
+  
+  /* Shadows - Deeper for dark mode */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+  
+  /* Gradients - Vibrant on dark */
+  --gradient-primary: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+  --gradient-success: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  --gradient-warning: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  --gradient-info: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
   --focus-ring: 0 0 0 3px rgba(59, 130, 246, 0.2);
   
   /* Shadows - More pronounced in dark mode */

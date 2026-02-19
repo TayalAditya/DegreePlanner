@@ -10,15 +10,21 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        // Map to CSS variables for easy theming
         background: "var(--background)",
         'background-secondary': "var(--background-secondary)",
         surface: "var(--surface)",
         'surface-elevated': "var(--surface-elevated)",
+        'surface-hover': "var(--surface-hover)",
+        
         foreground: "var(--foreground)",
         'foreground-secondary': "var(--foreground-secondary)",
         'foreground-muted': "var(--foreground-muted)",
+        
         border: "var(--border)",
         'border-strong': "var(--border-strong)",
+        
+        // Brand colors with extended palette
         primary: {
           DEFAULT: "var(--primary)",
           hover: "var(--primary-hover)",
@@ -35,6 +41,8 @@ const config: Config = {
           hover: "var(--accent-hover)",
           light: "var(--accent-light)",
         },
+        
+        // Semantic colors with light variants
         success: {
           DEFAULT: "var(--success)",
           light: "var(--success-light)",
@@ -51,6 +59,7 @@ const config: Config = {
           DEFAULT: "var(--info)",
           light: "var(--info-light)",
         },
+        
         hover: "var(--hover)",
         active: "var(--active)",
       },
