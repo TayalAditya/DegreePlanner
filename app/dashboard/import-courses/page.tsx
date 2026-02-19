@@ -189,11 +189,11 @@ export default function ImportCoursesPage() {
               <option value="CE">CE</option>
               <option value="BE">BE</option>
               <option value="EP">EP</option>
-              <option value="MnC">MnC</option>
+              <option value="MNC">MNC</option>
               <option value="MSE">MSE</option>
               <option value="GE">GE</option>
-              <option value="VLSI">VLSI</option>
-              <option value="CS">CS (B.S.)</option>
+              <option value="MEVLSI">MEVLSI</option>
+              <option value="BSCS">BSCS (B.S.)</option>
             </select>
           </div>
           <div>
