@@ -59,40 +59,53 @@ export class CreditCalculator {
       },
     });
 
-    // Check if user has completed MTP-1
+    // Check if user has completed MTP-1 (but not MTP-2) — for partial MTP skip logic
     const mtp1Completed = enrollments.some(
-      (e) => e.status === EnrollmentStatus.COMPLETED && 
+      (e) => e.status === EnrollmentStatus.COMPLETED &&
       e.course.code.endsWith("498P") // MTP-1 course code pattern
     );
+    const mtp2Completed = enrollments.some(
+      (e) => e.status === EnrollmentStatus.COMPLETED &&
+      e.course.code.endsWith("499P") // MTP-2 course code pattern
+    );
 
-    // Adjust credit requirements based on user preferences
+    // Derive individual MTP/ISTP credits from the combined field (BSCS has Research=14, BTech has 12)
+    // For BTech: MTP=8, ISTP=4. For BSCS: no MTP/ISTP (mtpIstpCredits=14 is Research)
+    const isBSProgram = program.code === "BSCS";
+    const mtpCreditsFull = isBSProgram ? 0 : 8;
+    const istpCreditsFull = isBSProgram ? 0 : 4;
+    const researchCredits = isBSProgram ? program.mtpIstpCredits : 0;
+
+    // Adjust credit requirements based on user preferences (skip logic per IIT Mandi rules)
     let deCredits = program.deCredits;
-    let freeElectiveCredits = program.freeElectiveCredits;
-    let mtpCredits = program.mtpCredits;
-    let istpCredits = program.istpCredits;
+    let feCredits = program.feCredits;
+    let mtpCredits = mtpCreditsFull;
+    let istpCredits = istpCreditsFull;
 
-    // If ISTP is skipped, add 4 credits to FE
-    if (!user?.doingISTP) {
-      freeElectiveCredits += istpCredits; // +4 credits
-      istpCredits = 0;
-    }
+    if (!isBSProgram) {
+      // If ISTP is skipped, add 4 credits to FE
+      if (!user?.doingISTP) {
+        feCredits += istpCredits; // +4 credits to FE
+        istpCredits = 0;
+      }
 
-    // If MTP is skipped completely, add 8 credits to DE
-    if (!user?.doingMTP) {
-      deCredits += mtpCredits; // +8 credits
-      mtpCredits = 0;
-    }
-    // If MTP-1 is done but MTP-2 will be skipped, add 5 credits to DE
-    else if (mtp1Completed && !user?.doingMTP) {
-      deCredits += 5; // +5 credits for MTP-2
-      mtpCredits = 3; // Only MTP-1 (3 credits) counts
+      // If MTP is skipped completely, add 8 credits to DE
+      if (!user?.doingMTP && !mtp1Completed) {
+        deCredits += mtpCredits; // +8 credits to DE
+        mtpCredits = 0;
+      }
+      // If MTP-1 done but MTP-2 will be skipped, add 5 credits to DE
+      else if (mtp1Completed && !mtp2Completed && !user?.doingMTP) {
+        deCredits += 5; // +5 credits for skipping MTP-2
+        mtpCredits = 3; // Only MTP-1 (3 credits) required
+      }
     }
 
     const required: CreditBreakdown = {
-      core: program.coreCredits,
+      core: program.icCredits + program.dcCredits, // IC + DC = "core" in IIT Mandi terms
       de: deCredits,
-      pe: program.peCredits,
-      freeElective: freeElectiveCredits,
+      pe: researchCredits, // reuse pe field for BS Research credits
+      freeElective: feCredits,
       mtp: mtpCredits,
       istp: istpCredits,
       total: program.totalCreditsRequired,
@@ -187,7 +200,8 @@ export class CreditCalculator {
       throw new Error("Program not found");
     }
 
-    if (!program.mtpRequired) {
+    // BSCS has no MTP (it uses Research credits instead); minSemesterForMtp=0 means no MTP
+    if (program.code === "BSCS" || !program.minSemesterForMtp) {
       return {
         eligible: false,
         reason: "MTP is not required for this program",
@@ -268,7 +282,8 @@ export class CreditCalculator {
       throw new Error("Program not found");
     }
 
-    if (!program.istpAllowed) {
+    // BSCS has no ISTP; minSemesterForMtp=0 means no MTP/ISTP
+    if (program.code === "BSCS" || !program.minSemesterForMtp) {
       return {
         eligible: false,
         reason: "ISTP is not allowed for this program",

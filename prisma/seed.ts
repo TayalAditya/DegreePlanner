@@ -16,7 +16,7 @@ async function seedPrograms() {
 
   const programs = [
     // B.Tech: IC(60) + DC(branch-specific) + DE(branch-specific) + FE(22) + MTP/ISTP(12) = 160
-    // BS-CS: IC(52) + DC(82) + DE(24) + FE(15) + Research(14) = 163
+    // BS-CS: IC(52) + DC(59) + DE(23) + FE(15) + Research(14) = 163
 
     // School of Computing & Electrical Engineering
     {
@@ -56,7 +56,7 @@ async function seedPrograms() {
       code: "EE",
       name: "B.Tech in Electrical Engineering",
       department: "School of Computing & Electrical Engineering",
-      totalCreditsRequired: 160,
+      totalCreditsRequired: 161, // EE is special: DC+DE=72, FE=17
       icCredits: 60,
       dcCredits: 52,
       deCredits: 20,
@@ -152,8 +152,8 @@ async function seedPrograms() {
       department: "School of Chemical Sciences",
       totalCreditsRequired: 163,
       icCredits: 52,
-      dcCredits: 82,
-      deCredits: 24,
+      dcCredits: 59,  // DC only (not DC+DE combined)
+      deCredits: 23,  // DE only
       feCredits: 15,
       mtpIstpCredits: 14,
     },

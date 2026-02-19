@@ -30,10 +30,11 @@ export const programSelectFields: Prisma.ProgramSelect = {
   code: true,
   type: true,
   totalCreditsRequired: true,
-  coreCredits: true,
+  icCredits: true,
+  dcCredits: true,
   deCredits: true,
-  peCredits: true,
-  freeElectiveCredits: true,
+  feCredits: true,
+  mtpIstpCredits: true,
 };
 
 // Pagination helper
