@@ -25,8 +25,23 @@ export const authOptions: NextAuthOptions = {
         // Check for email domain restriction (if configured)
         const allowedDomain = process.env.ALLOWED_EMAIL_DOMAIN;
         if (allowedDomain && !user.email.endsWith(allowedDomain)) {
-          return false;
+          return "/auth/error?error=domain_not_allowed";
         }
+
+        // Check for Batch 2023 requirement
+        const enrollmentId = profile?.email?.split("@")[0] || ""; // Try to extract from email
+        if (enrollmentId && !enrollmentId.match(/^B23/i)) {
+          // Not Batch 2023
+          return "/auth/error?error=batch_not_supported";
+        }
+
+        // User not in approved list and not auto-approvable
+        return "/auth/error?error=user_not_approved";
+      }
+
+      // Batch validation: Only Batch 2023 students allowed
+      if (approvedUser.batch && approvedUser.batch !== 2023) {
+        return "/auth/error?error=batch_not_supported";
       }
 
       // Update or create user with approval status
@@ -38,6 +53,22 @@ export const authOptions: NextAuthOptions = {
         await prisma.user.update({
           where: { email: user.email },
           data: {
+            isApproved: true,
+            enrollmentId: approvedUser.enrollmentId,
+            department: approvedUser.department,
+            branch: approvedUser.branch,
+            batch: approvedUser.batch,
+          },
+        });
+      }
+
+      // Auto-create user if approved
+      if (!existingUser && approvedUser) {
+        await prisma.user.create({
+          data: {
+            email: user.email,
+            name: user.name,
+            image: user.image,
             isApproved: true,
             enrollmentId: approvedUser.enrollmentId,
             department: approvedUser.department,
