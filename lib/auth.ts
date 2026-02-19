@@ -13,30 +13,34 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       if (!user.email) return false;
 
-      // Check if user is approved
-      const approvedUser = await prisma.approvedUser.findUnique({
+      // Check if user is approved by email (direct match)
+      let approvedUser = await prisma.approvedUser.findUnique({
         where: { email: user.email },
       });
 
+      // Fallback: look up by enrollmentId extracted from email prefix
+      // e.g. b23243@students.iitmandi.ac.in → enrollmentId = B23243
       if (!approvedUser) {
-        // Check for email domain restriction (if configured)
-        const allowedDomain = process.env.ALLOWED_EMAIL_DOMAIN;
-        if (allowedDomain && !user.email.endsWith(allowedDomain)) {
-          return "/auth/error?error=domain_not_allowed";
+        const emailPrefix = user.email.split("@")[0].toUpperCase();
+        if (emailPrefix.match(/^B23\d+/i)) {
+          approvedUser = await prisma.approvedUser.findUnique({
+            where: { enrollmentId: emailPrefix },
+          });
+          // If found by enrollmentId, update the ApprovedUser email to match Google email
+          if (approvedUser) {
+            await prisma.approvedUser.update({
+              where: { enrollmentId: emailPrefix },
+              data: { email: user.email },
+            });
+          }
         }
+      }
 
-        // Check for Batch 2023 requirement
-        const enrollmentId = profile?.email?.split("@")[0] || ""; // Try to extract from email
-        if (enrollmentId && !enrollmentId.match(/^B23/i)) {
-          // Not Batch 2023
-          return "/auth/error?error=batch_not_supported";
-        }
-
-        // User not in approved list and not auto-approvable
-        return "/auth/error?error=user_not_approved";
+      if (!approvedUser) {
+        return "/auth/error?error=batch_not_supported";
       }
 
       // Batch validation: Only Batch 2023 students allowed
@@ -49,7 +53,7 @@ export const authOptions: NextAuthOptions = {
         where: { email: user.email },
       });
 
-      if (existingUser && !existingUser.isApproved && approvedUser) {
+      if (existingUser && !existingUser.isApproved) {
         await prisma.user.update({
           where: { email: user.email },
           data: {
@@ -63,7 +67,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       // Auto-create user if approved
-      if (!existingUser && approvedUser) {
+      if (!existingUser) {
         await prisma.user.create({
           data: {
             email: user.email,
@@ -76,6 +80,31 @@ export const authOptions: NextAuthOptions = {
             batch: approvedUser.batch,
           },
         });
+      }
+
+      // Auto-enroll user in their branch program if not already enrolled
+      if (approvedUser.branch) {
+        const dbUser = await prisma.user.findUnique({ where: { email: user.email }, select: { id: true } });
+        if (dbUser) {
+          const program = await prisma.program.findUnique({ where: { code: approvedUser.branch } });
+          if (program) {
+            const alreadyEnrolled = await prisma.userProgram.findFirst({
+              where: { userId: dbUser.id, programId: program.id },
+            });
+            if (!alreadyEnrolled) {
+              await prisma.userProgram.create({
+                data: {
+                  userId: dbUser.id,
+                  programId: program.id,
+                  programType: "MAJOR",
+                  isPrimary: true,
+                  startSemester: 1,
+                  status: "ACTIVE",
+                },
+              });
+            }
+          }
+        }
       }
 
       return true;
