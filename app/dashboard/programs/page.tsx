@@ -10,14 +10,11 @@ interface Program {
   type: string;
   department: string;
   totalCreditsRequired: number;
-  coreCredits: number;
+  icCredits: number;
+  dcCredits: number;
   deCredits: number;
-  peCredits: number;
-  freeElectiveCredits: number;
-  mtpRequired: boolean;
-  mtpCredits: number;
-  istpAllowed: boolean;
-  istpCredits: number;
+  feCredits: number;
+  mtpIstpCredits: number;
   description?: string;
 }
 
@@ -128,10 +125,10 @@ export default function ProgramsPage() {
                   <div className="bg-surface/50 rounded-lg p-4 border border-border">
                     <div className="flex items-center gap-2 mb-1">
                       <BookOpen className="w-4 h-4 text-blue-500" />
-                      <p className="text-sm font-medium text-foreground-secondary">Core</p>
+                      <p className="text-sm font-medium text-foreground-secondary">IC + DC</p>
                     </div>
                     <p className="text-2xl font-bold text-foreground">
-                      {primaryProgram.program.coreCredits}
+                      {primaryProgram.program.icCredits + primaryProgram.program.dcCredits}
                     </p>
                   </div>
 
@@ -151,17 +148,17 @@ export default function ProgramsPage() {
                       <p className="text-sm font-medium text-foreground-secondary">Free Electives</p>
                     </div>
                     <p className="text-2xl font-bold text-foreground">
-                      {primaryProgram.program.freeElectiveCredits}
+                      {primaryProgram.program.feCredits}
                     </p>
                   </div>
                 </div>
 
                 {/* MTP/ISTP Info */}
-                {(primaryProgram.program.mtpRequired || primaryProgram.program.istpAllowed) && (
+                {primaryProgram.program.mtpIstpCredits > 0 && (
                   <div className="mt-6 pt-6 border-t border-border">
                     <h4 className="font-semibold text-foreground mb-3">Project Requirements</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {primaryProgram.program.mtpRequired && (
+                      {primaryProgram.program.code !== "BSCS" && (
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-orange-500/10 rounded-lg flex items-center justify-center">
                             <Award className="w-5 h-5 text-orange-500" />
@@ -169,20 +166,33 @@ export default function ProgramsPage() {
                           <div>
                             <p className="font-medium text-foreground">MTP Required</p>
                             <p className="text-sm text-foreground-secondary">
-                              {primaryProgram.program.mtpCredits} credits
+                              8 credits (MTP-1: 3cr + MTP-2: 5cr)
                             </p>
                           </div>
                         </div>
                       )}
-                      {primaryProgram.program.istpAllowed && (
+                      {primaryProgram.program.code !== "BSCS" && (
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
                             <Award className="w-5 h-5 text-blue-500" />
                           </div>
                           <div>
-                            <p className="font-medium text-foreground">ISTP Allowed</p>
+                            <p className="font-medium text-foreground">ISTP</p>
                             <p className="text-sm text-foreground-secondary">
-                              {primaryProgram.program.istpCredits} credits
+                              4 credits (Semester 6)
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                      {primaryProgram.program.code === "BSCS" && (
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
+                            <Award className="w-5 h-5 text-purple-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">Research Projects</p>
+                            <p className="text-sm text-foreground-secondary">
+                              {primaryProgram.program.mtpIstpCredits} credits
                             </p>
                           </div>
                         </div>

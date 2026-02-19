@@ -1,6 +1,8 @@
-// Branch configurations - Based on official curriculum
-// B.Tech: Total 160 credits = IC(60) + DC(66) + DE(var) + FE(22) + MTP/ISTP(12)
-// B.S.-CS: Total 163 credits = IC(52) + DC(82) + DE(var) + FE(15) + Research(14)
+// Branch configurations - Based on official IIT Mandi curriculum (PDF: Academic Discussion B.Tech & B.S. 2023)
+// B.Tech: Total 160 credits = IC(60) + DC+DE(66) + FE(22) + MTP/ISTP(12)  [most branches]
+// B.Tech EE: Total 161 credits = IC(60) + DC+DE(72) + FE(17) + MTP/ISTP(12)  [special case]
+// B.S.-CS: Total 163 credits = IC(52) + DC+DE(82) + FE(15) + Research(14)
+// DC-DE split per branch from PDF page 18 table
 
 export interface BranchConfig {
   code: string;
@@ -70,10 +72,10 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     name: 'Electrical Engineering',
     fullName: 'B.Tech in Electrical Engineering',
     type: 'BTech',
-    totalCredits: 160,
+    totalCredits: 161, // EE is 161 credits (special case per PDF page 3)
     icCredits: 60,
-    dcCredits: 52,    // DC=52 (combined with DE as 52+20=72)
-    deCredits: 20,    // DE=20
+    dcCredits: 52,    // DC=52
+    deCredits: 20,    // DE=20, DC+DE=72 total
     feCredits: 17,    // FE=17 (SPECIAL: not 22)
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
@@ -193,8 +195,8 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     type: 'BS',
     totalCredits: 163,
     icCredits: 52,    // IC Compulsory(31) + IC Basket(6) + HSS(12) + IKS(3)
-    dcCredits: 82,    // Discipline Core (higher than BTech)
-    deCredits: 24,    // Discipline Electives
+    dcCredits: 59,    // Discipline Core (DC only, per PDF page 18 DC-DE split table)
+    deCredits: 23,    // Discipline Electives (DC+DE=82 total per PDF)
     feCredits: 15,    // Free Electives (lowest)
     mtpIstpCredits: 14, // Research & Communication Projects (not MTP/ISTP)
     minCreditsForMTP: 0, // No MTP requirement for BS
