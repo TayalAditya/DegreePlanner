@@ -25,11 +25,16 @@ model User {
   enrollmentId  String?   @unique
   department    String?
   branch        String?   // Branch code (CSE, ECE, etc.)
+  previousBranch String?  // Previous branch (for branch change tracking)
   batch         Int?      // Year of joining
-  
+
   // Academic preferences
   doingMTP      Boolean   @default(true)
   doingISTP     Boolean   @default(true)
+
+  // P/F course tracking
+  totalPassFailCredits Int @default(0) // Total P/F credits taken
+  passFailPerSemester  Int @default(0) // Current semester P/F credits
   
   // Relations
   programs      UserProgram[]
@@ -157,12 +162,18 @@ model Course {
   department      String
   level           Int      // 100, 200, 300, 400 level
   description     String?
-  
+
   // Course offering
   offeredInFall   Boolean  @default(false)
   offeredInSpring Boolean  @default(false)
   offeredInSummer Boolean  @default(false)
-  
+
+  // Special course types
+  isPassFailEligible Boolean @default(false) // Can be taken as P/F
+  isBranchSpecific Boolean  @default(false) // e.g., DP-010P (2 credits for all branches)
+  requiredBranches String[] // If branchSpecific, which branches must take it
+  requiredSemester Int?     // If branchSpecific, which semester (e.g., 8 for DP-010P)
+
   isActive        Boolean  @default(true)
   
   createdAt       DateTime @default(now())
@@ -247,6 +258,8 @@ enum CourseCategoryType {
   IKS             // Indian Knowledge System
   MTP             // Major Technical Project
   ISTP            // Interactive Socio-Technical Practicum
+  INTERNSHIP      // Internship
+  BACKLOG         // Cleared backlog (F/FS grades)
   NA              // Not Applicable
 }
 
@@ -258,22 +271,38 @@ model CourseEnrollment {
   semester        Int              // Which semester number (1, 2, 3...)
   year            Int              // Academic year
   term            Term
-  
+
   courseType      CourseType
   programId       String?          // Which program this counts towards
-  
+
   grade           String?
   status          EnrollmentStatus @default(IN_PROGRESS)
-  
+
+  // Pass/Fail courses
+  isPassFail      Boolean          @default(false)
+  passFailCredits Int              @default(0)  // Credits if Pass/Fail
+
+  // Internship support
+  isInternship    Boolean          @default(false)
+  internshipType  InternshipType?  // REMOTE or ONSITE
+  internshipDays  Int?             // Number of days (for 6-week, BS doesn't get credits)
+
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-  
+
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   course          Course           @relation(fields: [courseId], references: [id])
-  
+
   @@unique([userId, courseId, semester, year, term])
   @@index([userId])
   @@index([semester])
+  @@index([isPassFail])
+  @@index([isInternship])
+}
+
+enum InternshipType {
+  REMOTE          // 6 credits (semester-long)
+  ONSITE          // 9 credits (P/F FE)
 }
 
 enum Term {
