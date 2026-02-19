@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Award, TrendingUp, CheckCircle, Clock, Target } from "lucide-react";
+import { CheckCircle, Clock, Target } from "lucide-react";
 
 interface Enrollment {
   id: string;
@@ -43,6 +43,7 @@ interface ProgressData {
 
 export default function ProgressPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [totalCreditsRequired, setTotalCreditsRequired] = useState(160);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,10 +52,24 @@ export default function ProgressPage() {
 
   const fetchProgress = async () => {
     try {
-      const res = await fetch("/api/enrollments");
-      if (res.ok) {
-        const data = await res.json();
+      const [enrollmentsRes, programsRes] = await Promise.all([
+        fetch("/api/enrollments"),
+        fetch("/api/programs"),
+      ]);
+      if (enrollmentsRes.ok) {
+        const data = await enrollmentsRes.json();
         setEnrollments(data);
+      }
+      if (programsRes.ok) {
+        const data = await programsRes.json();
+        // Find primary major program
+        const primary = (data.programs || data).find(
+          (p: { isPrimary?: boolean; programType?: string; program?: { totalCreditsRequired?: number; type?: string } }) =>
+            p.isPrimary || p.programType === "MAJOR"
+        );
+        if (primary?.program?.totalCreditsRequired) {
+          setTotalCreditsRequired(primary.program.totalCreditsRequired);
+        }
       }
     } catch (error) {
       console.error("Failed to fetch progress:", error);
@@ -126,7 +141,7 @@ export default function ProgressPage() {
     return {
       totalCreditsEarned,
       totalCreditsInProgress,
-      totalCreditsRequired: 160, // IIT Mandi standard
+      totalCreditsRequired,
       creditsByType,
       creditsInProgressByType,
       semesterWiseCredits,

@@ -180,13 +180,13 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   EP_5: [{ code: "EE311", name: "Device Electronics for Integrated Circuits", credits: 3, category: "DC", semester: 5 }, { code: "EP302", name: "Computational Methods for Engineering", credits: 3, category: "DC", semester: 5 }],
   EP_6: [{ code: "EP402P", name: "Engineering Physics Practicum", credits: 4, category: "DC", semester: 6 }, { code: "PH502", name: "Photonics", credits: 3, category: "DC", semester: 6 }],
 
-  // MnC
-  MnC_1: commonSem1,
-  MnC_2: commonSem2,
-  MnC_3: [...commonSem3, { code: "CS208", name: "Mathematical Foundations of Computer Science", credits: 4, category: "DC", semester: 3 }, { code: "MA211", name: "Ordinary Differential Equations", credits: 4, category: "DC", semester: 3 }],
-  MnC_4: [...commonSem4, { code: "MA220", name: "Partial Differential Equations", credits: 4, category: "DC", semester: 4 }, { code: "CS214", name: "Computer Organisation", credits: 4, category: "DC", semester: 4 }],
-  MnC_5: [{ code: "MA210", name: "Real and Complex Analysis", credits: 3, category: "DC", semester: 5 }, { code: "MA221", name: "Numerical Analysis", credits: 4, category: "DC", semester: 5 }],
-  MnC_6: [{ code: "MA222", name: "Applied Linear Programming", credits: 4, category: "DC", semester: 6 }, { code: "CS312", name: "Design of Algorithms", credits: 4, category: "DC", semester: 6 }],
+  // MNC (Mathematics & Computing)
+  MNC_1: commonSem1,
+  MNC_2: commonSem2,
+  MNC_3: [...commonSem3, { code: "CS208", name: "Mathematical Foundations of Computer Science", credits: 4, category: "DC", semester: 3 }, { code: "MA211", name: "Ordinary Differential Equations", credits: 4, category: "DC", semester: 3 }],
+  MNC_4: [...commonSem4, { code: "MA220", name: "Partial Differential Equations", credits: 4, category: "DC", semester: 4 }, { code: "CS214", name: "Computer Organisation", credits: 4, category: "DC", semester: 4 }],
+  MNC_5: [{ code: "MA210", name: "Real and Complex Analysis", credits: 3, category: "DC", semester: 5 }, { code: "MA221", name: "Numerical Analysis", credits: 4, category: "DC", semester: 5 }],
+  MNC_6: [{ code: "MA222", name: "Applied Linear Programming", credits: 4, category: "DC", semester: 6 }, { code: "CS312", name: "Design of Algorithms", credits: 4, category: "DC", semester: 6 }],
 
   // MSE
   MSE_1: commonSem1,
@@ -204,21 +204,21 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   GE_5: [{ code: "DS201", name: "Data Handling and Vizualization", credits: 3, category: "DC", semester: 5 }, { code: "EE301", name: "Control Systems", credits: 3, category: "DC", semester: 5 }],
   GE_6: [{ code: "ME309", name: "Theory of Machines", credits: 4, category: "DC", semester: 6 }],
 
-  // VLSI
-  VLSI_1: commonSem1,
-  VLSI_2: commonSem2,
-  VLSI_3: [...commonSem3, { code: "EE260", name: "Signals and Systems", credits: 3, category: "DC", semester: 3 }, { code: "EE210", name: "Digital System Design and Practicum", credits: 4, category: "DC", semester: 3 }],
-  VLSI_4: [...commonSem4, { code: "EE203", name: "Network Theory", credits: 3, category: "DC", semester: 4 }],
-  VLSI_5: [{ code: "EE301", name: "Control Systems", credits: 4, category: "DC", semester: 5 }, { code: "EE202", name: "Electromagnetic Theory and Transmission Lines", credits: 3, category: "DC", semester: 5 }],
-  VLSI_6: [{ code: "EE326", name: "Computer Organization and Design", credits: 4, category: "DC", semester: 6 }, { code: "EE211", name: "Analog Circuit Design", credits: 4, category: "DC", semester: 6 }],
+  // MEVLSI (Microelectronics & VLSI)
+  MEVLSI_1: commonSem1,
+  MEVLSI_2: commonSem2,
+  MEVLSI_3: [...commonSem3, { code: "EE260", name: "Signals and Systems", credits: 3, category: "DC", semester: 3 }, { code: "EE210", name: "Digital System Design and Practicum", credits: 4, category: "DC", semester: 3 }],
+  MEVLSI_4: [...commonSem4, { code: "EE203", name: "Network Theory", credits: 3, category: "DC", semester: 4 }],
+  MEVLSI_5: [{ code: "EE301", name: "Control Systems", credits: 4, category: "DC", semester: 5 }, { code: "EE202", name: "Electromagnetic Theory and Transmission Lines", credits: 3, category: "DC", semester: 5 }],
+  MEVLSI_6: [{ code: "EE326", name: "Computer Organization and Design", credits: 4, category: "DC", semester: 6 }, { code: "EE211", name: "Analog Circuit Design", credits: 4, category: "DC", semester: 6 }],
 
-  // CS (B.S. Chemical Sciences)
-  CS_1: commonSem1,
-  CS_2: commonSem2,
-  CS_3: [...commonSem3, { code: "CY301", name: "Principles and Theories of Physical Chemistry", credits: 3, category: "DC", semester: 3 }, { code: "CY302", name: "Principles of Organic Chemistry", credits: 3, category: "DC", semester: 3 }],
-  CS_4: [...commonSem4, { code: "CY303", name: "Fundamentals of Inorganic Chemistry", credits: 3, category: "DC", semester: 4 }, { code: "CY304", name: "Fundamental Analytical Chemistry", credits: 3, category: "DC", semester: 4 }],
-  CS_5: [{ code: "CY401", name: "Introduction to Quantum Chemistry and Molecular Spectroscopy", credits: 3, category: "DC", semester: 5 }, { code: "CY531", name: "Organic Reactions and Mechanisms", credits: 3, category: "DC", semester: 5 }],
-  CS_6: [{ code: "CY533", name: "Chemistry of Main Group Elements", credits: 3, category: "DC", semester: 6 }, { code: "CY512", name: "Advanced Quantum Chemistry", credits: 3, category: "DC", semester: 6 }],
+  // BSCS (B.S. Chemical Sciences)
+  BSCS_1: commonSem1,
+  BSCS_2: commonSem2,
+  BSCS_3: [...commonSem3, { code: "CY301", name: "Principles and Theories of Physical Chemistry", credits: 3, category: "DC", semester: 3 }, { code: "CY302", name: "Principles of Organic Chemistry", credits: 3, category: "DC", semester: 3 }],
+  BSCS_4: [...commonSem4, { code: "CY303", name: "Fundamentals of Inorganic Chemistry", credits: 3, category: "DC", semester: 4 }, { code: "CY304", name: "Fundamental Analytical Chemistry", credits: 3, category: "DC", semester: 4 }],
+  BSCS_5: [{ code: "CY401", name: "Introduction to Quantum Chemistry and Molecular Spectroscopy", credits: 3, category: "DC", semester: 5 }, { code: "CY531", name: "Organic Reactions and Mechanisms", credits: 3, category: "DC", semester: 5 }],
+  BSCS_6: [{ code: "CY533", name: "Chemistry of Main Group Elements", credits: 3, category: "DC", semester: 6 }, { code: "CY512", name: "Advanced Quantum Chemistry", credits: 3, category: "DC", semester: 6 }],
 };
 
 export function getDefaultCurriculum(branch: string, semester: number): DefaultCourse[] {

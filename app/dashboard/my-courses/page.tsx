@@ -49,11 +49,11 @@ const BRANCH_REQUIREMENTS: Record<string, { dc: number; de: number }> = {
   CE: { dc: 49, de: 17 },
   BE: { dc: 42, de: 24 },
   EP: { dc: 37, de: 29 },
-  MnC: { dc: 51, de: 15 },
+  MNC: { dc: 51, de: 15 },
   MSE: { dc: 45, de: 21 },
   GE: { dc: 36, de: 30 },
-  VLSI: { dc: 54, de: 12 },
-  CS: { dc: 59, de: 23 }, // B.S. Chemical Sciences
+  MEVLSI: { dc: 54, de: 12 },
+  BSCS: { dc: 59, de: 23 }, // B.S. Chemical Sciences
 };
 
 export default function MyCoursesPage() {
