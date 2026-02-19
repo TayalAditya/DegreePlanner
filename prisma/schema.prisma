@@ -95,18 +95,13 @@ model Program {
   description         String?
   
   // Credit distribution
-  coreCredits         Int          @default(0)
+  icCredits           Int          @default(0) // Institute Core (fixed per program type)
+  dcCredits           Int          @default(0) // Discipline Core
   deCredits           Int          @default(0) // Discipline Electives
-  peCredits           Int          @default(0) // Program Electives
-  freeElectiveCredits Int          @default(0)
+  feCredits           Int          @default(0) // Free Electives
+  mtpIstpCredits      Int          @default(0) // MTP + ISTP combined (or Research for BS)
   
-  // MTP/ISTP requirements
-  mtpRequired         Boolean      @default(false)
-  mtpCredits          Int          @default(0)
-  istpAllowed         Boolean      @default(false)
-  istpCredits         Int          @default(0)
-  
-  // Minimum credits before MTP/ISTP
+  // MTP/ISTP eligibility requirements
   minCreditsForMtp    Int?
   minSemesterForMtp   Int?
   
