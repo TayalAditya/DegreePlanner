@@ -1,203 +1,203 @@
-// Branch configurations for different engineering departments
+// Branch configurations - Based on official curriculum
+// B.Tech: Total 160 credits = IC(60) + DC(66) + DE(var) + FE(22) + MTP/ISTP(12)
+// B.S.-CS: Total 163 credits = IC(52) + DC(82) + DE(var) + FE(15) + Research(14)
+
 export interface BranchConfig {
   code: string;
   name: string;
   fullName: string;
   type: 'BTech' | 'BS';
   totalCredits: number;
-  coreCredits: number;
-  dcCredits: number; // Departmental Core
+  icCredits: number; // Institute Core (fixed per program type)
+  dcCredits: number; // Discipline Core
   deCredits: number; // Discipline Electives
   feCredits: number; // Free Electives
-  peCredits?: number; // Program Electives
-  mtpCredits: number;
-  istpCredits?: number;
+  mtpIstpCredits: number; // MTP + ISTP combined (or Research for BS)
   minCreditsForMTP: number;
   minSemesterForMTP: number;
 }
 
 export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
+  // B.Tech Programs - All have IC=60, MTP/ISTP=12, most have FE=22 (except EE=17)
+
   CSE: {
     code: 'CSE',
-    name: 'Computer Science',
-    fullName: 'Computer Science and Engineering',
+    name: 'Computer Science & Engineering',
+    fullName: 'B.Tech in Computer Science & Engineering',
     type: 'BTech',
     totalCredits: 160,
-    coreCredits: 80,
-    dcCredits: 24,
+    icCredits: 60,    // IC Compulsory(39) + IC Basket(6) + HSS(12) + IKS(3)
+    dcCredits: 38,    // Discipline Core
+    deCredits: 28,    // Discipline Electives
+    feCredits: 22,    // Free Electives
+    mtpIstpCredits: 12, // MTP(8) + ISTP(4)
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 6,
+  },
+
+  DSE: {
+    code: 'DSE',
+    name: 'Data Science & Engineering',
+    fullName: 'B.Tech in Data Science & Engineering',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 33,
+    deCredits: 33,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 6,
+  },
+
+  MEVLSI: {
+    code: 'MEVLSI',
+    name: 'Microelectronics & VLSI',
+    fullName: 'B.Tech in Microelectronics & VLSI',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 54,
+    deCredits: 12,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 6,
+  },
+
+  EE: {
+    code: 'EE',
+    name: 'Electrical Engineering',
+    fullName: 'B.Tech in Electrical Engineering',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 52,    // DC=52 (combined with DE as 52+20=72)
+    deCredits: 20,    // DE=20
+    feCredits: 17,    // FE=17 (SPECIAL: not 22)
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 6,
+  },
+
+  MNC: {
+    code: 'MNC',
+    name: 'Mathematics & Computing',
+    fullName: 'B.Tech in Mathematics & Computing',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 51,
+    deCredits: 15,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 6,
+  },
+
+  CE: {
+    code: 'CE',
+    name: 'Civil Engineering',
+    fullName: 'B.Tech in Civil Engineering',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 49,
+    deCredits: 17,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 6,
+  },
+
+  BE: {
+    code: 'BE',
+    name: 'Bioengineering',
+    fullName: 'B.Tech in Bioengineering',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 42,
     deCredits: 24,
-    feCredits: 16,
-    peCredits: 10,
-    mtpCredits: 6,
-    istpCredits: 6,
-    minCreditsForMTP: 120,
-    minSemesterForMTP: 7,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 6,
   },
-  ECE: {
-    code: 'ECE',
-    name: 'Electronics & Communication',
-    fullName: 'Electronics and Communication Engineering',
+
+  EP: {
+    code: 'EP',
+    name: 'Engineering Physics',
+    fullName: 'B.Tech in Engineering Physics',
     type: 'BTech',
     totalCredits: 160,
-    coreCredits: 82,
-    dcCredits: 22,
-    deCredits: 24,
-    feCredits: 16,
-    peCredits: 10,
-    mtpCredits: 6,
-    minCreditsForMTP: 120,
-    minSemesterForMTP: 7,
+    icCredits: 60,
+    dcCredits: 37,
+    deCredits: 29,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 6,
   },
-  EEE: {
-    code: 'EEE',
-    name: 'Electrical & Electronics',
-    fullName: 'Electrical and Electronics Engineering',
+
+  GE: {
+    code: 'GE',
+    name: 'General Engineering',
+    fullName: 'B.Tech in General Engineering',
     type: 'BTech',
     totalCredits: 160,
-    coreCredits: 80,
-    dcCredits: 24,
-    deCredits: 24,
-    feCredits: 16,
-    peCredits: 10,
-    mtpCredits: 6,
-    minCreditsForMTP: 120,
-    minSemesterForMTP: 7,
+    icCredits: 60,
+    dcCredits: 36,
+    deCredits: 30,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 6,
   },
-  MECH: {
-    code: 'MECH',
-    name: 'Mechanical',
-    fullName: 'Mechanical Engineering',
+
+  ME: {
+    code: 'ME',
+    name: 'Mechanical Engineering',
+    fullName: 'B.Tech in Mechanical Engineering',
     type: 'BTech',
     totalCredits: 160,
-    coreCredits: 84,
-    dcCredits: 20,
-    deCredits: 24,
-    feCredits: 16,
-    peCredits: 10,
-    mtpCredits: 6,
-    minCreditsForMTP: 120,
-    minSemesterForMTP: 7,
+    icCredits: 60,
+    dcCredits: 50,
+    deCredits: 16,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 6,
   },
-  CIVIL: {
-    code: 'CIVIL',
-    name: 'Civil',
-    fullName: 'Civil Engineering',
+
+  MSE: {
+    code: 'MSE',
+    name: 'Materials Science & Engineering',
+    fullName: 'B.Tech in Materials Science & Engineering',
     type: 'BTech',
     totalCredits: 160,
-    coreCredits: 82,
-    dcCredits: 22,
-    deCredits: 24,
-    feCredits: 16,
-    peCredits: 10,
-    mtpCredits: 6,
-    minCreditsForMTP: 120,
-    minSemesterForMTP: 7,
+    icCredits: 60,
+    dcCredits: 45,
+    deCredits: 21,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 6,
   },
-  CHE: {
-    code: 'CHE',
-    name: 'Chemical',
-    fullName: 'Chemical Engineering',
-    type: 'BTech',
-    totalCredits: 160,
-    coreCredits: 86,
-    dcCredits: 20,
-    deCredits: 22,
-    feCredits: 16,
-    peCredits: 10,
-    mtpCredits: 6,
-    minCreditsForMTP: 120,
-    minSemesterForMTP: 7,
-  },
-  BIO: {
-    code: 'BIO',
-    name: 'Biotechnology',
-    fullName: 'Biotechnology',
-    type: 'BTech',
-    totalCredits: 160,
-    coreCredits: 80,
-    dcCredits: 24,
-    deCredits: 24,
-    feCredits: 16,
-    peCredits: 10,
-    mtpCredits: 6,
-    minCreditsForMTP: 120,
-    minSemesterForMTP: 7,
-  },
-  PHARMA: {
-    code: 'PHARMA',
-    name: 'Pharmacy',
-    fullName: 'Pharmacy',
-    type: 'BTech',
-    totalCredits: 160,
-    coreCredits: 88,
-    dcCredits: 20,
-    deCredits: 20,
-    feCredits: 16,
-    peCredits: 10,
-    mtpCredits: 6,
-    minCreditsForMTP: 120,
-    minSemesterForMTP: 7,
-  },
-  ENI: {
-    code: 'ENI',
-    name: 'Electronics & Instrumentation',
-    fullName: 'Electronics and Instrumentation Engineering',
-    type: 'BTech',
-    totalCredits: 160,
-    coreCredits: 80,
-    dcCredits: 24,
-    deCredits: 24,
-    feCredits: 16,
-    peCredits: 10,
-    mtpCredits: 6,
-    minCreditsForMTP: 120,
-    minSemesterForMTP: 7,
-  },
-  CHEM: {
-    code: 'CHEM',
-    name: 'Chemistry',
-    fullName: 'Chemistry',
-    type: 'BTech',
-    totalCredits: 160,
-    coreCredits: 82,
-    dcCredits: 22,
-    deCredits: 24,
-    feCredits: 16,
-    peCredits: 10,
-    mtpCredits: 6,
-    minCreditsForMTP: 120,
-    minSemesterForMTP: 7,
-  },
-  MATH: {
-    code: 'MATH',
-    name: 'Mathematics',
-    fullName: 'Mathematics',
-    type: 'BTech',
-    totalCredits: 160,
-    coreCredits: 78,
-    dcCredits: 26,
-    deCredits: 24,
-    feCredits: 16,
-    peCredits: 10,
-    mtpCredits: 6,
-    minCreditsForMTP: 120,
-    minSemesterForMTP: 7,
-  },
-  // BS Branch (standalone with different structure)
-  BS: {
-    code: 'BS',
-    name: 'General Sciences',
-    fullName: 'Bachelor of Science',
+
+  // BS Program - Different structure
+  BSCS: {
+    code: 'BSCS',
+    name: 'Chemical Sciences',
+    fullName: 'B.S. in Chemical Sciences',
     type: 'BS',
-    totalCredits: 128,
-    coreCredits: 60,
-    dcCredits: 20,
-    deCredits: 20,
-    feCredits: 20,
-    peCredits: 8,
-    mtpCredits: 0,
-    istpCredits: 0,
-    minCreditsForMTP: 0,
+    totalCredits: 163,
+    icCredits: 52,    // IC Compulsory(31) + IC Basket(6) + HSS(12) + IKS(3)
+    dcCredits: 82,    // Discipline Core (higher than BTech)
+    deCredits: 24,    // Discipline Electives
+    feCredits: 15,    // Free Electives (lowest)
+    mtpIstpCredits: 14, // Research & Communication Projects (not MTP/ISTP)
+    minCreditsForMTP: 0, // No MTP requirement for BS
     minSemesterForMTP: 0,
   },
 };
