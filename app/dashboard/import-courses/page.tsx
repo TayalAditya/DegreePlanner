@@ -21,6 +21,7 @@ interface SelectedCourse extends DefaultCourse {
 
 export default function ImportCoursesPage() {
   const [branch, setBranch] = useState("CSE");
+  const [geSubBranch, setGeSubBranch] = useState("GERAI");
   const [currentSemester, setCurrentSemester] = useState(6);
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
   const [expandedSemesters, setExpandedSemesters] = useState<number[]>([1, 2, 3, 4, 5, 6]);
@@ -33,7 +34,7 @@ export default function ImportCoursesPage() {
 
   useEffect(() => {
     loadDefaultCourses();
-  }, [branch, currentSemester]);
+  }, [branch, geSubBranch, currentSemester]);
 
   const loadUserSettings = async () => {
     try {
@@ -48,7 +49,8 @@ export default function ImportCoursesPage() {
   };
 
   const loadDefaultCourses = () => {
-    const defaultCourses = getAllDefaultCourses(branch, currentSemester);
+    const effectiveBranch = branch === "GE" ? geSubBranch : branch;
+    const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester);
     const coursesWithSelection = defaultCourses.map((course) => ({
       ...course,
       selected: true, // By default all are selected
@@ -196,6 +198,20 @@ export default function ImportCoursesPage() {
               <option value="BSCS">BSCS (B.S.)</option>
             </select>
           </div>
+          {branch === "GE" && (
+            <div>
+              <label className="block text-sm font-medium mb-2">GE Sub-Branch</label>
+              <select
+                value={geSubBranch}
+                onChange={(e) => setGeSubBranch(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border bg-background"
+              >
+                <option value="GERAI">Robotics &amp; AI</option>
+                <option value="GECE">Communication Engineering</option>
+                <option value="GEMECH">Mechatronics</option>
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium mb-2">Current Semester</label>
             <select
