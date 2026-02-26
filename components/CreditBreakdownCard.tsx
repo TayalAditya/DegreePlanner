@@ -55,18 +55,25 @@ export function CreditBreakdownCard({
     },
   ].filter((cat) => cat.required > 0);
 
+  const barClasses: Record<string, string> = {
+    indigo: "bg-indigo-600 dark:bg-indigo-500",
+    cyan: "bg-cyan-600 dark:bg-cyan-500",
+    purple: "bg-purple-600 dark:bg-purple-500",
+    emerald: "bg-emerald-600 dark:bg-emerald-500",
+  };
+
   const getStatusIcon = (completed: number, required: number, inProgress: number) => {
     if (completed >= required) {
       return <CheckCircle2 className="w-5 h-5 text-green-500" />;
     } else if (completed + inProgress >= required) {
       return <AlertCircle className="w-5 h-5 text-yellow-500" />;
     }
-    return <Circle className="w-5 h-5 text-gray-300" />;
+    return <Circle className="w-5 h-5 text-foreground-muted" />;
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold text-gray-900 mb-6">
+    <div className="bg-surface rounded-lg border border-border shadow-sm p-6">
+      <h3 className="text-lg font-semibold text-foreground mb-6">
         Credit Breakdown
       </h3>
 
@@ -101,7 +108,7 @@ export function CreditBreakdownCard({
               </div>
               <div className="w-full bg-background-secondary dark:bg-background rounded-full h-2">
                 <div
-                  className={`bg-${category.color}-600 dark:bg-${category.color}-500 h-2 rounded-full transition-all duration-500`}
+                  className={`${barClasses[category.color] || "bg-gray-400"} h-2 rounded-full transition-all duration-500`}
                   style={{ width: `${percentage}%` }}
                 ></div>
               </div>

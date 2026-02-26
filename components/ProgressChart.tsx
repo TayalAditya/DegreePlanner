@@ -79,23 +79,27 @@ export function ProgressChart({ progress, isLoading }: ProgressChartProps) {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={250}>
-        <PieChart>
+      <ResponsiveContainer width="100%" height={200}>
+        <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
           <Pie
             data={data}
             dataKey="value"
             nameKey="name"
             cx="50%"
             cy="50%"
-            outerRadius={80}
-            label={({ name, value }) => `${name}: ${value}`}
+            outerRadius={70}
+            innerRadius={35}
           >
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={entry.color} />
             ))}
           </Pie>
-          <Tooltip />
-          <Legend />
+          <Tooltip formatter={(value, name) => [`${value} credits`, name]} />
+          <Legend
+            iconType="circle"
+            iconSize={8}
+            wrapperStyle={{ fontSize: "12px" }}
+          />
         </PieChart>
       </ResponsiveContainer>
     </div>
