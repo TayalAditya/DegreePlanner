@@ -49,6 +49,28 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { count } = await prisma.courseEnrollment.deleteMany({
+      where: { userId: session.user.id },
+    });
+
+    return NextResponse.json({ success: true, deleted: count });
+  } catch (error) {
+    console.error("Error deleting enrollments:", error);
+    return NextResponse.json(
+      { error: "Failed to delete enrollments" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
