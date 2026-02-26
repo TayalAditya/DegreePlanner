@@ -11,6 +11,7 @@ import {
   Info,
   AlertCircle,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { getAllDefaultCourses, getDefaultCurriculum, DefaultCourse } from "@/lib/defaultCurriculum";
 
@@ -26,6 +27,7 @@ export default function ImportCoursesPage() {
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
   const [expandedSemesters, setExpandedSemesters] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
@@ -87,6 +89,23 @@ export default function ImportCoursesPage() {
     setCourses(
       courses.map((c) => (c.code === code ? { ...c, grade } : c))
     );
+  };
+
+  const handleReset = async () => {
+    if (!confirm("Are you sure? This will delete ALL your enrolled courses.")) return;
+    setResetting(true);
+    try {
+      const res = await fetch("/api/enrollments", { method: "DELETE" });
+      if (res.ok) {
+        alert("All courses deleted. You can now re-import.");
+      } else {
+        alert("Failed to delete courses.");
+      }
+    } catch {
+      alert("An error occurred.");
+    } finally {
+      setResetting(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -161,13 +180,23 @@ export default function ImportCoursesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-          Import Your Courses
-        </h1>
-        <p className="text-foreground-secondary mt-2">
-          Select courses you've completed from semesters 1-{currentSemester}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Import Your Courses
+          </h1>
+          <p className="text-foreground-secondary mt-2">
+            Select courses you've completed from semesters 1-{currentSemester}
+          </p>
+        </div>
+        <button
+          onClick={handleReset}
+          disabled={resetting}
+          className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50 flex-shrink-0"
+        >
+          {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+          Reset All
+        </button>
       </div>
 
       {/* Configuration */}
