@@ -38,7 +38,6 @@ export function DashboardNav({ user }: DashboardNavProps) {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Import Courses", href: "/dashboard/import-courses", icon: Download },
-    { name: "My Courses", href: "/dashboard/my-courses", icon: CheckSquare },
     { name: "Courses", href: "/dashboard/courses", icon: BookOpen },
     { name: "Programs", href: "/dashboard/programs", icon: GraduationCap },
     { name: "Timetable", href: "/dashboard/timetable", icon: Calendar },
