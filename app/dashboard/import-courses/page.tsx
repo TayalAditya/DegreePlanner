@@ -68,9 +68,6 @@ export default function ImportCoursesPage() {
     }
   };
 
-  // Courses that appear in both Sem 1 and Sem 2 — selecting one auto-deselects the other
-  const MUTUAL_EXCLUSIVE_CODES = ["IC140", "IC102P", "IC181"];
-
   const toggleCourse = (code: string, semester: number) => {
     setCourses((prev) => {
       const clicked = prev.find((c) => c.code === code && c.semester === semester);
@@ -78,18 +75,36 @@ export default function ImportCoursesPage() {
       const nowSelected = !clicked.selected;
 
       return prev.map((c) => {
+        // Toggle the clicked course itself
         if (c.code === code && c.semester === semester) {
           return { ...c, selected: nowSelected };
         }
-        // If this is a mutual-exclusive course being selected, deselect the other semester copy
-        if (
-          MUTUAL_EXCLUSIVE_CODES.includes(code) &&
-          c.code === code &&
-          c.semester !== semester &&
-          nowSelected
-        ) {
-          return { ...c, selected: false };
+
+        if (nowSelected) {
+          // IC140/IC102P/IC181: selecting in one semester deselects the same course in the other
+          if (
+            ["IC140", "IC102P", "IC181"].includes(code) &&
+            c.code === code &&
+            c.semester !== semester
+          ) {
+            return { ...c, selected: false };
+          }
+
+          // ICB basket: selecting one deselects all other ICB courses in the SAME semester
+          if (clicked.category === "ICB" && c.category === "ICB" && c.semester === semester) {
+            return { ...c, selected: false };
+          }
+
+          // IC140 ↔ IC102P pairing: always in opposite semesters
+          if (code === "IC140" || code === "IC102P") {
+            const paired = code === "IC140" ? "IC102P" : "IC140";
+            // Auto-select paired course in the OTHER semester
+            if (c.code === paired && c.semester !== semester) return { ...c, selected: true };
+            // Auto-deselect paired course in the SAME semester
+            if (c.code === paired && c.semester === semester) return { ...c, selected: false };
+          }
         }
+
         return c;
       });
     });
@@ -313,8 +328,8 @@ export default function ImportCoursesPage() {
           <p className="text-yellow-800 dark:text-yellow-200 mt-1">
             Uncheck any courses you haven't taken. You can add grades optionally. Additional courses can be added later from "My Courses" page.
           </p>
-          <p className="text-yellow-800 dark:text-yellow-200 mt-2 font-medium">
-            ⚠️ IC140, IC102P, and IC181 appear in both Sem 1 and Sem 2 — keep only the semester you actually took them in, uncheck the other.
+          <p className="text-yellow-800 dark:text-yellow-200 mt-2">
+            Selecting IC140 in a semester auto-checks IC102P in the other (they always pair across semesters). IC181 is semester-exclusive. IC Basket courses allow only one selection per semester.
           </p>
         </div>
       </div>
@@ -370,12 +385,20 @@ export default function ImportCoursesPage() {
 
                 {isExpanded && (
                   <div className="border-t border-border p-4 space-y-2">
+                    {/* ICB basket header — shown once before first basket course */}
+                    {semCourses.some((c) => c.category === "ICB") && (
+                      <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wide px-1 pt-1">
+                        IC Basket — choose exactly one ↓
+                      </p>
+                    )}
                     {semCourses.map((course) => (
                       <div
                         key={`${course.code}-${course.semester}`}
                         className={`p-4 rounded-lg border transition-all ${
                           course.selected
-                            ? "bg-blue-500/5 border-blue-500/20"
+                            ? course.category === "ICB"
+                              ? "bg-orange-500/5 border-orange-500/40"
+                              : "bg-blue-500/5 border-blue-500/20"
                             : "bg-background-secondary/60 border-border"
                         }`}
                       >
@@ -398,8 +421,12 @@ export default function ImportCoursesPage() {
                               <span className="text-sm text-foreground">{course.name}</span>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-xs px-2 py-1 rounded-full bg-purple-500/10 text-purple-600">
-                                {course.category}
+                              <span className={`text-xs px-2 py-1 rounded-full ${
+                                course.category === "ICB"
+                                  ? "bg-orange-500/10 text-orange-600"
+                                  : "bg-purple-500/10 text-purple-600"
+                              }`}>
+                                {course.category === "ICB" ? "IC Basket" : course.category}
                               </span>
                               <span className="text-xs text-foreground-secondary">
                                 {course.credits} credits
