@@ -64,7 +64,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
               </span>
             </Link>
 
-            <div className="hidden lg:ml-8 lg:flex lg:space-x-4">
+            <div className="hidden lg:ml-4 lg:flex lg:space-x-1 xl:space-x-3">
               {navigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
@@ -72,13 +72,13 @@ export function DashboardNav({ user }: DashboardNavProps) {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors ${
+                    className={`inline-flex items-center px-2 xl:px-3 py-2 border-b-2 text-sm font-medium transition-colors ${
                       isActive
                         ? "border-primary text-foreground"
                         : "border-transparent text-foreground-secondary hover:border-border hover:text-foreground"
                     }`}
                   >
-                    <Icon className="w-4 h-4 mr-2" />
+                    <Icon className="w-4 h-4 xl:mr-2" />
                     <span className="hidden xl:inline">{item.name}</span>
                   </Link>
                 );
@@ -90,13 +90,13 @@ export function DashboardNav({ user }: DashboardNavProps) {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors ${
+                    className={`inline-flex items-center px-2 xl:px-3 py-2 border-b-2 text-sm font-medium transition-colors ${
                       isActive
                         ? "border-primary text-foreground"
                         : "border-transparent text-foreground-secondary hover:border-border hover:text-foreground"
                     }`}
                   >
-                    <Icon className="w-4 h-4 mr-2" />
+                    <Icon className="w-4 h-4 xl:mr-2" />
                     <span className="hidden xl:inline">{item.name}</span>
                   </Link>
                 );
@@ -104,7 +104,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             </div>
           </div>
 
-          <div className="hidden lg:ml-6 lg:flex lg:items-center space-x-3">
+          <div className="hidden lg:ml-3 lg:flex lg:items-center space-x-2">
             <ThemeToggle />
             <div className="flex items-center pl-3 border-l border-border">
               {user.image && (
