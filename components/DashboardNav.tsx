@@ -54,10 +54,13 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
   return (
     <nav className="bg-surface dark:bg-surface border-b border-border no-print sticky top-0 z-50 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex">
-            <Link href="/dashboard" className="flex items-center">
+            <Link
+              href="/dashboard"
+              className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            >
               <GraduationCap className="w-7 h-7 text-primary" />
               <span className="ml-2 text-lg font-bold text-foreground hidden sm:block">
                 Degree Planner
@@ -76,7 +79,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
                       isActive
                         ? "border-primary text-foreground"
                         : "border-transparent text-foreground-secondary hover:border-border hover:text-foreground"
-                    }`}
+                    } rounded-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20`}
                   >
                     <Icon className="w-4 h-4 xl:mr-2" />
                     <span className="hidden xl:inline">{item.name}</span>
@@ -94,7 +97,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
                       isActive
                         ? "border-primary text-foreground"
                         : "border-transparent text-foreground-secondary hover:border-border hover:text-foreground"
-                    }`}
+                    } rounded-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20`}
                   >
                     <Icon className="w-4 h-4 xl:mr-2" />
                     <span className="hidden xl:inline">{item.name}</span>
@@ -121,7 +124,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             </div>
             <button
               onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-              className="inline-flex items-center px-3 py-2 border border-border text-sm font-medium rounded-md text-foreground-secondary hover:bg-background-secondary transition-colors"
+              className="inline-flex items-center px-3 py-2 border border-border text-sm font-medium rounded-md text-foreground-secondary hover:bg-background-secondary transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
             >
               <LogOut className="w-4 h-4 mr-2" />
               <span className="hidden xl:inline">Sign Out</span>
@@ -132,7 +135,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             <ThemeToggle />
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
+              className="inline-flex items-center justify-center p-2 rounded-md text-foreground-secondary hover:text-foreground hover:bg-background-secondary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
             >
               {mobileMenuOpen ? (
                 <X className="w-6 h-6" />
@@ -158,7 +161,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
                     isActive
                       ? "bg-primary bg-opacity-10 dark:bg-opacity-20 text-primary"
                       : "text-foreground-secondary hover:bg-background-secondary hover:text-foreground"
-                  }`}
+                  } focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <Icon className="w-5 h-5 mr-3" />
@@ -184,7 +187,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             <div className="mt-3 px-2 space-y-1">
               <button
                 onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-                className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-foreground-secondary hover:text-foreground hover:bg-background-secondary"
+                className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-foreground-secondary hover:text-foreground hover:bg-background-secondary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
               >
                 <LogOut className="w-5 h-5 mr-3" />
                 Sign Out
