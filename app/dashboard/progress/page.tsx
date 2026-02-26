@@ -164,15 +164,15 @@ export default function ProgressPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Academic Progress</h1>
-        <p className="text-foreground-secondary mt-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Academic Progress</h1>
+        <p className="text-foreground-secondary mt-2 text-sm sm:text-base">
           Track your degree completion and credit requirements
         </p>
       </div>
 
       {/* Overall Progress */}
       <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg border border-primary p-6">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <div>
             <h2 className="text-2xl font-bold text-foreground">Overall Progress</h2>
             <p className="text-foreground-secondary">
@@ -180,7 +180,7 @@ export default function ProgressPage() {
             </p>
           </div>
           <div className="text-right">
-            <p className="text-4xl font-bold text-primary">{completionPercentage}%</p>
+            <p className="text-3xl sm:text-4xl font-bold text-primary">{completionPercentage}%</p>
           </div>
         </div>
         <div className="w-full bg-surface rounded-full h-4 overflow-hidden">

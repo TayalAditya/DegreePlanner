@@ -11,57 +11,62 @@ const config: Config = {
     extend: {
       colors: {
         // Map to CSS variables for easy theming
-        background: "var(--background)",
-        'background-secondary': "var(--background-secondary)",
-        surface: "var(--surface)",
-        'surface-elevated': "var(--surface-elevated)",
-        'surface-hover': "var(--surface-hover)",
+        background: "rgb(var(--background-rgb) / <alpha-value>)",
+        'background-secondary': "rgb(var(--background-secondary-rgb) / <alpha-value>)",
+        surface: "rgb(var(--surface-rgb) / <alpha-value>)",
+        'surface-elevated': "rgb(var(--surface-elevated-rgb) / <alpha-value>)",
+        'surface-hover': "rgb(var(--surface-hover-rgb) / <alpha-value>)",
+
+        // shadcn-style aliases (used by some pages)
+        card: "rgb(var(--surface-rgb) / <alpha-value>)",
+        muted: "rgb(var(--background-secondary-rgb) / <alpha-value>)",
+        'muted-foreground': "rgb(var(--foreground-secondary-rgb) / <alpha-value>)",
         
-        foreground: "var(--foreground)",
-        'foreground-secondary': "var(--foreground-secondary)",
-        'foreground-muted': "var(--foreground-muted)",
+        foreground: "rgb(var(--foreground-rgb) / <alpha-value>)",
+        'foreground-secondary': "rgb(var(--foreground-secondary-rgb) / <alpha-value>)",
+        'foreground-muted': "rgb(var(--foreground-muted-rgb) / <alpha-value>)",
         
-        border: "var(--border)",
-        'border-strong': "var(--border-strong)",
+        border: "rgb(var(--border-rgb) / <alpha-value>)",
+        'border-strong': "rgb(var(--border-strong-rgb) / <alpha-value>)",
         
         // Brand colors with extended palette
         primary: {
-          DEFAULT: "var(--primary)",
-          hover: "var(--primary-hover)",
-          light: "var(--primary-light)",
-          foreground: "var(--primary-foreground)",
+          DEFAULT: "rgb(var(--primary-rgb) / <alpha-value>)",
+          hover: "rgb(var(--primary-hover-rgb) / <alpha-value>)",
+          light: "rgb(var(--primary-light-rgb) / <alpha-value>)",
+          foreground: "rgb(var(--primary-foreground-rgb) / <alpha-value>)",
         },
         secondary: {
-          DEFAULT: "var(--secondary)",
-          hover: "var(--secondary-hover)",
-          light: "var(--secondary-light)",
+          DEFAULT: "rgb(var(--secondary-rgb) / <alpha-value>)",
+          hover: "rgb(var(--secondary-hover-rgb) / <alpha-value>)",
+          light: "rgb(var(--secondary-light-rgb) / <alpha-value>)",
         },
         accent: {
-          DEFAULT: "var(--accent)",
-          hover: "var(--accent-hover)",
-          light: "var(--accent-light)",
+          DEFAULT: "rgb(var(--accent-rgb) / <alpha-value>)",
+          hover: "rgb(var(--accent-hover-rgb) / <alpha-value>)",
+          light: "rgb(var(--accent-light-rgb) / <alpha-value>)",
         },
         
         // Semantic colors with light variants
         success: {
-          DEFAULT: "var(--success)",
-          light: "var(--success-light)",
+          DEFAULT: "rgb(var(--success-rgb) / <alpha-value>)",
+          light: "rgb(var(--success-light-rgb) / <alpha-value>)",
         },
         warning: {
-          DEFAULT: "var(--warning)",
-          light: "var(--warning-light)",
+          DEFAULT: "rgb(var(--warning-rgb) / <alpha-value>)",
+          light: "rgb(var(--warning-light-rgb) / <alpha-value>)",
         },
         error: {
-          DEFAULT: "var(--error)",
-          light: "var(--error-light)",
+          DEFAULT: "rgb(var(--error-rgb) / <alpha-value>)",
+          light: "rgb(var(--error-light-rgb) / <alpha-value>)",
         },
         info: {
-          DEFAULT: "var(--info)",
-          light: "var(--info-light)",
+          DEFAULT: "rgb(var(--info-rgb) / <alpha-value>)",
+          light: "rgb(var(--info-light-rgb) / <alpha-value>)",
         },
         
-        hover: "var(--hover)",
-        active: "var(--active)",
+        hover: "rgb(var(--hover-rgb) / <alpha-value>)",
+        active: "rgb(var(--active-rgb) / <alpha-value>)",
       },
       boxShadow: {
         sm: "var(--shadow-sm)",
