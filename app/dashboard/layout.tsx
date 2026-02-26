@@ -18,7 +18,7 @@ export default async function DashboardLayout({
 
   if (!session.user.isApproved) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background-secondary p-4">
         <div className="max-w-md w-full bg-surface rounded-xl border border-border shadow-lg p-8 text-center">
           <h1 className="text-2xl font-bold text-foreground mb-4">
             Approval Pending
@@ -35,9 +35,9 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background-secondary">
       <DashboardNav user={session.user} />
-      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <main className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         <RouteTransition>{children}</RouteTransition>
       </main>
       <ScrollToTop />

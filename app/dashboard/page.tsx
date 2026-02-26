@@ -110,7 +110,7 @@ export default async function DashboardPage() {
               <Link
                 key={action.href}
                 href={action.href}
-                className="group relative overflow-hidden bg-surface rounded-xl border border-border p-4 sm:p-6 hover:border-primary transition-all duration-300 hover:shadow-xl hover:scale-105"
+                className="group relative overflow-hidden bg-surface rounded-xl border border-border p-4 sm:p-6 hover:border-primary transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 will-change-transform focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${action.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 

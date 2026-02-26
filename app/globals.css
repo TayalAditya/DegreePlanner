@@ -240,6 +240,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.2s ease, color 0.2s ease;
+  overflow-x: hidden;
   /* Mobile optimizations */
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -276,6 +277,7 @@ html {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
+  overflow-x: hidden;
 }
 
 ::selection {
