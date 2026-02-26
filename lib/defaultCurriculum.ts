@@ -14,7 +14,6 @@ const icCompSem1: DefaultCourse[] = [
   { code: "IC112",  name: "Calculus",                              credits: 2, category: "IC",  semester: 1 },
   { code: "IC113",  name: "Complex Variables and Vector Calculus", credits: 2, category: "IC",  semester: 1 },
   { code: "IC152",  name: "Computing and Data Science",            credits: 4, category: "IC",  semester: 1 },
-  { code: "IC161",  name: "Applied Electronics",                   credits: 3, category: "IC",  semester: 1 },
 ];
 
 // IC140, IC102P, IC181: mixed groups — some students had these in Sem-1, others Sem-2.
@@ -26,6 +25,7 @@ const icMixedSem1: DefaultCourse[] = [
 ];
 
 const icCompSem2: DefaultCourse[] = [
+  { code: "IC161",  name: "Applied Electronics",        credits: 3, category: "IC", semester: 2 },
   { code: "IC114",  name: "Linear Algebra",             credits: 2, category: "IC", semester: 2 },
   { code: "IC115",  name: "ODE & Integral Transforms",  credits: 2, category: "IC", semester: 2 },
   { code: "IC161P", name: "Applied Electronics Lab",    credits: 2, category: "IC", semester: 2 },
