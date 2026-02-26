@@ -130,7 +130,7 @@ export default function ImportCoursesPage() {
             <CheckCircle className="h-12 w-12 text-green-600" />
           </div>
           <h2 className="text-3xl font-bold mb-4">Courses Imported Successfully!</h2>
-          <p className="text-muted-foreground mb-6">
+          <p className="text-foreground-secondary mb-6">
             Your courses have been added to your profile. You can now view them in My Courses.
           </p>
           <a
@@ -163,7 +163,7 @@ export default function ImportCoursesPage() {
         <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           Import Your Courses
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-foreground-secondary mt-2">
           Select courses you've completed from semesters 1-{currentSemester}
         </p>
       </div>
@@ -223,16 +223,16 @@ export default function ImportCoursesPage() {
 
       {/* Summary */}
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="bg-card p-4 rounded-xl border">
-          <div className="text-sm text-muted-foreground mb-1">Selected Courses</div>
+        <div className="bg-surface p-4 rounded-xl border border-border">
+          <div className="text-sm text-foreground-secondary mb-1">Selected Courses</div>
           <div className="text-3xl font-bold text-blue-600">{selectedCount}</div>
         </div>
-        <div className="bg-card p-4 rounded-xl border">
-          <div className="text-sm text-muted-foreground mb-1">Total Credits</div>
+        <div className="bg-surface p-4 rounded-xl border border-border">
+          <div className="text-sm text-foreground-secondary mb-1">Total Credits</div>
           <div className="text-3xl font-bold text-purple-600">{totalCredits}</div>
         </div>
-        <div className="bg-card p-4 rounded-xl border">
-          <div className="text-sm text-muted-foreground mb-1">Semesters</div>
+        <div className="bg-surface p-4 rounded-xl border border-border">
+          <div className="text-sm text-foreground-secondary mb-1">Semesters</div>
           <div className="text-3xl font-bold text-pink-600">1-{currentSemester}</div>
         </div>
       </div>
@@ -264,53 +264,53 @@ export default function ImportCoursesPage() {
             const isExpanded = expandedSemesters.includes(sem);
 
             return (
-              <div key={sem} className="bg-card rounded-xl border overflow-hidden">
+              <div key={sem} className="bg-surface rounded-xl border border-border overflow-hidden">
                 <div
-                  className="p-4 cursor-pointer hover:bg-accent/50 transition-colors flex items-center justify-between"
+                  className="p-4 cursor-pointer hover:bg-surface-hover transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
                   onClick={() => toggleSemester(sem)}
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-start sm:items-center gap-4 min-w-0">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         toggleAllInSemester(sem);
                       }}
-                      className="p-1 hover:bg-accent rounded"
+                      className="p-1 hover:bg-surface-hover rounded"
                     >
                       {semCourses.every((c) => c.selected) ? (
                         <CheckCircle className="h-5 w-5 text-green-600" />
                       ) : semCourses.some((c) => c.selected) ? (
                         <Circle className="h-5 w-5 text-blue-600" />
                       ) : (
-                        <Circle className="h-5 w-5 text-muted-foreground" />
+                        <Circle className="h-5 w-5 text-foreground-secondary" />
                       )}
                     </button>
-                    <div>
+                    <div className="min-w-0">
                       <h3 className="font-semibold text-lg">Semester {sem}</h3>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-foreground-secondary">
                         {selectedInSem} of {semCourses.length} courses • {creditsInSem} credits
                       </p>
                     </div>
                   </div>
                   {isExpanded ? (
-                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    <ChevronUp className="h-5 w-5 text-foreground-secondary" />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    <ChevronDown className="h-5 w-5 text-foreground-secondary" />
                   )}
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t p-4 space-y-2">
+                  <div className="border-t border-border p-4 space-y-2">
                     {semCourses.map((course) => (
                       <div
                         key={course.code}
                         className={`p-4 rounded-lg border transition-all ${
                           course.selected
                             ? "bg-blue-500/5 border-blue-500/20"
-                            : "bg-accent/30 border-transparent"
+                            : "bg-background-secondary/60 border-border"
                         }`}
                       >
-                        <div className="flex items-start gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                           <button
                             onClick={() => toggleCourse(course.code)}
                             className="mt-1"
@@ -318,27 +318,27 @@ export default function ImportCoursesPage() {
                             {course.selected ? (
                               <CheckCircle className="h-5 w-5 text-blue-600" />
                             ) : (
-                              <Circle className="h-5 w-5 text-muted-foreground" />
+                              <Circle className="h-5 w-5 text-foreground-secondary" />
                             )}
                           </button>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-2">
                               <span className="font-mono text-sm font-semibold text-blue-600">
                                 {course.code}
                               </span>
-                              <span className="text-sm">{course.name}</span>
+                              <span className="text-sm text-foreground">{course.name}</span>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
                               <span className="text-xs px-2 py-1 rounded-full bg-purple-500/10 text-purple-600">
                                 {course.category}
                               </span>
-                              <span className="text-xs text-muted-foreground">
+                              <span className="text-xs text-foreground-secondary">
                                 {course.credits} credits
                               </span>
                             </div>
                           </div>
                           {course.selected && (
-                            <div className="w-32">
+                            <div className="w-full sm:w-32 sm:shrink-0">
                               <select
                                 value={course.grade || ""}
                                 onChange={(e) => updateGrade(course.code, e.target.value)}
@@ -368,8 +368,8 @@ export default function ImportCoursesPage() {
       </div>
 
       {/* Submit Button */}
-      <div className="sticky bottom-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-6 shadow-2xl">
-        <div className="flex items-center justify-between">
+      <div className="sticky bottom-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 sm:p-6 shadow-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="text-white">
             <p className="text-sm opacity-90">Ready to import</p>
             <p className="font-bold text-lg">
@@ -379,7 +379,7 @@ export default function ImportCoursesPage() {
           <button
             onClick={handleSubmit}
             disabled={loading || selectedCount === 0}
-            className="px-8 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="w-full sm:w-auto px-8 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
               <>

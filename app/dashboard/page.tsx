@@ -65,16 +65,16 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Hero Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80 rounded-2xl p-8 md:p-12 border border-primary shadow-2xl shadow-primary/20">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/5 rounded-full blur-3xl"></div>
-        
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80 rounded-2xl p-6 sm:p-8 md:p-12 border border-primary shadow-2xl shadow-primary/20">
+        <div className="absolute top-0 right-0 w-32 h-32 sm:w-64 sm:h-64 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 sm:w-96 sm:h-96 bg-white/5 rounded-full blur-3xl"></div>
+
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-6 h-6 text-white/90" />
-            <span className="text-white/90 font-medium">{getCurrentGreeting()}</span>
+            <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white/90" />
+            <span className="text-white/90 font-medium text-sm sm:text-base">{getCurrentGreeting()}</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
             {session?.user?.name?.split(" ")[0]}! 👋
           </h1>
           {session?.user?.branch && session?.user?.batch ? (
@@ -99,32 +99,32 @@ export default async function DashboardPage() {
 
       {/* Quick Actions Grid */}
       <div>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-foreground">Quick Actions</h2>
-          <span className="text-sm text-foreground-secondary">Jump to what you need</span>
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Quick Actions</h2>
+          <span className="text-xs sm:text-sm text-foreground-secondary hidden sm:block">Jump to what you need</span>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
               <Link
                 key={action.href}
                 href={action.href}
-                className="group relative overflow-hidden bg-surface rounded-xl border border-border p-6 hover:border-primary transition-all duration-300 hover:shadow-xl hover:scale-105"
+                className="group relative overflow-hidden bg-surface rounded-xl border border-border p-4 sm:p-6 hover:border-primary transition-all duration-300 hover:shadow-xl hover:scale-105"
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${action.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-                
+
                 <div className="relative z-10">
-                  <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${action.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
-                    <Icon className="w-6 h-6 text-white" />
+                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br ${action.gradient} flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <h3 className="font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
+                  <h3 className="font-semibold text-foreground text-sm sm:text-base mb-1 sm:mb-2 group-hover:text-primary transition-colors">
                     {action.title}
                   </h3>
-                  <p className="text-sm text-foreground-secondary mb-4">
+                  <p className="text-xs sm:text-sm text-foreground-secondary hidden sm:block mb-4">
                     {action.description}
                   </p>
-                  <div className="flex items-center text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="hidden sm:flex items-center text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
                     Get started
                     <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                   </div>

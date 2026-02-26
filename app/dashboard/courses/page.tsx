@@ -96,60 +96,60 @@ export default function CoursesPage() {
   return (
     <div className="space-y-6">
       {/* Header with gradient */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 rounded-2xl p-8 shadow-xl">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-500 via-cyan-500 to-blue-600 rounded-2xl p-6 sm:p-8 shadow-xl">
+        <div className="absolute top-0 right-0 w-32 h-32 sm:w-64 sm:h-64 bg-white/10 rounded-full blur-3xl"></div>
         <div className="relative z-10">
-          <h1 className="text-4xl font-bold text-white mb-2">My Courses</h1>
-          <p className="text-white/90">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">My Courses</h1>
+          <p className="text-white/90 text-sm sm:text-base">
             Browse your enrollments and explore the course catalog
           </p>
         </div>
       </div>
 
       {/* Animated Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="group relative overflow-hidden bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+        <div className="group relative overflow-hidden bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+          <div className="absolute top-0 right-0 w-20 h-20 sm:w-32 sm:h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
-              <Award className="w-8 h-8 text-white/90" />
-              <span className="text-sm text-white/80 font-medium">Completed</span>
+              <Award className="w-5 h-5 sm:w-8 sm:h-8 text-white/90" />
+              <span className="text-xs sm:text-sm text-white/80 font-medium hidden sm:block">Completed</span>
             </div>
-            <p className="text-4xl font-bold text-white">{totalCredits}</p>
-            <p className="text-white/80 text-sm mt-1">Credits Earned</p>
+            <p className="text-2xl sm:text-4xl font-bold text-white">{totalCredits}</p>
+            <p className="text-white/80 text-xs sm:text-sm mt-1">Credits Earned</p>
           </div>
         </div>
 
-        <div className="group relative overflow-hidden bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+        <div className="group relative overflow-hidden bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+          <div className="absolute top-0 right-0 w-20 h-20 sm:w-32 sm:h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
-              <Clock className="w-8 h-8 text-white/90" />
-              <span className="text-sm text-white/80 font-medium">Active</span>
+              <Clock className="w-5 h-5 sm:w-8 sm:h-8 text-white/90" />
+              <span className="text-xs sm:text-sm text-white/80 font-medium hidden sm:block">Active</span>
             </div>
-            <p className="text-4xl font-bold text-white">{inProgressCredits}</p>
-            <p className="text-white/80 text-sm mt-1">In Progress</p>
+            <p className="text-2xl sm:text-4xl font-bold text-white">{inProgressCredits}</p>
+            <p className="text-white/80 text-xs sm:text-sm mt-1">In Progress</p>
           </div>
         </div>
 
-        <div className="group relative overflow-hidden bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+        <div className="group relative overflow-hidden bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-4 sm:p-6 shadow-lg hover:shadow-2xl transition-all duration-300 hover:scale-105">
+          <div className="absolute top-0 right-0 w-20 h-20 sm:w-32 sm:h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
           <div className="relative z-10">
             <div className="flex items-center justify-between mb-2">
-              <BookOpen className="w-8 h-8 text-white/90" />
-              <span className="text-sm text-white/80 font-medium">Total</span>
+              <BookOpen className="w-5 h-5 sm:w-8 sm:h-8 text-white/90" />
+              <span className="text-xs sm:text-sm text-white/80 font-medium hidden sm:block">Total</span>
             </div>
-            <p className="text-4xl font-bold text-white">{enrollments.length}</p>
-            <p className="text-white/80 text-sm mt-1">All Courses</p>
+            <p className="text-2xl sm:text-4xl font-bold text-white">{enrollments.length}</p>
+            <p className="text-white/80 text-xs sm:text-sm mt-1">All Courses</p>
           </div>
         </div>
       </div>
 
       {/* Modern View Toggle */}
-      <div className="flex gap-2 p-1 bg-surface rounded-xl border border-border shadow-sm w-fit">
+      <div className="flex gap-1 sm:gap-2 p-1 bg-surface rounded-xl border border-border shadow-sm w-full sm:w-fit">
         <button
           onClick={() => setView("enrolled")}
-          className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+          className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition-all duration-200 ${
             view === "enrolled"
               ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/30"
               : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
@@ -159,7 +159,7 @@ export default function CoursesPage() {
         </button>
         <button
           onClick={() => setView("catalog")}
-          className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+          className={`flex-1 sm:flex-none px-3 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium transition-all duration-200 ${
             view === "catalog"
               ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg shadow-primary/30"
               : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
@@ -185,9 +185,9 @@ export default function CoursesPage() {
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 
-                <div className="relative z-10 flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
                       <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
                         {enrollment.course.code}
                       </h3>
@@ -207,19 +207,17 @@ export default function CoursesPage() {
                       </span>
                     </div>
                     <p className="text-lg text-foreground mb-2 font-medium">{enrollment.course.name}</p>
-                    <p className="text-sm text-foreground-secondary flex items-center gap-2">
+                    <div className="text-sm text-foreground-secondary flex flex-wrap items-center gap-2">
                       <span className="px-2 py-1 bg-surface-hover rounded">{enrollment.term} {enrollment.year}</span>
-                      <span>•</span>
                       <span className="px-2 py-1 bg-surface-hover rounded">Semester {enrollment.semester}</span>
-                      <span>•</span>
                       <span className="px-2 py-1 bg-surface-hover rounded">{enrollment.course.department}</span>
-                    </p>
+                    </div>
                   </div>
                   {enrollment.grade && (
-                    <div className="text-right">
+                    <div className="self-start sm:self-auto sm:text-right">
                       <p className="text-sm text-foreground-secondary mb-1">Grade</p>
-                      <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg">
-                        <p className="text-3xl font-bold text-white">{enrollment.grade}</p>
+                      <div className="w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center shadow-lg">
+                        <p className="text-2xl sm:text-3xl font-bold text-white">{enrollment.grade}</p>
                       </div>
                     </div>
                   )}
@@ -267,34 +265,33 @@ export default function CoursesPage() {
               filteredCourses.map((course) => (
                 <div
                   key={course.id}
-                  className="group relative overflow-hidden bg-surface rounded-xl border border-border p-6 hover:border-primary hover:shadow-xl transition-all duration-300"
+                  className="group relative overflow-hidden bg-surface rounded-xl border border-border p-4 sm:p-6 hover:border-primary hover:shadow-xl transition-all duration-300"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  
-                  <div className="relative z-10 flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-3">
-                        <h3 className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
+
+                  <div className="relative z-10">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
+                        <h3 className="text-base sm:text-xl font-bold text-foreground group-hover:text-primary transition-colors">
                           {course.code}
                         </h3>
-                        <span className="px-3 py-1 bg-gradient-to-r from-primary/20 to-primary/10 text-primary text-sm font-semibold rounded-full border border-primary/20">
-                          {course.credits} Credits
+                        <span className="px-2 py-0.5 bg-gradient-to-r from-primary/20 to-primary/10 text-primary text-xs sm:text-sm font-semibold rounded-full border border-primary/20">
+                          {course.credits} Cr
                         </span>
-                        <span className="px-3 py-1 bg-gray-500/10 text-gray-600 text-sm font-semibold rounded-full border border-gray-500/20">
-                          Level {course.level}
+                        <span className="px-2 py-0.5 bg-gray-500/10 text-gray-600 text-xs sm:text-sm font-semibold rounded-full border border-gray-500/20">
+                          L{course.level}
                         </span>
                       </div>
-                      <p className="text-lg font-medium text-foreground mb-3">{course.name}</p>
+                      <p className="text-sm sm:text-base font-medium text-foreground mb-2 sm:mb-3">{course.name}</p>
                       {course.description && (
                         <p className="text-sm text-foreground-secondary mb-3 line-clamp-2">
                           {course.description}
                         </p>
                       )}
-                      <div className="flex items-center gap-3 text-sm">
+                      <div className="flex flex-wrap items-center gap-2 text-sm">
                         <span className="px-3 py-1 bg-surface-hover rounded-lg font-medium text-foreground">
                           {course.department}
                         </span>
-                        <span className="text-foreground-secondary">•</span>
                         <div className="flex gap-2">
                           {course.offeredInFall && (
                             <span className="px-2 py-1 bg-orange-500/10 text-orange-600 rounded-lg text-xs font-semibold">

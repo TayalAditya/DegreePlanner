@@ -238,18 +238,18 @@ export default function MyCoursesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             My Courses
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-foreground-secondary mt-2">
             Track your course completion and manage your degree progress
           </p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all flex items-center gap-2"
+          className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all flex items-center justify-center gap-2"
         >
           <Plus className="h-4 w-4" />
           Add Course
@@ -307,7 +307,7 @@ function PreferencesSection({
   onUpdate: (prefs: Preferences) => void;
 }) {
   return (
-    <div className="bg-card p-6 rounded-xl border">
+    <div className="bg-surface p-4 sm:p-6 rounded-xl border border-border">
       <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
         <Info className="h-5 w-5 text-blue-600" />
         Academic Preferences
@@ -352,7 +352,7 @@ function PreferencesSection({
           </label>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground mt-3">
+      <p className="text-xs text-foreground-secondary mt-3">
         {!preferences.doingMTP && "Not doing MTP will add 8 credits to DE requirements. "}
         {!preferences.doingISTP && "Not doing ISTP will add 4 credits to FE requirements."}
       </p>
@@ -364,6 +364,17 @@ function ProgressOverview({ progress }: { progress: any }) {
   const percentage = Math.round(
     (progress.totalCompleted / progress.totalRequired) * 100
   );
+
+  const barClasses: Record<string, string> = {
+    blue: "bg-blue-600 dark:bg-blue-500",
+    cyan: "bg-cyan-600 dark:bg-cyan-500",
+    green: "bg-green-600 dark:bg-green-500",
+    purple: "bg-purple-600 dark:bg-purple-500",
+    pink: "bg-pink-600 dark:bg-pink-500",
+    orange: "bg-orange-600 dark:bg-orange-500",
+    red: "bg-red-600 dark:bg-red-500",
+    yellow: "bg-yellow-600 dark:bg-yellow-500",
+  };
 
   const categories = [
     { key: "IC", label: "Institute Core", color: "blue" },
@@ -378,8 +389,8 @@ function ProgressOverview({ progress }: { progress: any }) {
 
   return (
     <div className="space-y-4">
-      <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 p-6 rounded-xl border border-blue-500/20">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 p-4 sm:p-6 rounded-xl border border-blue-500/20">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
           <h3 className="font-semibold text-xl">Overall Progress</h3>
           <span className="text-3xl font-bold text-blue-600">{percentage}%</span>
         </div>
@@ -389,7 +400,7 @@ function ProgressOverview({ progress }: { progress: any }) {
             style={{ width: `${percentage}%` }}
           />
         </div>
-        <p className="text-sm text-muted-foreground mt-2">
+        <p className="text-sm text-foreground-secondary mt-2">
           {progress.totalCompleted} of {progress.totalRequired} credits completed
         </p>
       </div>
@@ -405,10 +416,10 @@ function ProgressOverview({ progress }: { progress: any }) {
           return (
             <div
               key={cat.key}
-              className="bg-card p-4 rounded-lg border hover:shadow-lg transition-all"
+              className="bg-surface p-4 rounded-lg border border-border hover:shadow-md transition-all"
             >
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-muted-foreground">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <span className="text-sm font-semibold text-foreground-secondary">
                   {cat.label}
                 </span>
                 {remaining === 0 ? (
@@ -419,11 +430,11 @@ function ProgressOverview({ progress }: { progress: any }) {
               </div>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold">{completed}</span>
-                <span className="text-sm text-muted-foreground">/ {required}</span>
+                <span className="text-sm text-foreground-secondary">/ {required}</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-2">
                 <div
-                  className={`bg-${cat.color}-600 h-2 rounded-full transition-all`}
+                  className={`${barClasses[cat.color] || "bg-gray-400"} h-2 rounded-full transition-all`}
                   style={{ width: `${Math.min((completed / required) * 100, 100)}%` }}
                 />
               </div>
@@ -482,16 +493,16 @@ function SemesterCourses({
     <div className="space-y-4">
       <h3 className="font-semibold text-xl">Courses by Semester</h3>
       {semesters.length === 0 ? (
-        <div className="text-center py-12 bg-card rounded-xl border">
-          <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">No courses added yet</p>
-          <p className="text-sm text-muted-foreground mt-1">
+        <div className="text-center py-12 bg-surface rounded-xl border border-border">
+          <BookOpen className="h-12 w-12 text-foreground-secondary mx-auto mb-4" />
+          <p className="text-foreground-secondary">No courses added yet</p>
+          <p className="text-sm text-foreground-secondary mt-1">
             Click "Add Course" to start tracking your progress
           </p>
         </div>
       ) : (
         semesters.map((sem) => (
-          <div key={sem} className="bg-card p-6 rounded-xl border">
+          <div key={sem} className="bg-surface p-4 sm:p-6 rounded-xl border border-border">
             <h4 className="font-semibold text-lg mb-4">
               Semester {sem} ({semesterGroups[sem].reduce((sum, c) => sum + c.credits, 0)}{" "}
               credits)
@@ -500,20 +511,20 @@ function SemesterCourses({
               {semesterGroups[sem].map((course) => (
                 <div
                   key={course.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 rounded-lg bg-background-secondary/60 hover:bg-surface-hover transition-colors"
                 >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm text-blue-600 font-semibold">
                         {course.code}
                       </span>
-                      <span className="text-sm">{course.name}</span>
+                      <span className="text-sm text-foreground break-words">{course.name}</span>
                     </div>
-                    <div className="flex items-center gap-3 mt-1">
+                    <div className="flex flex-wrap items-center gap-2 mt-1">
                       <span className="text-xs px-2 py-1 rounded-full bg-purple-500/10 text-purple-600">
                         {CATEGORIES[course.category as keyof typeof CATEGORIES]}
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-foreground-secondary">
                         {course.credits} credits
                       </span>
                       {course.grade && (
@@ -525,7 +536,7 @@ function SemesterCourses({
                   </div>
                   <button
                     onClick={() => onDeleteCourse(course.id)}
-                    className="p-2 hover:bg-red-500/10 rounded-lg text-red-600 transition-colors"
+                    className="self-end sm:self-auto p-2 hover:bg-red-500/10 rounded-lg text-red-600 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -624,13 +635,13 @@ function AddCourseModal({
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-card p-6 rounded-xl border max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+        className="bg-surface p-4 sm:p-6 rounded-xl border border-border shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-semibold">Add Course</h3>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-accent rounded-lg transition-colors"
+            className="p-2 hover:bg-surface-hover rounded-lg transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
@@ -649,7 +660,7 @@ function AddCourseModal({
               className="w-full px-3 py-2 rounded-lg border bg-background"
             />
             {searchQuery && (
-              <div className="mt-2 max-h-48 overflow-y-auto border rounded-lg">
+              <div className="mt-2 max-h-48 overflow-y-auto border border-border rounded-lg bg-surface">
                 {filteredCourses.slice(0, 10).map((course) => (
                   <button
                     key={course.id}
@@ -663,11 +674,11 @@ function AddCourseModal({
                       });
                       setSearchQuery("");
                     }}
-                    className="w-full text-left p-3 hover:bg-accent transition-colors"
+                    className="w-full text-left p-3 hover:bg-surface-hover transition-colors"
                   >
                     <div className="font-mono text-sm text-blue-600">{course.code}</div>
                     <div className="text-sm">{course.name}</div>
-                    <div className="text-xs text-muted-foreground">{course.credits} credits</div>
+                    <div className="text-xs text-foreground-secondary">{course.credits} credits</div>
                   </button>
                 ))}
               </div>
@@ -771,7 +782,7 @@ function AddCourseModal({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 rounded-lg border hover:bg-accent transition-colors"
+              className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors"
             >
               Cancel
             </button>

@@ -101,46 +101,46 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-6 hover:shadow-md transition-all">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-4 sm:p-5 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-foreground-secondary font-medium mb-1">Current Semester</p>
-              <p className="text-4xl font-bold text-primary">
+              <p className="text-xs sm:text-sm text-foreground-secondary font-medium mb-1">Current Semester</p>
+              <p className="text-3xl sm:text-4xl font-bold text-primary">
                 {currentSemester}
               </p>
             </div>
-            <div className="w-14 h-14 bg-primary/10 dark:bg-primary/20 rounded-xl flex items-center justify-center">
-              <BookOpen className="w-7 h-7 text-primary" />
+            <div className="w-11 h-11 sm:w-14 sm:h-14 bg-primary/10 dark:bg-primary/20 rounded-xl flex items-center justify-center">
+              <BookOpen className="w-5 h-5 sm:w-7 sm:h-7 text-primary" />
             </div>
           </div>
         </div>
 
-        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-6 hover:shadow-md transition-all">
+        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-4 sm:p-5 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-foreground-secondary font-medium mb-1">This Semester</p>
-              <p className="text-4xl font-bold text-success">
+              <p className="text-xs sm:text-sm text-foreground-secondary font-medium mb-1">This Semester</p>
+              <p className="text-3xl sm:text-4xl font-bold text-success">
                 {currentSemesterEnrollments?.length || 0}
               </p>
             </div>
-            <div className="w-14 h-14 bg-success/10 dark:bg-success/20 rounded-xl flex items-center justify-center">
-              <TrendingUp className="w-7 h-7 text-success" />
+            <div className="w-11 h-11 sm:w-14 sm:h-14 bg-success/10 dark:bg-success/20 rounded-xl flex items-center justify-center">
+              <TrendingUp className="w-5 h-5 sm:w-7 sm:h-7 text-success" />
             </div>
           </div>
           <p className="text-xs text-foreground-secondary mt-2">Active courses</p>
         </div>
 
-        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-6 hover:shadow-md transition-all sm:col-span-2 lg:col-span-1">
+        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-4 sm:p-5 hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-foreground-secondary font-medium mb-1">Completed</p>
-              <p className="text-4xl font-bold text-info">
+              <p className="text-xs sm:text-sm text-foreground-secondary font-medium mb-1">Completed</p>
+              <p className="text-3xl sm:text-4xl font-bold text-info">
                 {completedCourses?.length || 0}
               </p>
             </div>
-            <div className="w-14 h-14 bg-info/10 dark:bg-info/20 rounded-xl flex items-center justify-center">
-              <BookOpen className="w-7 h-7 text-info" />
+            <div className="w-11 h-11 sm:w-14 sm:h-14 bg-info/10 dark:bg-info/20 rounded-xl flex items-center justify-center">
+              <BookOpen className="w-5 h-5 sm:w-7 sm:h-7 text-info" />
             </div>
           </div>
           <p className="text-xs text-foreground-secondary mt-2">Total courses</p>
@@ -149,7 +149,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
       {/* Progress Overview */}
       {primaryProgram && progressData && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <ProgressChart
             progress={progressData.progress}
             isLoading={progressLoading}
@@ -172,12 +172,12 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
       {/* Available DE Courses */}
       {progressData?.availableDECourses && progressData.availableDECourses.length > 0 && (
-        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
+        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 flex items-center">
             <span className="w-1 h-6 bg-primary rounded-full mr-3"></span>
             Available Discipline Electives
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
             {progressData.availableDECourses.slice(0, 6).map((course: any) => (
               <div
                 key={course.id}

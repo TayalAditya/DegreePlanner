@@ -111,7 +111,7 @@ export default function ProgramsPage() {
                 </div>
 
                 {/* Credit Requirements */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
                   <div className="bg-surface/50 rounded-lg p-4 border border-border">
                     <div className="flex items-center gap-2 mb-1">
                       <Award className="w-4 h-4 text-primary" />

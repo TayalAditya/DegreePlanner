@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Calendar, Clock, MapPin, Plus, Edit, Trash2 } from "lucide-react";
 
@@ -16,7 +16,17 @@ const TIME_SLOTS = [
 
 export function TimetableView({ userId }: TimetableViewProps) {
   const [selectedSemester, setSelectedSemester] = useState(1);
-  const [view, setView] = useState<"week" | "list">("week");
+  const [view, setView] = useState<"week" | "list">("list");
+
+  // Auto switch to list view on mobile
+  useEffect(() => {
+    const update = () => {
+      if (window.innerWidth < 768) setView("list");
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   const { data: timetable, isLoading } = useQuery({
     queryKey: ["timetable", userId, selectedSemester],
@@ -38,13 +48,13 @@ export function TimetableView({ userId }: TimetableViewProps) {
   return (
     <div className="space-y-6">
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <label className="text-sm font-medium text-foreground">Semester:</label>
+      <div className="flex flex-col sm:flex-row justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <label className="text-sm font-medium text-foreground whitespace-nowrap">Semester:</label>
           <select
             value={selectedSemester}
             onChange={(e) => setSelectedSemester(Number(e.target.value))}
-            className="px-3 py-2 border border-border rounded-md bg-surface text-foreground focus:ring-2 focus:ring-primary"
+            className="flex-1 sm:flex-none px-3 py-2 min-h-[44px] border border-border rounded-md bg-surface text-foreground focus:ring-2 focus:ring-primary text-sm"
           >
             {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
               <option key={sem} value={sem}>
@@ -57,11 +67,11 @@ export function TimetableView({ userId }: TimetableViewProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setView(view === "week" ? "list" : "week")}
-            className="px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground-secondary hover:bg-background-secondary"
+            className="hidden md:flex px-4 py-2 min-h-[44px] border border-border rounded-md text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center"
           >
             {view === "week" ? "List View" : "Week View"}
           </button>
-          <button className="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary-hover flex items-center gap-2">
+          <button className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] bg-primary text-white rounded-md text-sm font-medium hover:bg-primary-hover flex items-center justify-center gap-2">
             <Plus className="w-4 h-4" />
             Add Class
           </button>
@@ -139,53 +149,58 @@ function ListView({ timetable }: { timetable: any[] }) {
   const groupedByDay = DAYS.map((day) => ({
     day,
     classes: timetable.filter((e) => e.dayOfWeek === day).sort((a, b) => a.startTime.localeCompare(b.startTime)),
-  }));
+  })).filter(({ classes }) => classes.length > 0);
+
+  if (groupedByDay.length === 0) {
+    return (
+      <div className="bg-surface dark:bg-surface rounded-lg border border-border p-8 text-center">
+        <Calendar className="w-12 h-12 text-foreground-secondary mx-auto mb-3 opacity-50" />
+        <p className="text-foreground-secondary">No classes scheduled for this semester</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {groupedByDay.map(({ day, classes }) => (
-        <div key={day} className="bg-surface dark:bg-surface rounded-lg border border-border p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">{day}</h3>
-          {classes.length === 0 ? (
-            <p className="text-foreground-secondary text-sm">No classes scheduled</p>
-          ) : (
-            <div className="space-y-3">
-              {classes.map((entry: any) => (
-                <div
-                  key={entry.id}
-                  className="flex items-start justify-between p-4 bg-background-secondary dark:bg-background rounded-lg"
-                >
-                  <div className="flex-1">
-                    <h4 className="font-medium text-foreground">{entry.course?.name}</h4>
-                    <p className="text-sm text-foreground-secondary mt-1">{entry.course?.code}</p>
-                    <div className="flex flex-wrap gap-4 mt-2 text-sm text-foreground-secondary">
-                      <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {entry.startTime} - {entry.endTime}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-4 h-4" />
-                        {entry.venue || "TBA"}
-                      </div>
-                      {entry.classType && (
-                        <span className="px-2 py-1 bg-primary bg-opacity-10 dark:bg-opacity-20 text-primary rounded text-xs">
-                          {entry.classType}
-                        </span>
-                      )}
+        <div key={day} className="bg-surface dark:bg-surface rounded-lg border border-border p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 capitalize">{day.charAt(0) + day.slice(1).toLowerCase()}</h3>
+          <div className="space-y-2 sm:space-y-3">
+            {classes.map((entry: any) => (
+              <div
+                key={entry.id}
+                className="flex items-start justify-between p-3 sm:p-4 bg-background-secondary dark:bg-background rounded-lg"
+              >
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-foreground text-sm sm:text-base truncate">{entry.course?.name}</h4>
+                  <p className="text-xs sm:text-sm text-foreground-secondary mt-0.5">{entry.course?.code}</p>
+                  <div className="flex flex-wrap gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-foreground-secondary">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                      {entry.startTime} - {entry.endTime}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 ml-4">
-                    <button className="p-2 text-foreground-secondary hover:text-foreground hover:bg-background-secondary rounded">
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900 dark:hover:bg-opacity-20 rounded">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                      {entry.venue || "TBA"}
+                    </div>
+                    {entry.classType && (
+                      <span className="px-2 py-0.5 bg-primary bg-opacity-10 dark:bg-opacity-20 text-primary rounded text-xs">
+                        {entry.classType}
+                      </span>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+                  <button className="min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-secondary hover:text-foreground hover:bg-background-secondary rounded-lg">
+                    <Edit className="w-4 h-4" />
+                  </button>
+                  <button className="min-w-[44px] min-h-[44px] flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>

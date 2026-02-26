@@ -102,25 +102,25 @@ function OverviewSection() {
       <div className="bg-card p-6 rounded-xl border">
         <h3 className="font-semibold text-xl mb-4">Distribution of Credits (B.Tech)</h3>
         <div className="space-y-3">
-          <div className="flex justify-between items-center p-3 rounded-lg bg-accent/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 rounded-lg bg-accent/50">
             <span>Institute Core Courses</span>
             <span className="font-semibold">60 credits</span>
           </div>
           <div className="pl-4 space-y-2 text-sm text-muted-foreground">
-            <div className="flex justify-between"><span>• IC Compulsory</span><span>39 credits</span></div>
-            <div className="flex justify-between"><span>• IC Basket</span><span>6 credits</span></div>
-            <div className="flex justify-between"><span>• HSS</span><span>12 credits</span></div>
-            <div className="flex justify-between"><span>• Indian Knowledge System</span><span>3 credits</span></div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"><span>• IC Compulsory</span><span className="sm:text-right">39 credits</span></div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"><span>• IC Basket</span><span className="sm:text-right">6 credits</span></div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"><span>• HSS</span><span className="sm:text-right">12 credits</span></div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"><span>• Indian Knowledge System</span><span className="sm:text-right">3 credits</span></div>
           </div>
-          <div className="flex justify-between items-center p-3 rounded-lg bg-accent/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 rounded-lg bg-accent/50">
             <span>Discipline Courses</span>
             <span className="font-semibold">66 credits</span>
           </div>
-          <div className="flex justify-between items-center p-3 rounded-lg bg-accent/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 rounded-lg bg-accent/50">
             <span>Free Electives</span>
             <span className="font-semibold">22 credits</span>
           </div>
-          <div className="flex justify-between items-center p-3 rounded-lg bg-accent/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 rounded-lg bg-accent/50">
             <span>MTP + ISTP</span>
             <span className="font-semibold">12 credits</span>
           </div>
@@ -130,9 +130,9 @@ function OverviewSection() {
       <div className="bg-card p-6 rounded-xl border">
         <h3 className="font-semibold text-xl mb-4">Credit Limits Per Semester</h3>
         <div className="space-y-2">
-          <p className="flex justify-between"><span>Minimum:</span><strong>12 credits</strong></p>
-          <p className="flex justify-between"><span>Maximum:</span><strong>22 credits</strong></p>
-          <p className="flex justify-between"><span>With AD approval:</span><strong>Up to 25 credits</strong></p>
+          <p className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"><span>Minimum:</span><strong className="sm:text-right">12 credits</strong></p>
+          <p className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"><span>Maximum:</span><strong className="sm:text-right">22 credits</strong></p>
+          <p className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1"><span>With AD approval:</span><strong className="sm:text-right">Up to 25 credits</strong></p>
           <p className="text-sm text-muted-foreground mt-3">
             * Audit courses can increase the limit to 25 credits
           </p>
@@ -265,8 +265,8 @@ function CoursesSection() {
             { code: "IC222P", name: "Physics Practicum", credits: 2 },
             { code: "IC010", name: "Internship", credits: 2 },
           ].map((course, idx) => (
-            <div key={idx} className="flex justify-between items-center p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors">
-              <div>
+            <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors">
+              <div className="min-w-0">
                 <span className="font-mono text-sm text-blue-600">{course.code}</span>
                 <p className="text-sm">{course.name}</p>
               </div>
@@ -493,7 +493,7 @@ function ExchangeSection() {
               { ects: "E", iit: "C" },
               { ects: "FX/F", iit: "F" },
             ].map((grade, idx) => (
-              <div key={idx} className="flex justify-between items-center p-3 rounded-lg bg-accent/50">
+              <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 rounded-lg bg-accent/50">
                 <span className="font-mono text-blue-600">{grade.ects}</span>
                 <span>→</span>
                 <span className="font-mono text-purple-600">{grade.iit}</span>
@@ -515,7 +515,7 @@ function ExchangeSection() {
               { kyushu: "C (1)", iit: "D" },
               { kyushu: "F (0)", iit: "F" },
             ].map((grade, idx) => (
-              <div key={idx} className="flex justify-between items-center p-3 rounded-lg bg-accent/50">
+              <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 rounded-lg bg-accent/50">
                 <span className="font-mono text-blue-600">{grade.kyushu}</span>
                 <span>→</span>
                 <span className="font-mono text-purple-600">{grade.iit}</span>
@@ -731,7 +731,7 @@ function MinorsSection() {
               className="p-4 rounded-lg bg-gradient-to-br from-purple-500/5 to-pink-500/5 border border-purple-500/10 hover:border-purple-500/30 hover:shadow-lg transition-all"
             >
               <p className="font-semibold">{minor.name}</p>
-              <div className="mt-2 flex justify-between text-xs text-muted-foreground">
+              <div className="mt-2 flex flex-col sm:flex-row sm:justify-between gap-1 text-xs text-muted-foreground">
                 <span>{minor.courses}</span>
                 <span>CGPA: {minor.cgpa}</span>
               </div>
