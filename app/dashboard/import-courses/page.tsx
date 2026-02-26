@@ -53,9 +53,11 @@ export default function ImportCoursesPage() {
   const loadDefaultCourses = () => {
     const effectiveBranch = branch === "GE" ? geSubBranch : branch;
     const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester);
+    // ICB basket + mixed-sem courses start unchecked — user must pick manually
+    const MANUAL_PICK_CODES = ["IC140", "IC102P", "IC181"];
     const coursesWithSelection = defaultCourses.map((course) => ({
       ...course,
-      selected: true, // By default all are selected
+      selected: course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code),
     }));
     setCourses(coursesWithSelection);
   };
@@ -191,10 +193,10 @@ export default function ImportCoursesPage() {
             Your courses have been added to your profile. You can now view them in My Courses.
           </p>
           <a
-            href="/dashboard/my-courses"
+            href="/dashboard/courses"
             className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all inline-block"
           >
-            View My Courses
+            View Courses
           </a>
         </motion.div>
       </div>
