@@ -104,7 +104,7 @@ export default function ImportCoursesPage() {
       const res = await fetch("/api/enrollments/bulk", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enrollments }),
+        body: JSON.stringify({ enrollments, currentSemester }),
       });
 
       if (res.ok) {
@@ -262,6 +262,9 @@ export default function ImportCoursesPage() {
           </p>
           <p className="text-yellow-800 dark:text-yellow-200 mt-1">
             Uncheck any courses you haven't taken. You can add grades optionally. Additional courses can be added later from "My Courses" page.
+          </p>
+          <p className="text-yellow-800 dark:text-yellow-200 mt-2 font-medium">
+            ⚠️ IC140, IC102P, and IC181 appear in both Sem 1 and Sem 2 — keep only the semester you actually took them in, uncheck the other.
           </p>
         </div>
       </div>
