@@ -39,12 +39,12 @@ async function main() {
       BE: "Bioengineering",
       EP: "Engineering Physics",
       MA: "Mathematics",
-      MNC: "Mathematics & Computing",
       MT: "Materials Science",
       DS: "Data Science",
       CY: "Chemical Sciences",
       PH: "Physics",
-      IC2: "Institute Core",
+      VL: "Microelectronics and VLSI",
+      AR: "General Engineering",
     };
     const department = departmentMap[prefix] || "General";
 
