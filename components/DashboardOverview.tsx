@@ -51,10 +51,10 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="bg-white rounded-lg shadow p-6 animate-pulse"
+              className="bg-surface rounded-xl border border-border shadow-sm p-6 animate-pulse"
             >
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-4 bg-background-secondary dark:bg-background rounded w-3/4 mb-4"></div>
+              <div className="h-8 bg-background-secondary dark:bg-background rounded w-1/2"></div>
             </div>
           ))}
         </div>
@@ -64,7 +64,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
   if (programs.length === 0) {
     return (
-      <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-12 text-center">
+      <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
         <div className="w-20 h-20 bg-warning/10 dark:bg-warning/20 rounded-full flex items-center justify-center mx-auto mb-6">
           <AlertCircle className="w-10 h-10 text-warning" />
         </div>
@@ -102,8 +102,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     <div className="space-y-6">
       {/* Quick Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-4 sm:p-5 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
+        <div className="relative overflow-hidden bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <div className="absolute -top-10 -right-10 w-28 h-28 bg-primary/10 rounded-full blur-2xl"></div>
+          <div className="relative flex items-center justify-between">
             <div>
               <p className="text-xs sm:text-sm text-foreground-secondary font-medium mb-1">Current Semester</p>
               <p className="text-3xl sm:text-4xl font-bold text-primary">
@@ -116,8 +117,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
           </div>
         </div>
 
-        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-4 sm:p-5 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
+        <div className="relative overflow-hidden bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <div className="absolute -top-10 -right-10 w-28 h-28 bg-success/10 rounded-full blur-2xl"></div>
+          <div className="relative flex items-center justify-between">
             <div>
               <p className="text-xs sm:text-sm text-foreground-secondary font-medium mb-1">This Semester</p>
               <p className="text-3xl sm:text-4xl font-bold text-success">
@@ -131,8 +133,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
           <p className="text-xs text-foreground-secondary mt-2">Active courses</p>
         </div>
 
-        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-4 sm:p-5 hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
+        <div className="relative overflow-hidden bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-5 hover:shadow-lg hover:-translate-y-0.5 transition-all">
+          <div className="absolute -top-10 -right-10 w-28 h-28 bg-info/10 rounded-full blur-2xl"></div>
+          <div className="relative flex items-center justify-between">
             <div>
               <p className="text-xs sm:text-sm text-foreground-secondary font-medium mb-1">Completed</p>
               <p className="text-3xl sm:text-4xl font-bold text-info">
@@ -172,7 +175,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
       {/* Available DE Courses */}
       {progressData?.availableDECourses && progressData.availableDECourses.length > 0 && (
-        <div className="bg-surface dark:bg-surface rounded-xl shadow-soft border border-border p-4 sm:p-6">
+        <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 flex items-center">
             <span className="w-1 h-6 bg-primary rounded-full mr-3"></span>
             Available Discipline Electives
