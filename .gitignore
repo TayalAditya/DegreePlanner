@@ -39,6 +39,9 @@ next-env.d.ts
 # prisma
 /prisma/migrations
 
+# cleanup reports
+/reports/
+
 # uploads
 /public/uploads/**
 !/public/uploads/.gitkeep
