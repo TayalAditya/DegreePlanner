@@ -17,6 +17,13 @@ interface ParsedCourse {
   offeredInSummer: boolean;
 }
 
+const DOT_LEADER_RE = /\s*(?:\.(?:\s|\u00a0)*){4,}\d+\s*$/;
+
+function cleanCourseName(name: string): string {
+  const trimmed = name.trim().replace(/\s+/g, " ");
+  return trimmed.replace(DOT_LEADER_RE, "").trim();
+}
+
 function parseCoursesFromFile(filePath: string): ParsedCourse[] {
   const content = fs.readFileSync(filePath, "utf-8");
   const lines = content.split("\n");
@@ -24,18 +31,21 @@ function parseCoursesFromFile(filePath: string): ParsedCourse[] {
   const courses: ParsedCourse[] = [];
   const departmentMap: Record<string, string> = {
     AR: "Robotics",
-    BE: "BioEngineering",
+    BE: "Bioengineering",
     BY: "Biology",
-    CE: "CivilEngineering",
-    CS: "ComputerScience",
+    CE: "Civil Engineering",
+    CS: "Computer Science",
     CY: "Chemistry",
     HS: "Humanities",
-    DS: "DataScience",
+    DS: "Data Science",
     MA: "Mathematics",
     PH: "Physics",
-    ME: "MechanicalEngineering",
-    EE: "ElectricalEngineering",
+    ME: "Mechanical Engineering",
+    EE: "Electrical Engineering",
     DP: "Design",
+    IC: "Institute Core",
+    EP: "Engineering Physics",
+    IK: "Indian Knowledge Systems",
   };
 
   // Parse course list section headers and details
@@ -45,16 +55,17 @@ function parseCoursesFromFile(filePath: string): ParsedCourse[] {
 
     // Match course code in format: "1.1 AR 501/..." or "1.2 AR 502: ..."
     const courseLineMatch = line.match(
-      /^[\d.]+\s+([A-Z]{2})\s+(\d+)(?:[A-Z])?(?:\/[A-Z0-9\s]+)?:\s*(.+?)(?:\s+\.\+)?$/
+      /^[\d.]+\s+([A-Z]{2})\s+(\d{3})([A-Z])?(?:\/[A-Z0-9\s]+)?:\s*(.+?)(?:\s+\.\+)?$/
     );
 
     if (courseLineMatch) {
-      const [, dept, codeNum, courseName] = courseLineMatch;
-      const courseCode = `${dept}-${codeNum}`;
+      const [, dept, codeNum, codeSuffix, rawCourseName] = courseLineMatch;
+      const courseCode = `${dept}-${codeNum}${codeSuffix || ""}`;
 
       // Look ahead for course details
       let creditStr = "3";
-      let level = parseInt(codeNum.substring(0, 1)) * 100;
+      const inferredLevel = parseInt(codeNum.substring(0, 1)) * 100;
+      let level = inferredLevel > 0 ? inferredLevel : 100;
       let description = "";
 
       // Search for credit distribution in the next 20 lines
@@ -86,13 +97,14 @@ function parseCoursesFromFile(filePath: string): ParsedCourse[] {
         }
       }
 
+      const courseName = cleanCourseName(rawCourseName);
       const course: ParsedCourse = {
         code: courseCode,
-        name: courseName.trim(),
+        name: courseName,
         credits: parseInt(creditStr) || 3,
         department: departmentMap[dept] || dept,
         level: level,
-        description: description || `${dept} course on ${courseName.trim()}`,
+        description: description || `${dept} course on ${courseName}`,
         offeredInFall: true,
         offeredInSpring: true,
         offeredInSummer: false,
