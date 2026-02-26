@@ -66,7 +66,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
               </span>
             </Link>
 
-            <div className="hidden lg:ml-4 lg:flex lg:space-x-1 xl:space-x-3">
+            <div className="hidden lg:ml-4 lg:flex lg:space-x-0.5 xl:space-x-1 lg:overflow-x-auto lg:scrollbar-hide">
               {navigation.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
@@ -74,14 +74,14 @@ export function DashboardNav({ user }: DashboardNavProps) {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`inline-flex items-center px-2 xl:px-3 py-2 border-b-2 text-sm font-medium transition-colors ${
+                    className={`inline-flex items-center flex-shrink-0 px-2 lg:px-2.5 xl:px-3 py-2 border-b-2 text-xs lg:text-sm font-medium transition-colors whitespace-nowrap ${
                       isActive
                         ? "border-primary text-foreground"
                         : "border-transparent text-foreground-secondary hover:border-border hover:text-foreground"
                     } rounded-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20`}
                   >
-                    <Icon className="w-4 h-4 xl:mr-2" />
-                    <span className="hidden xl:inline">{item.name}</span>
+                    <Icon className="w-4 h-4 lg:mr-1.5 xl:mr-2 flex-shrink-0" />
+                    <span className="hidden lg:inline">{item.name}</span>
                   </Link>
                 );
               })}
@@ -92,14 +92,14 @@ export function DashboardNav({ user }: DashboardNavProps) {
                   <Link
                     key={item.name}
                     href={item.href}
-                    className={`inline-flex items-center px-2 xl:px-3 py-2 border-b-2 text-sm font-medium transition-colors ${
+                    className={`inline-flex items-center flex-shrink-0 px-2 lg:px-2.5 xl:px-3 py-2 border-b-2 text-xs lg:text-sm font-medium transition-colors whitespace-nowrap ${
                       isActive
                         ? "border-primary text-foreground"
                         : "border-transparent text-foreground-secondary hover:border-border hover:text-foreground"
                     } rounded-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20`}
                   >
-                    <Icon className="w-4 h-4 xl:mr-2" />
-                    <span className="hidden xl:inline">{item.name}</span>
+                    <Icon className="w-4 h-4 lg:mr-1.5 xl:mr-2 flex-shrink-0" />
+                    <span className="hidden lg:inline">{item.name}</span>
                   </Link>
                 );
               })}
