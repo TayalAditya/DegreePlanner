@@ -75,12 +75,12 @@ export function MTPStatusCard({
   };
 
   return (
-    <div className="bg-surface rounded-lg border border-border shadow-sm p-6">
-      <h3 className="text-lg font-semibold text-foreground mb-4">
+    <div className="bg-surface rounded-lg border border-border shadow-sm p-4 sm:p-6">
+      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">
         Terminal Project Eligibility
       </h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {renderEligibilityCard("Major Terminal Project (MTP)", mtpEligibility, "MTP")}
         {renderEligibilityCard(
           "Independent Study Terminal Project (ISTP)",

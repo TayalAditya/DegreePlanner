@@ -63,14 +63,14 @@ export default function ProgramsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Academic Programs</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Academic Programs</h1>
         <p className="text-foreground-secondary mt-2">
           View your enrolled programs and credit requirements
         </p>
       </div>
 
       {userPrograms.length === 0 ? (
-        <div className="bg-surface rounded-lg border border-border p-8 text-center">
+        <div className="bg-surface rounded-lg border border-border p-6 sm:p-8 text-center">
           <GraduationCap className="w-16 h-16 text-foreground-secondary mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-foreground mb-2">
             No Programs Enrolled
@@ -88,11 +88,11 @@ export default function ProgramsPage() {
                 <Target className="w-5 h-5 text-primary" />
                 <h2 className="text-xl font-semibold text-foreground">Primary Program</h2>
               </div>
-              <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg border-2 border-primary p-6">
+              <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg border-2 border-primary p-4 sm:p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-2xl font-bold text-foreground">
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                      <h3 className="text-xl sm:text-2xl font-bold text-foreground">
                         {primaryProgram.program.name}
                       </h3>
                       <span className="px-3 py-1 bg-primary text-white text-sm rounded-full">

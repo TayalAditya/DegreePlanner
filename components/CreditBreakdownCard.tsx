@@ -72,31 +72,31 @@ export function CreditBreakdownCard({
   };
 
   return (
-    <div className="bg-surface rounded-lg border border-border shadow-sm p-6">
-      <h3 className="text-lg font-semibold text-foreground mb-6">
+    <div className="bg-surface rounded-lg border border-border shadow-sm p-4 sm:p-6">
+      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 sm:mb-6">
         Credit Breakdown
       </h3>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {categories.map((category) => {
           const percentage = Math.min(
             100,
             (category.completed / category.required) * 100
           );
           return (
-            <div key={category.name} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
+            <div key={category.name} className="space-y-1.5 sm:space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                   {getStatusIcon(
                     category.completed,
                     category.required,
                     category.inProgress
                   )}
-                  <span className="font-medium text-foreground">
+                  <span className="font-medium text-foreground text-xs sm:text-sm truncate">
                     {category.name}
                   </span>
                 </div>
-                <span className="text-sm text-foreground-secondary">
+                <span className="text-xs sm:text-sm text-foreground-secondary flex-shrink-0">
                   {category.completed} / {category.required}
                   {category.inProgress > 0 && (
                     <span className="text-yellow-600 dark:text-yellow-400">
@@ -117,12 +117,12 @@ export function CreditBreakdownCard({
         })}
       </div>
 
-      <div className="mt-6 pt-6 border-t border-border">
+      <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-border">
         <div className="flex justify-between items-center">
-          <span className="text-lg font-semibold text-foreground">
+          <span className="text-sm sm:text-lg font-semibold text-foreground">
             Total Credits
           </span>
-          <span className="text-2xl font-bold text-primary">
+          <span className="text-xl sm:text-2xl font-bold text-primary">
             {progress.completed.total} / {progress.required.total}
           </span>
         </div>
