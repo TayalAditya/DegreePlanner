@@ -100,7 +100,7 @@ export default function CoursesPage() {
     .reduce((sum, e) => sum + e.course.credits, 0);
 
   const totalCreditsInProgress = enrollments
-    .filter((e) => e.status === "IN_PROGRESS")
+    .filter((e) => e.status === "IN_PROGRESS" || e.status === "ENROLLED")
     .reduce((sum, e) => sum + e.course.credits, 0);
 
   if (loading) {
