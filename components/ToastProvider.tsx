@@ -56,7 +56,7 @@ function ToastContainer({
   onRemove: (id: string) => void;
 }) {
   return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm w-full pointer-events-none">
+    <div className="fixed top-4 right-[max(1rem,calc((100vw-72rem)/2+1rem))] z-50 space-y-2 max-w-sm w-full pointer-events-none">
       {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onRemove={onRemove} />
       ))}

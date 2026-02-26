@@ -46,7 +46,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
   };
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto w-full">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Personal Information */}
         <div className="bg-surface dark:bg-surface rounded-lg border border-border p-6">
