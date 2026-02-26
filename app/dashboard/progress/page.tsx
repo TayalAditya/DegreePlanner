@@ -192,43 +192,43 @@ export default function ProgressPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-surface rounded-lg border border-border p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-green-500/10 rounded-lg flex items-center justify-center">
-              <CheckCircle className="w-6 h-6 text-green-500" />
+      <div className="grid grid-cols-3 gap-3 md:gap-4">
+        <div className="bg-surface rounded-lg border border-border p-3 sm:p-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-green-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="w-4 h-4 sm:w-6 sm:h-6 text-green-500" />
             </div>
             <div>
-              <p className="text-sm text-foreground-secondary">Completed</p>
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-xs sm:text-sm text-foreground-secondary">Completed</p>
+              <p className="text-xl sm:text-2xl font-bold text-foreground">
                 {progress.totalCreditsEarned}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-surface rounded-lg border border-border p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-blue-500/10 rounded-lg flex items-center justify-center">
-              <Clock className="w-6 h-6 text-blue-500" />
+        <div className="bg-surface rounded-lg border border-border p-3 sm:p-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Clock className="w-4 h-4 sm:w-6 sm:h-6 text-blue-500" />
             </div>
             <div>
-              <p className="text-sm text-foreground-secondary">In Progress</p>
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-xs sm:text-sm text-foreground-secondary">In Progress</p>
+              <p className="text-xl sm:text-2xl font-bold text-foreground">
                 {progress.totalCreditsInProgress}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-surface rounded-lg border border-border p-6">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-orange-500/10 rounded-lg flex items-center justify-center">
-              <Target className="w-6 h-6 text-orange-500" />
+        <div className="bg-surface rounded-lg border border-border p-3 sm:p-6">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-orange-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Target className="w-4 h-4 sm:w-6 sm:h-6 text-orange-500" />
             </div>
             <div>
-              <p className="text-sm text-foreground-secondary">Remaining</p>
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-xs sm:text-sm text-foreground-secondary">Remaining</p>
+              <p className="text-xl sm:text-2xl font-bold text-foreground">
                 {progress.totalCreditsRequired -
                   progress.totalCreditsEarned -
                   progress.totalCreditsInProgress}
@@ -239,8 +239,8 @@ export default function ProgressPage() {
       </div>
 
       {/* Credits by Type */}
-      <div className="bg-surface rounded-lg border border-border p-6">
-        <h3 className="text-xl font-semibold text-foreground mb-4">Credits by Category</h3>
+      <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
+        <h3 className="text-base sm:text-xl font-semibold text-foreground mb-4">Credits by Category</h3>
         <div className="space-y-4">
           {Object.entries(progress.creditsByType).map(([type, credits]) => {
             const inProgress = progress.creditsInProgressByType[type as keyof typeof progress.creditsInProgressByType];

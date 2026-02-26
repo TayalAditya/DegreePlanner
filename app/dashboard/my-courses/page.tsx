@@ -240,7 +240,7 @@ export default function MyCoursesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             My Courses
           </h1>
           <p className="text-foreground-secondary mt-2">
@@ -453,8 +453,8 @@ function ProgressOverview({ progress }: { progress: any }) {
 
 function RecommendationsCard({ recommendations }: { recommendations: string[] }) {
   return (
-    <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 p-6 rounded-xl border border-yellow-500/20">
-      <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+    <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 p-4 sm:p-6 rounded-xl border border-yellow-500/20">
+      <h3 className="font-semibold text-base sm:text-lg mb-3 sm:mb-4 flex items-center gap-2">
         <Lightbulb className="h-5 w-5 text-yellow-600" />
         Smart Recommendations
       </h3>

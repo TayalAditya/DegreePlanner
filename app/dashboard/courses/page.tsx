@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BookOpen, Search, Filter, Clock, Award } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Award, BookOpen, Clock, Copy, Filter, Search, X } from "lucide-react";
+import { useToast } from "@/components/ToastProvider";
 
 interface Course {
   id: string;
@@ -33,6 +35,13 @@ export default function CoursesPage() {
   const [view, setView] = useState<"enrolled" | "catalog">("enrolled");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState<string>("all");
+  const [details, setDetails] = useState<{
+    course: Course;
+    enrollment?: Enrollment;
+  } | null>(null);
+
+  const { showToast } = useToast();
+  const reducedMotion = useReducedMotion() ?? false;
 
   useEffect(() => {
     fetchEnrollments();
@@ -179,8 +188,10 @@ export default function CoursesPage() {
             </div>
           ) : (
             enrollments.map((enrollment) => (
-              <div
+              <button
+                type="button"
                 key={enrollment.id}
+                onClick={() => setDetails({ course: enrollment.course, enrollment })}
                 className="group relative overflow-hidden bg-surface rounded-xl border border-border p-6 hover:border-primary hover:shadow-xl transition-all duration-300"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -222,7 +233,7 @@ export default function CoursesPage() {
                     </div>
                   )}
                 </div>
-              </div>
+              </button>
             ))
           )}
         </div>
@@ -263,9 +274,11 @@ export default function CoursesPage() {
               </div>
             ) : (
               filteredCourses.map((course) => (
-                <div
+                <button
+                  type="button"
                   key={course.id}
-                  className="group relative overflow-hidden bg-surface rounded-xl border border-border p-4 sm:p-6 hover:border-primary hover:shadow-xl transition-all duration-300"
+                  onClick={() => setDetails({ course })}
+                  className="group relative overflow-hidden bg-surface rounded-xl border border-border p-4 sm:p-6 hover:border-primary hover:shadow-xl transition-all duration-300 text-left"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
@@ -312,12 +325,191 @@ export default function CoursesPage() {
                       </div>
                     </div>
                   </div>
-                </div>
+                </button>
               ))
             )}
           </div>
         </div>
       )}
+
+      <CourseDetailsModal
+        open={!!details}
+        details={details}
+        onClose={() => setDetails(null)}
+        reducedMotion={reducedMotion}
+        onCopyCode={async (code) => {
+          try {
+            await navigator.clipboard.writeText(code);
+            showToast("success", "Course code copied");
+          } catch {
+            showToast("error", "Failed to copy");
+          }
+        }}
+      />
     </div>
+  );
+}
+
+function CourseDetailsModal({
+  open,
+  details,
+  onClose,
+  onCopyCode,
+  reducedMotion,
+}: {
+  open: boolean;
+  details: { course: Course; enrollment?: Enrollment } | null;
+  onClose: () => void;
+  onCopyCode: (code: string) => void | Promise<void>;
+  reducedMotion: boolean;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open, onClose]);
+
+  const course = details?.course;
+  const enrollment = details?.enrollment;
+
+  return (
+    <AnimatePresence>
+      {open && course && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Course details"
+        >
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={onClose}
+            aria-label="Close course details"
+          />
+
+          <motion.div
+            initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="relative w-full sm:max-w-2xl bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden"
+          >
+            <div className="p-4 sm:p-6 border-b border-border flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-mono text-sm font-semibold text-primary">{course.code}</p>
+                  <span className="px-2 py-0.5 bg-primary/10 dark:bg-primary/20 text-primary text-xs font-semibold rounded-full border border-primary/20">
+                    {course.credits} credits
+                  </span>
+                  <span className="px-2 py-0.5 bg-surface-hover text-foreground-secondary text-xs font-semibold rounded-full border border-border">
+                    Level {course.level}
+                  </span>
+                </div>
+                <h2 className="text-lg sm:text-2xl font-bold text-foreground mt-2 break-words">
+                  {course.name}
+                </h2>
+                <div className="flex flex-wrap items-center gap-2 mt-3 text-xs sm:text-sm text-foreground-secondary">
+                  <span className="px-2 py-1 bg-background-secondary rounded-lg border border-border">
+                    {course.department}
+                  </span>
+                  <span className="px-2 py-1 bg-background-secondary rounded-lg border border-border">
+                    Offered:
+                    <span className="ml-2 inline-flex gap-1">
+                      {course.offeredInFall && <span className="px-2 py-0.5 rounded bg-orange-500/10 text-orange-700 dark:text-orange-300">Fall</span>}
+                      {course.offeredInSpring && <span className="px-2 py-0.5 rounded bg-green-500/10 text-green-700 dark:text-green-300">Spring</span>}
+                      {course.offeredInSummer && <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-700 dark:text-blue-300">Summer</span>}
+                      {!course.offeredInFall && !course.offeredInSpring && !course.offeredInSummer && (
+                        <span className="px-2 py-0.5 rounded bg-surface-hover text-foreground-secondary">TBA</span>
+                      )}
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:bg-surface-hover text-foreground-secondary hover:text-foreground transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-6 space-y-4">
+              {enrollment && (
+                <div className="rounded-xl border border-border bg-background-secondary/60 p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground">Your enrollment</p>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="px-2 py-1 rounded-lg bg-surface border border-border text-foreground-secondary">
+                        {enrollment.term} {enrollment.year}
+                      </span>
+                      <span className="px-2 py-1 rounded-lg bg-surface border border-border text-foreground-secondary">
+                        Semester {enrollment.semester}
+                      </span>
+                      <span className="px-2 py-1 rounded-lg bg-primary/10 dark:bg-primary/20 text-primary border border-primary/20 font-semibold">
+                        {enrollment.status}
+                      </span>
+                      {enrollment.grade && (
+                        <span className="px-2 py-1 rounded-lg bg-surface border border-border text-foreground-secondary">
+                          Grade: <span className="font-semibold text-foreground">{enrollment.grade}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {course.description ? (
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-2">About</h3>
+                  <p className="text-sm text-foreground-secondary leading-relaxed whitespace-pre-wrap">
+                    {course.description}
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-border bg-surface-hover p-4">
+                  <p className="text-sm text-foreground-secondary">
+                    No description available yet.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => onCopyCode(course.code)}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-surface hover:bg-surface-hover text-foreground font-medium transition-colors"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy code
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-full sm:flex-1 inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-hover transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
