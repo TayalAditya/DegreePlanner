@@ -68,10 +68,31 @@ export default function ImportCoursesPage() {
     }
   };
 
-  const toggleCourse = (code: string) => {
-    setCourses(
-      courses.map((c) => (c.code === code ? { ...c, selected: !c.selected } : c))
-    );
+  // Courses that appear in both Sem 1 and Sem 2 — selecting one auto-deselects the other
+  const MUTUAL_EXCLUSIVE_CODES = ["IC140", "IC102P", "IC181"];
+
+  const toggleCourse = (code: string, semester: number) => {
+    setCourses((prev) => {
+      const clicked = prev.find((c) => c.code === code && c.semester === semester);
+      if (!clicked) return prev;
+      const nowSelected = !clicked.selected;
+
+      return prev.map((c) => {
+        if (c.code === code && c.semester === semester) {
+          return { ...c, selected: nowSelected };
+        }
+        // If this is a mutual-exclusive course being selected, deselect the other semester copy
+        if (
+          MUTUAL_EXCLUSIVE_CODES.includes(code) &&
+          c.code === code &&
+          c.semester !== semester &&
+          nowSelected
+        ) {
+          return { ...c, selected: false };
+        }
+        return c;
+      });
+    });
   };
 
   const toggleAllInSemester = (sem: number) => {
@@ -351,7 +372,7 @@ export default function ImportCoursesPage() {
                   <div className="border-t border-border p-4 space-y-2">
                     {semCourses.map((course) => (
                       <div
-                        key={course.code}
+                        key={`${course.code}-${course.semester}`}
                         className={`p-4 rounded-lg border transition-all ${
                           course.selected
                             ? "bg-blue-500/5 border-blue-500/20"
@@ -360,7 +381,7 @@ export default function ImportCoursesPage() {
                       >
                         <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                           <button
-                            onClick={() => toggleCourse(course.code)}
+                            onClick={() => toggleCourse(course.code, course.semester)}
                             className="mt-1"
                           >
                             {course.selected ? (
