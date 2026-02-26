@@ -23,12 +23,15 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true },
+      select: { id: true, batch: true },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
+    // currentSemester from payload tells us which sems are "past" (→ COMPLETED)
+    const currentSemester: number = body.currentSemester ?? 99;
 
     // Map curriculum category codes to CourseType enum values
     const categoryToCourseType: Record<string, "CORE" | "DE" | "PE" | "FREE_ELECTIVE" | "MTP" | "ISTP"> = {
@@ -65,6 +68,16 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
+        // Determine correct academic year from batch + semester number
+        // Sem 1 = FALL batchYear, Sem 2 = SPRING batchYear+1, Sem 3 = FALL batchYear+1 ...
+        const batchYear = user.batch ?? new Date().getFullYear() - 3;
+        const semYear = batchYear + Math.floor((semester - 1) / 2);
+        const term = semester % 2 === 1 ? "FALL" : "SPRING";
+
+        // Past semesters are COMPLETED; current sem depends on whether grade given
+        const isPastSemester = semester < currentSemester;
+        const status = grade ? "COMPLETED" : isPastSemester ? "COMPLETED" : "IN_PROGRESS";
+
         // Check if enrollment already exists
         const existing = await prisma.courseEnrollment.findFirst({
           where: {
@@ -81,7 +94,9 @@ export async function POST(req: NextRequest) {
             data: {
               courseType,
               grade,
-              status: grade ? "COMPLETED" : "IN_PROGRESS",
+              status,
+              year: semYear,
+              term,
             },
           });
           results.push({ courseCode, action: "updated", id: updated.id });
@@ -92,11 +107,11 @@ export async function POST(req: NextRequest) {
               userId: user.id,
               courseId: course.id,
               semester,
-              year: new Date().getFullYear(),
-              term: semester % 2 === 0 ? "SPRING" : "FALL",
+              year: semYear,
+              term,
               courseType: courseType || "CORE",
               grade,
-              status: grade ? "COMPLETED" : "IN_PROGRESS",
+              status,
             },
           });
           results.push({ courseCode, action: "created", id: created.id });
