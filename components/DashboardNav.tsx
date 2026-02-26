@@ -53,9 +53,9 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
   return (
     <nav className="bg-surface dark:bg-surface border-b border-border no-print sticky top-0 z-50 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
-          <div className="flex">
+          <div className="flex flex-1 min-w-0">
             <Link
               href="/dashboard"
               className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
@@ -106,7 +106,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             </div>
           </div>
 
-          <div className="hidden lg:ml-3 lg:flex lg:items-center space-x-2">
+          <div className="hidden lg:ml-3 lg:flex lg:items-center space-x-2 flex-shrink-0">
             <ThemeToggle />
             <div className="flex items-center pl-3 border-l border-border">
               {user.image && (
