@@ -17,7 +17,6 @@ import { getAllDefaultCourses, getDefaultCurriculum, DefaultCourse } from "@/lib
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { formatCourseCode } from "@/lib/utils";
-import { InstructorList } from "@/components/InstructorCard";
 
 interface SelectedCourse extends DefaultCourse {
   selected: boolean;
@@ -622,7 +621,6 @@ export default function ImportCoursesPage() {
                                 {course.credits} credits
                               </span>
                             </div>
-                            <InstructorList courseCode={course.code} variant="compact" />
                           </div>
                           {course.selected && (
                             <div className="w-full sm:w-32 sm:shrink-0">
