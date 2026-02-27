@@ -23,12 +23,22 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, batch: true },
+      select: { 
+        id: true, 
+        batch: true,
+        programs: {
+          where: { isPrimary: true },
+          select: { programId: true }
+        }
+      },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
+
+    // Get primary program ID for enrollments
+    const primaryProgramId = user.programs[0]?.programId || null;
 
     // currentSemester from payload tells us which sems are "past" (→ COMPLETED)
     const currentSemester: number = body.currentSemester ?? 99;
@@ -97,6 +107,7 @@ export async function POST(req: NextRequest) {
               status,
               year: semYear,
               term,
+              programId: primaryProgramId, // Set programId
             },
           });
           results.push({ courseCode, action: "updated", id: updated.id });
@@ -112,6 +123,7 @@ export async function POST(req: NextRequest) {
               courseType: courseType || "CORE",
               grade,
               status,
+              programId: primaryProgramId, // Set programId
             },
           });
           results.push({ courseCode, action: "created", id: created.id });
