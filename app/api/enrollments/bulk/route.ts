@@ -100,10 +100,10 @@ export async function POST(req: NextRequest) {
     const errors: Array<{ courseCode: string; error: string }> = [];
 
     const normalizeCourseCode = (code: string) =>
-      code.toUpperCase().replace(/\s+/g, "");
+      code.toUpperCase().replace(/\s+/g, "").replace(/-/g, "");
 
     const toHyphenatedCode = (code: string) => {
-      const normalized = normalizeCourseCode(code).replace(/-/g, "");
+      const normalized = normalizeCourseCode(code);
       const match = normalized.match(/^([A-Z]+)(\d{3}[A-Z]?)$/);
       if (match) return `${match[1]}-${match[2]}`;
       return normalized;
@@ -111,9 +111,10 @@ export async function POST(req: NextRequest) {
 
     const buildCodeCandidates = (code: string) => {
       const normalized = normalizeCourseCode(code);
-      const dehyphenated = normalized.replace(/-/g, "");
-      const hyphenated = toHyphenatedCode(normalized);
-      return Array.from(new Set([normalized, dehyphenated, hyphenated]));
+      const hyphenated = toHyphenatedCode(code);
+      // Also try original case-insensitive
+      const original = code.trim();
+      return Array.from(new Set([normalized, hyphenated, original]));
     };
 
     const inferBatchYear = (
@@ -142,11 +143,15 @@ export async function POST(req: NextRequest) {
 
         const codeCandidates = buildCodeCandidates(courseCode);
         const course = await prisma.course.findFirst({
-          where: { code: { in: codeCandidates } },
+          where: { code: { in: codeCandidates, mode: 'insensitive' } },
         });
 
         if (!course) {
-          errors.push({ courseCode, error: "Course not found" });
+          console.error(`❌ Course not found: ${courseCode} (tried: ${codeCandidates.join(', ')})`);
+          errors.push({ 
+            courseCode, 
+            error: `Course not found. Tried: ${codeCandidates.join(', ')}` 
+          });
           continue;
         }
 

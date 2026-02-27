@@ -12,6 +12,7 @@ import {
   AlertCircle,
   Loader2,
   Trash2,
+  X,
 } from "lucide-react";
 import { getAllDefaultCourses, getDefaultCurriculum, DefaultCourse } from "@/lib/defaultCurriculum";
 import { useToast } from "@/components/ToastProvider";
@@ -271,13 +272,19 @@ export default function ImportCoursesPage() {
 
       if (res.ok) {
         if (data?.summary?.failed > 0) {
+          const failedCourses = data.errors?.map((e: any) => e.courseCode).join(', ') || 'Unknown';
           showToast(
             "warning",
-            `Imported ${data.summary.successful} courses, but ${data.summary.failed} failed.`
+            `Imported ${data.summary.successful} courses, but ${data.summary.failed} failed: ${failedCourses}`
           );
-          if (data?.errors?.length) {
-            console.warn("Import failures:", data.errors);
-          }
+          console.warn("❌ Failed courses:", data.errors);
+          // Show detailed error message
+          const errorDetails = data.errors?.map((e: any) => 
+            `${e.courseCode}: ${e.error}`
+          ).join('\n');
+          setErrorMessage(`Some courses failed to import:\n${errorDetails}`);
+        } else {
+          showToast("success", `Imported ${data.summary.successful} courses successfully!`);
         }
         setSubmitted(true);
         loadExistingEnrollments();
@@ -340,8 +347,22 @@ export default function ImportCoursesPage() {
   return (
     <div className="space-y-6">
       {errorMessage && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
-          {errorMessage}
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg overflow-hidden">
+          <div className="px-4 py-3 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-red-700 dark:text-red-300 mb-1">Import Errors</h3>
+              <pre className="text-sm text-red-600 dark:text-red-400 whitespace-pre-wrap font-mono">
+                {errorMessage}
+              </pre>
+            </div>
+            <button
+              onClick={() => setErrorMessage(null)}
+              className="text-red-600 hover:text-red-700 p-1"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       )}
       <div className="flex items-start justify-between gap-4">
