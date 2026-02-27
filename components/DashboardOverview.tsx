@@ -93,10 +93,17 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     );
   }
 
+  const currentSemesterFromEligibility =
+    progressData?.mtpEligibility?.semesterNumber ||
+    progressData?.istpEligibility?.semesterNumber ||
+    0;
+
   const currentSemester =
     enrollments && enrollments.length > 0
       ? Math.max(...enrollments.map((e: any) => e.semester))
-      : 1;
+      : currentSemesterFromEligibility > 0
+        ? currentSemesterFromEligibility
+        : 1;
 
   const currentSemesterEnrollments = enrollments?.filter(
     (e: any) => e.semester === currentSemester && e.status === "IN_PROGRESS"
