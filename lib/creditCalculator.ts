@@ -46,7 +46,7 @@ export class CreditCalculator {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { doingMTP: true, doingISTP: true },
+      select: { doingMTP: true, doingISTP: true, branch: true },
     });
 
     const enrollments = await prisma.courseEnrollment.findMany({
@@ -55,7 +55,16 @@ export class CreditCalculator {
         programId,
       },
       include: {
-        course: true,
+        course: {
+          include: {
+            branchMappings: {
+              select: {
+                courseCategory: true,
+                branch: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -115,11 +124,13 @@ export class CreditCalculator {
       enrollments.filter((e) => 
         e.status === EnrollmentStatus.COMPLETED && 
         (!e.grade || e.grade !== "F") // Exclude failed courses
-      )
+      ),
+      user?.branch || undefined
     );
 
     const inProgress = this.calculateCreditsByType(
-      enrollments.filter((e) => e.status === EnrollmentStatus.IN_PROGRESS)
+      enrollments.filter((e) => e.status === EnrollmentStatus.IN_PROGRESS),
+      user?.branch || undefined
     );
 
     const remaining: CreditBreakdown = {
@@ -303,10 +314,14 @@ export class CreditCalculator {
 
   private calculateCreditsByType(
     enrollments: Array<{
-      course: { credits: number };
+      course: { 
+        credits: number; 
+        branchMappings?: Array<{ courseCategory: string; branch: string }>;
+      };
       courseType: CourseType;
       grade?: string | null;
-    }>
+    }>,
+    branch?: string
   ): CreditBreakdown {
     const breakdown: CreditBreakdown = {
       core: 0,
@@ -321,6 +336,38 @@ export class CreditCalculator {
     enrollments.forEach((enrollment) => {
       const credits = enrollment.course.credits;
       breakdown.total += credits;
+
+      const mappedCategory = branch
+        ? enrollment.course.branchMappings?.find((m) => m.branch === branch)?.courseCategory
+        : undefined;
+
+      if (mappedCategory) {
+        switch (mappedCategory) {
+          case "IC":
+          case "IC_BASKET":
+          case "DC":
+          case "HSS":
+          case "IKS":
+            breakdown.core += credits;
+            return;
+          case "DE":
+            breakdown.de += credits;
+            return;
+          case "FE":
+            breakdown.freeElective += credits;
+            return;
+          case "MTP":
+            breakdown.mtp += credits;
+            return;
+          case "ISTP":
+            breakdown.istp += credits;
+            return;
+          case "INTERNSHIP":
+          case "BACKLOG":
+          case "NA":
+            break;
+        }
+      }
 
       switch (enrollment.courseType) {
         case CourseType.CORE:
