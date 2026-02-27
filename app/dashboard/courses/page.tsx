@@ -321,6 +321,11 @@ export default function CoursesPage() {
       const batchYear = inferBatchYear();
       const term = semNum % 2 === 1 ? "FALL" : "SPRING";
       
+      // Calculate year based on semester
+      // Sem 1-2: batch year, Sem 3-4: batch year + 1, Sem 5-6: batch year + 2, etc.
+      const yearOffset = Math.floor((semNum - 1) / 2);
+      const courseYear = batchYear + yearOffset;
+      
       // Determine final course type
       let finalCourseType = courseType;
       if (courseType === "AUTO") {
@@ -335,7 +340,7 @@ export default function CoursesPage() {
         body: JSON.stringify({
           courseId: addingCourse.id,
           semester: semNum,
-          year: batchYear,
+          year: courseYear,
           term,
           courseType: finalCourseType,
           grade: grade || undefined,
