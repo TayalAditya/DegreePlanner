@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { formatCourseCode } from "@/lib/utils";
 
 interface Course {
   id: string;
@@ -582,7 +583,7 @@ export default function CoursesPage() {
                                 >
                                   <div className="flex items-center gap-2 mb-2 flex-wrap">
                                     <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-                                      {enrollment.course.code}
+                                      {formatCourseCode(enrollment.course.code)}
                                     </h3>
                                     <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20">
                                       {enrollment.course.credits} Cr
@@ -700,7 +701,7 @@ export default function CoursesPage() {
                       <div className="flex items-start justify-between gap-4 mb-2">
                         <div>
                           <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors mb-1">
-                            {course.code} - {course.name}
+                            {formatCourseCode(course.code)} - {course.name}
                           </h3>
                           <p className="text-sm text-foreground-secondary line-clamp-1">
                             {course.description}
@@ -782,7 +783,7 @@ export default function CoursesPage() {
               <div className="flex items-start justify-between mb-6">
                 <div>
                   <h2 className="text-3xl font-bold text-foreground mb-2">
-                    {selectedCourse.code}
+                    {formatCourseCode(selectedCourse.code)}
                   </h2>
                   <p className="text-xl text-foreground-secondary">
                     {selectedCourse.name}
@@ -907,7 +908,7 @@ export default function CoursesPage() {
                 {/* Course Info */}
                 <div className="p-4 bg-surface-hover rounded-lg border border-border">
                   <h3 className="font-bold text-lg text-foreground mb-1">
-                    {addingCourse.code}
+                    {formatCourseCode(addingCourse.code)}
                   </h3>
                   <p className="text-foreground-secondary">{addingCourse.name}</p>
                   <div className="flex gap-2 mt-2">

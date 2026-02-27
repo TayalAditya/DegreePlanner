@@ -16,6 +16,7 @@ import {
 import { getAllDefaultCourses, getDefaultCurriculum, DefaultCourse } from "@/lib/defaultCurriculum";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { formatCourseCode } from "@/lib/utils";
 
 interface SelectedCourse extends DefaultCourse {
   selected: boolean;
@@ -469,7 +470,7 @@ export default function ImportCoursesPage() {
                 className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-background"
               >
                 <div className="min-w-0">
-                  <p className="font-semibold text-foreground truncate">{course.code} — {course.name}</p>
+                  <p className="font-semibold text-foreground truncate">{formatCourseCode(course.code)} — {course.name}</p>
                   <p className="text-xs text-foreground-secondary">{course.credits} credits • {course.department}</p>
                 </div>
                 <button
@@ -598,7 +599,7 @@ export default function ImportCoursesPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-2">
                               <span className="font-mono text-sm font-semibold text-blue-600">
-                                {course.code}
+                                {formatCourseCode(course.code)}
                               </span>
                               <span className="text-sm text-foreground">{course.name}</span>
                             </div>
