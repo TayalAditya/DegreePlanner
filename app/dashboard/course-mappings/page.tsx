@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Save, Search, Filter } from "lucide-react";
+import { useToast } from "@/components/ToastProvider";
 
 interface Course {
   id: string;
@@ -52,6 +53,7 @@ const COURSE_CATEGORIES = [
 ];
 
 export default function CourseMappingsPage() {
+  const { showToast } = useToast();
   const [courses, setCourses] = useState<Course[]>([]);
   const [mappings, setMappings] = useState<Map<string, CourseMapping>>(new Map());
   const [selectedBranch, setSelectedBranch] = useState("CSE");
@@ -77,6 +79,7 @@ export default function CourseMappingsPage() {
       setCourses(data);
     } catch (error) {
       console.error("Failed to fetch courses:", error);
+      showToast("error", "Failed to fetch courses");
     }
   };
 
@@ -94,6 +97,7 @@ export default function CourseMappingsPage() {
       setMappings(mappingMap);
     } catch (error) {
       console.error("Failed to fetch mappings:", error);
+      showToast("error", "Failed to fetch course mappings");
     } finally {
       setLoading(false);
     }
@@ -133,7 +137,7 @@ export default function CourseMappingsPage() {
 
   const handleSaveChanges = async () => {
     if (changes.size === 0) {
-      alert("No changes to save");
+      showToast("info", "No changes to save");
       return;
     }
 
@@ -148,15 +152,15 @@ export default function CourseMappingsPage() {
       });
 
       if (res.ok) {
-        alert(`Saved ${changes.size} changes successfully!`);
+        showToast("success", `Saved ${changes.size} changes`);
         setChanges(new Map());
         fetchMappings(selectedBranch);
       } else {
-        alert("Failed to save changes");
+        showToast("error", "Failed to save changes");
       }
     } catch (error) {
       console.error("Failed to save changes:", error);
-      alert("Failed to save changes");
+      showToast("error", "Failed to save changes");
     } finally {
       setSaving(false);
     }

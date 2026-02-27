@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { getAllDefaultCourses, getDefaultCurriculum, DefaultCourse } from "@/lib/defaultCurriculum";
 import { useToast } from "@/components/ToastProvider";
+import { useConfirmDialog } from "@/components/ConfirmDialog";
 
 interface SelectedCourse extends DefaultCourse {
   selected: boolean;
@@ -38,6 +39,7 @@ interface CatalogCourse {
 
 export default function ImportCoursesPage() {
   const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
   const [branch, setBranch] = useState("CSE");
   const [geSubBranch, setGeSubBranch] = useState("GERAI");
   const [currentSemester, setCurrentSemester] = useState(6);
@@ -215,7 +217,14 @@ export default function ImportCoursesPage() {
   };
 
   const handleReset = async () => {
-    if (!confirm("Are you sure? This will delete ALL your enrolled courses.")) return;
+    const ok = await confirm({
+      title: "Delete all enrolled courses?",
+      message: "This will delete ALL your enrolled courses. This action cannot be undone.",
+      confirmText: "Delete all",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+    if (!ok) return;
     setResetting(true);
     try {
       const res = await fetch("/api/enrollments", { method: "DELETE" });

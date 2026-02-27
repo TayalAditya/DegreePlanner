@@ -101,24 +101,20 @@ async function syncEnrollments() {
   console.log("Syncing enrollments...");
 }
 
-// Push notifications (for future feature)
+// Push messages -> in-app popups (no browser notifications)
 self.addEventListener("push", (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title || "Degree Planner Notification";
-  const options = {
-    body: data.body || "You have a new notification",
-    icon: "/icon-192.png",
-    badge: "/badge-72.png",
-    data: data.url,
+
+  const message = {
+    type: "PUSH_MESSAGE",
+    title: data.title || "Degree Planner",
+    body: data.body || "You have a new update",
+    url: data.url || "/dashboard",
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-// Notification click handler
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
   event.waitUntil(
-    clients.openWindow(event.notification.data || "/dashboard")
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      clientList.forEach((client) => client.postMessage(message));
+    })
   );
 });
