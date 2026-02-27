@@ -86,8 +86,10 @@ export default function ImportCoursesPage() {
       const res = await fetch("/api/enrollments");
       if (res.ok) {
         const data: EnrollmentSummary[] = await res.json();
+        // Normalize course codes to handle IC-131 vs IC131 vs IC 131 variations
+        const normalize = (code: string) => code.toUpperCase().replace(/[\s-]/g, "");
         const keys = new Set(
-          data.map((e) => `${e.course.code}|${e.semester}`)
+          data.map((e) => `${normalize(e.course.code)}|${e.semester}`)
         );
         setImportedCourseKeys(keys);
       }
@@ -99,12 +101,14 @@ export default function ImportCoursesPage() {
   const loadDefaultCourses = () => {
     const effectiveBranch = branch === "GE" ? geSubBranch : branch;
     const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester);
+    // Normalize course codes to match enrollment keys
+    const normalize = (code: string) => code.toUpperCase().replace(/[\s-]/g, "");
     // ICB basket + mixed-sem courses start unchecked — user must pick manually
     const MANUAL_PICK_CODES = ["IC140", "IC102P", "IC181"];
     // ISTP/MTP courses are auto-selected for semester 6+ (all branches have them)
     const ISTP_MTP_CODES = ["DP 301P", "DP 498P", "DP 499P"];
     const coursesWithSelection = defaultCourses
-      .filter((course) => !importedCourseKeys.has(`${course.code}|${course.semester}`))
+      .filter((course) => !importedCourseKeys.has(`${normalize(course.code)}|${course.semester}`))
       .map((course) => ({
       ...course,
       selected: (course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code)) || ISTP_MTP_CODES.includes(course.code),
@@ -132,9 +136,11 @@ export default function ImportCoursesPage() {
   };
 
   const addCustomCourse = (course: CatalogCourse) => {
-    const key = `${course.code}|${customSemester}`;
+    // Normalize to check for duplicates
+    const normalize = (code: string) => code.toUpperCase().replace(/[\s-]/g, "");
+    const key = `${normalize(course.code)}|${customSemester}`;
     if (importedCourseKeys.has(key)) return;
-    if (courses.some((c) => c.code === course.code && c.semester === customSemester)) return;
+    if (courses.some((c) => normalize(c.code) === normalize(course.code) && c.semester === customSemester)) return;
 
     const category = course.code.toUpperCase().startsWith("HS") ? "HSS" : "FE";
 
