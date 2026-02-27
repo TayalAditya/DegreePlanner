@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     // If no primary program, try to auto-enroll based on branch
     if (!primaryProgramId && user.branch) {
-      console.log(`Auto-enrolling ${user.email} in ${user.branch} program...`);
+      console.log(`Auto-enrolling user in ${user.branch} program...`);
       
       const program = await prisma.program.findUnique({
         where: { code: user.branch },
