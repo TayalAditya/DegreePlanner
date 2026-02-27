@@ -95,6 +95,8 @@ export async function POST(request: NextRequest) {
       year,
       term,
       courseType,
+      grade,
+      status,
       programId,
       isPassFail,
       isInternship,
@@ -237,6 +239,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create enrollment
+    const finalStatus: EnrollmentStatus =
+      status && Object.values(EnrollmentStatus).includes(status)
+        ? status
+        : grade
+          ? EnrollmentStatus.COMPLETED
+          : EnrollmentStatus.IN_PROGRESS;
+
     const enrollment = await prisma.courseEnrollment.create({
       data: {
         userId: session.user.id,
@@ -246,7 +255,8 @@ export async function POST(request: NextRequest) {
         term,
         courseType: courseType || CourseType.FREE_ELECTIVE,
         programId: finalProgramId,
-        status: EnrollmentStatus.IN_PROGRESS,
+        status: finalStatus,
+        grade: grade || null,
         isPassFail: isPassFail || false,
         passFailCredits: isPassFail ? course.credits : 0,
         isInternship: isInternship || false,
