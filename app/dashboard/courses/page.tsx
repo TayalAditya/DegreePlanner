@@ -334,6 +334,8 @@ export default function CoursesPage() {
 
       const status = grade ? "COMPLETED" : semNum < 6 ? "COMPLETED" : "IN_PROGRESS";
 
+      console.log("Frontend: Adding course to semester", semNum, "with status", status);
+
       const response = await fetch("/api/enrollments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
