@@ -30,9 +30,6 @@ interface MigrationReport {
   coursesCreated: number;
   coursesUpdated: number;
   coursesFailed: number;
-  instructorsExtracted: number;
-  instructorsCreated: number;
-  instructorsFailed: number;
   errors: Array<{
     courseCode: string;
     error: string;
@@ -57,16 +54,6 @@ function extractLevelFromCode(code: string): number {
   return 100;
 }
 
-function parseInstructorString(instructorStr: string): string[] {
-  // Split by comma and clean up whitespace
-  if (!instructorStr) return [];
-
-  return instructorStr
-    .split(',')
-    .map((name) => name.trim())
-    .filter((name) => name.length > 0);
-}
-
 async function migrateCoursesFromJson() {
   const report: MigrationReport = {
     startTime: new Date().toISOString(),
@@ -74,9 +61,6 @@ async function migrateCoursesFromJson() {
     coursesCreated: 0,
     coursesUpdated: 0,
     coursesFailed: 0,
-    instructorsExtracted: 0,
-    instructorsCreated: 0,
-    instructorsFailed: 0,
     errors: [],
     createdCourses: [],
     details: '',
@@ -167,21 +151,7 @@ async function migrateCoursesFromJson() {
           console.log(`✅ Created: ${code} - ${course.courseName}`);
         }
 
-        // Extract and store instructor information
-        const instructors = parseInstructorString(course.instructor);
-        report.instructorsExtracted += instructors.length;
-
-        // Store instructor information in course description for now
-        // In future, use CourseInstructor table
-        if (instructors.length > 0) {
-          await prisma.course.update({
-            where: { code },
-            data: {
-              description: `Instructors: ${instructors.join(', ')} | Category: ${course.category}`,
-            },
-          });
-          report.instructorsCreated += instructors.length;
-        }
+        // Intentionally not importing instructor/slot metadata into Course records.
       } catch (error) {
         report.coursesFailed++;
         const errorMsg = error instanceof Error ? error.message : String(error);
@@ -208,10 +178,6 @@ async function migrateCoursesFromJson() {
     console.log(`Created: ${report.coursesCreated}`);
     console.log(`Updated: ${report.coursesUpdated}`);
     console.log(`Failed: ${report.coursesFailed}`);
-    console.log(`\nInstructors extracted: ${report.instructorsExtracted}`);
-    console.log(`Instructors stored: ${report.instructorsCreated}`);
-    console.log(`Instructor errors: ${report.instructorsFailed}`);
-
     if (report.errors.length > 0) {
       console.log(`\n⚠️  Errors (${report.errors.length}):`);
       report.errors.slice(0, 5).forEach((e) => {
