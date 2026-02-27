@@ -391,27 +391,36 @@ export default function CoursesPage() {
         </div>
       )}
 
-      {/* Tab Navigation */}
-      <div className="flex gap-2 p-1 bg-surface rounded-lg border border-border shadow-sm">
-        <button
-          onClick={() => setTab("my-courses")}
-          className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all ${
-            tab === "my-courses"
-              ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg"
-              : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
-          }`}
-        >
-          My Enrollments ({enrollments.length})
-        </button>
+      {/* Tab Navigation with Add Button */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex gap-2 p-1 bg-surface rounded-lg border border-border shadow-sm flex-1">
+          <button
+            onClick={() => setTab("my-courses")}
+            className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all ${
+              tab === "my-courses"
+                ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg"
+                : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
+            }`}
+          >
+            My Enrollments ({enrollments.length})
+          </button>
+          <button
+            onClick={() => setTab("catalog")}
+            className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all ${
+              tab === "catalog"
+                ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg"
+                : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
+            }`}
+          >
+            Course Catalog ({allCourses.length})
+          </button>
+        </div>
         <button
           onClick={() => setTab("catalog")}
-          className={`flex-1 px-6 py-3 rounded-lg font-medium transition-all ${
-            tab === "catalog"
-              ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg"
-              : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
-          }`}
+          className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2"
         >
-          Course Catalog ({allCourses.length})
+          <Plus className="w-5 h-5" />
+          Add Courses
         </button>
       </div>
 
@@ -443,77 +452,101 @@ export default function CoursesPage() {
                 </button>
               </div>
             ) : (
-              <div className="grid gap-3">
-                {enrollments.map((enrollment) => (
-                  <motion.div
-                    key={enrollment.id}
-                    className="group relative overflow-hidden bg-surface rounded-lg border border-border p-5 hover:border-primary hover:shadow-xl transition-all"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="relative z-10 flex items-start justify-between gap-4">
-                      <button
-                        onClick={() => setSelectedCourse(enrollment.course)}
-                        className="flex-1 min-w-0 text-left"
-                      >
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
-                            {enrollment.course.code}
+              <div className="space-y-6">
+                {Array.from(new Set(enrollments.map(e => e.semester)))
+                  .sort((a, b) => a - b)
+                  .map((semNum) => {
+                    const semesterEnrollments = enrollments.filter(e => e.semester === semNum);
+                    const semCredits = semesterEnrollments.reduce((sum, e) => sum + e.course.credits, 0);
+                    
+                    return (
+                      <div key={semNum} className="space-y-3">
+                        <div className="flex items-center justify-between bg-gradient-to-r from-primary/10 to-transparent rounded-lg p-4 border-l-4 border-primary">
+                          <h3 className="text-xl font-bold text-foreground">
+                            Semester {semNum}
                           </h3>
-                          <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-full border border-primary/20">
-                            {enrollment.course.credits} Credits
-                          </span>
-                          <span
-                            className={`px-3 py-1 text-sm font-semibold rounded-full ${
-                              enrollment.status === "COMPLETED"
-                                ? "bg-green-500/10 text-green-600 border border-green-500/30"
-                                : "bg-blue-500/10 text-blue-600 border border-blue-500/30"
-                            }`}
-                          >
-                            {enrollment.status}
-                          </span>
-                        </div>
-                        <p className="text-foreground font-medium mb-2">
-                          {enrollment.course.name}
-                        </p>
-                        <div className="flex flex-wrap gap-2 text-sm text-foreground-secondary">
-                          <span className="px-2 py-1 bg-surface-hover rounded">
-                            {enrollment.term} {enrollment.year}
-                          </span>
-                          <span className="px-2 py-1 bg-surface-hover rounded">
-                            Sem {enrollment.semester}
-                          </span>
-                          <span className="px-2 py-1 bg-surface-hover rounded">
-                            {enrollment.course.department}
-                          </span>
-                        </div>
-                      </button>
-                      <div className="flex flex-col gap-2">
-                        {enrollment.grade && (
-                          <div className="text-center">
-                            <p className="text-xs text-foreground-secondary mb-1">
-                              Grade
-                            </p>
-                            <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg">
-                              <p className="text-2xl font-bold text-white">
-                                {enrollment.grade}
-                              </p>
-                            </div>
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm text-foreground-secondary">
+                              {semesterEnrollments.length} courses
+                            </span>
+                            <span className="px-4 py-1.5 bg-primary text-white rounded-full font-bold text-sm">
+                              {semCredits} Credits
+                            </span>
                           </div>
-                        )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteEnrollment(enrollment.id, enrollment.course.name);
-                          }}
-                          className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500/20 transition-colors"
-                          title="Remove course"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        </div>
+                        
+                        <div className="grid gap-3 pl-4">
+                          {semesterEnrollments.map((enrollment) => (
+                            <motion.div
+                              key={enrollment.id}
+                              className="group relative overflow-hidden bg-surface rounded-lg border border-border p-4 hover:border-primary hover:shadow-lg transition-all"
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                              <div className="relative z-10 flex items-start justify-between gap-4">
+                                <button
+                                  onClick={() => setSelectedCourse(enrollment.course)}
+                                  className="flex-1 min-w-0 text-left"
+                                >
+                                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                    <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
+                                      {enrollment.course.code}
+                                    </h3>
+                                    <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20">
+                                      {enrollment.course.credits} Cr
+                                    </span>
+                                    <span
+                                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                        enrollment.status === "COMPLETED"
+                                          ? "bg-green-500/10 text-green-600 border border-green-500/30"
+                                          : "bg-blue-500/10 text-blue-600 border border-blue-500/30"
+                                      }`}
+                                    >
+                                      {enrollment.status}
+                                    </span>
+                                  </div>
+                                  <p className="text-foreground font-medium mb-2 text-sm">
+                                    {enrollment.course.name}
+                                  </p>
+                                  <div className="flex flex-wrap gap-2 text-xs text-foreground-secondary">
+                                    <span className="px-2 py-1 bg-surface-hover rounded">
+                                      {enrollment.term} {enrollment.year}
+                                    </span>
+                                    <span className="px-2 py-1 bg-surface-hover rounded">
+                                      {enrollment.course.department}
+                                    </span>
+                                  </div>
+                                </button>
+                                <div className="flex flex-col gap-2">
+                                  {enrollment.grade && (
+                                    <div className="text-center">
+                                      <p className="text-xs text-foreground-secondary mb-1">
+                                        Grade
+                                      </p>
+                                      <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg">
+                                        <p className="text-xl font-bold text-white">
+                                          {enrollment.grade}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteEnrollment(enrollment.id, enrollment.course.name);
+                                    }}
+                                    className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500/20 transition-colors"
+                                    title="Remove course"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    );
+                  })}
               </div>
             )}
           </motion.div>
