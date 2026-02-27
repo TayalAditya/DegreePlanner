@@ -55,7 +55,7 @@ function parseCoursesFromFile(filePath: string): ParsedCourse[] {
 
     // Match course code in format: "1.1 AR 501/..." or "1.2 AR 502: ..."
     const courseLineMatch = line.match(
-      /^[\d.]+\s+([A-Z]{2})\s+(\d{3})([A-Z])?(?:\/[A-Z0-9\s]+)?:\s*(.+?)(?:\s+\.\+)?$/
+      /^(?:[\d.]+\s*)?([A-Z]{2})\s*(\d{3})([A-Z])?(?:\/[A-Z0-9\s]+)?:\s*(.+?)(?:\s+\.\+)?$/
     );
 
     if (courseLineMatch) {
