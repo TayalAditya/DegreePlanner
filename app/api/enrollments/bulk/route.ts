@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       select: { 
         id: true, 
         batch: true,
+        branch: true,
         programs: {
           where: { isPrimary: true },
           select: { programId: true }
@@ -38,7 +39,38 @@ export async function POST(req: NextRequest) {
     }
 
     // Get primary program ID for enrollments
-    const primaryProgramId = user.programs[0]?.programId || null;
+    let primaryProgramId = user.programs[0]?.programId || null;
+
+    // If no primary program, try to auto-enroll based on branch
+    if (!primaryProgramId && user.branch) {
+      console.log(`Auto-enrolling ${user.email} in ${user.branch} program...`);
+      
+      const program = await prisma.program.findUnique({
+        where: { code: user.branch },
+      });
+
+      if (program) {
+        const userProgram = await prisma.userProgram.create({
+          data: {
+            userId: user.id,
+            programId: program.id,
+            programType: "MAJOR",
+            isPrimary: true,
+            startSemester: 1,
+            status: "ACTIVE",
+          },
+        });
+        primaryProgramId = userProgram.programId;
+        console.log(`✅ Auto-enrolled in ${user.branch} program`);
+      }
+    }
+
+    if (!primaryProgramId) {
+      return NextResponse.json(
+        { error: "No program found. Please enroll in a program first." },
+        { status: 400 }
+      );
+    }
 
     // currentSemester from payload tells us which sems are "past" (→ COMPLETED)
     const currentSemester: number = body.currentSemester ?? 99;
