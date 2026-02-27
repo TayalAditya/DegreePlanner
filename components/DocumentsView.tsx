@@ -21,6 +21,7 @@ import { useConfirmDialog } from "./ConfirmDialog";
 interface DocumentsViewProps {
   userId: string;
   role: string;
+  canManageDocuments: boolean;
 }
 
 const CATEGORIES = [
@@ -128,7 +129,7 @@ function getPreviewConfig(fileUrl: string | null | undefined): PreviewConfig {
   return { kind: "none", reason: "Preview not available. Open the link instead." };
 }
 
-export function DocumentsView({ userId, role }: DocumentsViewProps) {
+export function DocumentsView({ userId, role, canManageDocuments }: DocumentsViewProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [previewDoc, setPreviewDoc] = useState<DocumentRecord | null>(null);
@@ -247,6 +248,8 @@ export function DocumentsView({ userId, role }: DocumentsViewProps) {
     }
   };
 
+  const canManage = canManageDocuments && role === "ADMIN";
+
   return (
     <div className="space-y-6">
       {/* Search and Filter */}
@@ -261,7 +264,7 @@ export function DocumentsView({ userId, role }: DocumentsViewProps) {
             className="w-full pl-10 pr-4 py-2 border border-border rounded-md bg-surface text-foreground focus:ring-2 focus:ring-primary"
           />
         </div>
-        {role === "ADMIN" && (
+        {canManage && (
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsAddLinkOpen(true)}
@@ -318,7 +321,7 @@ export function DocumentsView({ userId, role }: DocumentsViewProps) {
             <DocumentCard
               key={doc.id}
               document={doc}
-              isAdmin={role === "ADMIN"}
+              isAdmin={canManage}
               onView={() => setPreviewDoc(doc)}
               onDelete={() => handleDeleteDocument(doc)}
             />

@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { DocumentsView } from "@/components/DocumentsView";
+import { isDocumentsAdmin } from "@/lib/permissions";
 
 export default async function DocumentsPage() {
   const session = await getServerSession(authOptions);
@@ -19,7 +20,11 @@ export default async function DocumentsPage() {
         </p>
       </div>
 
-      <DocumentsView userId={session.user.id} role={session.user.role} />
+      <DocumentsView
+        userId={session.user.id}
+        role={session.user.role}
+        canManageDocuments={isDocumentsAdmin(session.user)}
+      />
     </div>
   );
 }

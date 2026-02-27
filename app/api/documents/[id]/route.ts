@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { isDocumentsAdmin } from "@/lib/permissions";
 
 function isAuthorizedToAccess(sessionUserId: string, doc: { userId: string; isPublic: boolean }) {
   return doc.isPublic || doc.userId === sessionUserId;
@@ -61,7 +62,7 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
       return NextResponse.json({ error: "Document not found" }, { status: 404 });
     }
 
-    const canDelete = session.user.role === "ADMIN" || doc.userId === session.user.id;
+    const canDelete = doc.userId === session.user.id || isDocumentsAdmin(session.user);
     if (!canDelete) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -74,4 +75,3 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
     return NextResponse.json({ error: "Failed to delete document" }, { status: 500 });
   }
 }
-
