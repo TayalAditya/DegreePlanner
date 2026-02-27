@@ -48,6 +48,11 @@ export default function CoursesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState<string>("all");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [addingCourse, setAddingCourse] = useState<Course | null>(null);
+  const [semester, setSemester] = useState<string>("");
+  const [grade, setGrade] = useState<string>("");
+  const [courseType, setCourseType] = useState<string>("AUTO");
+  const [submitting, setSubmitting] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -102,6 +107,100 @@ export default function CoursesPage() {
   const totalCreditsInProgress = enrollments
     .filter((e) => e.status === "IN_PROGRESS" || e.status === "ENROLLED")
     .reduce((sum, e) => sum + e.course.credits, 0);
+
+  // Calculate HSS credits for smart type detection
+  const hssCreditsCompleted = enrollments
+    .filter((e) => e.course.code.startsWith("HS-") && e.status === "COMPLETED")
+    .reduce((sum, e) => sum + e.course.credits, 0);
+
+  const determineCourseType = (course: Course): string => {
+    const code = course.code.toUpperCase();
+    
+    // HSS courses (HS-xxx)
+    if (code.startsWith("HS-")) {
+      // First 12 credits count as HSS/CORE, rest as FE
+      if (hssCreditsCompleted < 12) {
+        return "CORE";
+      } else {
+        return "FREE_ELECTIVE";
+      }
+    }
+    
+    // DC courses (Discipline Core) - starts with branch code
+    if (code.startsWith("CS-") || code.startsWith("EE-") || 
+        code.startsWith("ME-") || code.startsWith("CE-") ||
+        code.match(/^[A-Z]{2,3}-[0-9]/)) {
+      // Check if it's actually a DC course by looking at department
+      if (course.department.includes("Computer") || 
+          course.department.includes("Electrical") ||
+          course.department.includes("Mechanical") ||
+          course.department.includes("Civil")) {
+        // Most parent discipline courses are DE (unless marked as core)
+        return "DE";
+      }
+    }
+    
+    // Default to FE for other courses
+    return "FREE_ELECTIVE";
+  };
+
+  const handleAddCourse = (course: Course) => {
+    setAddingCourse(course);
+    setSemester("");
+    setGrade("");
+    setCourseType("AUTO");
+  };
+
+  const submitEnrollment = async () => {
+    if (!addingCourse || !semester) {
+      showToast("error", "Please fill in all required fields");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const semNum = parseInt(semester);
+      const currentYear = new Date().getFullYear();
+      const batchYear = currentYear - Math.floor((semNum - 1) / 2);
+      const term = semNum % 2 === 1 ? "FALL" : "SPRING";
+      
+      // Determine final course type
+      let finalCourseType = courseType;
+      if (courseType === "AUTO") {
+        finalCourseType = determineCourseType(addingCourse);
+      }
+
+      const status = grade ? "COMPLETED" : semNum < 6 ? "COMPLETED" : "IN_PROGRESS";
+
+      const response = await fetch("/api/enrollments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseId: addingCourse.id,
+          semester: semNum,
+          year: batchYear,
+          term,
+          courseType: finalCourseType,
+          grade: grade || undefined,
+          status,
+        }),
+      });
+
+      if (response.ok) {
+        showToast("success", "Course added successfully!");
+        setAddingCourse(null);
+        await loadData();
+      } else {
+        const error = await response.json();
+        showToast("error", error.error || "Failed to add course");
+      }
+    } catch (error) {
+      console.error("Error adding course:", error);
+      showToast("error", "Failed to add course");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -350,7 +449,23 @@ export default function CoursesPage() {
                         <span className="px-3 py-1 bg-surface-hover rounded text-foreground-secondary">
                           L{course.level}
                         </span>
-                        <div className="flex gap-2 ml-auto">
+                        {enrolledCourseIds.has(course.id) ? (
+                          <span className="px-3 py-1 bg-green-500/10 text-green-600 rounded font-medium border border-green-500/30 ml-auto">
+                            ✓ Enrolled
+                          </span>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddCourse(course);
+                            }}
+                            className="ml-auto px-4 py-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover font-medium transition-colors flex items-center gap-1"
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add
+                          </button>
+                        )}
+                        <div className="flex gap-2">
                           {course.offeredInFall && (
                             <span className="px-2 py-1 bg-orange-500/10 text-orange-600 rounded text-xs font-semibold">
                               Fall
@@ -473,11 +588,170 @@ export default function CoursesPage() {
                 >
                   Copy Code
                 </button>
+                {!enrolledCourseIds.has(selectedCourse.id) && (
+                  <button
+                    onClick={() => {
+                      setSelectedCourse(null);
+                      handleAddCourse(selectedCourse);
+                    }}
+                    className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all font-medium flex items-center justify-center gap-2"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Add Course
+                  </button>
+                )}
+              </div>
                 <button
                   onClick={() => setSelectedCourse(null)}
                   className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:shadow-lg transition-all font-medium"
                 >
                   Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Course Modal */}
+      <AnimatePresence>
+        {addingCourse && (
+          <motion.div
+            key="add-modal"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setAddingCourse(null)}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-surface rounded-2xl p-8 max-w-lg w-full shadow-2xl"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-foreground">Add Course</h2>
+                <button
+                  onClick={() => setAddingCourse(null)}
+                  className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-surface-hover transition-colors text-foreground-secondary hover:text-foreground"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4 mb-6">
+                {/* Course Info */}
+                <div className="p-4 bg-surface-hover rounded-lg border border-border">
+                  <h3 className="font-bold text-lg text-foreground mb-1">
+                    {addingCourse.code}
+                  </h3>
+                  <p className="text-foreground-secondary">{addingCourse.name}</p>
+                  <div className="flex gap-2 mt-2">
+                    <span className="px-2 py-1 bg-primary/10 text-primary text-sm font-semibold rounded">
+                      {addingCourse.credits} Credits
+                    </span>
+                    <span className="px-2 py-1 bg-surface text-foreground-secondary text-sm rounded">
+                      {addingCourse.department}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Semester Input */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Semester Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="12"
+                    value={semester}
+                    onChange={(e) => setSemester(e.target.value)}
+                    placeholder="e.g., 3"
+                    className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
+                  />
+                  <p className="text-xs text-foreground-secondary mt-1">
+                    Which semester did you take this course?
+                  </p>
+                </div>
+
+                {/* Grade Input */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Grade (Optional)
+                  </label>
+                  <select
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value)}
+                    className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
+                  >
+                    <option value="">No grade yet</option>
+                    <option value="A+">A+</option>
+                    <option value="A">A</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B">B</option>
+                    <option value="B-">B-</option>
+                    <option value="C+">C+</option>
+                    <option value="C">C</option>
+                    <option value="C-">C-</option>
+                    <option value="D">D</option>
+                    <option value="F">F</option>
+                    <option value="P">P (Pass)</option>
+                    <option value="NP">NP (Not Pass)</option>
+                  </select>
+                </div>
+
+                {/* Course Type */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Course Type
+                  </label>
+                  <select
+                    value={courseType}
+                    onChange={(e) => setCourseType(e.target.value)}
+                    className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
+                  >
+                    <option value="AUTO">Auto-detect (Recommended)</option>
+                    <option value="CORE">Core (IC/DC)</option>
+                    <option value="DE">Discipline Elective (DE)</option>
+                    <option value="FREE_ELECTIVE">Free Elective (FE)</option>
+                    <option value="PE">Program Elective (PE)</option>
+                  </select>
+                  <p className="text-xs text-foreground-secondary mt-1">
+                    {courseType === "AUTO" && (
+                      <>
+                        {addingCourse.code.startsWith("HS-") ? (
+                          hssCreditsCompleted < 12 ? (
+                            <span className="text-green-600">→ Will be marked as HSS/Core ({12 - hssCreditsCompleted} credits remaining)</span>
+                          ) : (
+                            <span className="text-blue-600">→ Will be marked as Free Elective (HSS limit reached)</span>
+                          )
+                        ) : (
+                          <span>→ Will auto-detect based on course code</span>
+                        )}
+                      </>
+                    )}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setAddingCourse(null)}
+                  disabled={submitting}
+                  className="flex-1 px-6 py-3 border-2 border-border text-foreground rounded-lg hover:bg-surface-hover transition-all font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitEnrollment}
+                  disabled={submitting || !semester}
+                  className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? "Adding..." : "Add Course"}
                 </button>
               </div>
             </motion.div>
