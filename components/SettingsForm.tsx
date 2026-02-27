@@ -163,43 +163,43 @@ export function SettingsForm({ user }: SettingsFormProps) {
           </h3>
           
           <div className="space-y-4">
-            <div className="flex items-start gap-3 p-4 bg-background-secondary dark:bg-background rounded-lg border border-border">
+            <div className="flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-lg border-2 border-border hover:border-primary/50 transition-colors">
               <input
                 type="checkbox"
                 id="doingMTP"
                 checked={formData.doingMTP}
                 onChange={(e) => setFormData({ ...formData, doingMTP: e.target.checked })}
-                className="mt-1 w-4 h-4 text-primary border-border rounded focus:ring-primary"
+                className="mt-1 w-5 h-5 text-primary bg-surface border-2 border-border rounded focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
               />
               <div className="flex-1">
-                <label htmlFor="doingMTP" className="block font-medium text-foreground cursor-pointer">
+                <label htmlFor="doingMTP" className="block font-semibold text-foreground cursor-pointer hover:text-primary transition-colors">
                   Major Technical Project (MTP)
                 </label>
                 <p className="text-sm text-foreground-secondary mt-1">
                   8 credits (MTP-1: 3 credits + MTP-2: 5 credits)
                 </p>
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
                   ⚠️ If unchecked: +8 credits will be added to Discipline Electives (DE)
                 </p>
               </div>
             </div>
 
-            <div className="flex items-start gap-3 p-4 bg-background-secondary dark:bg-background rounded-lg border border-border">
+            <div className="flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-lg border-2 border-border hover:border-primary/50 transition-colors">
               <input
                 type="checkbox"
                 id="doingISTP"
                 checked={formData.doingISTP}
                 onChange={(e) => setFormData({ ...formData, doingISTP: e.target.checked })}
-                className="mt-1 w-4 h-4 text-primary border-border rounded focus:ring-primary"
+                className="mt-1 w-5 h-5 text-primary bg-surface border-2 border-border rounded focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
               />
               <div className="flex-1">
-                <label htmlFor="doingISTP" className="block font-medium text-foreground cursor-pointer">
+                <label htmlFor="doingISTP" className="block font-semibold text-foreground cursor-pointer hover:text-primary transition-colors">
                   Interactive Socio-Technical Practicum (ISTP)
                 </label>
                 <p className="text-sm text-foreground-secondary mt-1">
                   4 credits (6th semester practicum)
                 </p>
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">
+                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
                   ⚠️ If unchecked: +4 credits will be added to Free Electives (FE)
                 </p>
               </div>

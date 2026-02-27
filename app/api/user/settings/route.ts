@@ -49,6 +49,20 @@ export async function PATCH(req: NextRequest) {
     const body = await req.json();
     const { name, enrollmentId, branch, doingMTP, doingISTP } = body;
 
+    // Check if user already has a branch set
+    const currentUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { branch: true },
+    });
+
+    // Prevent branch changes if branch is already set
+    if (branch && currentUser?.branch && currentUser.branch !== branch) {
+      return NextResponse.json(
+        { error: "Cannot change branch after it has been set" },
+        { status: 403 }
+      );
+    }
+
     // Validate branch if provided
     if (branch) {
       const validBranches = [
