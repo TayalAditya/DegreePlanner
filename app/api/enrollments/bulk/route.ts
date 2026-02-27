@@ -94,6 +94,23 @@ export async function POST(req: NextRequest) {
     const results = [];
     const errors = [];
 
+    const normalizeCourseCode = (code: string) =>
+      code.toUpperCase().replace(/\s+/g, "");
+
+    const toHyphenatedCode = (code: string) => {
+      const normalized = normalizeCourseCode(code).replace(/-/g, "");
+      const match = normalized.match(/^([A-Z]+)(\d{3}[A-Z]?)$/);
+      if (match) return `${match[1]}-${match[2]}`;
+      return normalized;
+    };
+
+    const buildCodeCandidates = (code: string) => {
+      const normalized = normalizeCourseCode(code);
+      const dehyphenated = normalized.replace(/-/g, "");
+      const hyphenated = toHyphenatedCode(normalized);
+      return Array.from(new Set([normalized, dehyphenated, hyphenated]));
+    };
+
     const inferBatchYear = (batch: number | null | undefined, enrollmentId: string | null | undefined) => {
       if (enrollmentId) {
         const match = enrollmentId.match(/B(\d{2})/i);
@@ -110,20 +127,10 @@ export async function POST(req: NextRequest) {
         const rawType = enrollment.courseType as string;
         const courseType = categoryToCourseType[rawType] ?? "CORE";
 
-        const normalizeCode = (code: string) => code.trim().toUpperCase();
-        const baseCode = normalizeCode(courseCode);
-        const codeVariants = Array.from(
-          new Set([
-            baseCode,
-            baseCode.replace(/\s+/g, "-"),
-            baseCode.replace(/\s+/g, ""),
-            baseCode.replace(/^([A-Z]{2})\s*(\d{3}P?)$/, "$1-$2"),
-          ])
-        );
-
-        // Find the course by code (try common variants)
+        // Find the course by code (support both hyphenated and non-hyphenated)
+        const codeCandidates = buildCodeCandidates(courseCode);
         const course = await prisma.course.findFirst({
-          where: { code: { in: codeVariants } },
+          where: { code: { in: codeCandidates } },
         });
 
         if (!course) {
@@ -162,6 +169,22 @@ export async function POST(req: NextRequest) {
               term,
               programId: primaryProgramId, // Set programId
             },
+      const normalizeCourseCode = (code: string) =>
+        code.toUpperCase().replace(/\s+/g, "");
+
+      const toHyphenatedCode = (code: string) => {
+        const normalized = normalizeCourseCode(code).replace(/-/g, "");
+        const match = normalized.match(/^([A-Z]+)(\d{3}[A-Z]?)$/);
+        if (match) return `${match[1]}-${match[2]}`;
+        return normalized;
+      };
+
+      const buildCodeCandidates = (code: string) => {
+        const normalized = normalizeCourseCode(code);
+        const dehyphenated = normalized.replace(/-/g, "");
+        const hyphenated = toHyphenatedCode(normalized);
+        return Array.from(new Set([normalized, dehyphenated, hyphenated]));
+      };
           });
           results.push({ courseCode, action: "updated", id: updated.id });
         } else {
@@ -179,17 +202,12 @@ export async function POST(req: NextRequest) {
               programId: primaryProgramId, // Set programId
             },
           });
-          results.push({ courseCode, action: "created", id: created.id });
-        }
-      } catch (error) {
-        console.error(`Error processing ${enrollment.courseCode}:`, error);
-        errors.push({ courseCode: enrollment.courseCode, error: String(error) });
-      }
-    }
-
-    const summary = {
-      total: enrollments.length,
       successful: results.length,
+          // Find the course by code (support both hyphenated and non-hyphenated)
+          const codeCandidates = buildCodeCandidates(courseCode);
+          const course = await prisma.course.findFirst({
+            where: { code: { in: codeCandidates } },
+          });
       failed: errors.length,
     };
 

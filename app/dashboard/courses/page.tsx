@@ -50,6 +50,8 @@ interface Enrollment {
 interface User {
   branch?: string;
   totalPassFailCredits?: number;
+  batch?: number | null;
+  enrollmentId?: string | null;
 }
 
 // Color scheme for each category
@@ -265,6 +267,15 @@ export default function CoursesPage() {
     setIsPassFail(false);
   };
 
+  const inferBatchYear = () => {
+    if (user?.batch && user.batch > 2000) return user.batch;
+    if (user?.enrollmentId) {
+      const match = user.enrollmentId.match(/B(\d{2})/i);
+      if (match) return 2000 + parseInt(match[1], 10);
+    }
+    return new Date().getFullYear() - 3;
+  };
+
   const submitEnrollment = async () => {
     if (!addingCourse || !semester) {
       showToast("error", "Please fill in all required fields");
@@ -274,8 +285,7 @@ export default function CoursesPage() {
     setSubmitting(true);
     try {
       const semNum = parseInt(semester);
-      const currentYear = new Date().getFullYear();
-      const batchYear = currentYear - Math.floor((semNum - 1) / 2);
+      const batchYear = inferBatchYear();
       const term = semNum % 2 === 1 ? "FALL" : "SPRING";
       
       // Determine final course type
