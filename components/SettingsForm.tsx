@@ -131,9 +131,13 @@ export function SettingsForm({ user }: SettingsFormProps) {
                 type="text"
                 value={formData.enrollmentId}
                 onChange={(e) => setFormData({ ...formData, enrollmentId: e.target.value })}
-                className="w-full px-4 py-2 border border-border rounded-md bg-surface text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+                disabled
+                className="w-full px-4 py-2 border border-border rounded-md bg-background-secondary dark:bg-background text-foreground-secondary cursor-not-allowed"
                 placeholder="e.g., 2020XXXXXX"
               />
+              <p className="mt-1 text-xs text-foreground-secondary">
+                Enrollment ID cannot be changed.
+              </p>
             </div>
 
             <div>
@@ -143,7 +147,8 @@ export function SettingsForm({ user }: SettingsFormProps) {
               <select
                 value={formData.branch}
                 onChange={(e) => setFormData({ ...formData, branch: e.target.value })}
-                className="w-full px-4 py-2 border border-border rounded-md bg-surface text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+                disabled
+                className="w-full px-4 py-2 border border-border rounded-md bg-background-secondary dark:bg-background text-foreground-secondary cursor-not-allowed"
                 required
               >
                 <option value="">Select your branch</option>
