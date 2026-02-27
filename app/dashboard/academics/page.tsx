@@ -190,8 +190,8 @@ function CreditsSection() {
     <div className="space-y-6">
       <div className="bg-card p-6 rounded-xl border">
         <h3 className="font-semibold text-xl mb-4">Discipline Core & Electives by Branch</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
+        <div className="-mx-6 overflow-x-auto px-6 scrollbar-hide">
+          <table className="w-full min-w-[680px] text-sm">
             <thead>
               <tr className="border-b">
                 <th className="text-left p-3">Branch</th>
@@ -202,10 +202,10 @@ function CreditsSection() {
             </thead>
             <tbody>
               {branches.map((branch, idx) => (
-                <tr key={idx} className="border-b hover:bg-accent/50 transition-colors">
+                <tr key={idx} className="border-b hover:bg-surface-hover/70 transition-colors">
                   <td className="p-3">{branch.name}</td>
-                  <td className="text-right p-3 text-blue-600 font-semibold">{branch.dc}</td>
-                  <td className="text-right p-3 text-purple-600 font-semibold">{branch.de}</td>
+                  <td className="text-right p-3 text-blue-600 dark:text-blue-400 font-semibold">{branch.dc}</td>
+                  <td className="text-right p-3 text-purple-600 dark:text-purple-400 font-semibold">{branch.de}</td>
                   <td className="text-right p-3 font-bold">{branch.total}</td>
                 </tr>
               ))}
@@ -219,13 +219,13 @@ function CreditsSection() {
           <h3 className="font-semibold text-xl mb-4">ISTP & MTP</h3>
           <div className="space-y-4">
             <div>
-              <h4 className="font-semibold text-blue-600 mb-2">ISTP (4 credits)</h4>
+              <h4 className="font-semibold text-blue-600 dark:text-blue-400 mb-2">ISTP (4 credits)</h4>
               <p className="text-sm text-muted-foreground">
                 Interactive Socio-Technical Practicum - 6th Semester practicum involving development of useful products and technologies with understanding of socio-economic context.
               </p>
             </div>
             <div>
-              <h4 className="font-semibold text-purple-600 mb-2">MTP (8 credits total)</h4>
+              <h4 className="font-semibold text-purple-600 dark:text-purple-400 mb-2">MTP (8 credits total)</h4>
               <p className="text-sm text-muted-foreground mb-2">
                 Major Technical Project - Final year project under faculty supervision
               </p>
@@ -242,7 +242,7 @@ function CreditsSection() {
           <h3 className="font-semibold text-xl mb-4">Pass/Fail & Audit Courses</h3>
           <div className="space-y-4">
             <div>
-              <h4 className="font-semibold text-blue-600 mb-2">Pass/Fail Courses</h4>
+              <h4 className="font-semibold text-blue-600 dark:text-blue-400 mb-2">Pass/Fail Courses</h4>
               <ul className="text-sm space-y-1 text-muted-foreground">
                 <li>• Grades: Pass (P) or Fail (F)</li>
                 <li>• Count towards B.Tech requirement</li>
@@ -252,7 +252,7 @@ function CreditsSection() {
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold text-purple-600 mb-2">Audit Courses</h4>
+              <h4 className="font-semibold text-purple-600 dark:text-purple-400 mb-2">Audit Courses</h4>
               <ul className="text-sm space-y-1 text-muted-foreground">
                 <li>• Grades: Audit Pass (AP) or Audit Fail (AF)</li>
                 <li>• Don't count towards requirements</li>

@@ -813,7 +813,7 @@ export default function CoursesPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-surface rounded-2xl p-8 max-w-lg w-full shadow-2xl"
+              className="bg-surface rounded-2xl p-8 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto mt-[0.8vh]"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-foreground">Add Course</h2>
