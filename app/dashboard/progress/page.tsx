@@ -163,16 +163,25 @@ export default function ProgressPage() {
       if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
         const mapping = enrollment.course.branchMappings.find(
           (m) => m.branch === user.branch
-        );
+        ) || (user.branch === "GE"
+          ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
+          : undefined);
+
         if (mapping && mapping.courseCategory in creditsByCategory) {
           return mapping.courseCategory as keyof typeof creditsByCategory;
         }
       }
 
+      // Fallback to course code hints
+      const code = enrollment.course.code.toUpperCase();
+      if (code.startsWith("IC")) return "IC";
+      if (code.startsWith("HS")) return "HSS";
+      if (code.startsWith("IKS")) return "IKS";
+      if (code.includes("MTP")) return "MTP";
+      if (code.includes("ISTP")) return "ISTP";
+
       // Fallback to courseType mapping
       switch (enrollment.courseType) {
-        case "CORE":
-          return "DC"; // Most core courses are DC
         case "DE":
           return "DE";
         case "PE":
@@ -182,8 +191,9 @@ export default function ProgressPage() {
           return "MTP";
         case "ISTP":
           return "ISTP";
+        case "CORE":
         default:
-          return "FE";
+          return "DC";
       }
     };
 
