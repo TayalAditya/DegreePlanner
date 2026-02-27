@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { formatCourseCode } from "@/lib/utils";
+import { InstructorList } from "@/components/InstructorCard";
 
 interface Course {
   id: string;
@@ -608,7 +609,7 @@ export default function CoursesPage() {
                                   <p className="text-foreground font-medium mb-2 text-sm">
                                     {enrollment.course.name}
                                   </p>
-                                  <div className="flex flex-wrap gap-2 text-xs text-foreground-secondary">
+                                  <div className="flex flex-wrap gap-2 text-xs text-foreground-secondary mb-3">
                                     <span className="px-2 py-1 bg-surface-hover rounded">
                                       {enrollment.term} {enrollment.year}
                                     </span>
@@ -616,6 +617,7 @@ export default function CoursesPage() {
                                       {enrollment.course.department}
                                     </span>
                                   </div>
+                                  <InstructorList courseCode={enrollment.course.code} variant="compact" />
                                 </button>
                                 <div className="flex flex-col gap-2">
                                   {enrollment.grade && (
@@ -842,6 +844,13 @@ export default function CoursesPage() {
                     </span>
                   )}
                 </div>
+              </div>
+
+              <div className="mb-6">
+                <h3 className="font-semibold text-foreground mb-3">
+                  Instructors
+                </h3>
+                <InstructorList courseCode={selectedCourse.code} variant="full" />
               </div>
 
               {selectedCourse.description && (
