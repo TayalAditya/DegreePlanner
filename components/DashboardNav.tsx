@@ -16,7 +16,6 @@ import {
   FileText,
   GitBranch,
   Info,
-  CheckSquare,
   Download
 } from "lucide-react";
 import { useState } from "react";
@@ -51,150 +50,187 @@ export function DashboardNav({ user }: DashboardNavProps) {
     { name: "Course Mappings", href: "/dashboard/course-mappings", icon: GitBranch },
   ];
 
+  const allNavigation = user.role === "ADMIN"
+    ? [...navigation, ...adminNavigation]
+    : navigation;
+
+  const isActiveRoute = (href: string) => {
+    if (href === "/dashboard") return pathname === "/dashboard";
+    return pathname.startsWith(href);
+  };
+
+  const signOutAndClose = () => {
+    setMobileMenuOpen(false);
+    signOut({ callbackUrl: "/auth/signin" });
+  };
+
   return (
-    <nav className="bg-surface dark:bg-surface border-b border-border no-print sticky top-0 z-50 backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex flex-1 min-w-0">
+    <>
+      {/* Mobile: Top bar */}
+      <nav className="lg:hidden bg-surface/80 border-b border-border no-print sticky top-0 z-50 backdrop-blur-sm">
+        <div className="px-4 sm:px-6">
+          <div className="flex justify-between h-16 items-center">
             <Link
               href="/dashboard"
               className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
             >
               <GraduationCap className="w-7 h-7 text-primary" />
-              <span className="ml-2 text-lg font-bold text-foreground hidden sm:block">
+              <span className="ml-2 text-lg font-bold text-foreground">
                 Degree Planner
               </span>
             </Link>
 
-            <div className="hidden lg:ml-4 lg:flex lg:space-x-0.5 xl:space-x-1 lg:overflow-x-auto lg:scrollbar-hide">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`inline-flex items-center flex-shrink-0 px-2 lg:px-2.5 xl:px-3 py-2 border-b-2 text-xs lg:text-sm font-medium transition-colors whitespace-nowrap ${
-                      isActive
-                        ? "border-primary text-foreground"
-                        : "border-transparent text-foreground-secondary hover:border-border hover:text-foreground"
-                    } rounded-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20`}
-                  >
-                    <Icon className="w-4 h-4 lg:mr-1.5 xl:mr-2 flex-shrink-0" />
-                    <span className="hidden lg:inline">{item.name}</span>
-                  </Link>
-                );
-              })}
-              {user.role === "ADMIN" && adminNavigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`inline-flex items-center flex-shrink-0 px-2 lg:px-2.5 xl:px-3 py-2 border-b-2 text-xs lg:text-sm font-medium transition-colors whitespace-nowrap ${
-                      isActive
-                        ? "border-primary text-foreground"
-                        : "border-transparent text-foreground-secondary hover:border-border hover:text-foreground"
-                    } rounded-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20`}
-                  >
-                    <Icon className="w-4 h-4 lg:mr-1.5 xl:mr-2 flex-shrink-0" />
-                    <span className="hidden lg:inline">{item.name}</span>
-                  </Link>
-                );
-              })}
+            <div className="flex items-center space-x-2">
+              <ThemeToggle />
+              <button
+                onClick={() => setMobileMenuOpen((v) => !v)}
+                className="inline-flex items-center justify-center p-2 rounded-lg border border-border bg-card text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              >
+                {mobileMenuOpen ? (
+                  <X className="w-5 h-5" />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
+              </button>
             </div>
-          </div>
-
-          <div className="hidden lg:ml-3 lg:flex lg:items-center space-x-2 flex-shrink-0">
-            <ThemeToggle />
-            <div className="flex items-center pl-3 border-l border-border">
-              {user.image && (
-                <img
-                  src={user.image}
-                  alt={user.name || "User"}
-                  className="w-8 h-8 rounded-full ring-2 ring-border"
-                />
-              )}
-              <div className="ml-3 hidden xl:block">
-                <p className="text-sm font-medium text-foreground truncate max-w-[150px]">{user.name}</p>
-                <p className="text-xs text-foreground-secondary truncate max-w-[150px]">{user.email}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-              className="inline-flex items-center px-3 py-2 border border-border text-sm font-medium rounded-md text-foreground-secondary hover:bg-background-secondary transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              <span className="hidden xl:inline">Sign Out</span>
-            </button>
-          </div>
-
-          <div className="flex items-center lg:hidden space-x-2">
-            <ThemeToggle />
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-foreground-secondary hover:text-foreground hover:bg-background-secondary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-            >
-              {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
-            </button>
           </div>
         </div>
-      </div>
+      </nav>
 
+      {/* Mobile: Drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-border bg-surface dark:bg-surface">
-          <div className="pt-2 pb-3 space-y-1 px-2">
-            {navigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`flex items-center px-3 py-2 rounded-md text-base font-medium transition-colors ${
-                    isActive
-                      ? "bg-primary bg-opacity-10 dark:bg-opacity-20 text-primary"
-                      : "text-foreground-secondary hover:bg-background-secondary hover:text-foreground"
-                  } focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20`}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Icon className="w-5 h-5 mr-3" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </div>
-          <div className="pt-4 pb-3 border-t border-border">
-            <div className="flex items-center px-5">
-              {user.image && (
-                <img
-                  src={user.image}
-                  alt={user.name || "User"}
-                  className="w-10 h-10 rounded-full ring-2 ring-border"
-                />
-              )}
-              <div className="ml-3 flex-1 min-w-0">
-                <p className="text-base font-medium text-foreground truncate">{user.name}</p>
-                <p className="text-sm text-foreground-secondary truncate">{user.email}</p>
-              </div>
-            </div>
-            <div className="mt-3 px-2 space-y-1">
+        <div className="lg:hidden fixed inset-0 z-50 no-print">
+          <button
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Close menu"
+          />
+
+          <div className="absolute right-0 top-0 h-full w-80 max-w-[85vw] bg-surface border-l border-border shadow-xl animate-slide-in flex flex-col">
+            <div className="flex items-center justify-between px-4 py-4 border-b border-border">
+              <span className="text-sm font-semibold text-foreground">Menu</span>
               <button
-                onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-                className="flex items-center w-full px-3 py-2 rounded-md text-base font-medium text-foreground-secondary hover:text-foreground hover:bg-background-secondary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                aria-label="Close menu"
               >
-                <LogOut className="w-5 h-5 mr-3" />
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-hide">
+              {allNavigation.map((item) => {
+                const Icon = item.icon;
+                const isActive = isActiveRoute(item.href);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+                      isActive
+                        ? "bg-primary/10 text-primary border-primary/20"
+                        : "bg-card border-border/60 text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
+                    }`}
+                  >
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="truncate">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="border-t border-border px-4 py-4 space-y-3">
+              <div className="flex items-center gap-3">
+                {user.image && (
+                  <img
+                    src={user.image}
+                    alt={user.name || "User"}
+                    className="w-10 h-10 rounded-full ring-2 ring-border"
+                  />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
+                  <p className="text-xs text-foreground-secondary truncate">{user.email}</p>
+                </div>
+              </div>
+
+              <button
+                onClick={signOutAndClose}
+                className="flex items-center justify-center w-full gap-2 px-3 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+              >
+                <LogOut className="w-4 h-4" />
                 Sign Out
               </button>
             </div>
           </div>
         </div>
       )}
-    </nav>
+
+      {/* Desktop: Sidebar */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/80 border-r border-border no-print sticky top-0 h-screen backdrop-blur-sm">
+        <div className="h-16 flex items-center px-4 border-b border-border">
+          <Link
+            href="/dashboard"
+            className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+          >
+            <GraduationCap className="w-7 h-7 text-primary" />
+            <span className="ml-2 text-lg font-bold text-foreground">
+              Degree Planner
+            </span>
+          </Link>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-hide">
+          {allNavigation.map((item) => {
+            const Icon = item.icon;
+            const isActive = isActiveRoute(item.href);
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
+                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+                  isActive
+                    ? "bg-primary/10 text-primary border-primary/20 shadow-sm"
+                    : "bg-transparent border-transparent text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
+                }`}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                <span className="truncate">{item.name}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        <div className="border-t border-border px-4 py-4 space-y-3">
+          <ThemeToggle />
+
+          <div className="flex items-center gap-3">
+            {user.image && (
+              <img
+                src={user.image}
+                alt={user.name || "User"}
+                className="w-9 h-9 rounded-full ring-2 ring-border"
+              />
+            )}
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
+              <p className="text-xs text-foreground-secondary truncate">{user.email}</p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+            className="flex items-center justify-center w-full gap-2 px-3 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

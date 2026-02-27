@@ -166,7 +166,22 @@ export default function CoursesPage() {
     if (code.startsWith("IKS")) return "IKS";
     if (code.includes("MTP")) return "MTP";
     if (code.includes("ISTP")) return "ISTP";
-    return "FE";
+
+    // Fallback to courseType mapping
+    switch (enrollment.courseType) {
+      case "DE":
+        return "DE";
+      case "FREE_ELECTIVE":
+      case "PE":
+        return "FE";
+      case "MTP":
+        return "MTP";
+      case "ISTP":
+        return "ISTP";
+      case "CORE":
+      default:
+        return "DC";
+    }
   };
 
   const creditsByCategory: Record<string, number> = {
