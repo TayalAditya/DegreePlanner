@@ -254,7 +254,22 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
         </div>
       )}
 
-      {semesterStatsList.length > 0 && (
+      {enrollmentsLoading ? (
+        <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6 animate-pulse">
+          <div className="h-6 bg-background-secondary dark:bg-background rounded w-1/3 mb-4"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="border border-border rounded-lg p-4 bg-surface-hover">
+                <div className="h-4 bg-background-secondary dark:bg-background rounded w-1/2 mb-2"></div>
+                <div className="space-y-2">
+                  <div className="h-3 bg-background-secondary dark:bg-background rounded w-1/3"></div>
+                  <div className="h-3 bg-background-secondary dark:bg-background rounded w-1/3"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : semesterStatsList.length > 0 ? (
         <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 flex items-center">
             <span className="w-1 h-6 bg-primary rounded-full mr-3"></span>
@@ -272,15 +287,24 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-foreground-secondary">
                   <span>IC: {sem.IC}</span>
+                  <span>IC Basket: {sem.IC_BASKET}</span>
                   <span>DC: {sem.DC}</span>
                   <span>DE: {sem.DE}</span>
                   <span>FE: {sem.FE}</span>
+                  <span>HSS: {sem.HSS}</span>
+                  <span>IKS: {sem.IKS}</span>
+                  {(sem.MTP > 0 || sem.ISTP > 0) && (
+                    <>
+                      {sem.MTP > 0 && <span>MTP: {sem.MTP}</span>}
+                      {sem.ISTP > 0 && <span>ISTP: {sem.ISTP}</span>}
+                    </>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* Available DE Courses */}
       {progressData?.availableDECourses && progressData.availableDECourses.length > 0 && (
