@@ -153,10 +153,7 @@ const eeSem7: DefaultCourse[] = [
   { code: "EEXXX2", name: "Reverse Engineering",                                   credits: 1, category: "DC", semester: 7 },
   ...mtpSem7,
 ];
-const eeSem8: DefaultCourse[] = [...mtpSem8  { code: "EE314",  name: "Digital Signal Processing",                             credits: 3, category: "DC", semester: 7 },
-  { code: "EE326",  name: "Computer Organization & Processor Architecture Design", credits: 4, category: "DC", semester: 7 },
-  { code: "EEXXX2", name: "Reverse Engineering",                                   credits: 1, category: "DC", semester: 7 },
-];
+const eeSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── ME  (DC = 50 cr | IC-I: free choice | IC-II: free choice) ───────────────
 const meSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
