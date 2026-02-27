@@ -677,7 +677,7 @@ export default function CoursesPage() {
                 onChange={(e) => setSelectedDept(e.target.value)}
                 className="px-6 py-3 bg-surface border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground font-medium shadow-sm transition-all cursor-pointer min-w-[200px]"
               >
-                <option value="all">All Departments</option>
+                <option value="all">All Departments ({departments.length})</option>
                 {departments.map((dept) => (
                   <option key={dept} value={dept}>
                     {dept}
