@@ -224,9 +224,10 @@ export default function ProgressPage() {
 
       // Fallback to course code hints
       const code = enrollment.course.code.toUpperCase();
-      if (ICB_CODES.has(code)) return "IC_BASKET";
-      if (code === "IC181") return "IKS";
-      if (code.startsWith("IC")) return "IC";
+      const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+      if (ICB_CODES.has(normalizedCode)) return "IC_BASKET";
+      if (normalizedCode === "IC181") return "IKS";
+      if (normalizedCode.startsWith("IC")) return "IC";
       if (code.startsWith("HS")) return "HSS";
       if (code.startsWith("IK")) return "IKS";
       if (code.includes("MTP")) return "MTP";
