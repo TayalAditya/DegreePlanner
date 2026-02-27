@@ -112,7 +112,10 @@ export class CreditCalculator {
     };
 
     const completed = this.calculateCreditsByType(
-      enrollments.filter((e) => e.status === EnrollmentStatus.COMPLETED)
+      enrollments.filter((e) => 
+        e.status === EnrollmentStatus.COMPLETED && 
+        (!e.grade || e.grade !== "F") // Exclude failed courses
+      )
     );
 
     const inProgress = this.calculateCreditsByType(
@@ -221,10 +224,12 @@ export class CreditCalculator {
       },
     });
 
-    const creditsCompleted = enrollments.reduce(
-      (sum: number, e: { course: { credits: number } }) => sum + e.course.credits,
-      0
-    );
+    const creditsCompleted = enrollments
+      .filter((e: { grade?: string | null }) => !e.grade || e.grade !== "F")
+      .reduce(
+        (sum: number, e: { course: { credits: number } }) => sum + e.course.credits,
+        0
+      );
 
     // Get current semester
     const allEnrollments = await prisma.courseEnrollment.findMany({
@@ -300,6 +305,7 @@ export class CreditCalculator {
     enrollments: Array<{
       course: { credits: number };
       courseType: CourseType;
+      grade?: string | null;
     }>
   ): CreditBreakdown {
     const breakdown: CreditBreakdown = {
