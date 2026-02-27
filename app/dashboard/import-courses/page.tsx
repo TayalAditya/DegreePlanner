@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { getAllDefaultCourses, getDefaultCurriculum, DefaultCourse } from "@/lib/defaultCurriculum";
+import { useToast } from "@/components/ToastProvider";
 
 interface SelectedCourse extends DefaultCourse {
   selected: boolean;
@@ -36,6 +37,7 @@ interface CatalogCourse {
 }
 
 export default function ImportCoursesPage() {
+  const { showToast } = useToast();
   const [branch, setBranch] = useState("CSE");
   const [geSubBranch, setGeSubBranch] = useState("GERAI");
   const [currentSemester, setCurrentSemester] = useState(6);
@@ -49,6 +51,7 @@ export default function ImportCoursesPage() {
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadUserSettings();
@@ -218,12 +221,12 @@ export default function ImportCoursesPage() {
       const res = await fetch("/api/enrollments", { method: "DELETE" });
       if (res.ok) {
         setImportedCourseKeys(new Set());
-        alert("All courses deleted. You can now re-import.");
+        showToast("success", "All courses deleted. You can now re-import.");
       } else {
-        alert("Failed to delete courses.");
+        showToast("error", "Failed to delete courses.");
       }
     } catch {
-      alert("An error occurred.");
+      showToast("error", "An error occurred.");
     } finally {
       setResetting(false);
     }
@@ -231,6 +234,7 @@ export default function ImportCoursesPage() {
 
   const handleSubmit = async () => {
     setLoading(true);
+    setErrorMessage(null);
     try {
       const selectedCourses = courses.filter((c) => c.selected);
       
@@ -251,8 +255,9 @@ export default function ImportCoursesPage() {
 
       if (res.ok) {
         if (data?.summary?.failed > 0) {
-          alert(
-            `Imported ${data.summary.successful} courses, but ${data.summary.failed} failed. Open console for details.`
+          showToast(
+            "warning",
+            `Imported ${data.summary.successful} courses, but ${data.summary.failed} failed.`
           );
           if (data?.errors?.length) {
             console.warn("Import failures:", data.errors);
@@ -262,14 +267,16 @@ export default function ImportCoursesPage() {
         loadExistingEnrollments();
       } else {
         const msg = data?.error || "Failed to import courses. Please try again.";
+        setErrorMessage(msg);
         if (data?.errors?.length) {
           console.warn("Import failures:", data.errors);
         }
-        alert(msg);
+        showToast("error", msg);
       }
     } catch (error) {
       console.error("Failed to import courses:", error);
-      alert("An error occurred. Please try again.");
+      setErrorMessage("An error occurred. Please try again.");
+      showToast("error", "An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -316,6 +323,11 @@ export default function ImportCoursesPage() {
 
   return (
     <div className="space-y-6">
+      {errorMessage && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-700 dark:text-red-300 px-4 py-3 rounded-lg">
+          {errorMessage}
+        </div>
+      )}
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
