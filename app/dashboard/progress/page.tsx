@@ -231,13 +231,25 @@ export default function ProgressPage() {
       const isICB1 = ICB1_CODES.has(normalizedCode);
       const isICB2 = ICB2_CODES.has(normalizedCode);
 
-      if (user?.branch === "CSE") {
-        // Sem 2: must be IC253 (DSA). If other basket course taken → FE
-        if (enrollment.semester === 2 && isICB2 && normalizedCode !== "IC253") return "FE";
-        if (code.startsWith("DS")) return "DE";
-      }
+      // Branch-specific basket rules
+      if (user?.branch) {
+        // Sem 1: ICB1 is compulsory. If ICB2 taken → FE
+        if (enrollment.semester === 1 && isICB2) return "FE";
+        
+        // Sem 2: Branch-specific
+        if (enrollment.semester === 2) {
+          if (user.branch === "CSE") {
+            // CSE Sem 2: IC253 (DSA) is compulsory. Other ICB2 → FE
+            if (isICB2 && normalizedCode !== "IC253") return "FE";
+          } else {
+            // Other branches Sem 2: ICB2 is compulsory. If ICB1 taken → FE
+            if (isICB1) return "FE";
+          }
+        }
 
-      if (user?.branch === "DSE" && code.startsWith("CS")) return "DE";
+        if (user.branch === "CSE" && code.startsWith("DS")) return "DE";
+        if (user.branch === "DSE" && code.startsWith("CS")) return "DE";
+      }
 
       if (isICB1 || isICB2) return "IC_BASKET";
       if (normalizedCode === "IC181") return "IKS";
