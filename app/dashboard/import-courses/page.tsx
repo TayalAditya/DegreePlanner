@@ -249,7 +249,9 @@ export default function ImportCoursesPage() {
             <select
               value={branch}
               onChange={(e) => setBranch(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border bg-background"
+              disabled={branch !== ""}
+              className="w-full px-3 py-2 rounded-lg border bg-background disabled:opacity-60 disabled:cursor-not-allowed"
+              title={branch ? "Branch cannot be changed after selection" : ""}
             >
               <option value="CSE">CSE</option>
               <option value="DSE">DSE</option>
@@ -264,6 +266,11 @@ export default function ImportCoursesPage() {
               <option value="MEVLSI">MEVLSI</option>
               <option value="BSCS">BSCS (B.S.)</option>
             </select>
+            {branch && (
+              <p className="text-xs text-foreground-secondary mt-1">
+                ℹ️ Branch is locked and cannot be changed
+              </p>
+            )}
           </div>
           {branch === "GE" && (
             <div>
