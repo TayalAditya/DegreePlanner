@@ -290,12 +290,12 @@ function CoursesSection() {
             { code: "IC222P", name: "Physics Practicum", credits: 2 },
             { code: "IC010", name: "Internship", credits: 2 },
           ].map((course, idx) => (
-            <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-accent/50 hover:bg-accent transition-colors">
+            <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-surface-hover/70 border border-border/60 hover:bg-surface-hover transition-colors">
               <div className="min-w-0">
-                <span className="font-mono text-sm text-blue-600">{course.code}</span>
+                <span className="font-mono text-sm text-blue-600 dark:text-blue-400">{course.code}</span>
                 <p className="text-sm">{course.name}</p>
               </div>
-              <span className="font-semibold text-purple-600">{course.credits}</span>
+              <span className="font-semibold text-purple-600 dark:text-purple-400">{course.credits}</span>
             </div>
           ))}
         </div>
@@ -305,20 +305,20 @@ function CoursesSection() {
         <h3 className="font-semibold text-xl mb-4">IC Basket Courses (6 credits)</h3>
         <div className="space-y-4">
           <div>
-            <h4 className="font-semibold text-blue-600 mb-2">IC-I Basket (3 credits - Choose 1)</h4>
+            <h4 className="font-semibold text-blue-600 dark:text-blue-400 mb-2">IC-I Basket (3 credits - Choose 1)</h4>
             <div className="space-y-2">
-              <div className="p-3 rounded-lg bg-accent/50"><span className="font-mono text-sm">IC131</span> - Applied Chemistry for Engineers</div>
-              <div className="p-3 rounded-lg bg-accent/50"><span className="font-mono text-sm">IC136</span> - Understanding Biotechnology and its Applications</div>
-              <div className="p-3 rounded-lg bg-accent/50"><span className="font-mono text-sm">IC230</span> - Environmental Science</div>
+              <div className="p-3 rounded-lg bg-surface-hover/70 border border-border/60"><span className="font-mono text-sm">IC131</span> - Applied Chemistry for Engineers</div>
+              <div className="p-3 rounded-lg bg-surface-hover/70 border border-border/60"><span className="font-mono text-sm">IC136</span> - Understanding Biotechnology and its Applications</div>
+              <div className="p-3 rounded-lg bg-surface-hover/70 border border-border/60"><span className="font-mono text-sm">IC230</span> - Environmental Science</div>
             </div>
           </div>
           <div>
-            <h4 className="font-semibold text-purple-600 mb-2">IC-II Basket (3 credits - Choose 1)</h4>
+            <h4 className="font-semibold text-purple-600 dark:text-purple-400 mb-2">IC-II Basket (3 credits - Choose 1)</h4>
             <div className="space-y-2">
-              <div className="p-3 rounded-lg bg-accent/50"><span className="font-mono text-sm">IC121</span> - Mechanics of Particles and Waves</div>
-              <div className="p-3 rounded-lg bg-accent/50"><span className="font-mono text-sm">IC240</span> - Mechanics of Rigid Bodies</div>
-              <div className="p-3 rounded-lg bg-accent/50"><span className="font-mono text-sm">IC241</span> - Material Science for Engineers</div>
-              <div className="p-3 rounded-lg bg-accent/50"><span className="font-mono text-sm">IC253</span> - Data Structures and Algorithms</div>
+              <div className="p-3 rounded-lg bg-surface-hover/70 border border-border/60"><span className="font-mono text-sm">IC121</span> - Mechanics of Particles and Waves</div>
+              <div className="p-3 rounded-lg bg-surface-hover/70 border border-border/60"><span className="font-mono text-sm">IC240</span> - Mechanics of Rigid Bodies</div>
+              <div className="p-3 rounded-lg bg-surface-hover/70 border border-border/60"><span className="font-mono text-sm">IC241</span> - Material Science for Engineers</div>
+              <div className="p-3 rounded-lg bg-surface-hover/70 border border-border/60"><span className="font-mono text-sm">IC253</span> - Data Structures and Algorithms</div>
             </div>
           </div>
         </div>
@@ -331,12 +331,12 @@ function CoursesSection() {
             12 credits from HSS courses covering various domains:
           </p>
           <div className="grid gap-2 md:grid-cols-2">
-            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">Sociology</div>
-            <div className="p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">Economics</div>
-            <div className="p-3 rounded-lg bg-pink-500/10 border border-pink-500/20">Literature</div>
-            <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/20">Entrepreneurship</div>
+            <div className="p-3 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 dark:border-blue-500/30">Sociology</div>
+            <div className="p-3 rounded-lg bg-purple-500/10 dark:bg-purple-500/20 border border-purple-500/20 dark:border-purple-500/30">Economics</div>
+            <div className="p-3 rounded-lg bg-pink-500/10 dark:bg-pink-500/20 border border-pink-500/20 dark:border-pink-500/30">Literature</div>
+            <div className="p-3 rounded-lg bg-orange-500/10 dark:bg-orange-500/20 border border-orange-500/20 dark:border-orange-500/30">Entrepreneurship</div>
           </div>
-          <div className="mt-4 p-4 rounded-lg bg-accent border-l-4 border-blue-600">
+          <div className="mt-4 p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 dark:border-blue-500/30 border-l-4 border-l-blue-500/60 dark:border-l-blue-500/50">
             <p className="font-semibold">Indian Knowledge System (IKS)</p>
             <p className="text-sm text-muted-foreground">1 course worth 3 credits is compulsory</p>
           </div>
@@ -356,27 +356,27 @@ function InternshipsSection() {
         <h3 className="font-semibold text-xl mb-4">Mandatory Internship (IC-010)</h3>
         <div className="space-y-3">
           <p className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
             <span>Compulsory for all students</span>
           </p>
           <p className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
             <span>Minimum 6 weeks duration</span>
           </p>
           <p className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
             <span>Worth 2 credits (Pass/Fail)</span>
           </p>
           <p className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
             <span>To be done after 5th semester</span>
           </p>
           <p className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
             <span>Must be completed before final semester</span>
           </p>
         </div>
-        <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+        <div className="mt-4 p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 dark:border-blue-500/30">
           <h4 className="font-semibold mb-2">Types of Internships</h4>
           <ul className="space-y-1 text-sm">
             <li>• <strong>Industrial:</strong> Industrial experience</li>
@@ -388,14 +388,14 @@ function InternshipsSection() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="bg-card p-6 rounded-xl border">
-          <h3 className="font-semibold text-xl mb-4 text-blue-600">Semester Long Remote Internship</h3>
+          <h3 className="font-semibold text-xl mb-4 text-blue-600 dark:text-blue-400">Semester Long Remote Internship</h3>
           <div className="space-y-3 text-sm">
             <p className="font-semibold">Course Code: DP-396P</p>
             <p><strong>Credits:</strong> 6 P/F (Free Electives)</p>
             <p><strong>Duration:</strong> Minimum 14 weeks</p>
             <p><strong>Semesters:</strong> 6th, 7th, or 8th</p>
             <p><strong>Courses Allowed:</strong> Max 9 credits alongside</p>
-            <div className="mt-4 p-3 rounded-lg bg-accent">
+            <div className="mt-4 p-3 rounded-lg bg-accent/10 dark:bg-accent/15 border border-border/60">
               <p className="font-semibold">Requirements:</p>
               <ul className="mt-2 space-y-1 text-muted-foreground">
                 <li>• FA approval required</li>
@@ -407,14 +407,14 @@ function InternshipsSection() {
         </div>
 
         <div className="bg-card p-6 rounded-xl border">
-          <h3 className="font-semibold text-xl mb-4 text-purple-600">Semester Long Onsite Internship</h3>
+          <h3 className="font-semibold text-xl mb-4 text-purple-600 dark:text-purple-400">Semester Long Onsite Internship</h3>
           <div className="space-y-3 text-sm">
             <p className="font-semibold">Course Code: DP-399P</p>
             <p><strong>Credits:</strong> 9 P/F (Free Electives)</p>
             <p><strong>Duration:</strong> Minimum 14 weeks</p>
             <p><strong>Semesters:</strong> 6th or 7th (8th needs Dean approval)</p>
             <p><strong>Courses Allowed:</strong> None during internship</p>
-            <div className="mt-4 p-3 rounded-lg bg-accent">
+            <div className="mt-4 p-3 rounded-lg bg-accent/10 dark:bg-accent/15 border border-border/60">
               <p className="font-semibold">Requirements:</p>
               <ul className="mt-2 space-y-1 text-muted-foreground">
                 <li>• FA approval required</li>
@@ -426,7 +426,7 @@ function InternshipsSection() {
         </div>
       </div>
 
-      <div className="bg-card p-6 rounded-xl border border-orange-500/20 bg-orange-500/5">
+      <div className="bg-card p-6 rounded-xl border border-orange-500/20 dark:border-orange-500/30 bg-orange-500/5 dark:bg-orange-500/10">
         <h3 className="font-semibold text-xl mb-3">⚠️ Important Notes</h3>
         <ul className="space-y-2 text-sm text-muted-foreground">
           <li>• 20-week internships = 2 credits (IC-010) + 6/9 credits (DP-396P/399P)</li>
@@ -464,7 +464,7 @@ function ExchangeSection() {
         <h3 className="font-semibold text-xl mb-4">Semester Exchange Program</h3>
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
-            <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+            <div className="p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 dark:border-blue-500/30">
               <h4 className="font-semibold mb-2">Eligibility</h4>
               <ul className="text-sm space-y-1 text-muted-foreground">
                 <li>• 5th - 7th semester students</li>
@@ -472,7 +472,7 @@ function ExchangeSection() {
                 <li>• Selection based on CGPA</li>
               </ul>
             </div>
-            <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20">
+            <div className="p-4 rounded-lg bg-purple-500/10 dark:bg-purple-500/15 border border-purple-500/20 dark:border-purple-500/30">
               <h4 className="font-semibold mb-2">Financial</h4>
               <ul className="text-sm space-y-1 text-muted-foreground">
                 <li>• No fees to host institute</li>
@@ -482,7 +482,7 @@ function ExchangeSection() {
             </div>
           </div>
 
-          <div className="p-4 rounded-lg bg-accent border-l-4 border-blue-600">
+          <div className="p-4 rounded-lg bg-accent/10 dark:bg-accent/15 border border-border/60 border-l-4 border-l-blue-500/60 dark:border-l-blue-500/50">
             <h4 className="font-semibold mb-2">Why Students Prefer Exchange</h4>
             <ul className="text-sm space-y-1 text-muted-foreground">
               <li>✓ Explore courses not offered at IIT Mandi</li>
@@ -498,8 +498,8 @@ function ExchangeSection() {
         <h3 className="font-semibold text-xl mb-4">Partner Universities</h3>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           {universities.map((uni, idx) => (
-            <div key={idx} className="p-4 rounded-lg bg-gradient-to-br from-blue-500/5 to-purple-500/5 border hover:shadow-lg transition-all">
-              <p className="font-semibold text-sm">{uni.name}</p>
+            <div key={idx} className="p-4 rounded-lg bg-gradient-to-br from-blue-500/5 to-purple-500/5 dark:from-blue-500/10 dark:to-purple-500/10 border border-border/60 hover:shadow-lg transition-all">
+              <p className="font-semibold text-sm break-words">{uni.name}</p>
               <p className="text-xs text-muted-foreground mt-1">📍 {uni.country}</p>
             </div>
           ))}
@@ -518,10 +518,10 @@ function ExchangeSection() {
               { ects: "E", iit: "C" },
               { ects: "FX/F", iit: "F" },
             ].map((grade, idx) => (
-              <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 rounded-lg bg-accent/50">
-                <span className="font-mono text-blue-600">{grade.ects}</span>
+              <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 rounded-lg bg-surface-hover/70 border border-border/60">
+                <span className="font-mono text-blue-600 dark:text-blue-400">{grade.ects}</span>
                 <span>→</span>
-                <span className="font-mono text-purple-600">{grade.iit}</span>
+                <span className="font-mono text-purple-600 dark:text-purple-400">{grade.iit}</span>
               </div>
             ))}
             <p className="text-xs text-muted-foreground mt-3">
@@ -540,10 +540,10 @@ function ExchangeSection() {
               { kyushu: "C (1)", iit: "D" },
               { kyushu: "F (0)", iit: "F" },
             ].map((grade, idx) => (
-              <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 rounded-lg bg-accent/50">
-                <span className="font-mono text-blue-600">{grade.kyushu}</span>
+              <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 p-3 rounded-lg bg-surface-hover/70 border border-border/60">
+                <span className="font-mono text-blue-600 dark:text-blue-400">{grade.kyushu}</span>
                 <span>→</span>
-                <span className="font-mono text-purple-600">{grade.iit}</span>
+                <span className="font-mono text-purple-600 dark:text-purple-400">{grade.iit}</span>
               </div>
             ))}
             <p className="text-xs text-muted-foreground mt-3">
@@ -553,7 +553,7 @@ function ExchangeSection() {
         </div>
       </div>
 
-      <div className="bg-card p-6 rounded-xl border border-blue-500/20 bg-blue-500/5">
+      <div className="bg-card p-6 rounded-xl border border-blue-500/20 dark:border-blue-500/30 bg-blue-500/5 dark:bg-blue-500/10">
         <h3 className="font-semibold text-lg mb-3">📋 Attendance Management</h3>
         <ul className="space-y-2 text-sm text-muted-foreground">
           <li>• Students can register for ongoing semester courses</li>
