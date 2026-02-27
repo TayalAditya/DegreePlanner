@@ -6,12 +6,16 @@ import prisma from "@/lib/prisma";
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
+    console.log("🔐 Session:", session?.user?.email);
+    
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
     const { enrollments } = body;
+    
+    console.log(`📋 Received ${enrollments?.length || 0} enrollments from ${session.user.email}`);
 
     if (!Array.isArray(enrollments) || enrollments.length === 0) {
       return NextResponse.json(
@@ -209,7 +213,10 @@ export async function POST(req: NextRequest) {
       failed: errors.length,
     };
 
+    console.log(`✅ Import complete: ${summary.successful} success, ${summary.failed} failed`);
+
     if (summary.successful === 0) {
+      console.error("❌ No courses imported, errors:", errors);
       return NextResponse.json(
         {
           success: false,

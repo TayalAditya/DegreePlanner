@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { isDocumentsAdmin } from "@/lib/permissions";
 
 export async function GET(req: NextRequest) {
   try {
@@ -54,8 +55,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Only admins can upload documents
-    if (session.user.role !== "ADMIN") {
+    // Only the designated documents admin can create links/embeds/documents.
+    if (!isDocumentsAdmin(session.user)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
