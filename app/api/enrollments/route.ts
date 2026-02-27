@@ -103,6 +103,8 @@ export async function POST(request: NextRequest) {
       internshipDays,
     } = body;
 
+    console.log("Creating enrollment with semester:", semester, "type:", typeof semester);
+
     // If no programId provided, get user's primary program
     let finalProgramId = programId;
     if (!finalProgramId) {
