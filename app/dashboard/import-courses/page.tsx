@@ -47,6 +47,7 @@ export default function ImportCoursesPage() {
   const [currentSemester, setCurrentSemester] = useState(6);
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
   const [importedCourseKeys, setImportedCourseKeys] = useState<Set<string>>(new Set());
+  const [catalogIndex, setCatalogIndex] = useState<Record<string, CatalogCourse>>({});
   const [customQuery, setCustomQuery] = useState("");
   const [customSemester, setCustomSemester] = useState(6);
   const [customResults, setCustomResults] = useState<CatalogCourse[]>([]);
@@ -60,11 +61,12 @@ export default function ImportCoursesPage() {
   useEffect(() => {
     loadUserSettings();
     loadExistingEnrollments();
+    loadCatalogIndex();
   }, []);
 
   useEffect(() => {
     loadDefaultCourses();
-  }, [branch, geSubBranch, currentSemester, importedCourseKeys]);
+  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex]);
 
   useEffect(() => {
     setCustomSemester(currentSemester);
@@ -99,16 +101,45 @@ export default function ImportCoursesPage() {
     }
   };
 
+  const loadCatalogIndex = async () => {
+    try {
+      const res = await fetch("/api/courses");
+      if (!res.ok) return;
+
+      const data: CatalogCourse[] = await res.json();
+      const normalize = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const index: Record<string, CatalogCourse> = {};
+
+      data.forEach((c) => {
+        index[normalize(c.code)] = c;
+      });
+
+      setCatalogIndex(index);
+    } catch (error) {
+      console.error("Failed to load catalog:", error);
+    }
+  };
+
   const loadDefaultCourses = () => {
     const effectiveBranch = branch === "GE" ? geSubBranch : branch;
     const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester);
+    const normalizeCatalog = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const resolvedCourses = defaultCourses.map((course) => {
+      const match = catalogIndex[normalizeCatalog(course.code)];
+      if (!match) return course;
+      return {
+        ...course,
+        name: match.name || course.name,
+        credits: typeof match.credits === "number" ? match.credits : course.credits,
+      };
+    });
     // Normalize course codes to match enrollment keys
     const normalize = (code: string) => code.toUpperCase().replace(/[\s-]/g, "");
     // ICB basket + mixed-sem courses start unchecked — user must pick manually
     const MANUAL_PICK_CODES = ["IC140", "IC102P", "IC181"];
     // ISTP/MTP courses are auto-selected for semester 6+ (all branches have them)
     const ISTP_MTP_CODES = ["DP 301P", "DP 498P", "DP 499P"];
-    const coursesWithSelection = defaultCourses
+    const coursesWithSelection = resolvedCourses
       .filter((course) => !importedCourseKeys.has(`${normalize(course.code)}|${course.semester}`))
       .map((course) => ({
       ...course,

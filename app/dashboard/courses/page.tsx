@@ -125,11 +125,7 @@ export default function CoursesPage() {
     new Set(allCourses.map((c) => c.department))
   ).sort();
 
-  const codePattern = /^[A-Z]{2}-\d{3}$/;
-  const allowedNormalized = new Set(["DP301P", "DP498P", "DP499P"]);
-  const normalize = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
   const filteredCourses = allCourses.filter((course) => {
-    if (!codePattern.test(course.code) && !allowedNormalized.has(normalize(course.code))) return false;
     const matchesSearch =
       course.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       course.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -710,9 +706,11 @@ export default function CoursesPage() {
                           <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors mb-1">
                             {formatCourseCode(course.code)} - {course.name}
                           </h3>
-                          <p className="text-sm text-foreground-secondary line-clamp-1">
-                            {course.description}
-                          </p>
+                          {course.description && (
+                            <p className="text-sm text-foreground-secondary line-clamp-1">
+                              {course.description}
+                            </p>
+                          )}
                         </div>
                         <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-full border border-primary/20 whitespace-nowrap">
                           {course.credits} Cr
