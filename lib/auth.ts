@@ -66,7 +66,8 @@ export const authOptions: NextAuthOptions = {
         console.log("❌ Login rejected: Batch", approvedUser.batch, "not supported");
         return "/auth/error?error=batch_not_supported";
       }
-      }
+
+      console.log("✅ Batch validation passed");
 
       // Update or create user with approval status
       const existingUser = await prisma.user.findUnique({
