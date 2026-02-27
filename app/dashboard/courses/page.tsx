@@ -96,7 +96,7 @@ export default function CoursesPage() {
   );
 
   const totalCreditsCompleted = enrollments
-    .filter((e) => e.status === "COMPLETED" && e.grade && e.grade !== "F")
+    .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
     .reduce((sum, e) => sum + e.course.credits, 0);
 
   const totalCreditsInProgress = enrollments
