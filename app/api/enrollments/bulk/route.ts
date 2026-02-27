@@ -166,15 +166,30 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const summary = {
+      total: enrollments.length,
+      successful: results.length,
+      failed: errors.length,
+    };
+
+    if (summary.successful === 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "No courses were imported.",
+          results,
+          errors,
+          summary,
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       results,
       errors,
-      summary: {
-        total: enrollments.length,
-        successful: results.length,
-        failed: errors.length,
-      },
+      summary,
     });
   } catch (error) {
     console.error("Bulk enrollment error:", error);

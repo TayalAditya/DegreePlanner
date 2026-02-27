@@ -247,11 +247,25 @@ export default function ImportCoursesPage() {
         body: JSON.stringify({ enrollments, currentSemester }),
       });
 
+      const data = await res.json().catch(() => null);
+
       if (res.ok) {
+        if (data?.summary?.failed > 0) {
+          alert(
+            `Imported ${data.summary.successful} courses, but ${data.summary.failed} failed. Open console for details.`
+          );
+          if (data?.errors?.length) {
+            console.warn("Import failures:", data.errors);
+          }
+        }
         setSubmitted(true);
         loadExistingEnrollments();
       } else {
-        alert("Failed to import courses. Please try again.");
+        const msg = data?.error || "Failed to import courses. Please try again.";
+        if (data?.errors?.length) {
+          console.warn("Import failures:", data.errors);
+        }
+        alert(msg);
       }
     } catch (error) {
       console.error("Failed to import courses:", error);
