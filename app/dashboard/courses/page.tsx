@@ -37,6 +37,7 @@ interface Enrollment {
   term: string;
   status: string;
   grade?: string;
+  courseType?: "CORE" | "DE" | "FREE_ELECTIVE" | "PE" | "MTP" | "ISTP";
   courseId: string;
   course: Course & {
     branchMappings?: {
