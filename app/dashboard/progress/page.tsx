@@ -232,8 +232,8 @@ export default function ProgressPage() {
       const isICB2 = ICB2_CODES.has(normalizedCode);
 
       if (user?.branch === "CSE") {
-        if (isICB2 && enrollment.semester < 4) return "FE";
-        if (isICB1 && enrollment.semester < 5) return "FE";
+        // Sem 2: must be IC253 (DSA). If other basket course taken → FE
+        if (enrollment.semester === 2 && isICB2 && normalizedCode !== "IC253") return "FE";
         if (code.startsWith("DS")) return "DE";
       }
 
