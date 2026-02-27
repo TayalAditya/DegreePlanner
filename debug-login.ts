@@ -2,28 +2,19 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-async function checkUser() {
-  console.log("Checking for B23243...\n");
+async function checkApproved() {
+  console.log("📋 All Approved Users in Database:\n");
   
-  // Check by enrollmentId
-  const approvedUser = await prisma.approvedUser.findUnique({
-    where: { enrollmentId: "B23243" },
+  const approvedUsers = await prisma.approvedUser.findMany({
+    orderBy: { enrollmentId: "asc" },
   });
-  console.log("ApprovedUser (by enrollmentId):", approvedUser);
   
-  // Check by email
-  const approvedByEmail = await prisma.approvedUser.findFirst({
-    where: { email: { contains: "b23243" } },
+  console.log(`Total approved: ${approvedUsers.length}\n`);
+  approvedUsers.forEach((user) => {
+    console.log(`${user.enrollmentId} | ${user.email} | Batch: ${user.batch} | ${user.branch}`);
   });
-  console.log("ApprovedUser (by email):", approvedByEmail);
-  
-  // Check User table
-  const user = await prisma.user.findFirst({
-    where: { enrollmentId: "B23243" },
-  });
-  console.log("User:", user);
 }
 
-checkUser()
+checkApproved()
   .catch(console.error)
   .finally(() => prisma.$disconnect());
