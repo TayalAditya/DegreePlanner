@@ -55,9 +55,11 @@ export default function ImportCoursesPage() {
     const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester);
     // ICB basket + mixed-sem courses start unchecked — user must pick manually
     const MANUAL_PICK_CODES = ["IC140", "IC102P", "IC181"];
+    // ISTP/MTP courses are auto-selected for semester 6+ (all branches have them)
+    const ISTP_MTP_CODES = ["DP 301P", "IC 401P", "DP 402P"];
     const coursesWithSelection = defaultCourses.map((course) => ({
       ...course,
-      selected: course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code),
+      selected: (course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code)) || ISTP_MTP_CODES.includes(course.code),
     }));
     setCourses(coursesWithSelection);
   };
