@@ -43,6 +43,15 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     },
   });
 
+  const { data: userSettings } = useQuery({
+    queryKey: ["user-settings"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/settings");
+      if (!res.ok) throw new Error("Failed to fetch user settings");
+      return res.json();
+    },
+  });
+
   if (programsLoading || !programs) {
     return (
       <div className="space-y-6">
@@ -155,6 +164,8 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
           <ProgressChart
             progress={progressData.progress}
             isLoading={progressLoading}
+            enrollments={enrollments}
+            userBranch={userSettings?.branch}
           />
           <CreditBreakdownCard
             progress={progressData.progress}

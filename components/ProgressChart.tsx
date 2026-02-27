@@ -5,9 +5,20 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recha
 interface ProgressChartProps {
   progress: any;
   isLoading: boolean;
+  enrollments?: any[];
+  userBranch?: string;
 }
 
 const COLORS = {
+  IC: "#3b82f6", // blue
+  IC_BASKET: "#22d3ee", // cyan
+  DC: "#a855f7", // purple
+  DE: "#ec4899", // pink
+  FE: "#10b981", // green
+  HSS: "#f97316", // orange
+  IKS: "#f59e0b", // amber
+  MTP: "#ef4444", // red
+  ISTP: "#14b8a6", // teal
   core: "#4f46e5", // indigo
   de: "#06b6d4", // cyan
   pe: "#8b5cf6", // purple
@@ -16,7 +27,7 @@ const COLORS = {
   istp: "#ef4444", // red
 };
 
-export function ProgressChart({ progress, isLoading }: ProgressChartProps) {
+export function ProgressChart({ progress, isLoading, enrollments, userBranch }: ProgressChartProps) {
   if (isLoading) {
     return (
       <div className="bg-surface dark:bg-surface rounded-lg border border-border p-6 animate-pulse">
@@ -26,32 +37,87 @@ export function ProgressChart({ progress, isLoading }: ProgressChartProps) {
     );
   }
 
-  const data = [
-    {
-      name: "Core",
-      value: progress.completed.core,
-      total: progress.required.core,
-      color: COLORS.core,
-    },
-    {
-      name: "DE",
-      value: progress.completed.de,
-      total: progress.required.de,
-      color: COLORS.de,
-    },
-    {
-      name: "PE",
-      value: progress.completed.pe,
-      total: progress.required.pe,
-      color: COLORS.pe,
-    },
-    {
-      name: "Free Elective",
-      value: progress.completed.freeElective,
-      total: progress.required.freeElective,
-      color: COLORS.freeElective,
-    },
-  ].filter((item) => item.total > 0);
+  const categoryCredits: Record<string, number> = {
+    IC: 0,
+    IC_BASKET: 0,
+    DC: 0,
+    DE: 0,
+    FE: 0,
+    HSS: 0,
+    IKS: 0,
+    MTP: 0,
+    ISTP: 0,
+  };
+
+  const getCourseCategory = (enrollment: any): keyof typeof categoryCredits => {
+    if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userBranch) {
+      const mapping = enrollment.course.branchMappings.find(
+        (m: any) => m.branch === userBranch
+      ) || (userBranch === "GE"
+        ? enrollment.course.branchMappings.find((m: any) => m.branch.startsWith("GE"))
+        : undefined);
+
+      if (mapping && mapping.courseCategory in categoryCredits) {
+        return mapping.courseCategory as keyof typeof categoryCredits;
+      }
+    }
+
+    const code = enrollment.course?.code?.toUpperCase() || "";
+    if (code.startsWith("IC")) return "IC";
+    if (code.startsWith("HS")) return "HSS";
+    if (code.startsWith("IKS")) return "IKS";
+    if (code.includes("MTP")) return "MTP";
+    if (code.includes("ISTP")) return "ISTP";
+    if (enrollment.courseType === "DE") return "DE";
+    if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
+    return "DC";
+  };
+
+  if (enrollments && enrollments.length > 0) {
+    enrollments
+      .filter((e: any) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
+      .forEach((e: any) => {
+        const category = getCourseCategory(e);
+        categoryCredits[category] += e.course?.credits || 0;
+      });
+  }
+
+  const categoryData = Object.entries(categoryCredits)
+    .filter(([, value]) => value > 0)
+    .map(([name, value]) => ({
+      name,
+      value,
+      color: COLORS[name as keyof typeof COLORS],
+    }));
+
+  const data = categoryData.length > 0
+    ? categoryData
+    : [
+        {
+          name: "Core",
+          value: progress.completed.core,
+          total: progress.required.core,
+          color: COLORS.core,
+        },
+        {
+          name: "DE",
+          value: progress.completed.de,
+          total: progress.required.de,
+          color: COLORS.de,
+        },
+        {
+          name: "PE",
+          value: progress.completed.pe,
+          total: progress.required.pe,
+          color: COLORS.pe,
+        },
+        {
+          name: "Free Elective",
+          value: progress.completed.freeElective,
+          total: progress.required.freeElective,
+          color: COLORS.freeElective,
+        },
+      ].filter((item) => item.total > 0);
 
   return (
     <div className="bg-surface dark:bg-surface rounded-lg border border-border p-6">
@@ -79,29 +145,50 @@ export function ProgressChart({ progress, isLoading }: ProgressChartProps) {
         </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={200}>
-        <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
-          <Pie
-            data={data}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={70}
-            innerRadius={35}
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
-            ))}
-          </Pie>
-          <Tooltip formatter={(value, name) => [`${value} credits`, name]} />
-          <Legend
-            iconType="circle"
-            iconSize={8}
-            wrapperStyle={{ fontSize: "12px" }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+      {categoryData.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3">
+          {Object.entries(categoryCredits).map(([key, value]) => (
+            <span
+              key={key}
+              className="px-2 py-1 rounded-full text-xs font-semibold bg-surface-hover text-foreground-secondary"
+            >
+              {key}: {value}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="relative">
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+            <Pie
+              data={data}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={70}
+              innerRadius={40}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip formatter={(value, name) => [`${value} credits`, name]} />
+            <Legend
+              iconType="circle"
+              iconSize={8}
+              wrapperStyle={{ fontSize: "12px" }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+          <span className="text-xl font-bold text-foreground">{progress.percentage}%</span>
+          <span className="text-xs text-foreground-secondary">
+            {progress.completed.total} / {progress.required.total}
+          </span>
+        </div>
+      </div>
     </div>
   );
 }
