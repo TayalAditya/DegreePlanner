@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { User, Mail, BookOpen, Save } from "lucide-react";
@@ -23,6 +23,28 @@ export function SettingsForm({ user }: SettingsFormProps) {
     doingMTP: user.doingMTP ?? true,
     doingISTP: user.doingISTP ?? true,
   });
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await fetch("/api/user/settings");
+        if (!res.ok) return;
+        const data = await res.json();
+        setFormData({
+          name: data.name || "",
+          email: data.email || "",
+          enrollmentId: data.enrollmentId || "",
+          branch: data.branch || "",
+          doingMTP: data.doingMTP ?? true,
+          doingISTP: data.doingISTP ?? true,
+        });
+      } catch {
+        // ignore fetch errors, keep session defaults
+      }
+    };
+
+    loadSettings();
+  }, []);
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
