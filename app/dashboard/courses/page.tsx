@@ -15,6 +15,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
+import { useConfirmDialog } from "@/components/ConfirmDialog";
 
 interface Course {
   id: string;
@@ -83,6 +84,7 @@ export default function CoursesPage() {
   const [isPassFail, setIsPassFail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     loadData();
@@ -123,8 +125,10 @@ export default function CoursesPage() {
   ).sort();
 
   const codePattern = /^[A-Z]{2}-\d{3}$/;
+  const allowedNormalized = new Set(["DP301P", "DP498P", "DP499P"]);
+  const normalize = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
   const filteredCourses = allCourses.filter((course) => {
-    if (!codePattern.test(course.code)) return false;
+    if (!codePattern.test(course.code) && !allowedNormalized.has(normalize(course.code))) return false;
     const matchesSearch =
       course.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       course.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -328,9 +332,14 @@ export default function CoursesPage() {
   };
 
   const deleteEnrollment = async (enrollmentId: string, courseName: string) => {
-    if (!confirm(`Are you sure you want to remove ${courseName}?`)) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Remove course?",
+      message: `This will remove ${courseName} from your enrollments.`,
+      confirmText: "Remove",
+      cancelText: "Cancel",
+      variant: "warning",
+    });
+    if (!ok) return;
 
     try {
       const response = await fetch(`/api/enrollments/${enrollmentId}`, {
