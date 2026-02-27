@@ -127,8 +127,8 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     const isICB2 = ICB2_CODES.has(normalizedCode);
 
     if (userSettings?.branch === "CSE") {
-      if (isICB2 && (enrollment.semester || 0) < 4) return "FE";
-      if (isICB1 && (enrollment.semester || 0) < 5) return "FE";
+      // Sem 2: must be IC253 (DSA). If other basket course taken → FE
+      if ((enrollment.semester || 0) === 2 && isICB2 && normalizedCode !== "IC253") return "FE";
     }
 
     if (isICB1 || isICB2) return "IC_BASKET";
