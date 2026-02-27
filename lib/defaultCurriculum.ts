@@ -61,15 +61,15 @@ const icSem3: DefaultCourse[] = [
 
 // ISTP and MTP courses (common for all BTech)
 const istpSem6: DefaultCourse[] = [
-  { code: "DP 301P", name: "Interdisciplinary Socio-Technical Practicum", credits: 4, category: "FE", semester: 6 },
+  { code: "DP 301P", name: "Interdisciplinary Socio-Technical Practicum", credits: 4, category: "ISTP", semester: 6 },
 ];
 
 const mtpSem7: DefaultCourse[] = [
-  { code: "DP 498P", name: "Major Technical Project - I", credits: 3, category: "FE", semester: 7 },
+  { code: "DP 498P", name: "Major Technical Project - I", credits: 3, category: "MTP", semester: 7 },
 ];
 
 const mtpSem8: DefaultCourse[] = [
-  { code: "DP 499P", name: "Major Technical Project - II", credits: 5, category: "FE", semester: 8 },
+  { code: "DP 499P", name: "Major Technical Project - II", credits: 5, category: "MTP", semester: 8 },
 ];
 
 // ─── CSE  (DC = 38 cr | IC-I: free choice | IC-II: free choice) ──────────────
