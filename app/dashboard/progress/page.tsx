@@ -80,7 +80,7 @@ export default function ProgressPage() {
 
   const calculateProgress = (): ProgressData => {
     const completedEnrollments = enrollments.filter(
-      (e) => e.status === "COMPLETED" && e.grade && e.grade !== "F"
+      (e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F")
     );
     const inProgressEnrollments = enrollments.filter(
       (e) => e.status === "IN_PROGRESS"
