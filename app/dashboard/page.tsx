@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { DashboardOverview } from "@/components/DashboardOverview";
 import Link from "next/link";
+import { TimeGreeting } from "@/components/TimeGreeting";
 import { 
   BookOpen, 
   GraduationCap, 
@@ -55,24 +56,19 @@ export default async function DashboardPage() {
     },
   ];
 
-  const getCurrentGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
-  };
-
   return (
     <div className="space-y-4 sm:space-y-8">
       {/* Hero Header */}
-      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80 rounded-2xl p-6 sm:p-8 md:p-12 border border-primary shadow-2xl shadow-primary/20">
-        <div className="absolute top-0 right-0 w-32 h-32 sm:w-64 sm:h-64 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 sm:w-96 sm:h-96 bg-white/5 rounded-full blur-3xl"></div>
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary via-secondary/80 to-accent/70 animate-gradient rounded-2xl p-6 sm:p-8 md:p-12 border border-primary/30 shadow-2xl shadow-primary/20">
+        <div className="absolute top-0 right-0 w-32 h-32 sm:w-64 sm:h-64 bg-white/10 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 sm:w-96 sm:h-96 bg-white/5 rounded-full blur-3xl animate-pulse-slow"></div>
 
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
             <Sparkles className="w-5 h-5 sm:w-6 sm:h-6 text-white/90" />
-            <span className="text-white/90 font-medium text-sm sm:text-base">{getCurrentGreeting()}</span>
+            <span className="text-white/90 font-medium text-sm sm:text-base animate-fade-in">
+              <TimeGreeting />
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
             {session?.user?.name?.split(" ")[0]}! 👋
