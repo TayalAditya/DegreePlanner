@@ -27,6 +27,16 @@ const COLORS = {
   istp: "#ef4444", // red
 };
 
+const ICB_CODES = new Set([
+  "IC131",
+  "IC136",
+  "IC230",
+  "IC121",
+  "IC240",
+  "IC241",
+  "IC253",
+]);
+
 export function ProgressChart({ progress, isLoading, enrollments, userBranch }: ProgressChartProps) {
   if (isLoading) {
     return (
@@ -50,6 +60,10 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
   };
 
   const getCourseCategory = (enrollment: any): keyof typeof categoryCredits => {
+    const code = enrollment.course?.code?.toUpperCase() || "";
+    const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+    if (ICB_CODES.has(normalizedCode)) return "IC_BASKET";
+
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length > 0) {
       const mapping = (userBranch
@@ -63,12 +77,13 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       }
     }
 
-    const code = enrollment.course?.code?.toUpperCase() || "";
-    if (code.startsWith("IC")) return "IC";
-    if (code.startsWith("HS")) return "HSS";
-    if (code.startsWith("IKS")) return "IKS";
-    if (code.includes("MTP")) return "MTP";
-    if (code.includes("ISTP")) return "ISTP";
+    const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode.startsWith("IC")) return "IC";
+    if (normalizedCode.startsWith("HS")) return "HSS";
+    if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
+    if (normalizedCode.includes("MTP")) return "MTP";
+    if (normalizedCode.includes("ISTP")) return "ISTP";
     if (enrollment.courseType === "DE") return "DE";
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     return "DC";
