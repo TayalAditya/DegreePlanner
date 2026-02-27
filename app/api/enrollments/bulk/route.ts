@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
       select: { 
         id: true, 
         batch: true,
+        enrollmentId: true,
         branch: true,
         programs: {
           where: { isPrimary: true },
@@ -93,6 +94,15 @@ export async function POST(req: NextRequest) {
     const results = [];
     const errors = [];
 
+    const inferBatchYear = (batch: number | null | undefined, enrollmentId: string | null | undefined) => {
+      if (enrollmentId) {
+        const match = enrollmentId.match(/B(\d{2})/i);
+        if (match) return 2000 + parseInt(match[1], 10);
+      }
+      if (batch && batch > 2000) return batch;
+      return new Date().getFullYear() - 3;
+    };
+
     for (const enrollment of enrollments) {
       try {
         const { courseCode, semester, grade } = enrollment;
@@ -100,9 +110,20 @@ export async function POST(req: NextRequest) {
         const rawType = enrollment.courseType as string;
         const courseType = categoryToCourseType[rawType] ?? "CORE";
 
-        // Find the course by code
-        const course = await prisma.course.findUnique({
-          where: { code: courseCode },
+        const normalizeCode = (code: string) => code.trim().toUpperCase();
+        const baseCode = normalizeCode(courseCode);
+        const codeVariants = Array.from(
+          new Set([
+            baseCode,
+            baseCode.replace(/\s+/g, "-"),
+            baseCode.replace(/\s+/g, ""),
+            baseCode.replace(/^([A-Z]{2})\s*(\d{3}P?)$/, "$1-$2"),
+          ])
+        );
+
+        // Find the course by code (try common variants)
+        const course = await prisma.course.findFirst({
+          where: { code: { in: codeVariants } },
         });
 
         if (!course) {
@@ -112,7 +133,7 @@ export async function POST(req: NextRequest) {
 
         // Determine correct academic year from batch + semester number
         // Sem 1 = FALL batchYear, Sem 2 = SPRING batchYear+1, Sem 3 = FALL batchYear+1 ...
-        const batchYear = user.batch ?? new Date().getFullYear() - 3;
+        const batchYear = inferBatchYear(user.batch, user.enrollmentId);
         const semYear = batchYear + Math.floor((semester - 1) / 2);
         const term = semester % 2 === 1 ? "FALL" : "SPRING";
 
