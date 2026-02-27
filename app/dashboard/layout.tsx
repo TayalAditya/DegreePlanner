@@ -35,7 +35,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background-secondary">
+    <div className="min-h-screen bg-gradient-to-b from-background-secondary to-background">
       <div className="flex flex-col lg:flex-row min-h-screen">
         <DashboardNav user={session.user} />
         <div className="flex-1 min-w-0">
