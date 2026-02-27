@@ -50,12 +50,13 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
   };
 
   const getCourseCategory = (enrollment: any): keyof typeof categoryCredits => {
-    if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userBranch) {
-      const mapping = enrollment.course.branchMappings.find(
-        (m: any) => m.branch === userBranch
-      ) || (userBranch === "GE"
-        ? enrollment.course.branchMappings.find((m: any) => m.branch.startsWith("GE"))
-        : undefined);
+    const mappings = enrollment.course?.branchMappings || [];
+    if (mappings.length > 0) {
+      const mapping = (userBranch
+        ? mappings.find((m: any) => m.branch === userBranch) || (userBranch === "GE"
+            ? mappings.find((m: any) => m.branch.startsWith("GE"))
+            : undefined)
+        : undefined) || (mappings.length === 1 ? mappings[0] : undefined);
 
       if (mapping && mapping.courseCategory in categoryCredits) {
         return mapping.courseCategory as keyof typeof categoryCredits;
