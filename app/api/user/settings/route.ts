@@ -21,6 +21,7 @@ export async function GET(req: NextRequest) {
         role: true,
         doingMTP: true,
         doingISTP: true,
+        totalPassFailCredits: true,
         createdAt: true,
       },
     });
@@ -95,6 +96,7 @@ export async function PATCH(req: NextRequest) {
         role: true,
         doingMTP: true,
         doingISTP: true,
+        totalPassFailCredits: true,
       },
     });
 
