@@ -190,13 +190,16 @@ export function SettingsForm({ user }: SettingsFormProps) {
           </h3>
           
           <div className="space-y-4">
-            <div className="flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-lg border-2 border-border hover:border-primary/50 transition-colors">
+            <div
+              className="flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-lg border-2 border-border hover:border-primary/50 transition-colors cursor-pointer"
+              onClick={() => setFormData({ ...formData, doingMTP: !formData.doingMTP })}
+            >
               <input
                 type="checkbox"
                 id="doingMTP"
                 checked={formData.doingMTP}
                 onChange={(e) => setFormData({ ...formData, doingMTP: e.target.checked })}
-                className="mt-1 w-5 h-5 text-primary bg-surface border-2 border-border rounded focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
+                className="mt-1 w-5 h-5 accent-primary bg-surface border-2 border-border rounded focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
               />
               <div className="flex-1">
                 <label htmlFor="doingMTP" className="block font-semibold text-foreground cursor-pointer hover:text-primary transition-colors">
@@ -211,13 +214,16 @@ export function SettingsForm({ user }: SettingsFormProps) {
               </div>
             </div>
 
-            <div className="flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-lg border-2 border-border hover:border-primary/50 transition-colors">
+            <div
+              className="flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-lg border-2 border-border hover:border-primary/50 transition-colors cursor-pointer"
+              onClick={() => setFormData({ ...formData, doingISTP: !formData.doingISTP })}
+            >
               <input
                 type="checkbox"
                 id="doingISTP"
                 checked={formData.doingISTP}
                 onChange={(e) => setFormData({ ...formData, doingISTP: e.target.checked })}
-                className="mt-1 w-5 h-5 text-primary bg-surface border-2 border-border rounded focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
+                className="mt-1 w-5 h-5 accent-primary bg-surface border-2 border-border rounded focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
               />
               <div className="flex-1">
                 <label htmlFor="doingISTP" className="block font-semibold text-foreground cursor-pointer hover:text-primary transition-colors">
