@@ -13,22 +13,29 @@ export default function SignIn() {
       await signIn("google", { callbackUrl: "/dashboard" });
     } catch (error) {
       console.error("Sign in error:", error);
+    } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center bg-gradient-to-b from-background-secondary to-background p-4">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-primary/20 dark:bg-primary/10 blur-3xl animate-float" />
+        <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-secondary/20 dark:bg-secondary/10 blur-3xl animate-pulse-slow" />
+        <div className="absolute -bottom-40 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-accent/15 dark:bg-accent/10 blur-3xl animate-float" />
+      </div>
+
+      <div className="max-w-md w-full relative">
+        <div className="bg-surface/80 backdrop-blur-xl rounded-2xl border border-border shadow-xl p-8 animate-scale-in">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-full mb-4">
-              <Shield className="w-8 h-8 text-white" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl shadow-lg shadow-primary/20 mb-4">
+              <Shield className="w-8 h-8 text-white drop-shadow-sm" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
               Degree Planner
             </h1>
-            <p className="text-gray-600">
+            <p className="text-foreground-secondary">
               Plan your academic journey with confidence
             </p>
           </div>
@@ -37,12 +44,13 @@ export default function SignIn() {
             <button
               onClick={handleSignIn}
               disabled={isLoading}
-              className="w-full flex items-center justify-center gap-3 bg-white border-2 border-gray-300 rounded-lg px-6 py-3 text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative w-full flex items-center justify-center gap-3 bg-surface rounded-xl px-6 py-3 text-foreground font-medium border border-border hover:border-border-strong hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
             >
+              <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 rounded-xl" />
               {isLoading ? (
-                <div className="w-5 h-5 border-2 border-gray-300 border-t-indigo-600 rounded-full animate-spin"></div>
+                <div className="relative w-5 h-5 border-2 border-border-strong border-t-primary rounded-full animate-spin" />
               ) : (
-                <>
+                <span className="relative inline-flex items-center justify-center gap-3">
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path
                       fill="currentColor"
@@ -61,13 +69,13 @@ export default function SignIn() {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                     />
                   </svg>
-                  Sign in with Google
-                </>
+                  Continue with Google
+                </span>
               )}
             </button>
 
-            <div className="pt-4 border-t border-gray-200">
-              <div className="flex items-start gap-2 text-sm text-gray-600">
+            <div className="pt-4 border-t border-border">
+              <div className="flex items-start gap-2 text-sm text-foreground-secondary">
                 <LogIn className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <p>
                   Only authorized users can access the degree planner. Please use your institutional email to sign in.
@@ -77,7 +85,7 @@ export default function SignIn() {
           </div>
         </div>
 
-        <div className="mt-8 text-center text-sm text-gray-600">
+        <div className="mt-8 text-center text-sm text-foreground-secondary">
           <p>
             By signing in, you agree to our Terms of Service and Privacy Policy
           </p>

@@ -18,6 +18,7 @@ import {
   Info,
   Download
 } from "lucide-react";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -33,6 +34,7 @@ interface DashboardNavProps {
 export function DashboardNav({ user }: DashboardNavProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const reducedMotion = useReducedMotion();
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -119,28 +121,38 @@ export function DashboardNav({ user }: DashboardNavProps) {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-hide">
-              {allNavigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = isActiveRoute(item.href);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
-                      isActive
-                        ? "bg-primary/10 text-primary border-primary/20"
-                        : "bg-card border-border/60 text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
-                    }`}
-                  >
-                    <Icon className="w-5 h-5 flex-shrink-0" />
-                    <span className="truncate">{item.name}</span>
-                  </Link>
-                );
-              })}
-            </div>
+            <LayoutGroup id="dashboard-nav-mobile">
+              <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-hide">
+                {allNavigation.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = isActiveRoute(item.href);
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      aria-current={isActive ? "page" : undefined}
+                      className={`group relative overflow-hidden flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium border transition-all duration-200 no-touch:hover:-translate-y-px focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+                        isActive
+                          ? "text-primary border-transparent"
+                          : "bg-card border-border/60 text-foreground-secondary hover:text-foreground hover:bg-surface-hover hover:border-border-strong/60"
+                      }`}
+                    >
+                      {isActive && (
+                        <motion.span
+                          layoutId="nav-indicator-mobile"
+                          className="absolute inset-0 rounded-xl bg-primary/10 border border-primary/20 shadow-sm"
+                          transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <Icon className="w-5 h-5 flex-shrink-0 relative z-10" />
+                      <span className="truncate relative z-10">{item.name}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </LayoutGroup>
 
             <div className="border-t border-border px-4 py-4 space-y-3">
               <div className="flex items-center gap-3">
@@ -183,27 +195,37 @@ export function DashboardNav({ user }: DashboardNavProps) {
           </Link>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-hide">
-          {allNavigation.map((item) => {
-            const Icon = item.icon;
-            const isActive = isActiveRoute(item.href);
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                aria-current={isActive ? "page" : undefined}
-                className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
-                  isActive
-                    ? "bg-primary/10 text-primary border-primary/20 shadow-sm"
-                    : "bg-transparent border-transparent text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
-                }`}
-              >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                <span className="truncate">{item.name}</span>
-              </Link>
-            );
-          })}
-        </div>
+        <LayoutGroup id="dashboard-nav-desktop">
+          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-hide">
+            {allNavigation.map((item) => {
+              const Icon = item.icon;
+              const isActive = isActiveRoute(item.href);
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  aria-current={isActive ? "page" : undefined}
+                  className={`group relative overflow-hidden flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium border transition-all duration-200 no-touch:hover:-translate-y-px focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+                    isActive
+                      ? "text-primary border-transparent"
+                      : "bg-transparent border-transparent text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
+                  }`}
+                >
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-indicator-desktop"
+                      className="absolute inset-0 rounded-xl bg-primary/10 border border-primary/20 shadow-sm"
+                      transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  <Icon className="w-5 h-5 flex-shrink-0 relative z-10" />
+                  <span className="truncate relative z-10">{item.name}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </LayoutGroup>
 
         <div className="border-t border-border px-4 py-4 space-y-3">
           <ThemeToggle />
