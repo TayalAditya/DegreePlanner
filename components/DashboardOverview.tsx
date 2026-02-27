@@ -9,6 +9,9 @@ interface DashboardOverviewProps {
   userId: string;
 }
 
+const ICB1_CODES = new Set(["IC131", "IC136", "IC230"]);
+const ICB2_CODES = new Set(["IC121", "IC240", "IC241", "IC253"]);
+
 export function DashboardOverview({ userId }: DashboardOverviewProps) {
   const { data: programs, isLoading: programsLoading } = useQuery({
     queryKey: ["user-programs", userId],
@@ -117,12 +120,18 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     (e: any) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F")
   ) || [];
 
-  const ICB_CODES = new Set(["IC131", "IC136", "IC230", "IC121", "IC240", "IC241", "IC253"]);
-
   const getCourseCategory = (enrollment: any): string => {
     const code = enrollment.course?.code?.toUpperCase() || "";
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
-    if (ICB_CODES.has(normalizedCode)) return "IC_BASKET";
+    const isICB1 = ICB1_CODES.has(normalizedCode);
+    const isICB2 = ICB2_CODES.has(normalizedCode);
+
+    if (userSettings?.branch === "CSE") {
+      if (isICB2 && (enrollment.semester || 0) < 4) return "FE";
+      if (isICB1 && (enrollment.semester || 0) < 5) return "FE";
+    }
+
+    if (isICB1 || isICB2) return "IC_BASKET";
 
     if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
       const mapping = enrollment.course.branchMappings.find(
@@ -137,14 +146,14 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     }
 
     // Branch-specific course patterns
-    if (userSettings?.branch === "CSE" && code.startsWith("DS")) return "DE";
-    if (userSettings?.branch === "DSE" && code.startsWith("CS")) return "DE";
+    if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return "DE";
+    if (userSettings?.branch === "DSE" && normalizedCode.startsWith("CS")) return "DE";
 
-    if (code.startsWith("IC")) return "IC";
-    if (code.startsWith("HS")) return "HSS";
-    if (code.startsWith("IKS")) return "IKS";
-    if (code.includes("MTP")) return "MTP";
-    if (code.includes("ISTP")) return "ISTP";
+    if (normalizedCode.startsWith("IC")) return "IC";
+    if (normalizedCode.startsWith("HS")) return "HSS";
+    if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
+    if (normalizedCode.includes("MTP")) return "MTP";
+    if (normalizedCode.includes("ISTP")) return "ISTP";
     if (enrollment.courseType === "DE") return "DE";
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     return "DC";

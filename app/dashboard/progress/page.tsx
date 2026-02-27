@@ -371,7 +371,7 @@ export default function ProgressPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-3 gap-3 md:gap-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
         <div className="bg-surface rounded-lg border border-border p-3 sm:p-6">
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
             <div className="w-8 h-8 sm:w-12 sm:h-12 bg-green-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -392,7 +392,6 @@ export default function ProgressPage() {
               <Clock className="w-4 h-4 sm:w-6 sm:h-6 text-blue-500" />
             </div>
             <div>
-        creditsRequiredByCategory,
               <p className="text-xs sm:text-sm text-foreground-secondary">In Progress</p>
               <p className="text-xl sm:text-2xl font-bold text-foreground">
                 {progress.totalCreditsInProgress}
@@ -435,14 +434,14 @@ export default function ProgressPage() {
             
             return (
               <div key={category} className="group">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-3 mb-2">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div className={`w-3 h-3 rounded-full ${colors.bar}`}></div>
-                    <span className={`font-semibold ${colors.text}`}>
+                    <span className={`min-w-0 font-semibold ${colors.text} break-words`}>
                       {label}
                     </span>
                   </div>
-                  <span className="text-foreground font-bold">
+                  <span className="text-foreground font-bold sm:text-right">
                     {credits} {inProgress > 0 && <span className="text-blue-500">(+{inProgress})</span>}
                   </span>
                 </div>
