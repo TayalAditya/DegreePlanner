@@ -23,20 +23,18 @@ export const authOptions: NextAuthOptions = {
 
       // Fallback: look up by enrollmentId extracted from email prefix
       // e.g. b23243@students.iitmandi.ac.in → enrollmentId = B23243
-      // or b23243@gmail.com → enrollmentId = B23243
+      // Only allows emails that START with b23XXX
       if (!approvedUser) {
         const emailPrefix = user.email.split("@")[0].toUpperCase();
-        // Extract B23XXX pattern from email prefix (works for b23243@gmail.com, aditya.b23243@gmail.com, etc.)
-        const enrollmentMatch = emailPrefix.match(/B23\d+/i);
-        if (enrollmentMatch) {
-          const enrollmentId = enrollmentMatch[0].toUpperCase();
+        // Only match if email starts with B23 followed by digits
+        if (emailPrefix.match(/^B23\d+$/i)) {
           approvedUser = await prisma.approvedUser.findUnique({
-            where: { enrollmentId },
+            where: { enrollmentId: emailPrefix },
           });
           // If found by enrollmentId, update the ApprovedUser email to match Google email
           if (approvedUser) {
             await prisma.approvedUser.update({
-              where: { enrollmentId },
+              where: { enrollmentId: emailPrefix },
               data: { email: user.email },
             });
           }
