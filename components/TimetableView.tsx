@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./ToastProvider";
+import { formatCourseCode } from "@/lib/utils";
 
 interface TimetableViewProps {
   userId: string;
@@ -288,7 +289,7 @@ function WeekView({
                           className="w-full text-left bg-primary/10 dark:bg-primary/20 border-l-4 border-primary rounded p-2 hover:bg-primary/15 dark:hover:bg-primary/25 transition-colors"
                         >
                           <p className="font-medium text-foreground text-xs truncate">
-                            {entry.course?.code}
+                            {formatCourseCode(entry.course?.code || "")}
                           </p>
                           <div className="flex items-center gap-1 text-xs text-foreground-secondary mt-1">
                             <MapPin className="w-3 h-3" />
@@ -351,7 +352,7 @@ function ListView({
                   <h4 className="font-medium text-foreground text-sm sm:text-base truncate group-hover:text-primary transition-colors">
                     {entry.course?.name}
                   </h4>
-                  <p className="text-xs sm:text-sm text-foreground-secondary mt-0.5">{entry.course?.code}</p>
+                  <p className="text-xs sm:text-sm text-foreground-secondary mt-0.5">{formatCourseCode(entry.course?.code || "")}</p>
                   <div className="flex flex-wrap gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-foreground-secondary">
                     <div className="flex items-center gap-1">
                       <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />

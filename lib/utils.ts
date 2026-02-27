@@ -231,3 +231,23 @@ export function isOnline(): boolean {
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+// Format course code consistently (e.g., IC123 or IC-123 → IC-123)
+export function formatCourseCode(code: string): string {
+  if (!code) return "";
+  
+  // Remove any existing hyphens and spaces
+  const normalized = code.toUpperCase().replace(/[\s-]/g, "");
+  
+  // Find where the letters end and numbers begin
+  let i = 0;
+  while (i < normalized.length && /[A-Z]/.test(normalized[i])) {
+    i++;
+  }
+  
+  // If we have both letters and numbers, format as ABC-123
+  if (i > 0 && i < normalized.length) {
+    return normalized.slice(0, i) + "-" + normalized.slice(i);
+  }
+  
+  return normalized;
+}
