@@ -16,38 +16,56 @@ export const authOptions: NextAuthOptions = {
     async signIn({ user, account }) {
       if (!user.email) return false;
 
+      console.log("🔐 Login attempt with email:", user.email);
+
       // Check if user is approved by email (direct match)
       let approvedUser = await prisma.approvedUser.findUnique({
         where: { email: user.email },
       });
+
+      console.log("Direct email match:", approvedUser ? "✅ Found" : "❌ Not found");
 
       // Fallback: look up by enrollmentId extracted from email prefix
       // e.g. b23243@students.iitmandi.ac.in → enrollmentId = B23243
       // Only allows emails that START with b23XXX
       if (!approvedUser) {
         const emailPrefix = user.email.split("@")[0].toUpperCase();
+        console.log("Email prefix:", emailPrefix);
+        
         // Only match if email starts with B23 followed by digits
-        if (emailPrefix.match(/^B23\d+$/i)) {
+        const matches = emailPrefix.match(/^B23\d+$/i);
+        console.log("Regex match:", matches ? "✅ Matches" : "❌ No match");
+        
+        if (matches) {
+          console.log("Looking up enrollmentId:", emailPrefix);
           approvedUser = await prisma.approvedUser.findUnique({
             where: { enrollmentId: emailPrefix },
           });
+          console.log("EnrollmentId lookup:", approvedUser ? "✅ Found" : "❌ Not found");
+          
           // If found by enrollmentId, update the ApprovedUser email to match Google email
           if (approvedUser) {
             await prisma.approvedUser.update({
               where: { enrollmentId: emailPrefix },
               data: { email: user.email },
             });
+            console.log("✅ Updated ApprovedUser email to:", user.email);
           }
         }
       }
 
       if (!approvedUser) {
+        console.log("❌ Login rejected: User not in approved list");
         return "/auth/error?error=batch_not_supported";
       }
 
+      console.log("Approved user batch:", approvedUser.batch);
+
       // Batch validation: Only Batch 2023 students allowed
       if (approvedUser.batch && approvedUser.batch !== 2023) {
+        console.log("❌ Login rejected: Batch", approvedUser.batch, "not supported");
         return "/auth/error?error=batch_not_supported";
+      }
       }
 
       // Update or create user with approval status
