@@ -5,7 +5,7 @@ export interface DefaultCourse {
   code: string;
   name: string;
   credits: number;
-  category: "IC" | "ICB" | "HSS" | "IKS" | "DC" | "DE" | "FE";
+  category: "IC" | "ICB" | "HSS" | "IKS" | "DC" | "DE" | "FE" | "ISTP" | "MTP";
   semester: number;
 }
 
