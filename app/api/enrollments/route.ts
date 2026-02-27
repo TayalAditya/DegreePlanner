@@ -93,6 +93,45 @@ export async function POST(request: NextRequest) {
       internshipDays,
     } = body;
 
+    // If no programId provided, get user's primary program
+    let finalProgramId = programId;
+    if (!finalProgramId) {
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: {
+          branch: true,
+          programs: {
+            where: { isPrimary: true },
+            select: { programId: true },
+          },
+        },
+      });
+
+      // Get from existing primary program
+      finalProgramId = user?.programs[0]?.programId;
+
+      // Or auto-enroll based on branch
+      if (!finalProgramId && user?.branch) {
+        const program = await prisma.program.findUnique({
+          where: { code: user.branch },
+        });
+
+        if (program) {
+          const userProgram = await prisma.userProgram.create({
+            data: {
+              userId: session.user.id,
+              programId: program.id,
+              programType: "MAJOR",
+              isPrimary: true,
+              startSemester: 1,
+              status: "ACTIVE",
+            },
+          });
+          finalProgramId = userProgram.programId;
+        }
+      }
+    }
+
     // Get the course to validate
     const course = await prisma.course.findUnique({
       where: { id: courseId },
@@ -197,7 +236,7 @@ export async function POST(request: NextRequest) {
         year,
         term,
         courseType: courseType || CourseType.FREE_ELECTIVE,
-        programId,
+        programId: finalProgramId,
         status: EnrollmentStatus.IN_PROGRESS,
         isPassFail: isPassFail || false,
         passFailCredits: isPassFail ? course.credits : 0,
