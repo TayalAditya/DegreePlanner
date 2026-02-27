@@ -82,6 +82,16 @@ const categoryLabels = {
   ISTP: "Interactive Socio-Technical Practicum",
 };
 
+const ICB_CODES = new Set([
+  "IC131",
+  "IC136",
+  "IC230",
+  "IC121",
+  "IC240",
+  "IC241",
+  "IC253",
+]);
+
 export default function ProgressPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -174,9 +184,11 @@ export default function ProgressPage() {
 
       // Fallback to course code hints
       const code = enrollment.course.code.toUpperCase();
+      if (ICB_CODES.has(code)) return "IC_BASKET";
+      if (code === "IC181") return "IKS";
       if (code.startsWith("IC")) return "IC";
       if (code.startsWith("HS")) return "HSS";
-      if (code.startsWith("IKS")) return "IKS";
+      if (code.startsWith("IK")) return "IKS";
       if (code.includes("MTP")) return "MTP";
       if (code.includes("ISTP")) return "ISTP";
 
@@ -192,8 +204,9 @@ export default function ProgressPage() {
         case "ISTP":
           return "ISTP";
         case "CORE":
-        default:
           return "DC";
+        default:
+          return "FE";
       }
     };
 
