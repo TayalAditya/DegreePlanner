@@ -20,11 +20,19 @@ interface SelectedCourse extends DefaultCourse {
   grade?: string;
 }
 
+interface EnrollmentSummary {
+  semester: number;
+  course: {
+    code: string;
+  };
+}
+
 export default function ImportCoursesPage() {
   const [branch, setBranch] = useState("CSE");
   const [geSubBranch, setGeSubBranch] = useState("GERAI");
   const [currentSemester, setCurrentSemester] = useState(6);
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
+  const [importedCourseKeys, setImportedCourseKeys] = useState<Set<string>>(new Set());
   const [expandedSemesters, setExpandedSemesters] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -32,11 +40,12 @@ export default function ImportCoursesPage() {
 
   useEffect(() => {
     loadUserSettings();
+    loadExistingEnrollments();
   }, []);
 
   useEffect(() => {
     loadDefaultCourses();
-  }, [branch, geSubBranch, currentSemester]);
+  }, [branch, geSubBranch, currentSemester, importedCourseKeys]);
 
   const loadUserSettings = async () => {
     try {
@@ -50,6 +59,21 @@ export default function ImportCoursesPage() {
     }
   };
 
+  const loadExistingEnrollments = async () => {
+    try {
+      const res = await fetch("/api/enrollments");
+      if (res.ok) {
+        const data: EnrollmentSummary[] = await res.json();
+        const keys = new Set(
+          data.map((e) => `${e.course.code}|${e.semester}`)
+        );
+        setImportedCourseKeys(keys);
+      }
+    } catch (error) {
+      console.error("Failed to load enrollments:", error);
+    }
+  };
+
   const loadDefaultCourses = () => {
     const effectiveBranch = branch === "GE" ? geSubBranch : branch;
     const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester);
@@ -57,7 +81,9 @@ export default function ImportCoursesPage() {
     const MANUAL_PICK_CODES = ["IC140", "IC102P", "IC181"];
     // ISTP/MTP courses are auto-selected for semester 6+ (all branches have them)
     const ISTP_MTP_CODES = ["DP 301P", "DP 498P", "DP 499P"];
-    const coursesWithSelection = defaultCourses.map((course) => ({
+    const coursesWithSelection = defaultCourses
+      .filter((course) => !importedCourseKeys.has(`${course.code}|${course.semester}`))
+      .map((course) => ({
       ...course,
       selected: (course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code)) || ISTP_MTP_CODES.includes(course.code),
     }));
@@ -137,6 +163,7 @@ export default function ImportCoursesPage() {
     try {
       const res = await fetch("/api/enrollments", { method: "DELETE" });
       if (res.ok) {
+        setImportedCourseKeys(new Set());
         alert("All courses deleted. You can now re-import.");
       } else {
         alert("Failed to delete courses.");
@@ -168,6 +195,7 @@ export default function ImportCoursesPage() {
 
       if (res.ok) {
         setSubmitted(true);
+        loadExistingEnrollments();
       } else {
         alert("Failed to import courses. Please try again.");
       }
