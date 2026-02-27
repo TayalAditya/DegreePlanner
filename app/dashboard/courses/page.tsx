@@ -120,7 +120,9 @@ export default function CoursesPage() {
     new Set(allCourses.map((c) => c.department))
   ).sort();
 
+  const codePattern = /^[A-Z]{2}-\d{3}$/;
   const filteredCourses = allCourses.filter((course) => {
+    if (!codePattern.test(course.code)) return false;
     const matchesSearch =
       course.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
       course.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -145,6 +147,16 @@ export default function CoursesPage() {
   const passFailUsed = user?.totalPassFailCredits ?? 0;
   const passFailRemaining = Math.max(0, maxPassFailCredits - passFailUsed);
 
+  const ICB_CODES = new Set([
+    "IC131",
+    "IC136",
+    "IC230",
+    "IC121",
+    "IC240",
+    "IC241",
+    "IC253",
+  ]);
+
   // Calculate credits by category
   const getCourseCategory = (enrollment: Enrollment): string => {
     // First try to get from branchMappings if available
@@ -162,11 +174,14 @@ export default function CoursesPage() {
 
     // Fallback to code analysis
     const code = enrollment.course.code.toUpperCase();
-    if (code.startsWith("IC")) return "IC";
-    if (code.startsWith("HS")) return "HSS";
-    if (code.startsWith("IKS")) return "IKS";
-    if (code.includes("MTP")) return "MTP";
-    if (code.includes("ISTP")) return "ISTP";
+    const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+    if (ICB_CODES.has(normalizedCode)) return "IC_BASKET";
+    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode.startsWith("IC")) return "IC";
+    if (normalizedCode.startsWith("HS")) return "HSS";
+    if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
+    if (normalizedCode.includes("MTP")) return "MTP";
+    if (normalizedCode.includes("ISTP")) return "ISTP";
 
     // Fallback to courseType mapping
     switch (enrollment.courseType) {
