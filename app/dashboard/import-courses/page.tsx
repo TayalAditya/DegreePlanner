@@ -27,12 +27,24 @@ interface EnrollmentSummary {
   };
 }
 
+interface CatalogCourse {
+  id: string;
+  code: string;
+  name: string;
+  credits: number;
+  department: string;
+}
+
 export default function ImportCoursesPage() {
   const [branch, setBranch] = useState("CSE");
   const [geSubBranch, setGeSubBranch] = useState("GERAI");
   const [currentSemester, setCurrentSemester] = useState(6);
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
   const [importedCourseKeys, setImportedCourseKeys] = useState<Set<string>>(new Set());
+  const [customQuery, setCustomQuery] = useState("");
+  const [customSemester, setCustomSemester] = useState(6);
+  const [customResults, setCustomResults] = useState<CatalogCourse[]>([]);
+  const [customLoading, setCustomLoading] = useState(false);
   const [expandedSemesters, setExpandedSemesters] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(false);
@@ -46,6 +58,10 @@ export default function ImportCoursesPage() {
   useEffect(() => {
     loadDefaultCourses();
   }, [branch, geSubBranch, currentSemester, importedCourseKeys]);
+
+  useEffect(() => {
+    setCustomSemester(currentSemester);
+  }, [currentSemester]);
 
   const loadUserSettings = async () => {
     try {
@@ -88,6 +104,44 @@ export default function ImportCoursesPage() {
       selected: (course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code)) || ISTP_MTP_CODES.includes(course.code),
     }));
     setCourses(coursesWithSelection);
+  };
+
+  const searchCatalogCourses = async () => {
+    if (!customQuery.trim()) return;
+    setCustomLoading(true);
+    try {
+      const res = await fetch(`/api/courses?search=${encodeURIComponent(customQuery.trim())}`);
+      if (res.ok) {
+        const data: CatalogCourse[] = await res.json();
+        setCustomResults(data.slice(0, 8));
+      } else {
+        setCustomResults([]);
+      }
+    } catch (error) {
+      console.error("Failed to search courses:", error);
+      setCustomResults([]);
+    } finally {
+      setCustomLoading(false);
+    }
+  };
+
+  const addCustomCourse = (course: CatalogCourse) => {
+    const key = `${course.code}|${customSemester}`;
+    if (importedCourseKeys.has(key)) return;
+    if (courses.some((c) => c.code === course.code && c.semester === customSemester)) return;
+
+    const category = course.code.toUpperCase().startsWith("HS") ? "HSS" : "FE";
+
+    const newCourse: SelectedCourse = {
+      code: course.code,
+      name: course.name,
+      credits: course.credits,
+      category,
+      semester: customSemester,
+      selected: true,
+    };
+
+    setCourses((prev) => [...prev, newCourse]);
   };
 
   const toggleSemester = (sem: number) => {
@@ -339,6 +393,60 @@ export default function ImportCoursesPage() {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Quick Add (Missing Course) */}
+      <div className="bg-surface rounded-xl border border-border p-6">
+        <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
+          <Info className="h-5 w-5 text-primary" />
+          Missing a course? Quick Add from Catalog
+        </h3>
+        <div className="grid gap-3 md:grid-cols-[1fr_140px_140px]">
+          <input
+            type="text"
+            value={customQuery}
+            onChange={(e) => setCustomQuery(e.target.value)}
+            placeholder="Search by code or name (e.g., HS342 German)"
+            className="px-3 py-2 rounded-lg border bg-background"
+          />
+          <input
+            type="number"
+            min={1}
+            max={8}
+            value={customSemester}
+            onChange={(e) => setCustomSemester(Number(e.target.value))}
+            className="px-3 py-2 rounded-lg border bg-background"
+            placeholder="Semester"
+          />
+          <button
+            onClick={searchCatalogCourses}
+            disabled={customLoading || !customQuery.trim()}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50"
+          >
+            {customLoading ? "Searching..." : "Search"}
+          </button>
+        </div>
+        {customResults.length > 0 && (
+          <div className="mt-4 grid gap-2">
+            {customResults.map((course) => (
+              <div
+                key={course.id}
+                className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border bg-background"
+              >
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground truncate">{course.code} — {course.name}</p>
+                  <p className="text-xs text-foreground-secondary">{course.credits} credits • {course.department}</p>
+                </div>
+                <button
+                  onClick={() => addCustomCourse(course)}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+                >
+                  Add
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Summary */}
