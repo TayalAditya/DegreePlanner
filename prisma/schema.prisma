@@ -186,58 +186,9 @@ model Course {
   enrollments     CourseEnrollment[]
   timetableEntries TimetableEntry[]
   branchMappings  CourseBranchMapping[]
-  instructors     CourseInstructor[]
   
   @@index([code])
   @@index([department])
-}
-
-// Instructor database
-model Instructor {
-  id              String   @id @default(cuid())
-  name            String   @unique
-  email           String?  @unique
-  department      String?
-  designation     String?  // Professor, Associate Professor, etc.
-  phone           String?
-  office          String?
-  bio             String?
-  
-  isActive        Boolean  @default(true)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  courseAssignments CourseInstructor[]
-  
-  @@index([name])
-  @@index([department])
-  @@index([isActive])
-}
-
-// Course-Instructor mapping with semester/year specificity
-model CourseInstructor {
-  id              String   @id @default(cuid())
-  courseId        String
-  instructorId    String
-  semester        Int?     // Which semester (1-8), null = all semesters
-  year            Int?     // Academic year (2023, 2024, etc.), null = all years
-  term            Term?    // FALL, SPRING, SUMMER
-  isPrimary       Boolean  @default(true)
-  responsibilities String? // e.g., "Lectures", "Labs", "Evaluation"
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  course          Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  instructor      Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
-  
-  @@unique([courseId, instructorId, semester, year, term])
-  @@index([courseId])
-  @@index([instructorId])
-  @@index([semester])
-  @@index([year])
-  @@index([term])
 }
 
 // Prerequisites
