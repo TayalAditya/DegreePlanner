@@ -37,12 +37,35 @@ interface Enrollment {
   status: string;
   grade?: string;
   courseId: string;
-  course: Course;
+  course: Course & {
+    branchMappings?: {
+      courseCategory: string;
+      branch: string;
+    }[];
+  };
 }
+
+interface User {
+  branch?: string;
+}
+
+// Color scheme for each category
+const categoryColors = {
+  IC: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400", bar: "bg-blue-500" },
+  IC_BASKET: { bg: "bg-cyan-500/10", text: "text-cyan-600 dark:text-cyan-400", bar: "bg-cyan-500" },
+  DC: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", bar: "bg-purple-500" },
+  DE: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400", bar: "bg-pink-500" },
+  FE: { bg: "bg-green-500/10", text: "text-green-600 dark:text-green-400", bar: "bg-green-500" },
+  HSS: { bg: "bg-orange-500/10", text: "text-orange-600 dark:text-orange-400", bar: "bg-orange-500" },
+  IKS: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", bar: "bg-amber-500" },
+  MTP: { bg: "bg-red-500/10", text: "text-red-600 dark:text-red-400", bar: "bg-red-500" },
+  ISTP: { bg: "bg-teal-500/10", text: "text-teal-600 dark:text-teal-400", bar: "bg-teal-500" },
+};
 
 export default function CoursesPage() {
   const [tab, setTab] = useState<"my-courses" | "catalog">("my-courses");
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -61,9 +84,10 @@ export default function CoursesPage() {
 
   const loadData = async () => {
     try {
-      const [enrollmentsRes, coursesRes] = await Promise.all([
+      const [enrollmentsRes, coursesRes, userRes] = await Promise.all([
         fetch("/api/enrollments"),
         fetch("/api/courses"),
+        fetch("/api/user/settings"),
       ]);
 
       if (enrollmentsRes.ok) {
@@ -74,6 +98,11 @@ export default function CoursesPage() {
       if (coursesRes.ok) {
         const data = await coursesRes.json();
         setAllCourses(data);
+      }
+
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        setUser(userData);
       }
     } catch (error) {
       console.error("Failed to load data:", error);
@@ -107,6 +136,46 @@ export default function CoursesPage() {
   const totalCreditsInProgress = enrollments
     .filter((e) => e.status === "IN_PROGRESS" || e.status === "ENROLLED")
     .reduce((sum, e) => sum + e.course.credits, 0);
+
+  // Calculate credits by category
+  const getCourseCategory = (enrollment: Enrollment): string => {
+    // First try to get from branchMappings if available
+    if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
+      const mapping = enrollment.course.branchMappings.find(
+        (m) => m.branch === user.branch
+      );
+      if (mapping) {
+        return mapping.courseCategory;
+      }
+    }
+    // Fallback to code analysis
+    const code = enrollment.course.code.toUpperCase();
+    if (code.startsWith("HS-")) return "HSS";
+    if (code.includes("MTP")) return "MTP";
+    if (code.includes("ISTP")) return "ISTP";
+    return "FE";
+  };
+
+  const creditsByCategory: Record<string, number> = {
+    IC: 0,
+    IC_BASKET: 0,
+    DC: 0,
+    DE: 0,
+    FE: 0,
+    HSS: 0,
+    IKS: 0,
+    MTP: 0,
+    ISTP: 0,
+  };
+
+  enrollments
+    .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
+    .forEach((e) => {
+      const category = getCourseCategory(e);
+      if (category in creditsByCategory) {
+        creditsByCategory[category] += e.course.credits;
+      }
+    });
 
   // Calculate HSS credits for smart type detection
   const hssCreditsCompleted = enrollments
@@ -202,6 +271,29 @@ export default function CoursesPage() {
     }
   };
 
+  const deleteEnrollment = async (enrollmentId: string, courseName: string) => {
+    if (!confirm(`Are you sure you want to remove ${courseName}?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/enrollments/${enrollmentId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        showToast("success", "Course removed successfully!");
+        await loadData();
+      } else {
+        const error = await response.json();
+        showToast("error", error.error || "Failed to remove course");
+      }
+    } catch (error) {
+      console.error("Error removing course:", error);
+      showToast("error", "Failed to remove course");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -262,6 +354,43 @@ export default function CoursesPage() {
         </motion.div>
       </div>
 
+      {/* Category Breakdown */}
+      {enrollments.length > 0 && (
+        <div className="bg-surface rounded-lg border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Credits by Category</h3>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            {Object.entries(creditsByCategory)
+              .filter(([_, credits]) => credits > 0)
+              .map(([category, credits]) => {
+                const colors = categoryColors[category as keyof typeof categoryColors];
+                const labels: Record<string, string> = {
+                  IC: "Institute Core",
+                  IC_BASKET: "IC Basket",
+                  DC: "Discipline Core",
+                  DE: "Discipline Electives",
+                  FE: "Free Electives",
+                  HSS: "HSS",
+                  IKS: "IKS",
+                  MTP: "MTP",
+                  ISTP: "ISTP",
+                };
+                return (
+                  <div key={category} className={`${colors.bg} rounded-lg p-4 border border-opacity-20`}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className={`w-2 h-2 rounded-full ${colors.bar}`}></div>
+                      <span className={`text-xs font-semibold ${colors.text}`}>
+                        {labels[category]}
+                      </span>
+                    </div>
+                    <p className={`text-2xl font-bold ${colors.text}`}>{credits}</p>
+                    <p className="text-xs text-foreground-secondary mt-1">credits</p>
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
+
       {/* Tab Navigation */}
       <div className="flex gap-2 p-1 bg-surface rounded-lg border border-border shadow-sm">
         <button
@@ -316,14 +445,16 @@ export default function CoursesPage() {
             ) : (
               <div className="grid gap-3">
                 {enrollments.map((enrollment) => (
-                  <motion.button
+                  <motion.div
                     key={enrollment.id}
-                    onClick={() => setSelectedCourse(enrollment.course)}
-                    className="group relative overflow-hidden bg-surface rounded-lg border border-border p-5 hover:border-primary hover:shadow-xl transition-all text-left"
+                    className="group relative overflow-hidden bg-surface rounded-lg border border-border p-5 hover:border-primary hover:shadow-xl transition-all"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                     <div className="relative z-10 flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
+                      <button
+                        onClick={() => setSelectedCourse(enrollment.course)}
+                        className="flex-1 min-w-0 text-left"
+                      >
                         <div className="flex items-center gap-3 mb-2">
                           <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
                             {enrollment.course.code}
@@ -355,21 +486,33 @@ export default function CoursesPage() {
                             {enrollment.course.department}
                           </span>
                         </div>
-                      </div>
-                      {enrollment.grade && (
-                        <div className="text-center">
-                          <p className="text-xs text-foreground-secondary mb-1">
-                            Grade
-                          </p>
-                          <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg">
-                            <p className="text-2xl font-bold text-white">
-                              {enrollment.grade}
+                      </button>
+                      <div className="flex flex-col gap-2">
+                        {enrollment.grade && (
+                          <div className="text-center">
+                            <p className="text-xs text-foreground-secondary mb-1">
+                              Grade
                             </p>
+                            <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg">
+                              <p className="text-2xl font-bold text-white">
+                                {enrollment.grade}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteEnrollment(enrollment.id, enrollment.course.name);
+                          }}
+                          className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500/20 transition-colors"
+                          title="Remove course"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
                     </div>
-                  </motion.button>
+                  </motion.div>
                 ))}
               </div>
             )}
