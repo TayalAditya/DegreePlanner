@@ -1,0 +1,451 @@
+{
+  "generatedAt": "2026-02-27T11:13:59.523Z",
+  "totalCoursesValidated": 99,
+  "validationResults": {
+    "codeValidation": {
+      "valid": 46,
+      "invalid": 53,
+      "issues": [
+        {
+          "code": "IC 010P",
+          "issue": "Invalid format: \"IC 010P\""
+        },
+        {
+          "code": "CE 498P",
+          "issue": "Invalid format: \"CE 498P\""
+        },
+        {
+          "code": "CS 498P",
+          "issue": "Invalid format: \"CS 498P\""
+        },
+        {
+          "code": "CS514_1",
+          "issue": "Invalid format: \"CS514_1\""
+        },
+        {
+          "code": "DP 399P",
+          "issue": "Invalid format: \"DP 399P\""
+        },
+        {
+          "code": "EE-XXX-1",
+          "issue": "Invalid format: \"EE-XXX-1\""
+        },
+        {
+          "code": "EE-XXXP-2",
+          "issue": "Invalid format: \"EE-XXXP-2\""
+        },
+        {
+          "code": "EE-XXX-3",
+          "issue": "Invalid format: \"EE-XXX-3\""
+        },
+        {
+          "code": "EE-XXX-4",
+          "issue": "Invalid format: \"EE-XXX-4\""
+        },
+        {
+          "code": "HS 105_1",
+          "issue": "Invalid format: \"HS 105_1\""
+        },
+        {
+          "code": "HS 151",
+          "issue": "Invalid format: \"HS 151\""
+        },
+        {
+          "code": "HS 202_1",
+          "issue": "Invalid format: \"HS 202_1\""
+        },
+        {
+          "code": "HS 342_2",
+          "issue": "Invalid format: \"HS 342_2\""
+        },
+        {
+          "code": "HS 344",
+          "issue": "Invalid format: \"HS 344\""
+        },
+        {
+          "code": "HS 357",
+          "issue": "Invalid format: \"HS 357\""
+        },
+        {
+          "code": "HS 391",
+          "issue": "Invalid format: \"HS 391\""
+        },
+        {
+          "code": "HS 524",
+          "issue": "Invalid format: \"HS 524\""
+        },
+        {
+          "code": "HS 531",
+          "issue": "Invalid format: \"HS 531\""
+        },
+        {
+          "code": "IC 010P",
+          "issue": "Invalid format: \"IC 010P\""
+        },
+        {
+          "code": "IK591_3",
+          "issue": "Invalid format: \"IK591_3\""
+        },
+        {
+          "code": "IK591_4",
+          "issue": "Invalid format: \"IK591_4\""
+        },
+        {
+          "code": "IK592_5",
+          "issue": "Invalid format: \"IK592_5\""
+        },
+        {
+          "code": "IK592_6",
+          "issue": "Invalid format: \"IK592_6\""
+        },
+        {
+          "code": "IK593_1",
+          "issue": "Invalid format: \"IK593_1\""
+        },
+        {
+          "code": "IK 505",
+          "issue": "Invalid format: \"IK 505\""
+        },
+        {
+          "code": "ME-2xx",
+          "issue": "Invalid format: \"ME-2xx\""
+        },
+        {
+          "code": "ME 615",
+          "issue": "Invalid format: \"ME 615\""
+        },
+        {
+          "code": "EE-3XX",
+          "issue": "Invalid format: \"EE-3XX\""
+        },
+        {
+          "code": "EE 498P",
+          "issue": "Invalid format: \"EE 498P\""
+        },
+        {
+          "code": "EP 301",
+          "issue": "Invalid format: \"EP 301\""
+        },
+        {
+          "code": "EP 302",
+          "issue": "Invalid format: \"EP 302\""
+        },
+        {
+          "code": "EP 321",
+          "issue": "Invalid format: \"EP 321\""
+        },
+        {
+          "code": "EP 402P",
+          "issue": "Invalid format: \"EP 402P\""
+        },
+        {
+          "code": "ME 206",
+          "issue": "Invalid format: \"ME 206\""
+        },
+        {
+          "code": "ME 210",
+          "issue": "Invalid format: \"ME 210\""
+        },
+        {
+          "code": "ME 303",
+          "issue": "Invalid format: \"ME 303\""
+        },
+        {
+          "code": "ME 305",
+          "issue": "Invalid format: \"ME 305\""
+        },
+        {
+          "code": "ME 308",
+          "issue": "Invalid format: \"ME 308\""
+        },
+        {
+          "code": "ME 312P",
+          "issue": "Invalid format: \"ME 312P\""
+        },
+        {
+          "code": "ME 509",
+          "issue": "Invalid format: \"ME 509\""
+        },
+        {
+          "code": "ME 511",
+          "issue": "Invalid format: \"ME 511\""
+        },
+        {
+          "code": "ME 523",
+          "issue": "Invalid format: \"ME 523\""
+        },
+        {
+          "code": "ME 603",
+          "issue": "Invalid format: \"ME 603\""
+        },
+        {
+          "code": "ME 605",
+          "issue": "Invalid format: \"ME 605\""
+        },
+        {
+          "code": "ME 610",
+          "issue": "Invalid format: \"ME 610\""
+        },
+        {
+          "code": "ME xxx",
+          "issue": "Invalid format: \"ME xxx\""
+        },
+        {
+          "code": "PH 301",
+          "issue": "Invalid format: \"PH 301\""
+        },
+        {
+          "code": "PH 508",
+          "issue": "Invalid format: \"PH 508\""
+        },
+        {
+          "code": "PH 528",
+          "issue": "Invalid format: \"PH 528\""
+        },
+        {
+          "code": "PH 603",
+          "issue": "Invalid format: \"PH 603\""
+        },
+        {
+          "code": "PH 605",
+          "issue": "Invalid format: \"PH 605\""
+        },
+        {
+          "code": "PH 613",
+          "issue": "Invalid format: \"PH 613\""
+        },
+        {
+          "code": "PH 701",
+          "issue": "Invalid format: \"PH 701\""
+        }
+      ]
+    },
+    "nameValidation": {
+      "valid": 99,
+      "potentialTypos": []
+    },
+    "creditValidation": {
+      "valid": 58,
+      "mismatch": [
+        {
+          "code": "IC-102P",
+          "formula": 7,
+          "stated": 4
+        },
+        {
+          "code": "IC-152",
+          "formula": 5,
+          "stated": 4
+        },
+        {
+          "code": "IC181",
+          "formula": 4,
+          "stated": 3
+        },
+        {
+          "code": "IC-222P",
+          "formula": 3,
+          "stated": 2
+        },
+        {
+          "code": "IC-231",
+          "formula": 4,
+          "stated": 3
+        },
+        {
+          "code": "IC-272",
+          "formula": 4,
+          "stated": 3
+        },
+        {
+          "code": "IC-102P",
+          "formula": 7,
+          "stated": 4
+        },
+        {
+          "code": "IC-152",
+          "formula": 5,
+          "stated": 4
+        },
+        {
+          "code": "IC181",
+          "formula": 4,
+          "stated": 3
+        },
+        {
+          "code": "IC-222P",
+          "formula": 3,
+          "stated": 2
+        },
+        {
+          "code": "IC-272",
+          "formula": 4,
+          "stated": 3
+        },
+        {
+          "code": "BE-201",
+          "formula": 5,
+          "stated": 4
+        },
+        {
+          "code": "BE-202",
+          "formula": 5,
+          "stated": 4
+        },
+        {
+          "code": "BE-503",
+          "formula": 5,
+          "stated": 4
+        },
+        {
+          "code": "BE-504",
+          "formula": 5,
+          "stated": 4
+        },
+        {
+          "code": "BE-308",
+          "formula": 5,
+          "stated": 4
+        },
+        {
+          "code": "BE-498P",
+          "formula": 4.5,
+          "stated": 3
+        },
+        {
+          "code": "BE-505",
+          "formula": 4,
+          "stated": 3
+        },
+        {
+          "code": "CE 498P",
+          "formula": 4.5,
+          "stated": 3
+        },
+        {
+          "code": "CS308P",
+          "formula": 3,
+          "stated": 2
+        },
+        {
+          "code": "CS310",
+          "formula": 5,
+          "stated": 4
+        },
+        {
+          "code": "CS 498P",
+          "formula": 4.5,
+          "stated": 3
+        },
+        {
+          "code": "CS514_1",
+          "formula": 5,
+          "stated": 4
+        },
+        {
+          "code": "DP 399P",
+          "formula": 18,
+          "stated": 9
+        },
+        {
+          "code": "EE210P",
+          "formula": 2,
+          "stated": 1
+        },
+        {
+          "code": "EE-XXXP-2",
+          "formula": 3,
+          "stated": 2
+        },
+        {
+          "code": "ME-2xx",
+          "formula": 5,
+          "stated": 3
+        },
+        {
+          "code": "CS515",
+          "formula": 4,
+          "stated": 3
+        },
+        {
+          "code": "CS571",
+          "formula": 4,
+          "stated": 3
+        },
+        {
+          "code": "DS-498P",
+          "formula": 4.5,
+          "stated": 3
+        },
+        {
+          "code": "EE-3XX",
+          "formula": 5,
+          "stated": 4
+        },
+        {
+          "code": "EE 498P",
+          "formula": 4.5,
+          "stated": 3
+        },
+        {
+          "code": "EE-508P",
+          "formula": 3,
+          "stated": 2
+        },
+        {
+          "code": "EE-528",
+          "formula": 4,
+          "stated": 3
+        },
+        {
+          "code": "EP 302",
+          "formula": 4,
+          "stated": 3
+        },
+        {
+          "code": "EP 402P",
+          "formula": 6,
+          "stated": 4
+        },
+        {
+          "code": "EP-498P",
+          "formula": 4.5,
+          "stated": 3
+        },
+        {
+          "code": "ME 312P",
+          "formula": 2,
+          "stated": 1
+        },
+        {
+          "code": "ME-498P",
+          "formula": 4.5,
+          "stated": 3
+        },
+        {
+          "code": "ME xxx",
+          "formula": 4,
+          "stated": 3
+        },
+        {
+          "code": "PH 701",
+          "formula": 3,
+          "stated": 4
+        }
+      ]
+    },
+    "instructorValidation": {
+      "complete": 99,
+      "missing": [],
+      "hasMultiple": 5
+    }
+  },
+  "summary": {
+    "overallStatus": "FAIL",
+    "score": 76,
+    "recommendations": [
+      "Fix 53 invalid course codes",
+      "Verify 41 credit mismatches"
+    ]
+  }
+}

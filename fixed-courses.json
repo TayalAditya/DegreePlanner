@@ -1,0 +1,2885 @@
+{
+  "fixedAt": "2026-02-27T11:15:46.718Z",
+  "coursesProcessed": 91,
+  "coursesCorrected": 65,
+  "coursesAlreadyValid": 34,
+  "bySemester": {
+    "1": [
+      {
+        "courseCode": "IC-102P",
+        "courseName": "Foundations of Design Practicum",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 1,
+          "tutorial": 0,
+          "practical": 6,
+          "total": 4
+        },
+        "instructor": "Dr. Amit Shukla, Dr. Narendra K Dhar, Dr. Jagadeesh Kadiyam, Dr. Radhe Shyam Sharma",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "IC-102P",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-136",
+        "courseName": "Understanding Biotechnology and Its Applications",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Biofac",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IC-136",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-152",
+        "courseName": "Introduction to Python and Data Science (DS-I)",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 4
+        },
+        "instructor": "Rohit",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "IC-152",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-181",
+        "courseName": "Introduction to Consciousness and Wellbeing",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 3
+        },
+        "instructor": "Prof. Laxmidhar Behera",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IC181",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "IC-222P",
+        "courseName": "Physics Practicum",
+        "credits": 2,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 3,
+          "total": 2
+        },
+        "instructor": "Kaustav Mukherjee/Pradeep Kumar",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "IC",
+        "originalCode": "IC-222P",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-231",
+        "courseName": "Measurement and Instrumentation",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 3
+        },
+        "instructor": "Srikanth Suguvanam and Erwin",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "IC-231",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-241",
+        "courseName": "Materials Science for Engineers",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Ranbir",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "IC",
+        "originalCode": "IC-241",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-272",
+        "courseName": "Data Science III",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 3
+        },
+        "instructor": "Aditya",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "IC-272",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-010P",
+        "courseName": "Internship",
+        "credits": 2,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 2
+        },
+        "instructor": "Faculty Advisors",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IC 010P",
+        "codeFixed": true
+      }
+    ],
+    "3": [
+      {
+        "courseCode": "IC-102P",
+        "courseName": "Foundations of Design Practicum",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 1,
+          "tutorial": 0,
+          "practical": 6,
+          "total": 4
+        },
+        "instructor": "Dr. Amit Shukla, Dr. Narendra K Dhar, Dr. Jagadeesh Kadiyam, Dr. Radhe Shyam Sharma",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "IC-102P",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-136",
+        "courseName": "Understanding Biotechnology and Its Applications",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Biofac",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IC-136",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-152",
+        "courseName": "Introduction to Python and Data Science (DS-I)",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 4
+        },
+        "instructor": "Rohit",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "IC-152",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-181",
+        "courseName": "Introduction to Consciousness and Wellbeing",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 3
+        },
+        "instructor": "Prof. Laxmidhar Behera",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IC181",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "IC-222P",
+        "courseName": "Physics Practicum",
+        "credits": 2,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 3,
+          "total": 2
+        },
+        "instructor": "Kaustav Mukherjee/Pradeep Kumar",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "IC",
+        "originalCode": "IC-222P",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-241",
+        "courseName": "Materials Science for Engineers",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Ranbir",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "IC",
+        "originalCode": "IC-241",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "IC-272",
+        "courseName": "Data Science III",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 3
+        },
+        "instructor": "Aditya",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "IC-272",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "BE-201",
+        "courseName": "Cell Biology",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 4
+        },
+        "instructor": "PK",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "BE-201",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "BE-202",
+        "courseName": "Biochemistry and Molecular Biology",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 4
+        },
+        "instructor": "BB",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "BE-202",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "BE-305",
+        "courseName": "Bioethics and Regulatory Affairs",
+        "credits": 1,
+        "creditBreakdown": {
+          "lecture": 1,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 1
+        },
+        "instructor": "PK",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "BE-305",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "BE-503",
+        "courseName": "Biosensing & Bioinstrumentation",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 4
+        },
+        "instructor": "Biofac",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "BE-503",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "BE-504",
+        "courseName": "Biomaterials",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 4
+        },
+        "instructor": "SM",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "BE-504",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "BE-308",
+        "courseName": "Introduction to Biomanufacturing",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 4
+        },
+        "instructor": "SM",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "BE-308",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "BE-498P",
+        "courseName": "Major Technical Project-1",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 4.5,
+          "total": 3
+        },
+        "instructor": "Trayambak Basak",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "BE-498P",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "BE-501",
+        "courseName": "Anatomy and Physiology",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "TBK",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "BE-501",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "BE-505",
+        "courseName": "Computational Biology",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 3
+        },
+        "instructor": "TPS",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "BE-505",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "CE-498P",
+        "courseName": "Major Technical Project-1",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 4.5,
+          "total": 3
+        },
+        "instructor": "Sandip Saha",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": true,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "CE 498P",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "CS-208",
+        "courseName": "Mathematical Foundations of Computer Science",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 1,
+          "practical": 0,
+          "total": 4
+        },
+        "instructor": "Jinesh",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": true,
+          "DSE": true,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "CS208",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "CS-308P",
+        "courseName": "Large Application Practicum",
+        "credits": 2,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 3,
+          "total": 2
+        },
+        "instructor": "Varun Dutt",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": true,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "CS308P",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "CS-310",
+        "courseName": "Introduction to Communication and Distributed Processes",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 4
+        },
+        "instructor": "Padman",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": false,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "CS310",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "CS-498P",
+        "courseName": "Major Technical Project-1",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 4.5,
+          "total": 3
+        },
+        "instructor": "Rohit Saluja",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": true,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "CS 498P",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "CS-513",
+        "courseName": "Discrete Mathematics",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 1,
+          "practical": 0,
+          "total": 4
+        },
+        "instructor": "Samar",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": true,
+          "DSE": true,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "CS513",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "CS-514",
+        "courseName": "Advance Data Structure and Algorithm",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 4
+        },
+        "instructor": "Varunkumar Jayapaul",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "CS514_1",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "CS-669",
+        "courseName": "Pattern Recognition",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 1,
+          "practical": 0,
+          "total": 4
+        },
+        "instructor": "Dileep",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": true,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "CS-669",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "DP-399P",
+        "courseName": "Semester Internship",
+        "credits": 9,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 18,
+          "total": 9
+        },
+        "instructor": "Faculty Advisors",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "DP 399P",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EE-203",
+        "courseName": "Network Theory",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Kaushik Halder",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": true,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "EE203",
+        "codeFixed": true
+      }
+    ],
+    "4": [
+      {
+        "courseCode": "EE-210",
+        "courseName": "Digital Systems Design",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Gopi",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": true,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "EE210",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EE-210P",
+        "courseName": "Digital Systems Design Lab",
+        "credits": 1,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 1
+        },
+        "instructor": "Srinivasu",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": true,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "EE210P",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EE-534",
+        "courseName": "Probability and Random Processes",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Satyajit",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": true,
+          "CS": true,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "EE-534",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "EE-615",
+        "courseName": "Nanoelectronics and Micronanofabrication",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Satinder",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "EE-615",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "EE-000-1",
+        "courseName": "Electrical Systems Around Us",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Sneha",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "EE-XXX-1",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EE-000P-2",
+        "courseName": "Electrical Systems Around Us Lab",
+        "credits": 2,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 3,
+          "total": 2
+        },
+        "instructor": "Bharat (Co-ordinator), Amit, Tushar, Priyatosh, Pratim, Abhinoy",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "EE-XXXP-2",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EE-000-3",
+        "courseName": "Signals and Systems",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2.5,
+          "tutorial": 0.5,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Siddharth Panwar",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": true,
+          "CS": true,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "EE-XXX-3",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EE-000-4",
+        "courseName": "Device Electronics",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Gopal",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": true,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "EE-XXX-4",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "HS-105",
+        "courseName": "Basic Communication Skills",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Thirthankar",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "HS 105_1",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "HS-151",
+        "courseName": "Introduction to English Literature",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Suman",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "HS 151",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "HS-202",
+        "courseName": "Principles of Economics",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Shyamasree",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "HS 202_1",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "HS-342",
+        "courseName": "German I",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Shreya",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "HS 342_2",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "HS-344",
+        "courseName": "Introduction to Sociology",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Saumya",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "HS 344",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "HS-357",
+        "courseName": "Creative Writing",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Thirthankar",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "HS 357",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "HS-391",
+        "courseName": "Introduction to World History",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Rajeshwari",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "HS 391",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "HS-524",
+        "courseName": "India in the 1950s: Biography of a Foundational Decade",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Devika",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "HS 524",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "HS-531",
+        "courseName": "Gender and Devlopment",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Suman",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "HS 531",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "IC-010P",
+        "courseName": "Internship",
+        "credits": 2,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 2
+        },
+        "instructor": "Faculty Advisors",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IC 010P",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "IK-591",
+        "courseName": "Selected topics in Oddisi dance",
+        "credits": 1,
+        "creditBreakdown": {
+          "lecture": 1,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 1
+        },
+        "instructor": "Ms. Satakshi Goyal",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IK591_3",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "IK-591",
+        "courseName": "Selected topics on Vedic Thoughts and Cultural Behaviour",
+        "credits": 1,
+        "creditBreakdown": {
+          "lecture": 1,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 1
+        },
+        "instructor": "Lutchmanah Raman Nair",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IK591_4",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "IK-592",
+        "courseName": "Selected topics in Music and Musopathy",
+        "credits": 2,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 2
+        },
+        "instructor": "Prof. Ganpati Ramanath, Mr. Chitravina N Ravikiran",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IK592_5",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "IK-592",
+        "courseName": "Selected topics in Indian Knowledge System and Consciousness Studies",
+        "credits": 2,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 2
+        },
+        "instructor": "Mr. Hidehiko Saegusa",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IK592_6",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "IK-593",
+        "courseName": "Selected topics in Indian Astronomy and Mathematics",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Dr. Venkateswara Pai",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IK593_1",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "IK-505",
+        "courseName": "Bhagavat Samkhya (to be offered if Prof. Behera does not offer IC 181",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Prof. Laxmidhar Behera",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": true,
+          "DSE": true,
+          "EE": true,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "IK 505",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-2000",
+        "courseName": "Product Manufacturing Technology",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 3,
+          "total": 3
+        },
+        "instructor": "Swati",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "ME-2xx",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-615",
+        "courseName": "Applied Computational Fluid Dynamics",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2.5,
+          "tutorial": 0.5,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "GB",
+        "semester": 0,
+        "offerings": {
+          "BE": true,
+          "CE": true,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "ME 615",
+        "codeFixed": true
+      }
+    ],
+    "5": [
+      {
+        "courseCode": "CS-515",
+        "courseName": "Advanced Computer Science Practicum",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 1,
+          "tutorial": 0,
+          "practical": 3,
+          "total": 3
+        },
+        "instructor": "Padman, Dileep, and Dinesh",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": true,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "CS515",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "CS-571",
+        "courseName": "Programming Practicum",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 1,
+          "tutorial": 0,
+          "practical": 3,
+          "total": 3
+        },
+        "instructor": "Siddhartha Sharma",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": true,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "CS571",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "DS404",
+        "courseName": "Information Security and Privacy",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Ravi Mittal LC:Arnav",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": true,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "DS404",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "DS-498P",
+        "courseName": "Major Technical Project-1",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 4.5,
+          "total": 3
+        },
+        "instructor": "Jinesh Machchhar",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": true,
+          "EE": false,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "DS-498P",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "EE-303",
+        "courseName": "Power Systems",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 1,
+          "practical": 0,
+          "total": 4
+        },
+        "instructor": "Priyatosh",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "EE303",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EE-3000",
+        "courseName": "Computer Organization and Processor Architecture Design",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 4
+        },
+        "instructor": "Shubhajit",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": true,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "C",
+        "originalCode": "EE-3XX",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EE-498P",
+        "courseName": "Major Technical Project-1",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 4.5,
+          "total": 3
+        },
+        "instructor": "Gopi shrikanth",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "EE 498P",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EE-508",
+        "courseName": "Fundamentals of Electric Drives",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Narsa",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "EE-508",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "EE-508P",
+        "courseName": "Practicum on fundamentals of Electrical Drives",
+        "credits": 2,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 3,
+          "total": 2
+        },
+        "instructor": "Narsa",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "EE-508P",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "EE-509",
+        "courseName": "Linear Dynamical Systems",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Tushar",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "EE-509",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "EE-528",
+        "courseName": "Modeling and Analysis of Electric Machines",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 3
+        },
+        "instructor": "Pratim",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "EE-528",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "EE-580",
+        "courseName": "Network Systems: Modelling and Analysis",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Sreelakshmi",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": true,
+          "EE": true,
+          "EP": false,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "EE-580",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "EP-301",
+        "courseName": "Engineering Mathematics – 2",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 1,
+          "practical": 0,
+          "total": 4
+        },
+        "instructor": "Harsh",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "EP 301",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EP-302",
+        "courseName": "Computational Methods for Engineering",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 3
+        },
+        "instructor": "Rahul Kothari",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "EP 302",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EP-321",
+        "courseName": "Foundations of Electrodynamics",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Pradyumna pathak",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "EP 321",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EP-402P",
+        "courseName": "Engineering Physics Practicum",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 1,
+          "tutorial": 0,
+          "practical": 5,
+          "total": 4
+        },
+        "instructor": "SKP/Pradeep Kumar",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "EP 402P",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "EP-498P",
+        "courseName": "Major Technical Project-1",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 4.5,
+          "total": 3
+        },
+        "instructor": "Girish Sharma",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "EP-498P",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "ME-206",
+        "courseName": "Mechanics of Solids",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2.5,
+          "tutorial": 0.5,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "VSC",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "ME 206",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-210",
+        "courseName": "Fluid Mechanics",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2.5,
+          "tutorial": 0.5,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Parmod",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "ME 210",
+        "codeFixed": true
+      }
+    ],
+    "6": [
+      {
+        "courseCode": "ME-303",
+        "courseName": "Heat Transfer",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2.5,
+          "tutorial": 0.5,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Sarthak Nag",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "ME 303",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-305",
+        "courseName": "Design of Machine Elements",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 1,
+          "practical": 0,
+          "total": 4
+        },
+        "instructor": "HP",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "ME 305",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-308",
+        "courseName": "Manufacturing Engineering",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "PS",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "ME 308",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-312P",
+        "courseName": "Design Lab -II",
+        "credits": 1,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 1
+        },
+        "instructor": "RG (CI)",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "C",
+        "originalCode": "ME 312P",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-498P",
+        "courseName": "Major Technical Project-1",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 0,
+          "tutorial": 0,
+          "practical": 4.5,
+          "total": 3
+        },
+        "instructor": "Gajendra Singh",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "ME-498P",
+        "codeFixed": false
+      },
+      {
+        "courseCode": "ME-509",
+        "courseName": "Nano-manufacturing",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Ravindra",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "ME 509",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-511",
+        "courseName": "Manufacturing of composites",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "SZ",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "ME 511",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-523",
+        "courseName": "Product Design",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Mrityunjay",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "ME 523",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-603",
+        "courseName": "Advanced Fluid Mechanics",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "GS",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "ME 603",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-605",
+        "courseName": "Air Conditioning and Ventilation",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "PAK",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "ME 605",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-610",
+        "courseName": "Advanced Thermodynamics",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 1,
+          "practical": 0,
+          "total": 4
+        },
+        "instructor": "Dube Dheeraj",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "ME 610",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "ME-000",
+        "courseName": "Object Oriented Programming",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 0,
+          "practical": 2,
+          "total": 3
+        },
+        "instructor": "Pradeep Kumar (SMME)",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": false,
+          "ME": true
+        },
+        "category": "E",
+        "originalCode": "ME xxx",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "PH-301",
+        "courseName": "Quantum Mechanics and Applications",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Ajay",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "DC",
+        "originalCode": "PH 301",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "PH-508",
+        "courseName": "Magnetism and Magnetic Materials",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Arti",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "PH 508",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "PH-528",
+        "courseName": "Introduction to General Relativity",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Nirmalya",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "PH 528",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "PH-603",
+        "courseName": "Advanced Condensed Matter Physics",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "G",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "PH 603",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "PH-605",
+        "courseName": "Superconductivity",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "CSY",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "PH 605",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "PH-613",
+        "courseName": "Special Topics in Quantum Mechanics",
+        "credits": 3,
+        "creditBreakdown": {
+          "lecture": 3,
+          "tutorial": 0,
+          "practical": 0,
+          "total": 3
+        },
+        "instructor": "Arko",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "PH 613",
+        "codeFixed": true
+      },
+      {
+        "courseCode": "PH-701",
+        "courseName": "Introduction to Molecular Simulations",
+        "credits": 4,
+        "creditBreakdown": {
+          "lecture": 2,
+          "tutorial": 2,
+          "practical": 0,
+          "total": 4
+        },
+        "instructor": "PJ",
+        "semester": 0,
+        "offerings": {
+          "BE": false,
+          "CE": false,
+          "CS": false,
+          "DSE": false,
+          "EE": false,
+          "EP": true,
+          "ME": false
+        },
+        "category": "E",
+        "originalCode": "PH 701",
+        "codeFixed": true
+      }
+    ]
+  },
+  "issues": [
+    {
+      "semester": "1",
+      "originalCode": "IC181",
+      "fixedCode": "IC-181",
+      "isValid": true
+    },
+    {
+      "semester": "1",
+      "originalCode": "IC 010P",
+      "fixedCode": "IC-010P",
+      "isValid": true
+    },
+    {
+      "semester": "3",
+      "originalCode": "IC181",
+      "fixedCode": "IC-181",
+      "isValid": true
+    },
+    {
+      "semester": "3",
+      "originalCode": "CE 498P",
+      "fixedCode": "CE-498P",
+      "isValid": true
+    },
+    {
+      "semester": "3",
+      "originalCode": "CS208",
+      "fixedCode": "CS-208",
+      "isValid": true
+    },
+    {
+      "semester": "3",
+      "originalCode": "CS308P",
+      "fixedCode": "CS-308P",
+      "isValid": true
+    },
+    {
+      "semester": "3",
+      "originalCode": "CS310",
+      "fixedCode": "CS-310",
+      "isValid": true
+    },
+    {
+      "semester": "3",
+      "originalCode": "CS 498P",
+      "fixedCode": "CS-498P",
+      "isValid": true
+    },
+    {
+      "semester": "3",
+      "originalCode": "CS513",
+      "fixedCode": "CS-513",
+      "isValid": true
+    },
+    {
+      "semester": "3",
+      "originalCode": "CS514_1",
+      "fixedCode": "CS-514",
+      "isValid": true
+    },
+    {
+      "semester": "3",
+      "originalCode": "DP 399P",
+      "fixedCode": "DP-399P",
+      "isValid": true
+    },
+    {
+      "semester": "3",
+      "originalCode": "EE203",
+      "fixedCode": "EE-203",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "EE210",
+      "fixedCode": "EE-210",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "EE210P",
+      "fixedCode": "EE-210P",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "EE-XXX-1",
+      "fixedCode": "EE-000-1",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "EE-XXXP-2",
+      "fixedCode": "EE-000P-2",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "EE-XXX-3",
+      "fixedCode": "EE-000-3",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "EE-XXX-4",
+      "fixedCode": "EE-000-4",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "HS 105_1",
+      "fixedCode": "HS-105",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "HS 151",
+      "fixedCode": "HS-151",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "HS 202_1",
+      "fixedCode": "HS-202",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "HS 342_2",
+      "fixedCode": "HS-342",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "HS 344",
+      "fixedCode": "HS-344",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "HS 357",
+      "fixedCode": "HS-357",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "HS 391",
+      "fixedCode": "HS-391",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "HS 524",
+      "fixedCode": "HS-524",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "HS 531",
+      "fixedCode": "HS-531",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "IC 010P",
+      "fixedCode": "IC-010P",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "IK591_3",
+      "fixedCode": "IK-591",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "IK591_4",
+      "fixedCode": "IK-591",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "IK592_5",
+      "fixedCode": "IK-592",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "IK592_6",
+      "fixedCode": "IK-592",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "IK593_1",
+      "fixedCode": "IK-593",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "IK 505",
+      "fixedCode": "IK-505",
+      "isValid": true
+    },
+    {
+      "semester": "4",
+      "originalCode": "ME-2xx",
+      "fixedCode": "ME-2000",
+      "isValid": false
+    },
+    {
+      "semester": "4",
+      "originalCode": "ME 615",
+      "fixedCode": "ME-615",
+      "isValid": true
+    },
+    {
+      "semester": "5",
+      "originalCode": "CS515",
+      "fixedCode": "CS-515",
+      "isValid": true
+    },
+    {
+      "semester": "5",
+      "originalCode": "CS571",
+      "fixedCode": "CS-571",
+      "isValid": true
+    },
+    {
+      "semester": "5",
+      "originalCode": "EE303",
+      "fixedCode": "EE-303",
+      "isValid": true
+    },
+    {
+      "semester": "5",
+      "originalCode": "EE-3XX",
+      "fixedCode": "EE-3000",
+      "isValid": false
+    },
+    {
+      "semester": "5",
+      "originalCode": "EE 498P",
+      "fixedCode": "EE-498P",
+      "isValid": true
+    },
+    {
+      "semester": "5",
+      "originalCode": "EP 301",
+      "fixedCode": "EP-301",
+      "isValid": true
+    },
+    {
+      "semester": "5",
+      "originalCode": "EP 302",
+      "fixedCode": "EP-302",
+      "isValid": true
+    },
+    {
+      "semester": "5",
+      "originalCode": "EP 321",
+      "fixedCode": "EP-321",
+      "isValid": true
+    },
+    {
+      "semester": "5",
+      "originalCode": "EP 402P",
+      "fixedCode": "EP-402P",
+      "isValid": true
+    },
+    {
+      "semester": "5",
+      "originalCode": "ME 206",
+      "fixedCode": "ME-206",
+      "isValid": true
+    },
+    {
+      "semester": "5",
+      "originalCode": "ME 210",
+      "fixedCode": "ME-210",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "ME 303",
+      "fixedCode": "ME-303",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "ME 305",
+      "fixedCode": "ME-305",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "ME 308",
+      "fixedCode": "ME-308",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "ME 312P",
+      "fixedCode": "ME-312P",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "ME 509",
+      "fixedCode": "ME-509",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "ME 511",
+      "fixedCode": "ME-511",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "ME 523",
+      "fixedCode": "ME-523",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "ME 603",
+      "fixedCode": "ME-603",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "ME 605",
+      "fixedCode": "ME-605",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "ME 610",
+      "fixedCode": "ME-610",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "ME xxx",
+      "fixedCode": "ME-000",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "PH 301",
+      "fixedCode": "PH-301",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "PH 508",
+      "fixedCode": "PH-508",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "PH 528",
+      "fixedCode": "PH-528",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "PH 603",
+      "fixedCode": "PH-603",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "PH 605",
+      "fixedCode": "PH-605",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "PH 613",
+      "fixedCode": "PH-613",
+      "isValid": true
+    },
+    {
+      "semester": "6",
+      "originalCode": "PH 701",
+      "fixedCode": "PH-701",
+      "isValid": true
+    }
+  ]
+}
