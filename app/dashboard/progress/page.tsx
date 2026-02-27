@@ -214,11 +214,11 @@ export default function ProgressPage() {
     const getCourseCategory = (enrollment: Enrollment): keyof typeof creditsByCategory => {
       // First try to get from branchMappings if available
       if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
+        // Map CSE → CS (database uses CS code)
+        const mappingBranch = user.branch === "CSE" ? "CS" : user.branch;
         const mapping = enrollment.course.branchMappings.find(
-          (m) => m.branch === user.branch
-        ) || (user.branch === "GE"
-          ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
-          : undefined);
+          (m) => m.branch === mappingBranch || m.branch === "COMMON"
+        );
 
         if (mapping && mapping.courseCategory in creditsByCategory) {
           return mapping.courseCategory as keyof typeof creditsByCategory;
@@ -302,15 +302,31 @@ export default function ProgressPage() {
     const icBasketRequired = 6;
     const hssRequired = 12;
     const iksRequired = 3;
-    const mtpRequired = Math.min(8, mtpIstpTotal);
-    const istpRequired = Math.max(0, mtpIstpTotal - mtpRequired);
+    
+    // Adjust MTP/ISTP based on user preferences
+    let mtpRequired = 8;
+    let istpRequired = 4;
+    let deAdjustment = 0;  // DE credit adjustment when MTP/ISTP deselected
+    let feAdjustment = 0;  // FE credit adjustment when ISTP deselected
+    
+    // If user deselected MTP, add 8 credits to DE
+    if (user?.doingMTP === false) {
+      mtpRequired = 0;
+      deAdjustment = 8;
+    }
+    
+    // If user deselected ISTP, add 4 credits to FE
+    if (user?.doingISTP === false) {
+      istpRequired = 0;
+      feAdjustment = 4;
+    }
 
     const creditsRequiredByCategory = {
       IC: Math.max(0, icCredits - icBasketRequired - hssRequired - iksRequired),
       IC_BASKET: icBasketRequired,
       DC: programCredits.dcCredits ?? 0,
-      DE: programCredits.deCredits ?? 0,
-      FE: programCredits.feCredits ?? 0,
+      DE: (programCredits.deCredits ?? 0) + deAdjustment,
+      FE: (programCredits.feCredits ?? 0) + feAdjustment,
       HSS: hssRequired,
       IKS: iksRequired,
       MTP: mtpRequired,
