@@ -258,8 +258,8 @@ body {
   }
 }
 
-/* Remove iOS input shadows and zoom */
-input, select, textarea {
+/* Remove iOS input shadows and zoom (keep native checkbox/radio visuals) */
+input:not([type="checkbox"]):not([type="radio"]), select, textarea {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
@@ -267,7 +267,7 @@ input, select, textarea {
 
 /* Prevent zoom on iOS without forcing font size on desktop */
 @media (hover: none) and (pointer: coarse) {
-  input, select, textarea {
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
     font-size: 16px; /* Prevents zoom on iOS */
   }
 }
