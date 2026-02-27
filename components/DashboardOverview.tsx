@@ -117,7 +117,13 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     (e: any) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F")
   ) || [];
 
+  const ICB_CODES = new Set(["IC131", "IC136", "IC230", "IC121", "IC240", "IC241", "IC253"]);
+
   const getCourseCategory = (enrollment: any): string => {
+    const code = enrollment.course?.code?.toUpperCase() || "";
+    const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+    if (ICB_CODES.has(normalizedCode)) return "IC_BASKET";
+
     if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
       const mapping = enrollment.course.branchMappings.find(
         (m: any) => m.branch === userSettings.branch
@@ -130,7 +136,6 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       }
     }
 
-    const code = enrollment.course?.code?.toUpperCase() || "";
     if (code.startsWith("IC")) return "IC";
     if (code.startsWith("HS")) return "HSS";
     if (code.startsWith("IKS")) return "IKS";
