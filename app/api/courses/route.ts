@@ -32,7 +32,11 @@ export async function GET(req: NextRequest) {
       },
     });
     const codePattern = /^[A-Z]{2}-\d{3}$/;
-    const filteredCourses = courses.filter((course) => codePattern.test(course.code));
+    const allowedNormalized = new Set(["DP301P", "DP498P", "DP499P"]);
+    const normalize = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const filteredCourses = courses.filter(
+      (course) => codePattern.test(course.code) || allowedNormalized.has(normalize(course.code))
+    );
 
     return NextResponse.json(filteredCourses);
   } catch (error) {
