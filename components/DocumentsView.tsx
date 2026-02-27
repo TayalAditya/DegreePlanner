@@ -135,7 +135,7 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
   const [previewDoc, setPreviewDoc] = useState<DocumentRecord | null>(null);
   const [isAddLinkOpen, setIsAddLinkOpen] = useState(false);
 
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useReducedMotion() ?? false;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
