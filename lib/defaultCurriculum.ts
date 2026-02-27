@@ -59,6 +59,19 @@ const icSem3: DefaultCourse[] = [
   { code: "IC272",  name: "Machine Learning", credits: 3, category: "IC", semester: 3 },
 ];
 
+// ISTP and MTP courses (common for all BTech)
+const istpSem6: DefaultCourse[] = [
+  { code: "ISTP-001", name: "Interactive Socio-Technical Practicum", credits: 4, category: "FE", semester: 6 },
+];
+
+const mtpSem7: DefaultCourse[] = [
+  { code: "MTP-498P", name: "Major Technical Project - I", credits: 3, category: "FE", semester: 7 },
+];
+
+const mtpSem8: DefaultCourse[] = [
+  { code: "MTP-499P", name: "Major Technical Project - II", credits: 5, category: "FE", semester: 8 },
+];
+
 // ─── CSE  (DC = 38 cr | IC-I: free choice | IC-II: free choice) ──────────────
 const cseSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
 const cseSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
@@ -81,7 +94,10 @@ const cseSem5: DefaultCourse[] = [
 const cseSem6: DefaultCourse[] = [
   { code: "CS302", name: "Paradigms of Programming", credits: 4, category: "DC", semester: 6 },
   { code: "CS303", name: "Software Engineering",     credits: 3, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
+const cseSem7: DefaultCourse[] = [...mtpSem7];
+const cseSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── DSE  (DC = 33 cr | IC-I: free choice | IC-II: free choice) ──────────────
 const dseSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -104,7 +120,10 @@ const dseSem5: DefaultCourse[] = [
 const dseSem6: DefaultCourse[] = [
   { code: "DS412", name: "Matrix Computations for Data Science",  credits: 4, category: "DC", semester: 6 },
   { code: "DS413", name: "Introduction to Statistical Learning",  credits: 4, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
+const dseSem7: DefaultCourse[] = [...mtpSem7];
+const dseSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── EE  (DC = 52 cr | both IC baskets: free choice) ─────────────────────────
 const eeSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -126,12 +145,15 @@ const eeSem5: DefaultCourse[] = [
 ];
 const eeSem6: DefaultCourse[] = [
   { code: "EE211",  name: "Analog Circuit Design",    credits: 4, category: "DC", semester: 6 },
-  { code: "EE304",  name: "Communication Systems",    credits: 4, category: "DC", semester: 6 },
-  { code: "EE301",  name: "Control Systems",          credits: 4, category: "DC", semester: 6 },
-  { code: "EEXXX1", name: "Power and Energy Systems", credits: 4, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
 const eeSem7: DefaultCourse[] = [
   { code: "EE314",  name: "Digital Signal Processing",                             credits: 3, category: "DC", semester: 7 },
+  { code: "EE326",  name: "Computer Organization & Processor Architecture Design", credits: 4, category: "DC", semester: 7 },
+  { code: "EEXXX2", name: "Reverse Engineering",                                   credits: 1, category: "DC", semester: 7 },
+  ...mtpSem7,
+];
+const eeSem8: DefaultCourse[] = [...mtpSem8  { code: "EE314",  name: "Digital Signal Processing",                             credits: 3, category: "DC", semester: 7 },
   { code: "EE326",  name: "Computer Organization & Processor Architecture Design", credits: 4, category: "DC", semester: 7 },
   { code: "EEXXX2", name: "Reverse Engineering",                                   credits: 1, category: "DC", semester: 7 },
 ];
@@ -164,11 +186,14 @@ const meSem6: DefaultCourse[] = [
   { code: "ME310",  name: "System Dynamics and Control",  credits: 3, category: "DC", semester: 6 },
   { code: "ME311P", name: "Design Lab 1",                 credits: 1, category: "DC", semester: 6 },
   { code: "ME312P", name: "Design Lab 2",                 credits: 1, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
 const meSem7: DefaultCourse[] = [
   { code: "ME315", name: "Manufacturing Engineering 2", credits: 3, category: "DC", semester: 7 },
   { code: "ME100", name: "Reverse Engineering",         credits: 1, category: "DC", semester: 7 },
+  ...mtpSem7,
 ];
+const meSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── CE  (DC = 49 cr | IC-I: free choice | IC-II: free choice) ───────────────
 const ceSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -198,6 +223,7 @@ const ceSem6: DefaultCourse[] = [
   { code: "CE401",  name: "Design of Steel Structures",       credits: 3, category: "DC", semester: 6 },
   { code: "CE403",  name: "Water and Wastewater Engineering", credits: 3, category: "DC", semester: 6 },
   { code: "CE404",  name: "Analysis of Structures",           credits: 3, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
 const ceSem7: DefaultCourse[] = [
   { code: "CE402",  name: "Geotechnical Engineering II",              credits: 3, category: "DC", semester: 7 },
@@ -205,7 +231,9 @@ const ceSem7: DefaultCourse[] = [
   { code: "CE351",  name: "Design of Reinforced Concrete Structures", credits: 3, category: "DC", semester: 7 },
   { code: "CE353P", name: "Civil Engineering Drawing",                credits: 1, category: "DC", semester: 7 },
   { code: "CEXXX",  name: "Reverse Engineering",                      credits: 1, category: "DC", semester: 7 },
+  ...mtpSem7,
 ];
+const ceSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── BE  (DC = 42 cr | IC-I: free choice | IC-II: free choice) ───────────────
 const beSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];

@@ -3,7 +3,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { ProgressChart } from "./ProgressChart";
 import { CreditBreakdownCard } from "./CreditBreakdownCard";
-import { MTPStatusCard } from "./MTPStatusCard";
 import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
 
 interface DashboardOverviewProps {
@@ -162,15 +161,6 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
             isLoading={progressLoading}
           />
         </div>
-      )}
-
-      {/* MTP/ISTP Status */}
-      {primaryProgram && progressData && (
-        <MTPStatusCard
-          mtpEligibility={progressData.mtpEligibility}
-          istpEligibility={progressData.istpEligibility}
-          isLoading={progressLoading}
-        />
       )}
 
       {/* Available DE Courses */}
