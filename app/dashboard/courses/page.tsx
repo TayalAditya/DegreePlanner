@@ -153,10 +153,13 @@ export default function CoursesPage() {
   const passFailUsed = user?.totalPassFailCredits ?? 0;
   const passFailRemaining = Math.max(0, maxPassFailCredits - passFailUsed);
 
-  const ICB_CODES = new Set([
+  const ICB1_CODES = new Set([
     "IC131",
     "IC136",
     "IC230",
+  ]);
+
+  const ICB2_CODES = new Set([
     "IC121",
     "IC240",
     "IC241",
@@ -181,8 +184,21 @@ export default function CoursesPage() {
     // Fallback to code analysis
     const code = enrollment.course.code.toUpperCase();
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
-    if (ICB_CODES.has(normalizedCode)) return "IC_BASKET";
+    const isICB1 = ICB1_CODES.has(normalizedCode);
+    const isICB2 = ICB2_CODES.has(normalizedCode);
+
+    if (user?.branch === "CSE") {
+      if (isICB2 && enrollment.semester < 4) return "FE";
+      if (isICB1 && enrollment.semester < 5) return "FE";
+    }
+
+    if (isICB1 || isICB2) return "IC_BASKET";
     if (normalizedCode === "IC181") return "IKS";
+    
+    // Branch-specific course patterns
+    if (user?.branch === "CSE" && code.startsWith("DS")) return "DE";
+    if (user?.branch === "DSE" && code.startsWith("CS")) return "DE";
+    
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("HS")) return "HSS";
     if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";

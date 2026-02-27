@@ -27,10 +27,13 @@ const COLORS = {
   istp: "#ef4444", // red
 };
 
-const ICB_CODES = new Set([
+const ICB1_CODES = new Set([
   "IC131",
   "IC136",
   "IC230",
+]);
+
+const ICB2_CODES = new Set([
   "IC121",
   "IC240",
   "IC241",
@@ -62,7 +65,15 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
   const getCourseCategory = (enrollment: any): keyof typeof categoryCredits => {
     const code = enrollment.course?.code?.toUpperCase() || "";
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
-    if (ICB_CODES.has(normalizedCode)) return "IC_BASKET";
+    const isICB1 = ICB1_CODES.has(normalizedCode);
+    const isICB2 = ICB2_CODES.has(normalizedCode);
+
+    if (userBranch === "CSE") {
+      if (isICB2 && (enrollment.semester || 0) < 4) return "FE";
+      if (isICB1 && (enrollment.semester || 0) < 5) return "FE";
+    }
+
+    if (isICB1 || isICB2) return "IC_BASKET";
 
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length > 0) {
@@ -76,6 +87,10 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
         return mapping.courseCategory as keyof typeof categoryCredits;
       }
     }
+
+    // Branch-specific course patterns
+    if (userBranch === "CSE" && code.startsWith("DS")) return "DE";
+    if (userBranch === "DSE" && code.startsWith("CS")) return "DE";
 
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
