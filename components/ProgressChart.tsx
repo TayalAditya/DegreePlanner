@@ -77,7 +77,6 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       }
     }
 
-    const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("HS")) return "HSS";

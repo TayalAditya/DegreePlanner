@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -23,15 +22,15 @@ export async function POST(req: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { 
-        id: true, 
+      select: {
+        id: true,
         batch: true,
         enrollmentId: true,
         branch: true,
         programs: {
           where: { isPrimary: true },
-          select: { programId: true }
-        }
+          select: { programId: true },
+        },
       },
     });
 
@@ -45,7 +44,7 @@ export async function POST(req: NextRequest) {
     // If no primary program, try to auto-enroll based on branch
     if (!primaryProgramId && user.branch) {
       console.log(`Auto-enrolling user in ${user.branch} program...`);
-      
+
       const program = await prisma.program.findUnique({
         where: { code: user.branch },
       });
@@ -77,7 +76,10 @@ export async function POST(req: NextRequest) {
     const currentSemester: number = body.currentSemester ?? 99;
 
     // Map curriculum category codes to CourseType enum values
-    const categoryToCourseType: Record<string, "CORE" | "DE" | "PE" | "FREE_ELECTIVE" | "MTP" | "ISTP"> = {
+    const categoryToCourseType: Record<
+      string,
+      "CORE" | "DE" | "PE" | "FREE_ELECTIVE" | "MTP" | "ISTP"
+    > = {
       IC: "CORE",
       ICB: "CORE",
       DC: "CORE",
@@ -90,9 +92,8 @@ export async function POST(req: NextRequest) {
       INTERNSHIP: "FREE_ELECTIVE",
     };
 
-    // Process enrollments in batches
-    const results = [];
-    const errors = [];
+    const results: Array<{ courseCode: string; action: string; id: string }> = [];
+    const errors: Array<{ courseCode: string; error: string }> = [];
 
     const normalizeCourseCode = (code: string) =>
       code.toUpperCase().replace(/\s+/g, "");
@@ -111,7 +112,10 @@ export async function POST(req: NextRequest) {
       return Array.from(new Set([normalized, dehyphenated, hyphenated]));
     };
 
-    const inferBatchYear = (batch: number | null | undefined, enrollmentId: string | null | undefined) => {
+    const inferBatchYear = (
+      batch: number | null | undefined,
+      enrollmentId: string | null | undefined
+    ) => {
       if (enrollmentId) {
         const match = enrollmentId.match(/B(\d{2})/i);
         if (match) return 2000 + parseInt(match[1], 10);
@@ -122,12 +126,16 @@ export async function POST(req: NextRequest) {
 
     for (const enrollment of enrollments) {
       try {
-        const { courseCode, semester, grade } = enrollment;
-        // Normalize courseType: map category codes to valid enum values
-        const rawType = enrollment.courseType as string;
+        const { courseCode, semester, grade } = enrollment as {
+          courseCode: string;
+          semester: number;
+          grade?: string;
+          courseType?: string;
+        };
+
+        const rawType = (enrollment as any).courseType as string;
         const courseType = categoryToCourseType[rawType] ?? "CORE";
 
-        // Find the course by code (support both hyphenated and non-hyphenated)
         const codeCandidates = buildCodeCandidates(courseCode);
         const course = await prisma.course.findFirst({
           where: { code: { in: codeCandidates } },
@@ -146,9 +154,9 @@ export async function POST(req: NextRequest) {
 
         // Past semesters are COMPLETED; current sem depends on whether grade given
         const isPastSemester = semester < currentSemester;
-        const status = grade ? "COMPLETED" : isPastSemester ? "COMPLETED" : "IN_PROGRESS";
+        const status =
+          grade ? "COMPLETED" : isPastSemester ? "COMPLETED" : "IN_PROGRESS";
 
-        // Check if enrollment already exists
         const existing = await prisma.courseEnrollment.findFirst({
           where: {
             userId: user.id,
@@ -158,7 +166,6 @@ export async function POST(req: NextRequest) {
         });
 
         if (existing) {
-          // Update existing enrollment
           const updated = await prisma.courseEnrollment.update({
             where: { id: existing.id },
             data: {
@@ -167,28 +174,11 @@ export async function POST(req: NextRequest) {
               status,
               year: semYear,
               term,
-              programId: primaryProgramId, // Set programId
+              programId: primaryProgramId,
             },
-      const normalizeCourseCode = (code: string) =>
-        code.toUpperCase().replace(/\s+/g, "");
-
-      const toHyphenatedCode = (code: string) => {
-        const normalized = normalizeCourseCode(code).replace(/-/g, "");
-        const match = normalized.match(/^([A-Z]+)(\d{3}[A-Z]?)$/);
-        if (match) return `${match[1]}-${match[2]}`;
-        return normalized;
-      };
-
-      const buildCodeCandidates = (code: string) => {
-        const normalized = normalizeCourseCode(code);
-        const dehyphenated = normalized.replace(/-/g, "");
-        const hyphenated = toHyphenatedCode(normalized);
-        return Array.from(new Set([normalized, dehyphenated, hyphenated]));
-      };
           });
           results.push({ courseCode, action: "updated", id: updated.id });
         } else {
-          // Create new enrollment
           const created = await prisma.courseEnrollment.create({
             data: {
               userId: user.id,
@@ -199,15 +189,23 @@ export async function POST(req: NextRequest) {
               courseType: courseType || "CORE",
               grade,
               status,
-              programId: primaryProgramId, // Set programId
+              programId: primaryProgramId,
             },
           });
+          results.push({ courseCode, action: "created", id: created.id });
+        }
+      } catch (error) {
+        console.error(`Error processing ${(enrollment as any).courseCode}:`, error);
+        errors.push({
+          courseCode: String((enrollment as any).courseCode),
+          error: String(error),
+        });
+      }
+    }
+
+    const summary = {
+      total: enrollments.length,
       successful: results.length,
-          // Find the course by code (support both hyphenated and non-hyphenated)
-          const codeCandidates = buildCodeCandidates(courseCode);
-          const course = await prisma.course.findFirst({
-            where: { code: { in: codeCandidates } },
-          });
       failed: errors.length,
     };
 
@@ -238,3 +236,4 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
