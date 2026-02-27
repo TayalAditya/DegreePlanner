@@ -9,7 +9,6 @@ import {
   Globe, 
   Briefcase,
   ChevronDown,
-  FileText,
   TrendingUp,
   CheckCircle,
   Info
