@@ -27,6 +27,7 @@ interface Course {
   offeredInFall: boolean;
   offeredInSpring: boolean;
   offeredInSummer: boolean;
+  isPassFailEligible?: boolean;
 }
 
 interface Enrollment {
@@ -47,6 +48,7 @@ interface Enrollment {
 
 interface User {
   branch?: string;
+  totalPassFailCredits?: number;
 }
 
 // Color scheme for each category
@@ -75,6 +77,7 @@ export default function CoursesPage() {
   const [semester, setSemester] = useState<string>("");
   const [grade, setGrade] = useState<string>("");
   const [courseType, setCourseType] = useState<string>("AUTO");
+  const [isPassFail, setIsPassFail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { showToast } = useToast();
 
@@ -136,6 +139,10 @@ export default function CoursesPage() {
   const totalCreditsInProgress = enrollments
     .filter((e) => e.status === "IN_PROGRESS" || e.status === "ENROLLED")
     .reduce((sum, e) => sum + e.course.credits, 0);
+
+  const maxPassFailCredits = 9;
+  const passFailUsed = user?.totalPassFailCredits ?? 0;
+  const passFailRemaining = Math.max(0, maxPassFailCredits - passFailUsed);
 
   // Calculate credits by category
   const getCourseCategory = (enrollment: Enrollment): string => {
@@ -218,6 +225,7 @@ export default function CoursesPage() {
     setSemester("");
     setGrade("");
     setCourseType("AUTO");
+    setIsPassFail(false);
   };
 
   const submitEnrollment = async () => {
@@ -252,6 +260,7 @@ export default function CoursesPage() {
           courseType: finalCourseType,
           grade: grade || undefined,
           status,
+          isPassFail: isPassFail && finalCourseType === "FREE_ELECTIVE",
         }),
       });
 
@@ -905,6 +914,45 @@ export default function CoursesPage() {
                     )}
                   </p>
                 </div>
+
+                {/* Pass/Fail Option (FE only) */}
+                {(() => {
+                  const inferredType = courseType === "AUTO"
+                    ? determineCourseType(addingCourse)
+                    : courseType;
+                  const isFE = inferredType === "FREE_ELECTIVE";
+                  const eligible = Boolean(addingCourse.isPassFailEligible);
+                  const canUsePF = isFE && eligible && passFailRemaining > 0;
+
+                  return (
+                    <div className="p-4 bg-surface-hover rounded-lg border border-border">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-foreground">Pass/Fail (P/F)</p>
+                          <p className="text-xs text-foreground-secondary">
+                            You can take up to {maxPassFailCredits} P/F credits. Remaining: {passFailRemaining}.
+                          </p>
+                          {!isFE && (
+                            <p className="text-xs text-foreground-secondary mt-1">Only Free Electives can be taken as P/F.</p>
+                          )}
+                          {isFE && !eligible && (
+                            <p className="text-xs text-foreground-secondary mt-1">This course is not P/F eligible.</p>
+                          )}
+                        </div>
+                        <label className="inline-flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isPassFail}
+                            onChange={(e) => setIsPassFail(e.target.checked)}
+                            disabled={!canUsePF}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-sm text-foreground">Take as P/F</span>
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="flex gap-3">
