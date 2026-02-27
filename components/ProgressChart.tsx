@@ -90,9 +90,9 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length > 0) {
       // Map branch code: CSE → CS (since database uses CS code)
-      const mappingBranch = userBranch === \"CSE\" ? \"CS\" : userBranch;
+      const mappingBranch = userBranch === "CSE" ? "CS" : userBranch;
       const mapping = (mappingBranch
-        ? mappings.find((m: any) => m.branch === mappingBranch) || mappings.find((m: any) => m.branch === \"COMMON\")
+        ? mappings.find((m: any) => m.branch === mappingBranch) || mappings.find((m: any) => m.branch === "COMMON")
         : undefined) || (mappings.length === 1 ? mappings[0] : undefined);
 
       if (mapping && mapping.courseCategory in categoryCredits) {
