@@ -571,9 +571,9 @@ function ExchangeSection() {
 function HonoursSection() {
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 p-6 rounded-xl border border-yellow-500/20">
+      <div className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 dark:from-yellow-500/20 dark:to-orange-500/20 p-6 rounded-xl border border-yellow-500/20 dark:border-yellow-500/30 shadow-sm">
         <div className="flex items-center gap-3 mb-4">
-          <Award className="h-8 w-8 text-yellow-600" />
+          <Award className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
           <h3 className="font-semibold text-2xl">Honours Degree</h3>
         </div>
         <p className="text-muted-foreground">
@@ -584,23 +584,23 @@ function HonoursSection() {
       <div className="bg-card p-6 rounded-xl border">
         <h3 className="font-semibold text-xl mb-4">Basic Requirements</h3>
         <div className="space-y-3">
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50">
-            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-surface-hover/70 border border-border/60">
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
             <div>
               <p className="font-semibold">Application Timing</p>
               <p className="text-sm text-muted-foreground">4th or 5th semester (no F grade till then)</p>
             </div>
           </div>
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50">
-            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-surface-hover/70 border border-border/60">
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
             <div>
               <p className="font-semibold">MTP Requirement</p>
               <p className="text-sm text-muted-foreground">8 credits of MTP (DP498P + DP499P) in parent discipline</p>
               <p className="text-xs text-muted-foreground mt-1">* Waived for IDD students (required to do PGP)</p>
             </div>
           </div>
-          <div className="flex items-start gap-3 p-3 rounded-lg bg-accent/50">
-            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-surface-hover/70 border border-border/60">
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
             <div>
               <p className="font-semibold">No F Grades</p>
               <p className="text-sm text-muted-foreground">Throughout the entire program</p>
@@ -610,11 +610,11 @@ function HonoursSection() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="bg-card p-6 rounded-xl border border-blue-500/20">
-          <h3 className="font-semibold text-xl mb-4 text-blue-600">Mode A</h3>
+        <div className="bg-card p-6 rounded-xl border border-blue-500/20 dark:border-blue-500/30">
+          <h3 className="font-semibold text-xl mb-4 text-blue-600 dark:text-blue-400">Mode A</h3>
           <div className="space-y-3">
-            <div className="text-center p-4 rounded-lg bg-blue-500/10">
-              <p className="text-4xl font-bold text-blue-600">8.5+</p>
+            <div className="text-center p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/15">
+              <p className="text-4xl font-bold text-blue-600 dark:text-blue-400">8.5+</p>
               <p className="text-sm text-muted-foreground mt-1">CGPA Required</p>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -623,11 +623,11 @@ function HonoursSection() {
           </div>
         </div>
 
-        <div className="bg-card p-6 rounded-xl border border-purple-500/20">
-          <h3 className="font-semibold text-xl mb-4 text-purple-600">Mode B</h3>
+        <div className="bg-card p-6 rounded-xl border border-purple-500/20 dark:border-purple-500/30">
+          <h3 className="font-semibold text-xl mb-4 text-purple-600 dark:text-purple-400">Mode B</h3>
           <div className="space-y-3">
-            <div className="text-center p-4 rounded-lg bg-purple-500/10">
-              <p className="text-4xl font-bold text-purple-600">8.0+</p>
+            <div className="text-center p-4 rounded-lg bg-purple-500/10 dark:bg-purple-500/15">
+              <p className="text-4xl font-bold text-purple-600 dark:text-purple-400">8.0+</p>
               <p className="text-sm text-muted-foreground mt-1">CGPA Required</p>
             </div>
             <p className="text-sm font-semibold">Plus one of:</p>
@@ -643,45 +643,45 @@ function HonoursSection() {
         <h3 className="font-semibold text-xl mb-4">Publication/Patent Guidelines</h3>
         <div className="space-y-2 text-sm text-muted-foreground">
           <p className="flex items-start gap-2">
-            <span className="text-blue-600 font-bold">•</span>
+            <span className="text-blue-600 dark:text-blue-400 font-bold">•</span>
             Article must be submitted and accepted during IIT Mandi registration
           </p>
           <p className="flex items-start gap-2">
-            <span className="text-blue-600 font-bold">•</span>
+            <span className="text-blue-600 dark:text-blue-400 font-bold">•</span>
             Must be declared before last date of 8th semester grade submission
           </p>
           <p className="flex items-start gap-2">
-            <span className="text-blue-600 font-bold">•</span>
+            <span className="text-blue-600 dark:text-blue-400 font-bold">•</span>
             Publication/patent must have IIT Mandi affiliation
           </p>
           <p className="flex items-start gap-2">
-            <span className="text-blue-600 font-bold">•</span>
+            <span className="text-blue-600 dark:text-blue-400 font-bold">•</span>
             Student must be first author (or main inventor for patents)
           </p>
           <p className="flex items-start gap-2">
-            <span className="text-blue-600 font-bold">•</span>
+            <span className="text-blue-600 dark:text-blue-400 font-bold">•</span>
             Same work cannot be counted by multiple students
           </p>
           <p className="flex items-start gap-2">
-            <span className="text-blue-600 font-bold">•</span>
+            <span className="text-blue-600 dark:text-blue-400 font-bold">•</span>
             Journal must be Q1 at time of submission/acceptance
           </p>
         </div>
       </div>
 
-      <div className="bg-card p-6 rounded-xl border border-green-500/20 bg-green-500/5">
+      <div className="bg-card p-6 rounded-xl border border-green-500/20 dark:border-green-500/30 bg-green-500/5 dark:bg-green-500/10">
         <h3 className="font-semibold text-xl mb-4">Honours Degree Awards</h3>
         <div className="space-y-2">
           <p className="flex items-center gap-2">
-            <Award className="h-5 w-5 text-yellow-600" />
+            <Award className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
             <span><strong>B.Tech/B.S. students:</strong> B.Tech. (Honours) / B.S. (Honours) in {"<"}discipline{">"}</span>
           </p>
           <p className="flex items-center gap-2">
-            <Award className="h-5 w-5 text-yellow-600" />
+            <Award className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
             <span><strong>IDD students:</strong> B.Tech. (Honours) and M.Tech. / B.S. (Honours) and M.S.</span>
           </p>
           <p className="flex items-center gap-2">
-            <Award className="h-5 w-5 text-yellow-600" />
+            <Award className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
             <span><strong>Double Major:</strong> B.Tech. (Honours) with Second Major in {"<"}discipline{">"}</span>
           </p>
         </div>
@@ -711,9 +711,9 @@ function MinorsSection() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 p-6 rounded-xl border border-purple-500/20">
+      <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20 p-6 rounded-xl border border-purple-500/20 dark:border-purple-500/30 shadow-sm">
         <div className="flex items-center gap-3 mb-4">
-          <GraduationCap className="h-8 w-8 text-purple-600" />
+          <GraduationCap className="h-8 w-8 text-purple-600 dark:text-purple-400" />
           <h3 className="font-semibold text-2xl">Minor Degrees</h3>
         </div>
         <p className="text-muted-foreground">
@@ -724,20 +724,20 @@ function MinorsSection() {
       <div className="bg-card p-6 rounded-xl border">
         <h3 className="font-semibold text-xl mb-4">General Requirements</h3>
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20 text-center">
-            <p className="text-2xl font-bold text-blue-600">9-12</p>
+          <div className="p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 dark:border-blue-500/30 text-center">
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">9-12</p>
             <p className="text-sm text-muted-foreground mt-1">Credits Required</p>
           </div>
-          <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/20 text-center">
-            <p className="text-2xl font-bold text-purple-600">7.0+</p>
+          <div className="p-4 rounded-lg bg-purple-500/10 dark:bg-purple-500/15 border border-purple-500/20 dark:border-purple-500/30 text-center">
+            <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">7.0+</p>
             <p className="text-sm text-muted-foreground mt-1">Minimum CGPA</p>
           </div>
-          <div className="p-4 rounded-lg bg-pink-500/10 border border-pink-500/20 text-center">
-            <p className="text-2xl font-bold text-pink-600">≠</p>
+          <div className="p-4 rounded-lg bg-pink-500/10 dark:bg-pink-500/15 border border-pink-500/20 dark:border-pink-500/30 text-center">
+            <p className="text-2xl font-bold text-pink-600 dark:text-pink-400">≠</p>
             <p className="text-sm text-muted-foreground mt-1">Different from Major</p>
           </div>
         </div>
-        <div className="mt-4 p-4 rounded-lg bg-accent border-l-4 border-purple-600">
+        <div className="mt-4 p-4 rounded-lg bg-accent/10 dark:bg-accent/15 border border-border/60 border-l-4 border-l-purple-500/60 dark:border-l-purple-500/50">
           <p className="text-sm text-muted-foreground">
             ✓ All courses count towards Free Electives basket<br />
             ✓ Courses must be non Pass/Fail and non Audit<br />
@@ -753,7 +753,7 @@ function MinorsSection() {
           {minors.map((minor, idx) => (
             <div 
               key={idx} 
-              className="p-4 rounded-lg bg-gradient-to-br from-purple-500/5 to-pink-500/5 border border-purple-500/10 hover:border-purple-500/30 hover:shadow-lg transition-all"
+              className="p-4 rounded-lg bg-gradient-to-br from-purple-500/5 to-pink-500/5 dark:from-purple-500/10 dark:to-pink-500/10 border border-border/60 hover:border-purple-500/30 hover:shadow-lg transition-all"
             >
               <p className="font-semibold">{minor.name}</p>
               <div className="mt-2 flex flex-col sm:flex-row sm:justify-between gap-1 text-xs text-muted-foreground">
@@ -767,7 +767,7 @@ function MinorsSection() {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div className="bg-card p-6 rounded-xl border">
-          <h3 className="font-semibold text-lg mb-4 text-blue-600">Minor in Management</h3>
+          <h3 className="font-semibold text-lg mb-4 text-blue-600 dark:text-blue-400">Minor in Management</h3>
           <div className="space-y-3">
             <div>
               <p className="font-semibold text-sm mb-2">Prerequisites:</p>
@@ -793,7 +793,7 @@ function MinorsSection() {
         </div>
 
         <div className="bg-card p-6 rounded-xl border">
-          <h3 className="font-semibold text-lg mb-4 text-purple-600">Minor in Robotics</h3>
+          <h3 className="font-semibold text-lg mb-4 text-purple-600 dark:text-purple-400">Minor in Robotics</h3>
           <div className="space-y-3">
             <div>
               <p className="font-semibold text-sm mb-2">Compulsory (2 courses):</p>
@@ -812,7 +812,7 @@ function MinorsSection() {
         </div>
       </div>
 
-      <div className="bg-card p-6 rounded-xl border border-orange-500/20 bg-orange-500/5">
+      <div className="bg-card p-6 rounded-xl border border-orange-500/20 dark:border-orange-500/30 bg-orange-500/5 dark:bg-orange-500/10">
         <h3 className="font-semibold text-lg mb-3">⭐ Special: Quantum Technologies</h3>
         <p className="text-sm text-muted-foreground mb-3">
           Can be taken as either Minor (12+ credits) or Specialization (18+ credits)
