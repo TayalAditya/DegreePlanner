@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import type { Adapter } from "next-auth/adapters";
+import { DOCS_ADMIN_ENROLLMENT_ID } from "@/lib/permissions";
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
@@ -69,22 +70,34 @@ export const authOptions: NextAuthOptions = {
 
       console.log("✅ Batch validation passed");
 
+      const isDocumentsAdmin = (approvedUser.enrollmentId || "").toUpperCase() === DOCS_ADMIN_ENROLLMENT_ID;
+
       // Update or create user with approval status
       const existingUser = await prisma.user.findUnique({
         where: { email: user.email },
       });
 
-      if (existingUser && !existingUser.isApproved) {
-        await prisma.user.update({
-          where: { email: user.email },
-          data: {
-            isApproved: true,
-            enrollmentId: approvedUser.enrollmentId,
-            department: approvedUser.department,
-            branch: approvedUser.branch,
-            batch: approvedUser.batch,
-          },
-        });
+      if (existingUser) {
+        const updates: any = {};
+
+        if (!existingUser.isApproved) {
+          updates.isApproved = true;
+          updates.enrollmentId = approvedUser.enrollmentId;
+          updates.department = approvedUser.department;
+          updates.branch = approvedUser.branch;
+          updates.batch = approvedUser.batch;
+        }
+
+        if (isDocumentsAdmin && existingUser.role !== "ADMIN") {
+          updates.role = "ADMIN";
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await prisma.user.update({
+            where: { email: user.email },
+            data: updates,
+          });
+        }
       }
 
       // Auto-create user if approved
@@ -95,6 +108,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             image: user.image,
             isApproved: true,
+            ...(isDocumentsAdmin ? { role: "ADMIN" } : {}),
             enrollmentId: approvedUser.enrollmentId,
             department: approvedUser.department,
             branch: approvedUser.branch,
