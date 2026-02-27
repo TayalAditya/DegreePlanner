@@ -28,6 +28,14 @@ interface User {
   doingISTP?: boolean;
 }
 
+interface ProgramCredits {
+  icCredits?: number;
+  dcCredits?: number;
+  deCredits?: number;
+  feCredits?: number;
+  mtpIstpCredits?: number;
+}
+
 interface ProgressData {
   totalCreditsEarned: number;
   totalCreditsInProgress: number;
@@ -44,6 +52,17 @@ interface ProgressData {
     ISTP: number;
   };
   creditsInProgressByCategory: {
+    IC: number;
+    IC_BASKET: number;
+    DC: number;
+    DE: number;
+    FE: number;
+    HSS: number;
+    IKS: number;
+    MTP: number;
+    ISTP: number;
+  };
+  creditsRequiredByCategory: {
     IC: number;
     IC_BASKET: number;
     DC: number;
@@ -96,6 +115,7 @@ export default function ProgressPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [totalCreditsRequired, setTotalCreditsRequired] = useState(160);
+  const [programCredits, setProgramCredits] = useState<ProgramCredits>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -117,11 +137,31 @@ export default function ProgressPage() {
         const data = await programsRes.json();
         // Find primary major program
         const primary = (data.programs || data).find(
-          (p: { isPrimary?: boolean; programType?: string; program?: { totalCreditsRequired?: number; type?: string } }) =>
-            p.isPrimary || p.programType === "MAJOR"
+          (p: {
+            isPrimary?: boolean;
+            programType?: string;
+            program?: {
+              totalCreditsRequired?: number;
+              type?: string;
+              icCredits?: number;
+              dcCredits?: number;
+              deCredits?: number;
+              feCredits?: number;
+              mtpIstpCredits?: number;
+            };
+          }) => p.isPrimary || p.programType === "MAJOR"
         );
         if (primary?.program?.totalCreditsRequired) {
           setTotalCreditsRequired(primary.program.totalCreditsRequired);
+        }
+        if (primary?.program) {
+          setProgramCredits({
+            icCredits: primary.program.icCredits,
+            dcCredits: primary.program.dcCredits,
+            deCredits: primary.program.deCredits,
+            feCredits: primary.program.feCredits,
+            mtpIstpCredits: primary.program.mtpIstpCredits,
+          });
         }
       }
       if (userRes.ok) {
@@ -230,6 +270,26 @@ export default function ProgressPage() {
       0
     );
 
+    const icCredits = programCredits.icCredits ?? 60;
+    const mtpIstpTotal = programCredits.mtpIstpCredits ?? 12;
+    const icBasketRequired = 6;
+    const hssRequired = 12;
+    const iksRequired = 3;
+    const mtpRequired = Math.min(8, mtpIstpTotal);
+    const istpRequired = Math.max(0, mtpIstpTotal - mtpRequired);
+
+    const creditsRequiredByCategory = {
+      IC: Math.max(0, icCredits - icBasketRequired - hssRequired - iksRequired),
+      IC_BASKET: icBasketRequired,
+      DC: programCredits.dcCredits ?? 0,
+      DE: programCredits.deCredits ?? 0,
+      FE: programCredits.feCredits ?? 0,
+      HSS: hssRequired,
+      IKS: iksRequired,
+      MTP: mtpRequired,
+      ISTP: istpRequired,
+    };
+
     // Group by semester
     const semesterMap = new Map<number, number>();
     completedEnrollments.forEach((e) => {
@@ -247,6 +307,7 @@ export default function ProgressPage() {
       totalCreditsRequired,
       creditsByCategory,
       creditsInProgressByCategory,
+      creditsRequiredByCategory,
       semesterWiseCredits,
     };
   };
@@ -316,6 +377,7 @@ export default function ProgressPage() {
               <Clock className="w-4 h-4 sm:w-6 sm:h-6 text-blue-500" />
             </div>
             <div>
+        creditsRequiredByCategory,
               <p className="text-xs sm:text-sm text-foreground-secondary">In Progress</p>
               <p className="text-xl sm:text-2xl font-bold text-foreground">
                 {progress.totalCreditsInProgress}
@@ -350,6 +412,8 @@ export default function ProgressPage() {
             const total = credits + inProgress;
             const colors = categoryColors[category as keyof typeof categoryColors];
             const label = categoryLabels[category as keyof typeof categoryLabels];
+            const required = progress.creditsRequiredByCategory[category as keyof typeof progress.creditsRequiredByCategory];
+            const denominator = required > 0 ? required : Math.max(total, 1);
             
             // Skip if no credits (0 completed and 0 in progress)
             if (total === 0) return null;
@@ -370,7 +434,7 @@ export default function ProgressPage() {
                 <div className="w-full bg-border rounded-full h-2.5 overflow-hidden">
                   <div
                     className={`h-full ${colors.bar} rounded-full transition-all duration-500 ease-out`}
-                    style={{ width: `${Math.min((total / 30) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((total / denominator) * 100, 100)}%` }}
                   ></div>
                 </div>
               </div>
