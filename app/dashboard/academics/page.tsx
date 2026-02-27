@@ -8,6 +8,7 @@ import {
   Award, 
   Globe, 
   Briefcase,
+  ChevronDown,
   FileText,
   TrendingUp,
   CheckCircle,
@@ -30,26 +31,50 @@ export default function AcademicsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+        <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
           Academic Information
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-sm sm:text-base text-muted-foreground mt-2">
           Complete guide to B.Tech & B.S. 2023 academic requirements
         </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
+      <div className="sm:hidden">
+        <label htmlFor="academics-tab" className="sr-only">
+          Select section
+        </label>
+        <div className="relative">
+          <select
+            id="academics-tab"
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value)}
+            className="w-full appearance-none rounded-xl border border-border bg-card px-4 py-3 pr-10 text-sm font-medium text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+          >
+            {tabs.map((tab) => (
+              <option key={tab.id} value={tab.id}>
+                {tab.label}
+              </option>
+            ))}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
+        </div>
+      </div>
+
+      <div className="hidden sm:flex gap-2 overflow-x-auto pb-2 scrollbar-hide" role="tablist" aria-label="Academic sections">
         {tabs.map((tab) => {
           const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg whitespace-nowrap transition-all ${
-                activeTab === tab.id
-                  ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
-                  : "bg-card hover:bg-accent"
+              role="tab"
+              aria-selected={isActive}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl whitespace-nowrap border text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+                isActive
+                  ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-600/20 border-blue-500/30"
+                  : "bg-card text-foreground-secondary hover:text-foreground hover:bg-surface-hover border-border/60"
               }`}
             >
               <Icon className="h-4 w-4" />

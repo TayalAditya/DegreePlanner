@@ -150,14 +150,20 @@ export default function CoursesPage() {
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
       const mapping = enrollment.course.branchMappings.find(
         (m) => m.branch === user.branch
-      );
+      ) || (user.branch === "GE"
+        ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
+        : undefined);
+
       if (mapping) {
         return mapping.courseCategory;
       }
     }
+
     // Fallback to code analysis
     const code = enrollment.course.code.toUpperCase();
-    if (code.startsWith("HS-")) return "HSS";
+    if (code.startsWith("IC")) return "IC";
+    if (code.startsWith("HS")) return "HSS";
+    if (code.startsWith("IKS")) return "IKS";
     if (code.includes("MTP")) return "MTP";
     if (code.includes("ISTP")) return "ISTP";
     return "FE";
