@@ -5,10 +5,11 @@ const prisma = new PrismaClient();
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { code: string } }
+  { params }: { params: Promise<{ code: string }> }
 ) {
   try {
-    const courseCode = params.code.toUpperCase();
+    const { code } = await params;
+    const courseCode = code.toUpperCase();
 
     // Find the course
     const course = await prisma.course.findUnique({
