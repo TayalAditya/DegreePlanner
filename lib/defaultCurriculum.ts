@@ -65,11 +65,11 @@ const istpSem6: DefaultCourse[] = [
 ];
 
 const mtpSem7: DefaultCourse[] = [
-  { code: "IC 401P", name: "Major Technical Project", credits: 3, category: "FE", semester: 7 },
+  { code: "DP 498P", name: "Major Technical Project - I", credits: 3, category: "FE", semester: 7 },
 ];
 
 const mtpSem8: DefaultCourse[] = [
-  { code: "DP 402P", name: "Major Technical Project (Contd.)", credits: 5, category: "FE", semester: 8 },
+  { code: "DP 499P", name: "Major Technical Project - II", credits: 5, category: "FE", semester: 8 },
 ];
 
 // ─── CSE  (DC = 38 cr | IC-I: free choice | IC-II: free choice) ──────────────
