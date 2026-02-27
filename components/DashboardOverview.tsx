@@ -136,6 +136,10 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       }
     }
 
+    // Branch-specific course patterns
+    if (userSettings?.branch === "CSE" && code.startsWith("DS")) return "DE";
+    if (userSettings?.branch === "DSE" && code.startsWith("CS")) return "DE";
+
     if (code.startsWith("IC")) return "IC";
     if (code.startsWith("HS")) return "HSS";
     if (code.startsWith("IKS")) return "IKS";
@@ -153,6 +157,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
         semester: sem,
         total: 0,
         IC: 0,
+        IC_BASKET: 0,
         DC: 0,
         DE: 0,
         FE: 0,

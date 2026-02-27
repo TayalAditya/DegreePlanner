@@ -101,10 +101,13 @@ const categoryLabels = {
   ISTP: "Interactive Socio-Technical Practicum",
 };
 
-const ICB_CODES = new Set([
+const ICB1_CODES = new Set([
   "IC131",
   "IC136",
   "IC230",
+]);
+
+const ICB2_CODES = new Set([
   "IC121",
   "IC240",
   "IC241",
@@ -225,13 +228,24 @@ export default function ProgressPage() {
       // Fallback to course code hints
       const code = enrollment.course.code.toUpperCase();
       const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
-      if (ICB_CODES.has(normalizedCode)) return "IC_BASKET";
+      const isICB1 = ICB1_CODES.has(normalizedCode);
+      const isICB2 = ICB2_CODES.has(normalizedCode);
+
+      if (user?.branch === "CSE") {
+        if (isICB2 && enrollment.semester < 4) return "FE";
+        if (isICB1 && enrollment.semester < 5) return "FE";
+        if (code.startsWith("DS")) return "DE";
+      }
+
+      if (user?.branch === "DSE" && code.startsWith("CS")) return "DE";
+
+      if (isICB1 || isICB2) return "IC_BASKET";
       if (normalizedCode === "IC181") return "IKS";
       if (normalizedCode.startsWith("IC")) return "IC";
-      if (code.startsWith("HS")) return "HSS";
-      if (code.startsWith("IK")) return "IKS";
-      if (code.includes("MTP")) return "MTP";
-      if (code.includes("ISTP")) return "ISTP";
+      if (normalizedCode.startsWith("HS")) return "HSS";
+      if (normalizedCode.startsWith("IK")) return "IKS";
+      if (normalizedCode.includes("MTP")) return "MTP";
+      if (normalizedCode.includes("ISTP")) return "ISTP";
 
       // Fallback to courseType mapping
       switch (enrollment.courseType) {
