@@ -47,10 +47,7 @@ export async function GET(request: NextRequest) {
         { course: { code: "asc" } },
       ],
     });
-    const codePattern = /^[A-Z]{2}-\d{3}$/;
-    const filteredEnrollments = enrollments.filter((e) => codePattern.test(e.course.code));
-
-    return NextResponse.json(filteredEnrollments);
+    return NextResponse.json(enrollments);
   } catch (error) {
     console.error("Error fetching enrollments:", error);
     return NextResponse.json(
