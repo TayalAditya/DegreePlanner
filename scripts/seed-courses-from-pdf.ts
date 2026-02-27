@@ -53,20 +53,18 @@ function parseCoursesFromFile(filePath: string): ParsedCourse[] {
   while (i < lines.length) {
     const line = lines[i].replace(/\u00a0/g, " ").trim();
 
-    // Match course code in format: "1.1 AR 501/..." or "1.2 AR 502: ..."
+    // Match course code in format: "1.1 AR 501/..." or "1.2 AR 502: ..." (exactly 2 letters + 3 digits)
     const courseLineMatch = line.match(
-      /^(?:[\d.]+\s*)?([A-Z]{2,3})\s*[- ]?\s*([A-Z0-9]{2,6})\s*:?\s*(.+?)(?:\s+\.\+)?$/
+      /^(?:[\d.]+\s*)?([A-Z]{2})\s*[- ]?\s*(\d{3})\s*:?\s*(.+?)(?:\s+\.\+)?$/
     );
 
     if (courseLineMatch) {
       const [, dept, codePart, rawCourseName] = courseLineMatch;
-      const normalizedCodePart = codePart.replace(/\s+/g, "");
-      const courseCode = `${dept}-${normalizedCodePart}`;
+      const courseCode = `${dept}-${codePart}`;
 
       // Look ahead for course details
       let creditStr = "3";
-      const numMatch = normalizedCodePart.match(/\d{3}/) || normalizedCodePart.match(/\d+/);
-      const inferredLevel = numMatch ? parseInt(numMatch[0].substring(0, 1)) * 100 : 100;
+      const inferredLevel = parseInt(codePart.substring(0, 1)) * 100;
       let level = inferredLevel > 0 ? inferredLevel : 100;
       let description = "";
 
