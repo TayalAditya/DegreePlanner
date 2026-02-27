@@ -146,8 +146,10 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     if (isICB1 || isICB2) return "IC_BASKET";
 
     if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
+      // Map branch code: CSE → CS (since database uses CS code)
+      const mappingBranch = userSettings.branch === \"CSE\" ? \"CS\" : userSettings.branch;
       const mapping = enrollment.course.branchMappings.find(
-        (m: any) => m.branch === userSettings.branch
+        (m: any) => m.branch === mappingBranch || m.branch === \"COMMON\""
       ) || (userSettings.branch === "GE"
         ? enrollment.course.branchMappings.find((m: any) => m.branch.startsWith("GE"))
         : undefined);
