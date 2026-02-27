@@ -106,6 +106,60 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     (e: any) => e.status === "COMPLETED"
   );
 
+  const completedEnrollments = enrollments?.filter(
+    (e: any) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F")
+  ) || [];
+
+  const getCourseCategory = (enrollment: any): string => {
+    if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
+      const mapping = enrollment.course.branchMappings.find(
+        (m: any) => m.branch === userSettings.branch
+      ) || (userSettings.branch === "GE"
+        ? enrollment.course.branchMappings.find((m: any) => m.branch.startsWith("GE"))
+        : undefined);
+
+      if (mapping) {
+        return mapping.courseCategory;
+      }
+    }
+
+    const code = enrollment.course?.code?.toUpperCase() || "";
+    if (code.startsWith("IC")) return "IC";
+    if (code.startsWith("HS")) return "HSS";
+    if (code.startsWith("IKS")) return "IKS";
+    if (code.includes("MTP")) return "MTP";
+    if (code.includes("ISTP")) return "ISTP";
+    if (enrollment.courseType === "DE") return "DE";
+    if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
+    return "DC";
+  };
+
+  const semesterStats = completedEnrollments.reduce((acc: Record<number, any>, e: any) => {
+    const sem = e.semester || 0;
+    if (!acc[sem]) {
+      acc[sem] = {
+        semester: sem,
+        total: 0,
+        IC: 0,
+        DC: 0,
+        DE: 0,
+        FE: 0,
+        HSS: 0,
+        IKS: 0,
+        MTP: 0,
+        ISTP: 0,
+      };
+    }
+    const category = getCourseCategory(e);
+    acc[sem][category] = (acc[sem][category] || 0) + (e.course?.credits || 0);
+    acc[sem].total += e.course?.credits || 0;
+    return acc;
+  }, {});
+
+  const semesterStatsList = Object.values(semesterStats).sort(
+    (a: any, b: any) => a.semester - b.semester
+  );
+
   return (
     <div className="space-y-6">
       {/* Quick Stats */}
@@ -171,6 +225,34 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
             progress={progressData.progress}
             isLoading={progressLoading}
           />
+        </div>
+      )}
+
+      {semesterStatsList.length > 0 && (
+        <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 flex items-center">
+            <span className="w-1 h-6 bg-primary rounded-full mr-3"></span>
+            Semester-wise Credits (Completed)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {semesterStatsList.map((sem: any) => (
+              <div
+                key={sem.semester}
+                className="border border-border rounded-lg p-4 bg-surface-hover"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-semibold text-foreground">Semester {sem.semester}</p>
+                  <span className="text-sm font-semibold text-primary">{sem.total} credits</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-xs text-foreground-secondary">
+                  <span>IC: {sem.IC}</span>
+                  <span>DC: {sem.DC}</span>
+                  <span>DE: {sem.DE}</span>
+                  <span>FE: {sem.FE}</span>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
