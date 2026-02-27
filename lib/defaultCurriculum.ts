@@ -61,15 +61,15 @@ const icSem3: DefaultCourse[] = [
 
 // ISTP and MTP courses (common for all BTech)
 const istpSem6: DefaultCourse[] = [
-  { code: "ISTP-001", name: "Interactive Socio-Technical Practicum", credits: 4, category: "FE", semester: 6 },
+  { code: "DP 301P", name: "Interdisciplinary Socio-Technical Practicum", credits: 4, category: "FE", semester: 6 },
 ];
 
 const mtpSem7: DefaultCourse[] = [
-  { code: "MTP-498P", name: "Major Technical Project - I", credits: 3, category: "FE", semester: 7 },
+  { code: "IC 401P", name: "Major Technical Project", credits: 3, category: "FE", semester: 7 },
 ];
 
 const mtpSem8: DefaultCourse[] = [
-  { code: "MTP-499P", name: "Major Technical Project - II", credits: 5, category: "FE", semester: 8 },
+  { code: "DP 402P", name: "Major Technical Project (Contd.)", credits: 5, category: "FE", semester: 8 },
 ];
 
 // ─── CSE  (DC = 38 cr | IC-I: free choice | IC-II: free choice) ──────────────
@@ -256,11 +256,14 @@ const beSem6: DefaultCourse[] = [
   { code: "BE304", name: "Bioinformatics",                      credits: 4, category: "DC", semester: 6 },
   { code: "BE306", name: "Fundamentals of Genetic Engineering", credits: 4, category: "DC", semester: 6 },
   { code: "BE309", name: "Biosensing & Bioinstrumentation",     credits: 4, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
 const beSem7: DefaultCourse[] = [
   { code: "BE310", name: "Biomaterials",      credits: 4, category: "DC", semester: 7 },
   { code: "BEXXX", name: "Reverse Engineering", credits: 1, category: "DC", semester: 7 },
+  ...mtpSem7,
 ];
+const beSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── EP  (DC = 37 cr | IC-I: free choice | IC-II: free choice) ───────────────
 const epSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -285,7 +288,10 @@ const epSem6: DefaultCourse[] = [
   { code: "EP401P", name: "Engineering of Instrumentation", credits: 4, category: "DC", semester: 6 },
   { code: "PH501",  name: "Solid State Physics",            credits: 3, category: "DC", semester: 6 },
   { code: "EPXXX",  name: "Reverse Engineering",            credits: 1, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
+const epSem7: DefaultCourse[] = [...mtpSem7];
+const epSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── MNC  (DC = 51 cr | IC-I: free choice | IC-II: free choice) ──────────────
 const mncSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -310,11 +316,14 @@ const mncSem6: DefaultCourse[] = [
   { code: "MA222", name: "Applied Linear Programming",  credits: 4, category: "DC", semester: 6 },
   { code: "CS312", name: "Design of Algorithms",        credits: 4, category: "DC", semester: 6 },
   { code: "MA311", name: "Mathematical Modelling",      credits: 3, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
 const mncSem7: DefaultCourse[] = [
   { code: "MA321", name: "Numerics of Differential Equation", credits: 4, category: "DC", semester: 7 },
   { code: "MA322", name: "Applied Graph Theory",              credits: 4, category: "DC", semester: 7 },
+  ...mtpSem7,
 ];
+const mncSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── MSE  (DC = 45 cr | IC-I: free choice | IC-II: free choice) ──────────────
 const mseSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -338,11 +347,14 @@ const mseSem6: DefaultCourse[] = [
   { code: "MT206", name: "Extraction and Materials Processing", credits: 4, category: "DC", semester: 6 },
   { code: "MT302", name: "Transport Phenomena",                 credits: 3, category: "DC", semester: 6 },
   { code: "MT303", name: "Computational Materials Science",     credits: 4, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
 const mseSem7: DefaultCourse[] = [
   { code: "ME212", name: "Product Realization (Manufacturing) Technology", credits: 3, category: "DC", semester: 7 },
   { code: "ME100", name: "Reverse Engineering",                            credits: 1, category: "DC", semester: 7 },
+  ...mtpSem7,
 ];
+const mseSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── GE  (DC = 36 cr | IC-I: free choice | IC-II: free choice) ───────────────
 // GE has 3 sub-branches; Sem 1 & 2 are identical for all three.
@@ -369,7 +381,10 @@ const geRaiSem5: DefaultCourse[] = [
 const geRaiSem6: DefaultCourse[] = [
   { code: "AR504", name: "Robot Programming",          credits: 3, category: "DC", semester: 6 },
   { code: "ME305", name: "Design of Machine Elements", credits: 4, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
+const geRaiSem7: DefaultCourse[] = [...mtpSem7];
+const geRaiSem8: DefaultCourse[] = [...mtpSem8];
 
 // ── GE sub-branch: Communication Engineering ──
 const geCeSem3: DefaultCourse[] = [
@@ -392,7 +407,10 @@ const geCeSem5: DefaultCourse[] = [
 ];
 const geCeSem6: DefaultCourse[] = [
   { code: "EE202", name: "Electromagnetic Theory", credits: 3, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
+const geCeSem7: DefaultCourse[] = [...mtpSem7];
+const geCeSem8: DefaultCourse[] = [...mtpSem8];
 
 // ── GE sub-branch: Mechatronics ──
 const geMechSem3: DefaultCourse[] = [
@@ -415,7 +433,10 @@ const geMechSem6: DefaultCourse[] = [
   { code: "EE311", name: "Device Electronics for Integrated Circuits", credits: 3, category: "DC", semester: 6 },
   { code: "ME305", name: "Design of Machine Elements",                 credits: 4, category: "DC", semester: 6 },
   { code: "ME100", name: "Reverse Engineering",                        credits: 1, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
+const geMechSem7: DefaultCourse[] = [...mtpSem7];
+const geMechSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── MEVLSI  (DC = 54 cr | both IC baskets: free choice) ─────────────────────
 const mevlsiSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -442,11 +463,14 @@ const mevlsiSem6: DefaultCourse[] = [
   { code: "VL403",  name: "CMOS Digital IC Design",         credits: 4, category: "DC", semester: 6 },
   { code: "VL404",  name: "CMOS Analog IC Design",          credits: 4, category: "DC", semester: 6 },
   { code: "VLXXX2", name: "Electronic System Packaging",    credits: 3, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
 const mevlsiSem7: DefaultCourse[] = [
   { code: "VL405",  name: "Design for Testability", credits: 4, category: "DC", semester: 7 },
   { code: "VLXXX3", name: "Reverse Engineering",    credits: 1, category: "DC", semester: 7 },
+  ...mtpSem7,
 ];
+const mevlsiSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── BSCS  (B.S. Chemical Sciences | DC = 59 cr) ─────────────────────────────
 // IC-I: forced IC131 | IC-II: forced IC121
@@ -476,16 +500,19 @@ const bscsSem6: DefaultCourse[] = [
   { code: "CY533P", name: "Inorganic Chemistry Laboratory",          credits: 3, category: "DC", semester: 6 },
   { code: "CY532",  name: "Photochemistry and Pericyclic Reactions", credits: 3, category: "DC", semester: 6 },
   { code: "CY534",  name: "Chemistry of Transition Elements",        credits: 3, category: "DC", semester: 6 },
+  ...istpSem6,
 ];
 const bscsSem7: DefaultCourse[] = [
   { code: "CY511",  name: "Group Theory and Spectroscopy",            credits: 3, category: "DC", semester: 7 },
   { code: "CY531P", name: "Organic Chemistry Laboratory",             credits: 3, category: "DC", semester: 7 },
   { code: "CY514",  name: "Chemical and Statistical Thermodynamics",  credits: 3, category: "DC", semester: 7 },
   { code: "CY535",  name: "Introduction to Organometallic Chemistry", credits: 3, category: "DC", semester: 7 },
+  ...mtpSem7,
 ];
 const bscsSem8: DefaultCourse[] = [
   { code: "CY513", name: "Chemical Kinetics and Reaction Dynamics", credits: 3, category: "DC", semester: 8 },
   { code: "CY504", name: "Heterocyclic Chemistry",                  credits: 2, category: "DC", semester: 8 },
+  ...mtpSem8,
 ];
 
 // ─── Export ───────────────────────────────────────────────────────────────────
@@ -493,55 +520,62 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   // CSE
   CSE_1: cseSem1, CSE_2: cseSem2, CSE_3: cseSem3,
   CSE_4: cseSem4, CSE_5: cseSem5, CSE_6: cseSem6,
+  CSE_7: cseSem7, CSE_8: cseSem8,
 
   // DSE
   DSE_1: dseSem1, DSE_2: dseSem2, DSE_3: dseSem3,
   DSE_4: dseSem4, DSE_5: dseSem5, DSE_6: dseSem6,
+  DSE_7: dseSem7, DSE_8: dseSem8,
 
   // EE
   EE_1: eeSem1, EE_2: eeSem2, EE_3: eeSem3,
-  EE_4: eeSem4, EE_5: eeSem5, EE_6: eeSem6, EE_7: eeSem7,
+  EE_4: eeSem4, EE_5: eeSem5, EE_6: eeSem6, EE_7: eeSem7, EE_8: eeSem8,
 
   // ME
   ME_1: meSem1, ME_2: meSem2, ME_3: meSem3,
-  ME_4: meSem4, ME_5: meSem5, ME_6: meSem6, ME_7: meSem7,
+  ME_4: meSem4, ME_5: meSem5, ME_6: meSem6, ME_7: meSem7, ME_8: meSem8,
 
   // CE
   CE_1: ceSem1, CE_2: ceSem2, CE_3: ceSem3,
-  CE_4: ceSem4, CE_5: ceSem5, CE_6: ceSem6, CE_7: ceSem7,
+  CE_4: ceSem4, CE_5: ceSem5, CE_6: ceSem6, CE_7: ceSem7, CE_8: ceSem8,
 
   // BE
   BE_1: beSem1, BE_2: beSem2, BE_3: beSem3,
-  BE_4: beSem4, BE_5: beSem5, BE_6: beSem6, BE_7: beSem7,
+  BE_4: beSem4, BE_5: beSem5, BE_6: beSem6, BE_7: beSem7, BE_8: beSem8,
 
   // EP
   EP_1: epSem1, EP_2: epSem2, EP_3: epSem3,
   EP_4: epSem4, EP_5: epSem5, EP_6: epSem6,
+  EP_7: epSem7, EP_8: epSem8,
 
   // MNC
   MNC_1: mncSem1, MNC_2: mncSem2, MNC_3: mncSem3,
-  MNC_4: mncSem4, MNC_5: mncSem5, MNC_6: mncSem6, MNC_7: mncSem7,
+  MNC_4: mncSem4, MNC_5: mncSem5, MNC_6: mncSem6, MNC_7: mncSem7, MNC_8: mncSem8,
 
   // MSE
   MSE_1: mseSem1, MSE_2: mseSem2, MSE_3: mseSem3,
-  MSE_4: mseSem4, MSE_5: mseSem5, MSE_6: mseSem6, MSE_7: mseSem7,
+  MSE_4: mseSem4, MSE_5: mseSem5, MSE_6: mseSem6, MSE_7: mseSem7, MSE_8: mseSem8,
 
   // GE – Robotics & AI (default / backward compat)
   GE_1: geSem1, GE_2: geSem2, GE_3: geRaiSem3,
   GE_4: geRaiSem4, GE_5: geRaiSem5, GE_6: geRaiSem6,
+  GE_7: geRaiSem7, GE_8: geRaiSem8,
   // GE – Robotics & AI (explicit key)
   GERAI_1: geSem1, GERAI_2: geSem2, GERAI_3: geRaiSem3,
   GERAI_4: geRaiSem4, GERAI_5: geRaiSem5, GERAI_6: geRaiSem6,
+  GERAI_7: geRaiSem7, GERAI_8: geRaiSem8,
   // GE – Communication Engineering
   GECE_1: geSem1, GECE_2: geSem2, GECE_3: geCeSem3,
   GECE_4: geCeSem4, GECE_5: geCeSem5, GECE_6: geCeSem6,
+  GECE_7: geCeSem7, GECE_8: geCeSem8,
   // GE – Mechatronics
   GEMECH_1: geSem1, GEMECH_2: geSem2, GEMECH_3: geMechSem3,
   GEMECH_4: geMechSem4, GEMECH_5: geMechSem5, GEMECH_6: geMechSem6,
+  GEMECH_7: geMechSem7, GEMECH_8: geMechSem8,
 
   // MEVLSI
   MEVLSI_1: mevlsiSem1, MEVLSI_2: mevlsiSem2, MEVLSI_3: mevlsiSem3,
-  MEVLSI_4: mevlsiSem4, MEVLSI_5: mevlsiSem5, MEVLSI_6: mevlsiSem6, MEVLSI_7: mevlsiSem7,
+  MEVLSI_4: mevlsiSem4, MEVLSI_5: mevlsiSem5, MEVLSI_6: mevlsiSem6, MEVLSI_7: mevlsiSem7, MEVLSI_8: mevlsiSem8,
 
   // BSCS
   BSCS_1: bscsSem1, BSCS_2: bscsSem2, BSCS_3: bscsSem3,

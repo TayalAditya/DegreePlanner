@@ -31,7 +31,16 @@ export async function GET(request: NextRequest) {
     const enrollments = await prisma.courseEnrollment.findMany({
       where,
       include: {
-        course: true,
+        course: {
+          include: {
+            branchMappings: {
+              select: {
+                courseCategory: true,
+                branch: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [
         { semester: "asc" },

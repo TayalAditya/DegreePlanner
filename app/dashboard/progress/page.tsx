@@ -15,34 +15,76 @@ interface Enrollment {
     name: string;
     credits: number;
     department: string;
+    branchMappings?: {
+      courseCategory: string;
+      branch: string;
+    }[];
   };
+}
+
+interface User {
+  branch?: string;
+  doingMTP?: boolean;
+  doingISTP?: boolean;
 }
 
 interface ProgressData {
   totalCreditsEarned: number;
   totalCreditsInProgress: number;
   totalCreditsRequired: number;
-  creditsByType: {
-    CORE: number;
+  creditsByCategory: {
+    IC: number;
+    IC_BASKET: number;
+    DC: number;
     DE: number;
-    PE: number;
-    FREE_ELECTIVE: number;
+    FE: number;
+    HSS: number;
+    IKS: number;
     MTP: number;
     ISTP: number;
   };
-  creditsInProgressByType: {
-    CORE: number;
+  creditsInProgressByCategory: {
+    IC: number;
+    IC_BASKET: number;
+    DC: number;
     DE: number;
-    PE: number;
-    FREE_ELECTIVE: number;
+    FE: number;
+    HSS: number;
+    IKS: number;
     MTP: number;
     ISTP: number;
   };
   semesterWiseCredits: { semester: number; credits: number }[];
 }
 
+// Color scheme for each category
+const categoryColors = {
+  IC: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400", bar: "bg-blue-500" },
+  IC_BASKET: { bg: "bg-cyan-500/10", text: "text-cyan-600 dark:text-cyan-400", bar: "bg-cyan-500" },
+  DC: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", bar: "bg-purple-500" },
+  DE: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400", bar: "bg-pink-500" },
+  FE: { bg: "bg-green-500/10", text: "text-green-600 dark:text-green-400", bar: "bg-green-500" },
+  HSS: { bg: "bg-orange-500/10", text: "text-orange-600 dark:text-orange-400", bar: "bg-orange-500" },
+  IKS: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", bar: "bg-amber-500" },
+  MTP: { bg: "bg-red-500/10", text: "text-red-600 dark:text-red-400", bar: "bg-red-500" },
+  ISTP: { bg: "bg-teal-500/10", text: "text-teal-600 dark:text-teal-400", bar: "bg-teal-500" },
+};
+
+const categoryLabels = {
+  IC: "Institute Core",
+  IC_BASKET: "IC Basket",
+  DC: "Discipline Core",
+  DE: "Discipline Electives",
+  FE: "Free Electives",
+  HSS: "Humanities & Social Sciences",
+  IKS: "Indian Knowledge System",
+  MTP: "Major Technical Project",
+  ISTP: "Interactive Socio-Technical Practicum",
+};
+
 export default function ProgressPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [totalCreditsRequired, setTotalCreditsRequired] = useState(160);
   const [loading, setLoading] = useState(true);
 
@@ -52,9 +94,10 @@ export default function ProgressPage() {
 
   const fetchProgress = async () => {
     try {
-      const [enrollmentsRes, programsRes] = await Promise.all([
+      const [enrollmentsRes, programsRes, userRes] = await Promise.all([
         fetch("/api/enrollments"),
         fetch("/api/programs"),
+        fetch("/api/user/settings"),
       ]);
       if (enrollmentsRes.ok) {
         const data = await enrollmentsRes.json();
@@ -71,6 +114,10 @@ export default function ProgressPage() {
           setTotalCreditsRequired(primary.program.totalCreditsRequired);
         }
       }
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        setUser(userData);
+      }
     } catch (error) {
       console.error("Failed to fetch progress:", error);
     } finally {
@@ -86,35 +133,68 @@ export default function ProgressPage() {
       (e) => e.status === "IN_PROGRESS"
     );
 
-    const creditsByType = {
-      CORE: 0,
+    const creditsByCategory = {
+      IC: 0,
+      IC_BASKET: 0,
+      DC: 0,
       DE: 0,
-      PE: 0,
-      FREE_ELECTIVE: 0,
+      FE: 0,
+      HSS: 0,
+      IKS: 0,
       MTP: 0,
       ISTP: 0,
     };
 
-    const creditsInProgressByType = {
-      CORE: 0,
+    const creditsInProgressByCategory = {
+      IC: 0,
+      IC_BASKET: 0,
+      DC: 0,
       DE: 0,
-      PE: 0,
-      FREE_ELECTIVE: 0,
+      FE: 0,
+      HSS: 0,
+      IKS: 0,
       MTP: 0,
       ISTP: 0,
+    };
+
+    // Helper function to get course category
+    const getCourseCategory = (enrollment: Enrollment): keyof typeof creditsByCategory => {
+      // First try to get from branchMappings if available
+      if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
+        const mapping = enrollment.course.branchMappings.find(
+          (m) => m.branch === user.branch
+        );
+        if (mapping && mapping.courseCategory in creditsByCategory) {
+          return mapping.courseCategory as keyof typeof creditsByCategory;
+        }
+      }
+
+      // Fallback to courseType mapping
+      switch (enrollment.courseType) {
+        case "CORE":
+          return "DC"; // Most core courses are DC
+        case "DE":
+          return "DE";
+        case "PE":
+        case "FREE_ELECTIVE":
+          return "FE";
+        case "MTP":
+          return "MTP";
+        case "ISTP":
+          return "ISTP";
+        default:
+          return "FE";
+      }
     };
 
     completedEnrollments.forEach((e) => {
-      if (e.courseType in creditsByType) {
-        creditsByType[e.courseType as keyof typeof creditsByType] += e.course.credits;
-      }
+      const category = getCourseCategory(e);
+      creditsByCategory[category] += e.course.credits;
     });
 
     inProgressEnrollments.forEach((e) => {
-      if (e.courseType in creditsInProgressByType) {
-        creditsInProgressByType[e.courseType as keyof typeof creditsInProgressByType] +=
-          e.course.credits;
-      }
+      const category = getCourseCategory(e);
+      creditsInProgressByCategory[category] += e.course.credits;
     });
 
     const totalCreditsEarned = completedEnrollments.reduce(
@@ -142,8 +222,8 @@ export default function ProgressPage() {
       totalCreditsEarned,
       totalCreditsInProgress,
       totalCreditsRequired,
-      creditsByType,
-      creditsInProgressByType,
+      creditsByCategory,
+      creditsInProgressByCategory,
       semesterWiseCredits,
     };
   };
@@ -238,33 +318,50 @@ export default function ProgressPage() {
         </div>
       </div>
 
-      {/* Credits by Type */}
+      {/* Credits by Category */}
       <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
-        <h3 className="text-base sm:text-xl font-semibold text-foreground mb-4">Credits by Category</h3>
-        <div className="space-y-4">
-          {Object.entries(progress.creditsByType).map(([type, credits]) => {
-            const inProgress = progress.creditsInProgressByType[type as keyof typeof progress.creditsInProgressByType];
+        <h3 className="text-base sm:text-xl font-semibold text-foreground mb-6">Credits by Category</h3>
+        <div className="space-y-5">
+          {Object.entries(progress.creditsByCategory).map(([category, credits]) => {
+            const inProgress = progress.creditsInProgressByCategory[category as keyof typeof progress.creditsInProgressByCategory];
             const total = credits + inProgress;
+            const colors = categoryColors[category as keyof typeof categoryColors];
+            const label = categoryLabels[category as keyof typeof categoryLabels];
+            
+            // Skip if no credits (0 completed and 0 in progress)
+            if (total === 0) return null;
+            
             return (
-              <div key={type}>
+              <div key={category} className="group">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-foreground">
-                    {type.replace(/_/g, " ")}
-                  </span>
-                  <span className="text-foreground-secondary">
-                    {credits} {inProgress > 0 && `(+${inProgress})`}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${colors.bar}`}></div>
+                    <span className={`font-semibold ${colors.text}`}>
+                      {label}
+                    </span>
+                  </div>
+                  <span className="text-foreground font-bold">
+                    {credits} {inProgress > 0 && <span className="text-blue-500">(+{inProgress})</span>}
                   </span>
                 </div>
-                <div className="w-full bg-border rounded-full h-2">
+                <div className="w-full bg-border rounded-full h-2.5 overflow-hidden">
                   <div
-                    className="h-full bg-primary rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min((total / 40) * 100, 100)}%` }}
+                    className={`h-full ${colors.bar} rounded-full transition-all duration-500 ease-out`}
+                    style={{ width: `${Math.min((total / 30) * 100, 100)}%` }}
                   ></div>
                 </div>
               </div>
             );
           })}
         </div>
+        
+        {/* Show helpful message if no credits */}
+        {Object.values(progress.creditsByCategory).every(v => v === 0) && 
+         Object.values(progress.creditsInProgressByCategory).every(v => v === 0) && (
+          <div className="text-center py-8 text-foreground-secondary">
+            <p>No courses enrolled yet. Start adding courses to see your progress!</p>
+          </div>
+        )}
       </div>
 
       {/* Semester-wise Progress */}
