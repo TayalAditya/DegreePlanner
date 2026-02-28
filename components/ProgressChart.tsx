@@ -40,20 +40,6 @@ const ICB2_CODES = new Set([
   "IC253",
 ]);
 
-const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
-  BIO: { ic1: "IC136", ic2: "IC240" },
-  CE: { ic1: "IC230", ic2: "IC240" },
-  CS: { ic2: "IC253" },
-  CSE: { ic2: "IC253" },
-  DSE: { ic2: "IC253" },
-  EP: { ic1: "IC230", ic2: "IC121" },
-  ME: { ic2: "IC240" },
-  CH: { ic1: "IC131", ic2: "IC121" },
-  MNC: { ic1: "IC136", ic2: "IC253" },
-  MS: { ic1: "IC131", ic2: "IC240" },
-  GE: { ic1: "IC230", ic2: "IC240" },
-};
-
 export function ProgressChart({ progress, isLoading, enrollments, userBranch }: ProgressChartProps) {
   if (isLoading) {
     return (
@@ -82,7 +68,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
 
-    // IC Basket compulsion logic
+    // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && userBranch) {
       const branchCompulsion = IC_BASKET_COMPULSIONS[userBranch];
       
@@ -102,20 +88,22 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       }
     }
 
-    if (isICB1 || isICB2) return "IC_BASKET";
-
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length > 0) {
       // Map branch code: CSE → CS (since database uses CS code)
       const mappingBranch = userBranch === "CSE" ? "CS" : userBranch;
       const mapping = (mappingBranch
-        ? mappings.find((m: any) => m.branch === mappingBranch) || mappings.find((m: any) => m.branch === "COMMON")
-        : undefined) || (mappings.length === 1 ? mappings[0] : undefined);
+        ? mappings.find((m: any) => m.branch === mappingBranch || m.branch === "COMMON")
+        : undefined) || (userBranch === "GE"
+          ? mappings.find((m: any) => m.branch?.startsWith("GE"))
+          : undefined) || (mappings.length === 1 ? mappings[0] : undefined);
 
       if (mapping && mapping.courseCategory in categoryCredits) {
         return mapping.courseCategory as keyof typeof categoryCredits;
       }
     }
+
+    if (isICB1 || isICB2) return "IC_BASKET";
 
     // Branch-specific course patterns
     if (userBranch === "CSE" && code.startsWith("DS")) return "DE";
