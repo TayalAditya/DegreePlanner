@@ -360,6 +360,21 @@ export class CreditCalculator {
     );
     const icBasketUsed = { ic1: false, ic2: false };
 
+    // HSS cap: first 12 credits → core, next 8 (13–20) → FE, above 20 → don't count
+    let hssCreditsAccumulated = 0;
+    const HSS_CORE_CAP = 12;
+    const HSS_FE_CAP = 20;
+    const addHssCredits = (credits: number) => {
+      const prev = hssCreditsAccumulated;
+      hssCreditsAccumulated += credits;
+      const corePortion = Math.min(HSS_CORE_CAP, hssCreditsAccumulated) - Math.min(HSS_CORE_CAP, prev);
+      const fePortion = Math.max(0, Math.min(HSS_FE_CAP, hssCreditsAccumulated) - Math.max(HSS_CORE_CAP, prev));
+      const ignored = credits - corePortion - fePortion;
+      breakdown.core += corePortion;
+      breakdown.freeElective += fePortion;
+      breakdown.total -= ignored; // undo the total increment for credits that don't count
+    };
+
     sortedEnrollments.forEach((enrollment) => {
       const credits = enrollment.course.credits;
       breakdown.total += credits;
@@ -419,9 +434,11 @@ export class CreditCalculator {
           case "IC":
           case "IC_BASKET":
           case "DC":
-          case "HSS":
           case "IKS":
             breakdown.core += credits;
+            return;
+          case "HSS":
+            addHssCredits(credits);
             return;
           case "DE":
             breakdown.de += credits;
@@ -457,7 +474,7 @@ export class CreditCalculator {
         return;
       }
       if (normalizedCode.startsWith("HS")) {
-        breakdown.core += credits; // HSS
+        addHssCredits(credits);
         return;
       }
       if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) {
