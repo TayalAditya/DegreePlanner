@@ -132,6 +132,21 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       }
     }
 
+    const mappings = enrollment.course?.branchMappings || [];
+    if (mappings.length > 0) {
+      // Map branch code: CSE → CS (since database uses CS code)
+      const mappingBranch = userBranch === "CSE" ? "CS" : userBranch;
+      const mapping = (mappingBranch
+        ? mappings.find((m: any) => m.branch === mappingBranch || m.branch === "COMMON")
+        : undefined) || (userBranch === "GE"
+          ? mappings.find((m: any) => m.branch?.startsWith("GE"))
+          : undefined) || (mappings.length === 1 ? mappings[0] : undefined);
+
+      if (mapping && mapping.courseCategory in categoryCredits) {
+        return mapping.courseCategory as keyof typeof categoryCredits;
+      }
+    }
+
     if (isICB1 || isICB2) return "IC_BASKET";
 
     if (normalizedCode === "IC181") return "IKS";
@@ -141,7 +156,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     if (normalizedCode.includes("MTP")) return "MTP";
     if (normalizedCode.includes("ISTP")) return "ISTP";
     
-    // Check courseType BEFORE branch-specific patterns
+    // Check courseType AFTER branchMappings
     if (enrollment.courseType === "DE") return "DE";
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     
