@@ -48,6 +48,7 @@ export default function ImportCoursesPage() {
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
   const [importedCourseKeys, setImportedCourseKeys] = useState<Set<string>>(new Set());
   const [catalogIndex, setCatalogIndex] = useState<Record<string, CatalogCourse>>({});
+  const [catalogCourses, setCatalogCourses] = useState<CatalogCourse[]>([]);
   const [customQuery, setCustomQuery] = useState("");
   const [customSemester, setCustomSemester] = useState(6);
   const [customResults, setCustomResults] = useState<CatalogCourse[]>([]);
@@ -115,6 +116,7 @@ export default function ImportCoursesPage() {
       });
 
       setCatalogIndex(index);
+      setCatalogCourses(data);
     } catch (error) {
       console.error("Failed to load catalog:", error);
     }
