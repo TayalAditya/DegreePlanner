@@ -424,9 +424,7 @@ export class CreditCalculator {
             )?.courseCategory
           : undefined) || (branch && branch.startsWith("GE")
             ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))?.courseCategory
-            : undefined) || (enrollment.course.branchMappings.length === 1
-              ? enrollment.course.branchMappings[0]?.courseCategory
-              : undefined))
+            : undefined))
         : undefined;
 
       if (mappedCategory) {

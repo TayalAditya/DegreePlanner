@@ -198,7 +198,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
         ? mappings.find((m: any) => m.branch === mappingBranch || m.branch === "COMMON")
         : undefined) || (userBranch === "GE"
           ? mappings.find((m: any) => m.branch?.startsWith("GE"))
-          : undefined) || (mappings.length === 1 ? mappings[0] : undefined);
+          : undefined);
 
       if (mapping && mapping.courseCategory in categoryCredits) {
         return mapping.courseCategory as keyof typeof categoryCredits;
