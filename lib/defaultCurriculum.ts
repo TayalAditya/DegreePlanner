@@ -53,10 +53,19 @@ const ICB2_IC241: DefaultCourse = { code: "IC241", name: "Material Science for E
 const ICB2_IC253: DefaultCourse = { code: "IC253", name: "Data Structures and Algorithms",     credits: 3, category: "ICB", semester: 2 };
 const allICB2: DefaultCourse[]  = [ICB2_IC121, ICB2_IC240, ICB2_IC241, ICB2_IC253];
 
-// IC202P + IC272 appear in Sem-3 for most branches
+// IC202P + IC272 appear in Sem-3 for most branches.
+// For ME/EE/BE/DSE/EP/BSCS, IC202P is taken in Sem-4.
 const icSem3: DefaultCourse[] = [
   { code: "IC202P", name: "Design Practicum", credits: 3, category: "IC", semester: 3 },
   { code: "IC272",  name: "Machine Learning", credits: 3, category: "IC", semester: 3 },
+];
+
+const icSem3WithoutIC202P: DefaultCourse[] = [
+  { code: "IC272", name: "Machine Learning", credits: 3, category: "IC", semester: 3 },
+];
+
+const ic202pSem4: DefaultCourse[] = [
+  { code: "IC202P", name: "Design Practicum", credits: 3, category: "IC", semester: 4 },
 ];
 
 // ISTP and MTP courses (common for all BTech)
@@ -103,12 +112,13 @@ const cseSem8: DefaultCourse[] = [...mtpSem8];
 const dseSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
 const dseSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
 const dseSem3: DefaultCourse[] = [
-  ...icSem3,
+  ...icSem3WithoutIC202P,
   { code: "DS201", name: "Data Handling and Vizualisation",          credits: 3, category: "DC", semester: 3 },
   { code: "DS301", name: "Mathematical Foundations of Data Science", credits: 4, category: "DC", semester: 3 },
   { code: "CS213", name: "Reverse Engineering",                      credits: 1, category: "DC", semester: 3 },
 ];
 const dseSem4: DefaultCourse[] = [
+  ...ic202pSem4,
   { code: "DS302", name: "Computing Systems for Data Processing",   credits: 3, category: "DC", semester: 4 },
   { code: "DS313", name: "Statistical Foundations of Data Science", credits: 4, category: "DC", semester: 4 },
   { code: "DS404", name: "Information Security and Privacy",        credits: 3, category: "DC", semester: 4 },
@@ -129,7 +139,7 @@ const dseSem8: DefaultCourse[] = [...mtpSem8];
 const eeSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
 const eeSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
 const eeSem3: DefaultCourse[] = [
-  ...icSem3,
+  ...icSem3WithoutIC202P,
   { code: "EE203", name: "Network Theory",              credits: 3, category: "DC", semester: 3 },
   { code: "EE210", name: "Digital System Design",       credits: 4, category: "DC", semester: 3 },
   { code: "EE260", name: "Signals and Systems",         credits: 3, category: "DC", semester: 3 },
@@ -137,6 +147,7 @@ const eeSem3: DefaultCourse[] = [
   { code: "EE311", name: "Device Electronics",          credits: 3, category: "DC", semester: 3 },
 ];
 const eeSem4: DefaultCourse[] = [
+  ...ic202pSem4,
   { code: "EE201",  name: "Electro-Mechanics",      credits: 4, category: "DC", semester: 4 },
   { code: "EE202",  name: "Electromagnetic Theory", credits: 3, category: "DC", semester: 4 },
   { code: "EE211",  name: "Analog Circuit Design",  credits: 4, category: "DC", semester: 4 },
@@ -160,7 +171,7 @@ const eeSem8: DefaultCourse[] = [...mtpSem8];
 const meSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
 const meSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
 const meSem3: DefaultCourse[] = [
-  ...icSem3,
+  ...icSem3WithoutIC202P,
   { code: "EE261", name: "Electrical Systems Around Us",        credits: 3, category: "DC", semester: 3 },
   { code: "IC241", name: "Material Science for Engineers",      credits: 3, category: "DC", semester: 3 },
   { code: "ME100", name: "Reverse Engineering",                 credits: 1, category: "DC", semester: 3 },
@@ -172,6 +183,7 @@ const meSem3: DefaultCourse[] = [
   { code: "ME310", name: "System Dynamics and Control",         credits: 3, category: "DC", semester: 3 },
 ];
 const meSem4: DefaultCourse[] = [
+  ...ic202pSem4,
   { code: "ME206",  name: "Mechanics of Solids",           credits: 3, category: "DC", semester: 4 },
   { code: "ME210P", name: "Fluid Mechanics Lab",           credits: 1, category: "DC", semester: 4 },
   { code: "ME303",  name: "Heat Transfer",                 credits: 3, category: "DC", semester: 4 },
@@ -233,13 +245,14 @@ const ceSem8: DefaultCourse[] = [...mtpSem8];
 const beSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
 const beSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
 const beSem3: DefaultCourse[] = [
-  ...icSem3,
+  ...icSem3WithoutIC202P,
   { code: "BE201", name: "Cell Biology",                        credits: 4, category: "DC", semester: 3 },
   { code: "BE202", name: "Biochemistry and Molecular Biology",  credits: 4, category: "DC", semester: 3 },
   { code: "BE308", name: "Introduction to Biomanufacturing",    credits: 4, category: "DC", semester: 3 },
   { code: "BE309", name: "Biosensing & Bioinstrumentation",     credits: 4, category: "DC", semester: 3 },
 ];
 const beSem4: DefaultCourse[] = [
+  ...ic202pSem4,
   { code: "BE203", name: "Enzymology and Bioprocessing", credits: 4, category: "DC", semester: 4 },
   { code: "BE301", name: "Biomechanics",                 credits: 4, category: "DC", semester: 4 },
   { code: "BE304", name: "Bioinformatics",               credits: 4, category: "DC", semester: 4 },
@@ -261,12 +274,13 @@ const beSem8: DefaultCourse[] = [...mtpSem8];
 const epSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
 const epSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
 const epSem3: DefaultCourse[] = [
-  ...icSem3,
+  ...icSem3WithoutIC202P,
   { code: "EP301", name: "Engineering Mathematics 2",         credits: 4, category: "DC", semester: 3 },
   { code: "EP321", name: "Foundations of Electrodynamics",    credits: 3, category: "DC", semester: 3 },
   { code: "PH301", name: "Quantum Mechanics and Applications", credits: 3, category: "DC", semester: 3 },
 ];
 const epSem4: DefaultCourse[] = [
+  ...ic202pSem4,
   { code: "EP403", name: "Physics of Atoms and Molecules",         credits: 3, category: "DC", semester: 4 },
   { code: "EPXXX", name: "Reverse Engineering",                    credits: 1, category: "DC", semester: 4 },
   { code: "PH302", name: "Introduction to Statistical Mechanics",  credits: 3, category: "DC", semester: 4 },
@@ -463,13 +477,13 @@ const mevlsiSem8: DefaultCourse[] = [...mtpSem8];
 const bscsSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ICB1_IC131];
 const bscsSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ICB2_IC121];
 const bscsSem3: DefaultCourse[] = [
-  { code: "IC202P", name: "Design Practicum",                                    credits: 3, category: "IC", semester: 3 },
   { code: "CY301",  name: "Principles and Theories of Physical Chemistry",        credits: 3, category: "DC", semester: 3 },
   { code: "CY302",  name: "Principles of Organic Chemistry",                     credits: 3, category: "DC", semester: 3 },
   { code: "CY303",  name: "Fundamentals of Inorganic Chemistry",                 credits: 3, category: "DC", semester: 3 },
   { code: "CY201P", name: "Physical Chemistry Laboratory",                       credits: 2, category: "DC", semester: 3 },
 ];
 const bscsSem4: DefaultCourse[] = [
+  ...ic202pSem4,
   { code: "CY304",  name: "Fundamental Analytical Chemistry",    credits: 3, category: "DC", semester: 4 },
   { code: "CY202P", name: "Organic Chemistry Laboratory",        credits: 2, category: "DC", semester: 4 },
   { code: "CY203P", name: "Inorganic Chemistry Laboratory",      credits: 2, category: "DC", semester: 4 },
