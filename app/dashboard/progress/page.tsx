@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle, Clock, Target } from "lucide-react";
+import { formatCourseCode } from "@/lib/utils";
 
 interface Enrollment {
   id: string;
@@ -101,21 +102,6 @@ const categoryLabels = {
   ISTP: "Interactive Socio-Technical Practicum",
 };
 
-// IC Basket compulsions by branch
-const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
-  BIO: { ic1: "IC136", ic2: "IC240" },
-  CE: { ic1: "IC230", ic2: "IC240" },
-  CS: { ic2: "IC253" }, // CSE/DSE - only IC-II compulsory
-  CSE: { ic2: "IC253" },
-  DSE: { ic2: "IC253" },
-  EP: { ic1: "IC230", ic2: "IC121" },
-  ME: { ic2: "IC240" },
-  CH: { ic1: "IC131", ic2: "IC121" },
-  MNC: { ic1: "IC136", ic2: "IC253" }, // Mathematics and Computing
-  MS: { ic1: "IC131", ic2: "IC240" },
-  GE: { ic1: "IC230", ic2: "IC240" },
-};
-
 const ICB1_CODES = new Set([
   "IC131",
   "IC136",
@@ -135,6 +121,58 @@ export default function ProgressPage() {
   const [totalCreditsRequired, setTotalCreditsRequired] = useState(160);
   const [programCredits, setProgramCredits] = useState<ProgramCredits>({});
   const [loading, setLoading] = useState(true);
+
+  type CourseCategory = keyof typeof categoryLabels;
+
+  const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+  const getCourseCategory = (enrollment: Enrollment): CourseCategory => {
+    if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
+      const mappingBranch = user.branch === "CSE" ? "CS" : user.branch;
+      const mapping = enrollment.course.branchMappings.find(
+        (m) => m.branch === mappingBranch || m.branch === "COMMON"
+      ) || (user.branch === "GE"
+        ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
+        : undefined);
+
+      if (mapping && mapping.courseCategory in categoryLabels) {
+        return mapping.courseCategory as CourseCategory;
+      }
+    }
+
+    const code = enrollment.course.code.toUpperCase();
+    const normalizedCode = normalizeCode(code);
+    const isICB1 = ICB1_CODES.has(normalizedCode);
+    const isICB2 = ICB2_CODES.has(normalizedCode);
+
+    if (isICB1 || isICB2) return "IC_BASKET";
+
+    if (user?.branch === "CSE" && code.startsWith("DS")) return "DE";
+    if (user?.branch === "DSE" && code.startsWith("CS")) return "DE";
+
+    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode.startsWith("IC")) return "IC";
+    if (normalizedCode.startsWith("HS")) return "HSS";
+    if (normalizedCode.startsWith("IK")) return "IKS";
+    if (normalizedCode.includes("MTP")) return "MTP";
+    if (normalizedCode.includes("ISTP")) return "ISTP";
+
+    switch (enrollment.courseType) {
+      case "DE":
+        return "DE";
+      case "PE":
+      case "FREE_ELECTIVE":
+        return "FE";
+      case "MTP":
+        return "MTP";
+      case "ISTP":
+        return "ISTP";
+      case "CORE":
+        return "DC";
+      default:
+        return "FE";
+    }
+  };
 
   useEffect(() => {
     fetchProgress();
