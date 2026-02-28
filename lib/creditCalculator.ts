@@ -478,7 +478,7 @@ export class CreditCalculator {
         breakdown.de += credits;
         return;
       }
-      if (branch === "DSE" && normalizedCode.startsWith("CS")) {
+      if (branch === "DSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) {
         breakdown.de += credits;
         return;
       }

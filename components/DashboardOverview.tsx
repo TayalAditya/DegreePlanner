@@ -192,7 +192,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
     // Branch-specific course patterns
     if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return "DE";
-    if (userSettings?.branch === "DSE" && normalizedCode.startsWith("CS")) return "DE";
+    if (userSettings?.branch === "DSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) return "DE";
 
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
