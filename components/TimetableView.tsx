@@ -253,7 +253,7 @@ function WeekView({
   return (
     <div className="bg-surface dark:bg-surface rounded-lg border border-border overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-border">
+        <table className="min-w-[720px] w-full divide-y divide-border">
           <thead className="bg-background-secondary dark:bg-background">
             <tr>
               <th className="px-4 py-3 text-left text-xs font-medium text-foreground-secondary uppercase tracking-wider w-24">
