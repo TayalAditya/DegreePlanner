@@ -130,20 +130,6 @@ const ICB2_CODES = new Set([
   "IC253",
 ]);
 
-const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
-  BIO: { ic1: "IC136", ic2: "IC240" },
-  CE: { ic1: "IC230", ic2: "IC240" },
-  CS: { ic2: "IC253" },
-  CSE: { ic2: "IC253" },
-  DSE: { ic2: "IC253" },
-  EP: { ic1: "IC230", ic2: "IC121" },
-  ME: { ic2: "IC240" },
-  CH: { ic1: "IC131", ic2: "IC121" },
-  MNC: { ic1: "IC136", ic2: "IC253" },
-  MS: { ic1: "IC131", ic2: "IC240" },
-  GE: { ic1: "IC230", ic2: "IC240" },
-};
-
 export default function ProgressPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -292,78 +278,6 @@ export default function ProgressPage() {
       ISTP: 0,
     };
 
-    // Helper function to get course category
-    const getCourseCategory = (enrollment: Enrollment): keyof typeof creditsByCategory => {
-      // First try to get from branchMappings if available
-      if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
-        // Map CSE → CS (database uses CS code)
-        const mappingBranch = user.branch === "CSE" ? "CS" : user.branch;
-        const mapping = enrollment.course.branchMappings.find(
-          (m) => m.branch === mappingBranch || m.branch === "COMMON"
-        );
-
-        if (mapping && mapping.courseCategory in creditsByCategory) {
-          return mapping.courseCategory as keyof typeof creditsByCategory;
-        }
-      }
-
-      // Fallback to course code hints
-      const code = enrollment.course.code.toUpperCase();
-      const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
-      const isICB1 = ICB1_CODES.has(normalizedCode);
-      const isICB2 = ICB2_CODES.has(normalizedCode);
-
-      // IC Basket compulsion logic
-      if ((isICB1 || isICB2) && user?.branch) {
-        const branchCompulsion = IC_BASKET_COMPULSIONS[user.branch];
-        
-        if (branchCompulsion) {
-          // Check if this course matches branch's IC-I compulsion
-          if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
-            return "IC_BASKET";
-          }
-          
-          // Check if this course matches branch's IC-II compulsion
-          if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
-            return "IC_BASKET";
-          }
-          
-          // Non-compulsory IC basket course → FE
-          return "FE";
-        }
-      }
-
-      // If no branch or not in IC basket codes
-      if (isICB1 || isICB2) return "IC_BASKET";
-
-      if (user?.branch === "CSE" && code.startsWith("DS")) return "DE";
-      if (user?.branch === "DSE" && code.startsWith("CS")) return "DE";
-
-      if (normalizedCode === "IC181") return "IKS";
-      if (normalizedCode.startsWith("IC")) return "IC";
-      if (normalizedCode.startsWith("HS")) return "HSS";
-      if (normalizedCode.startsWith("IK")) return "IKS";
-      if (normalizedCode.includes("MTP")) return "MTP";
-      if (normalizedCode.includes("ISTP")) return "ISTP";
-
-      // Fallback to courseType mapping
-      switch (enrollment.courseType) {
-        case "DE":
-          return "DE";
-        case "PE":
-        case "FREE_ELECTIVE":
-          return "FE";
-        case "MTP":
-          return "MTP";
-        case "ISTP":
-          return "ISTP";
-        case "CORE":
-          return "DC";
-        default:
-          return "FE";
-      }
-    };
-
     completedEnrollments.forEach((e) => {
       const category = getCourseCategory(e);
       creditsByCategory[category] += e.course.credits;
@@ -451,6 +365,18 @@ export default function ProgressPage() {
   }
 
   const progress = calculateProgress();
+  const completedICCourses = enrollments
+    .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
+    .filter((e) => normalizeCode(e.course.code).startsWith("IC"))
+    .map((e) => ({
+      id: e.id,
+      semester: e.semester,
+      code: formatCourseCode(e.course.code),
+      name: e.course.name,
+      credits: e.course.credits,
+      category: getCourseCategory(e),
+    }))
+    .sort((a, b) => a.semester - b.semester || a.code.localeCompare(b.code));
   const completionPercentage = Math.round(
     (progress.totalCreditsEarned / progress.totalCreditsRequired) * 100
   );
@@ -578,6 +504,65 @@ export default function ProgressPage() {
             <p>No courses enrolled yet. Start adding courses to see your progress!</p>
           </div>
         )}
+      </div>
+
+      {/* Completed IC Courses */}
+      <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
+        <h3 className="text-base sm:text-xl font-semibold text-foreground mb-4">
+          Completed IC Courses
+        </h3>
+
+        {completedICCourses.length === 0 ? (
+          <p className="text-foreground-secondary text-sm">
+            No completed IC courses found yet.
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead className="text-foreground-secondary">
+                <tr className="border-b border-border">
+                  <th className="py-2 pr-4 text-left whitespace-nowrap">Sem</th>
+                  <th className="py-2 pr-4 text-left whitespace-nowrap">Code</th>
+                  <th className="py-2 pr-4 text-left min-w-[16rem]">Course</th>
+                  <th className="py-2 pr-4 text-right whitespace-nowrap">Credits</th>
+                  <th className="py-2 text-left whitespace-nowrap">Counts As</th>
+                </tr>
+              </thead>
+              <tbody>
+                {completedICCourses.map((c) => {
+                  const colors = categoryColors[c.category];
+                  const label = categoryLabels[c.category];
+
+                  return (
+                    <tr key={c.id} className="border-b border-border/60 last:border-0">
+                      <td className="py-2 pr-4 text-foreground whitespace-nowrap">
+                        {c.semester}
+                      </td>
+                      <td className="py-2 pr-4 font-semibold text-foreground whitespace-nowrap">
+                        {c.code}
+                      </td>
+                      <td className="py-2 pr-4 text-foreground-secondary">
+                        {c.name}
+                      </td>
+                      <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap">
+                        {c.credits}
+                      </td>
+                      <td className="py-2 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}>
+                          <span className={`font-semibold ${colors.text}`}>{label}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <p className="mt-3 text-xs text-foreground-secondary">
+          If any IC course shows up as FE here, it&apos;s being counted as a Free Elective by the current mapping/fallback logic.
+        </p>
       </div>
 
       {/* Semester-wise Progress */}
