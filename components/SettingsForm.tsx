@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Mail, BookOpen, Save, Bug, Lightbulb, ExternalLink } from "lucide-react";
+import { User, Mail, BookOpen, Save, Bug, Lightbulb } from "lucide-react";
 import { getAllBranches } from "@/lib/branches";
 
 interface SettingsFormProps {
@@ -21,15 +22,10 @@ export function SettingsForm({ user }: SettingsFormProps) {
     enrollmentId: user.enrollmentId || "",
     branch: user.branch || "",
     doingMTP: user.doingMTP ?? true,
-    doingISTP: user.doingISTP ?? true,
+    doingISTP: user.doingISTP ?? false,
   });
 
-  const githubRepoUrl =
-    process.env.NEXT_PUBLIC_GITHUB_REPO_URL || "https://github.com/TayalAditya/DegreePlanner";
   const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "";
-  const bugReportUrl = `${githubRepoUrl}/issues/new?labels=bug&title=Bug%3A+`;
-  const suggestionUrl = `${githubRepoUrl}/issues/new?labels=enhancement&title=Suggestion%3A+`;
-  const contactUrl = supportEmail ? `mailto:${supportEmail}` : `${githubRepoUrl}/issues/new`;
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -43,7 +39,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
           enrollmentId: data.enrollmentId || "",
           branch: data.branch || "",
           doingMTP: data.doingMTP ?? true,
-          doingISTP: data.doingISTP ?? true,
+          doingISTP: data.doingISTP ?? false,
         });
       } catch {
         // ignore fetch errors, keep session defaults
@@ -263,10 +259,8 @@ export function SettingsForm({ user }: SettingsFormProps) {
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <a
-              href={contactUrl}
-              target={supportEmail ? undefined : "_blank"}
-              rel={supportEmail ? undefined : "noreferrer"}
+            <Link
+              href="/dashboard/support?type=CONTACT"
               className="group flex items-start gap-3 rounded-lg border border-border bg-surface-hover/50 p-4 hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
             >
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -275,20 +269,15 @@ export function SettingsForm({ user }: SettingsFormProps) {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-foreground">Contact</p>
-                  {!supportEmail && (
-                    <ExternalLink className="w-4 h-4 text-foreground-secondary group-hover:text-foreground transition-colors" />
-                  )}
                 </div>
                 <p className="text-xs text-foreground-secondary">
-                  {supportEmail || "Open a ticket on GitHub"}
+                  {supportEmail ? `Email: ${supportEmail}` : "Message the admin inside the app"}
                 </p>
               </div>
-            </a>
+            </Link>
 
-            <a
-              href={suggestionUrl}
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              href="/dashboard/support?type=SUGGESTION"
               className="group flex items-start gap-3 rounded-lg border border-border bg-surface-hover/50 p-4 hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
             >
               <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
@@ -297,18 +286,15 @@ export function SettingsForm({ user }: SettingsFormProps) {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-foreground">Suggestion</p>
-                  <ExternalLink className="w-4 h-4 text-foreground-secondary group-hover:text-foreground transition-colors" />
                 </div>
                 <p className="text-xs text-foreground-secondary">
                   Request a feature or improvement
                 </p>
               </div>
-            </a>
+            </Link>
 
-            <a
-              href={bugReportUrl}
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              href="/dashboard/support?type=ISSUE"
               className="group flex items-start gap-3 rounded-lg border border-border bg-surface-hover/50 p-4 hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
             >
               <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
@@ -317,13 +303,12 @@ export function SettingsForm({ user }: SettingsFormProps) {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-semibold text-foreground">Report Issue</p>
-                  <ExternalLink className="w-4 h-4 text-foreground-secondary group-hover:text-foreground transition-colors" />
                 </div>
                 <p className="text-xs text-foreground-secondary">
                   Something broken? Tell us
                 </p>
               </div>
-            </a>
+            </Link>
           </div>
         </div>
 

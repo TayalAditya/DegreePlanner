@@ -127,7 +127,7 @@ export default function CourseMappingsPage() {
       ...existing,
       courseId,
       branch: selectedBranch,
-      courseCategory: existing?.courseCategory || currentMapping?.courseCategory || "NA",
+      courseCategory: existing?.courseCategory || currentMapping?.courseCategory || "FE",
       semester: semester ? parseInt(semester) : null,
       isRequired: currentMapping?.isRequired || false,
     };
@@ -173,7 +173,7 @@ export default function CourseMappingsPage() {
 
   const getDisplayCategory = (courseId: string) => {
     const key = `${courseId}-${selectedBranch}`;
-    return changes.get(key)?.courseCategory || mappings.get(key)?.courseCategory || "NA";
+    return changes.get(key)?.courseCategory || mappings.get(key)?.courseCategory || "FE";
   };
 
   const getDisplaySemester = (courseId: string) => {
