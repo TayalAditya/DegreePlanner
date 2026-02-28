@@ -99,14 +99,14 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
         return "IC_BASKET";
       }
       
-      // First course of each basket type counts as IC_BASKET (if not compulsory)
+      // No compulsion for this basket type - first course counts as IC_BASKET
       if (icBasketUsed) {
-        if (isICB1 && !icBasketUsed.ic1) {
+        if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
           icBasketUsed.ic1 = true;
           return "IC_BASKET";
         }
         
-        if (isICB2 && !icBasketUsed.ic2) {
+        if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
           icBasketUsed.ic2 = true;
           return "IC_BASKET";
         }
