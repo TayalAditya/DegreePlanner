@@ -125,10 +125,17 @@ export default function CoursesPage() {
     new Set(allCourses.map((c) => c.department))
   ).sort();
 
+  const normalizeCourseCodeForSearch = (text: string) =>
+    text.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+  const searchNormalized = normalizeCourseCodeForSearch(searchQuery);
+  const searchLower = searchQuery.trim().toLowerCase();
+
   const filteredCourses = allCourses.filter((course) => {
     const matchesSearch =
-      course.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.name.toLowerCase().includes(searchQuery.toLowerCase());
+      !searchLower ||
+      normalizeCourseCodeForSearch(course.code).includes(searchNormalized) ||
+      course.name.toLowerCase().includes(searchLower);
     const matchesDept = selectedDept === "all" || course.department === selectedDept;
     return matchesSearch && matchesDept;
   });

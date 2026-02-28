@@ -37,13 +37,59 @@ export async function GET(req: NextRequest) {
     const search = searchParams.get("search");
     const department = searchParams.get("department");
 
+    // Helpers for matching and de-duplication.
+    const normalize = (code: string) =>
+      code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+    const toHyphenatedCode = (code: string) => {
+      const normalized = normalize(code);
+      const match = normalized.match(/^([A-Z]+)(\d{3}[A-Z]?)$/);
+      if (match) return `${match[1]}-${match[2]}`;
+      return normalized;
+    };
+
+    const buildCodeCandidates = (code: string) => {
+      const normalized = normalize(code);
+      const hyphenated = toHyphenatedCode(code);
+      const original = code.trim();
+      return Array.from(new Set([normalized, hyphenated, original])).filter(Boolean);
+    };
+
+    const courseIdentityKey = (code: string): string => {
+      const text = String(code ?? "")
+        .replace(/\u00a0/g, " ")
+        .trim()
+        .toUpperCase();
+
+      // Standard course codes: "IC-102P", "IC 102P", "IC102P"
+      // Also allow simple section suffix: "BE-203_1" -> "BE203"
+      const standard = text.match(
+        /^([A-Z]{2,4})\s*[- ]?\s*(\d{3})\s*([A-Z])?(?:\s*_\s*(\d{1,2}))?$/
+      );
+      if (standard) {
+        const [, prefix, digits, maybeSuffix] = standard;
+        return `${prefix}${digits}${maybeSuffix ?? ""}`;
+      }
+
+      // Fallback: treat as unique (don't collapse special topics like AR-593_2025_01).
+      return text.replace(/[^A-Z0-9]/g, "");
+    };
+
+    const keyPattern = /^[A-Z]{2,4}\d{3}[A-Z0-9]*$/;
+
+    const searchTrimmed = search?.trim() || "";
+    const codeCandidates = searchTrimmed ? buildCodeCandidates(searchTrimmed) : [];
+
     const courses = await prisma.course.findMany({
       where: {
         isActive: true,
-        ...(search && {
+        ...(searchTrimmed && {
           OR: [
-            { code: { contains: search, mode: 'insensitive' } },
-            { name: { contains: search, mode: 'insensitive' } },
+            { code: { contains: searchTrimmed, mode: "insensitive" } },
+            { name: { contains: searchTrimmed, mode: "insensitive" } },
+            ...codeCandidates.map((candidate) => ({
+              code: { equals: candidate, mode: "insensitive" },
+            })),
           ],
         }),
         ...(department && { department }),
@@ -66,10 +112,6 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Filter out obviously invalid codes and de-duplicate variants like "IC112" vs "IC-112"
-    const normalize = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const normalizedPattern = /^[A-Z]{2}\d{3}[A-Z]?(?:\d)?$/;
-
     const scoreCode = (code: string) => {
       const c = code.trim();
       const upper = c.toUpperCase();
@@ -83,8 +125,8 @@ export async function GET(req: NextRequest) {
 
     const bestByKey = new Map<string, (typeof courses)[number]>();
     for (const course of courses) {
-      const key = normalize(course.code);
-      if (!normalizedPattern.test(key)) continue;
+      const key = courseIdentityKey(course.code);
+      if (!keyPattern.test(key)) continue;
       const existing = bestByKey.get(key);
       if (!existing || scoreCode(course.code) > scoreCode(existing.code)) {
         bestByKey.set(key, course);
