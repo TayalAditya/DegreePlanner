@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle, Clock, Target } from "lucide-react";
+import { CheckCircle, ChevronDown, Clock, Target } from "lucide-react";
 import { formatCourseCode } from "@/lib/utils";
 
 interface Enrollment {
@@ -139,6 +139,7 @@ export default function ProgressPage() {
   const [loading, setLoading] = useState(true);
 
   type CourseCategory = keyof typeof categoryLabels;
+  type ICBasketUsed = { ic1: boolean; ic2: boolean };
 
   const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
@@ -160,14 +161,14 @@ export default function ProgressPage() {
         return "IC_BASKET";
       }
       
-      // No compulsion - first course counts as IC_BASKET
+      // First course of each basket type counts as IC_BASKET (if not compulsory)
       if (icBasketUsed) {
-        if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
+        if (isICB1 && !icBasketUsed.ic1) {
           icBasketUsed.ic1 = true;
           return "IC_BASKET";
         }
         
-        if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
+        if (isICB2 && !icBasketUsed.ic2) {
           icBasketUsed.ic2 = true;
           return "IC_BASKET";
         }
@@ -281,11 +282,14 @@ export default function ProgressPage() {
       (e) => e.status === "IN_PROGRESS"
     );
 
-    // Sort completed enrollments by semester for IC basket first-course logic
-    const sortedCompleted = [...completedEnrollments].sort(
-      (a, b) => (a.semester || 0) - (b.semester || 0)
-    );
-    const icBasketUsed = { ic1: false, ic2: false };
+    const compareEnrollments = (a: Enrollment, b: Enrollment) =>
+      (a.semester || 0) - (b.semester || 0) ||
+      normalizeCode(a.course.code).localeCompare(normalizeCode(b.course.code));
+
+    // Sort by semester+code to apply IC basket first-course logic deterministically
+    const sortedCompleted = [...completedEnrollments].sort(compareEnrollments);
+    const sortedInProgress = [...inProgressEnrollments].sort(compareEnrollments);
+    const icBasketUsed: ICBasketUsed = { ic1: false, ic2: false };
 
     const creditsByCategory = {
       IC: 0,
@@ -311,13 +315,13 @@ export default function ProgressPage() {
       ISTP: 0,
     };
 
-    completedEnrollments.forEach((e) => {
+    sortedCompleted.forEach((e) => {
       const category = getCourseCategory(e, icBasketUsed);
       creditsByCategory[category] += e.course.credits;
     });
 
-    inProgressEnrollments.forEach((e) => {
-      const category = getCourseCategory(e);
+    sortedInProgress.forEach((e) => {
+      const category = getCourseCategory(e, icBasketUsed);
       creditsInProgressByCategory[category] += e.course.credits;
     });
 
@@ -398,18 +402,43 @@ export default function ProgressPage() {
   }
 
   const progress = calculateProgress();
-  const completedICCourses = enrollments
-    .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
-    .filter((e) => normalizeCode(e.course.code).startsWith("IC"))
+  const activeEnrollments = enrollments.filter(
+    (e) =>
+      (e.status === "COMPLETED" && (!e.grade || e.grade !== "F")) ||
+      e.status === "IN_PROGRESS"
+  );
+
+  const sortedActiveEnrollments = [...activeEnrollments].sort(
+    (a, b) =>
+      (a.semester || 0) - (b.semester || 0) ||
+      normalizeCode(a.course.code).localeCompare(normalizeCode(b.course.code))
+  );
+
+  const icBasketUsedForDisplay: ICBasketUsed = { ic1: false, ic2: false };
+
+  const semesterCourses = sortedActiveEnrollments
     .map((e) => ({
       id: e.id,
       semester: e.semester,
       code: formatCourseCode(e.course.code),
       name: e.course.name,
       credits: e.course.credits,
-      category: getCourseCategory(e),
+      status: e.status,
+      grade: e.grade,
+      category: getCourseCategory(e, icBasketUsedForDisplay),
     }))
-    .sort((a, b) => a.semester - b.semester || a.code.localeCompare(b.code));
+    .reduce<Record<number, any[]>>((acc, course) => {
+      const sem = course.semester || 0;
+      const list = acc[sem] || [];
+      list.push(course);
+      acc[sem] = list;
+      return acc;
+    }, {});
+
+  const semesters = Object.keys(semesterCourses)
+    .map((s) => Number(s))
+    .sort((a, b) => a - b);
+  const latestSemester = semesters.length > 0 ? semesters[semesters.length - 1] : null;
   const completionPercentage = Math.round(
     (progress.totalCreditsEarned / progress.totalCreditsRequired) * 100
   );
@@ -539,62 +568,110 @@ export default function ProgressPage() {
         )}
       </div>
 
-      {/* Completed IC Courses */}
+      {/* Courses by Semester */}
       <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
-        <h3 className="text-base sm:text-xl font-semibold text-foreground mb-4">
-          Completed IC Courses
+        <h3 className="text-base sm:text-xl font-semibold text-foreground mb-2">
+          Courses (Semester-wise)
         </h3>
+        <p className="text-xs text-foreground-secondary mb-4">
+          Collapsed by semester so this page doesn&apos;t become huge as you add more courses.
+        </p>
 
-        {completedICCourses.length === 0 ? (
+        {semesters.length === 0 ? (
           <p className="text-foreground-secondary text-sm">
-            No completed IC courses found yet.
+            No courses found yet.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead className="text-foreground-secondary">
-                <tr className="border-b border-border">
-                  <th className="py-2 pr-4 text-left whitespace-nowrap">Sem</th>
-                  <th className="py-2 pr-4 text-left whitespace-nowrap">Code</th>
-                  <th className="py-2 pr-4 text-left min-w-[16rem]">Course</th>
-                  <th className="py-2 pr-4 text-right whitespace-nowrap">Credits</th>
-                  <th className="py-2 text-left whitespace-nowrap">Counts As</th>
-                </tr>
-              </thead>
-              <tbody>
-                {completedICCourses.map((c) => {
-                  const colors = categoryColors[c.category];
-                  const label = categoryLabels[c.category];
+          <div className="space-y-3">
+            {semesters.map((sem) => {
+              const courses = semesterCourses[sem] || [];
+              const completedCredits = courses
+                .filter((c) => c.status === "COMPLETED")
+                .reduce((sum, c) => sum + c.credits, 0);
+              const inProgressCredits = courses
+                .filter((c) => c.status === "IN_PROGRESS")
+                .reduce((sum, c) => sum + c.credits, 0);
+              const totalCredits = completedCredits + inProgressCredits;
 
-                  return (
-                    <tr key={c.id} className="border-b border-border/60 last:border-0">
-                      <td className="py-2 pr-4 text-foreground whitespace-nowrap">
-                        {c.semester}
-                      </td>
-                      <td className="py-2 pr-4 font-semibold text-foreground whitespace-nowrap">
-                        {c.code}
-                      </td>
-                      <td className="py-2 pr-4 text-foreground-secondary">
-                        {c.name}
-                      </td>
-                      <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap">
-                        {c.credits}
-                      </td>
-                      <td className="py-2 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}>
-                          <span className={`font-semibold ${colors.text}`}>{label}</span>
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+              return (
+                <details
+                  key={sem}
+                  open={latestSemester !== null && sem === latestSemester}
+                  className="group rounded-lg border border-border bg-surface-hover/50"
+                >
+                  <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground">Semester {sem}</p>
+                      <p className="text-xs text-foreground-secondary">
+                        {courses.length} courses • {completedCredits}
+                        {inProgressCredits > 0 ? (
+                          <span className="text-blue-500"> (+{inProgressCredits})</span>
+                        ) : null}{" "}
+                        credits{inProgressCredits > 0 ? ` • ${totalCredits} total` : ""}
+                      </p>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-foreground-secondary transition-transform duration-200 group-open:rotate-180" />
+                  </summary>
+
+                  <div className="px-4 pb-4 overflow-x-auto">
+                    <table className="min-w-full text-sm">
+                      <thead className="text-foreground-secondary">
+                        <tr className="border-b border-border">
+                          <th className="py-2 pr-4 text-left whitespace-nowrap">Code</th>
+                          <th className="py-2 pr-4 text-left min-w-[16rem]">Course</th>
+                          <th className="py-2 pr-4 text-right whitespace-nowrap">Credits</th>
+                          <th className="py-2 pr-4 text-left whitespace-nowrap">Status</th>
+                          <th className="py-2 text-left whitespace-nowrap">Counts As</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {courses.map((c) => {
+                          const colors = categoryColors[c.category as CourseCategory];
+                          const label = categoryLabels[c.category as CourseCategory];
+                          const statusBadge =
+                            c.status === "COMPLETED"
+                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
+                              : "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+                          const statusText =
+                            c.status === "COMPLETED"
+                              ? `Completed${c.grade ? ` (${c.grade})` : ""}`
+                              : "In Progress";
+
+                          return (
+                            <tr key={c.id} className="border-b border-border/60 last:border-0">
+                              <td className="py-2 pr-4 font-semibold text-foreground whitespace-nowrap">
+                                {c.code}
+                              </td>
+                              <td className="py-2 pr-4 text-foreground-secondary">
+                                {c.name}
+                              </td>
+                              <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap">
+                                {c.credits}
+                              </td>
+                              <td className="py-2 pr-4 whitespace-nowrap">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full ${statusBadge}`}>
+                                  <span className="font-semibold">{statusText}</span>
+                                </span>
+                              </td>
+                              <td className="py-2 whitespace-nowrap">
+                                <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}>
+                                  <span className={`font-semibold ${colors.text}`}>{label}</span>
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              );
+            })}
           </div>
         )}
 
         <p className="mt-3 text-xs text-foreground-secondary">
-          If any IC course shows up as FE here, it&apos;s being counted as a Free Elective by the current mapping/fallback logic.
+          Note: IC Basket courses can show up as FE based on your branch compulsion + first-course logic.
         </p>
       </div>
 
