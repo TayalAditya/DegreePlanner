@@ -197,6 +197,10 @@ export default function ProgressPage() {
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("HS")) return "HSS";
     if (normalizedCode.startsWith("IK")) return "IKS";
+
+    // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
+    if (normalizedCode === "DP301P") return "ISTP";
+    if (normalizedCode === "DP498P" || normalizedCode === "DP499P") return "MTP";
     if (normalizedCode.includes("MTP")) return "MTP";
     if (normalizedCode.includes("ISTP")) return "ISTP";
 

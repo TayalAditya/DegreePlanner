@@ -481,6 +481,16 @@ export class CreditCalculator {
         breakdown.core += credits;
         return;
       }
+
+      // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
+      if (normalizedCode === "DP301P") {
+        breakdown.istp += credits;
+        return;
+      }
+      if (normalizedCode === "DP498P" || normalizedCode === "DP499P") {
+        breakdown.mtp += credits;
+        return;
+      }
       if (normalizedCode.includes("MTP")) {
         breakdown.mtp += credits;
         return;

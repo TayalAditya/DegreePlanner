@@ -325,6 +325,10 @@ export default function CoursesPage() {
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("HS")) return "HSS";
     if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
+
+    // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
+    if (normalizedCode === "DP301P") return "ISTP";
+    if (normalizedCode === "DP498P" || normalizedCode === "DP499P") return "MTP";
     if (normalizedCode.includes("MTP")) return "MTP";
     if (normalizedCode.includes("ISTP")) return "ISTP";
 
@@ -373,6 +377,11 @@ export default function CoursesPage() {
 
   const determineCourseType = (course: Course): string => {
     const code = course.code.toUpperCase();
+    const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+
+    // Special DP codes
+    if (normalizedCode === "DP301P") return "ISTP";
+    if (normalizedCode === "DP498P" || normalizedCode === "DP499P") return "MTP";
     
     // HSS courses (HS-xxx)
     if (code.startsWith("HS-")) {
@@ -1283,6 +1292,8 @@ export default function CoursesPage() {
                     <option value="DE">Discipline Elective (DE)</option>
                     <option value="FREE_ELECTIVE">Free Elective (FE)</option>
                     <option value="PE">Program Elective (PE)</option>
+                    <option value="ISTP">ISTP</option>
+                    <option value="MTP">MTP</option>
                   </select>
                   <p className="text-xs text-foreground-secondary mt-1">
                     {courseType === "AUTO" && (
