@@ -127,39 +127,6 @@ export default function ProgressPage() {
   const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
   const getCourseCategory = (enrollment: Enrollment): CourseCategory => {
-    const code = enrollment.course.code.toUpperCase();
-    const normalizedCode = normalizeCode(code);
-    const isICB1 = ICB1_CODES.has(normalizedCode);
-    const isICB2 = ICB2_CODES.has(normalizedCode);
-
-    // IC Basket compulsion logic - check BEFORE branchMappings
-    if ((isICB1 || isICB2) && user?.branch) {
-      const branchCompulsion = IC_BASKET_COMPULSIONS[user.branch] || {};
-      
-      // Check if this course matches branch's IC-I compulsion
-      if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
-        return "IC_BASKET";
-      }
-      
-      // Check if this course matches branch's IC-II compulsion
-      if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
-        return "IC_BASKET";
-      }
-      
-      // No compulsion for this basket type - first course counts as IC_BASKET
-      if (isICB1 && !branchCompulsion.ic1) {
-        return "IC_BASKET";
-      }
-      
-      if (isICB2 && !branchCompulsion.ic2) {
-        return "IC_BASKET";
-      }
-      
-      // Additional IC basket courses → FE
-      return "FE";
-    }
-
-    // Check branchMappings after IC basket logic
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
       const mappingBranch = user.branch === "CSE" ? "CS" : user.branch;
       const mapping = enrollment.course.branchMappings.find(
@@ -173,7 +140,15 @@ export default function ProgressPage() {
       }
     }
 
+    const code = enrollment.course.code.toUpperCase();
+    const normalizedCode = normalizeCode(code);
+    const isICB1 = ICB1_CODES.has(normalizedCode);
+    const isICB2 = ICB2_CODES.has(normalizedCode);
+
     if (isICB1 || isICB2) return "IC_BASKET";
+
+    if (user?.branch === "CSE" && code.startsWith("DS")) return "DE";
+    if (user?.branch === "DSE" && code.startsWith("CS")) return "DE";
 
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
@@ -181,9 +156,6 @@ export default function ProgressPage() {
     if (normalizedCode.startsWith("IK")) return "IKS";
     if (normalizedCode.includes("MTP")) return "MTP";
     if (normalizedCode.includes("ISTP")) return "ISTP";
-
-    if (user?.branch === "CSE" && code.startsWith("DS")) return "DE";
-    if (user?.branch === "DSE" && code.startsWith("CS")) return "DE";
 
     switch (enrollment.courseType) {
       case "DE":
