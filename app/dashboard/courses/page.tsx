@@ -1239,18 +1239,99 @@ export default function CoursesPage() {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Semester Number <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="12"
-                    value={semester}
-                    onChange={(e) => setSemester(e.target.value)}
-                    placeholder="e.g., 3"
-                    className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
-                  />
-                  <p className="text-xs text-foreground-secondary mt-1">
-                    Which semester did you take this course?
-                  </p>
+                  {(() => {
+                    const { offeredInFall, offeredInSpring } = addingCourse;
+                    const offeredBothSemesters = offeredInFall && offeredInSpring;
+                    const offeredOddOnly = offeredInFall && !offeredInSpring;
+                    const offeredEvenOnly = !offeredInFall && offeredInSpring;
+
+                    // If course is offered in both semesters OR neither specified, show all semesters
+                    if (offeredBothSemesters || (!offeredInFall && !offeredInSpring)) {
+                      return (
+                        <>
+                          <select
+                            value={semester}
+                            onChange={(e) => setSemester(e.target.value)}
+                            className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
+                          >
+                            <option value="">Select semester...</option>
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                              <option key={sem} value={sem}>
+                                Semester {sem} ({sem % 2 === 1 ? "Fall" : "Spring"})
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-foreground-secondary mt-1">
+                            This course is offered in both Fall and Spring semesters
+                          </p>
+                        </>
+                      );
+                    }
+
+                    // Odd semester only (Fall only) - semesters 1, 3, 5, 7
+                    if (offeredOddOnly) {
+                      return (
+                        <>
+                          <select
+                            value={semester}
+                            onChange={(e) => setSemester(e.target.value)}
+                            className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
+                          >
+                            <option value="">Select semester...</option>
+                            {[1, 3, 5, 7].map((sem) => (
+                              <option key={sem} value={sem}>
+                                Semester {sem} (Fall)
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                            ⚠️ This course is only offered in Fall semesters (odd)
+                          </p>
+                        </>
+                      );
+                    }
+
+                    // Even semester only (Spring only) - semesters 2, 4, 6, 8
+                    if (offeredEvenOnly) {
+                      return (
+                        <>
+                          <select
+                            value={semester}
+                            onChange={(e) => setSemester(e.target.value)}
+                            className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
+                          >
+                            <option value="">Select semester...</option>
+                            {[2, 4, 6, 8].map((sem) => (
+                              <option key={sem} value={sem}>
+                                Semester {sem} (Spring)
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            ℹ️ This course is only offered in Spring semesters (even)
+                          </p>
+                        </>
+                      );
+                    }
+
+                    // Fallback (shouldn't reach here)
+                    return (
+                      <>
+                        <input
+                          type="number"
+                          min="1"
+                          max="12"
+                          value={semester}
+                          onChange={(e) => setSemester(e.target.value)}
+                          placeholder="e.g., 3"
+                          className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
+                        />
+                        <p className="text-xs text-foreground-secondary mt-1">
+                          Which semester did you take this course?
+                        </p>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Grade Input */}
