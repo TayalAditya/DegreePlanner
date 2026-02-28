@@ -1,9 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ProgressChart } from "./ProgressChart";
-import { CreditBreakdownCard } from "./CreditBreakdownCard";
 import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
+import { formatCourseCode } from "@/lib/utils";
 
 interface DashboardOverviewProps {
   userId: string;
@@ -28,31 +27,31 @@ const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
   VLSI: {},
 };
 
+const categoryLabels = {
+  IC: "Institute Core",
+  IC_BASKET: "IC Basket",
+  DC: "Discipline Core",
+  DE: "Discipline Elective",
+  FE: "Free Elective",
+  HSS: "HSS",
+  IKS: "IKS",
+  MTP: "MTP",
+  ISTP: "ISTP",
+} as const;
+
+const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: string }> = {
+  IC: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400" },
+  IC_BASKET: { bg: "bg-cyan-500/10", text: "text-cyan-600 dark:text-cyan-400" },
+  DC: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400" },
+  DE: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400" },
+  FE: { bg: "bg-green-500/10", text: "text-green-600 dark:text-green-400" },
+  HSS: { bg: "bg-orange-500/10", text: "text-orange-600 dark:text-orange-400" },
+  IKS: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400" },
+  MTP: { bg: "bg-red-500/10", text: "text-red-600 dark:text-red-400" },
+  ISTP: { bg: "bg-teal-500/10", text: "text-teal-600 dark:text-teal-400" },
+};
+
 export function DashboardOverview({ userId }: DashboardOverviewProps) {
-  const { data: programs, isLoading: programsLoading } = useQuery({
-    queryKey: ["user-programs", userId],
-    queryFn: async () => {
-      const res = await fetch("/api/programs");
-      if (!res.ok) throw new Error("Failed to fetch programs");
-      return res.json();
-    },
-  });
-
-  const primaryProgram = programs?.find((p: any) => p.isPrimary);
-
-  const { data: progressData, isLoading: progressLoading } = useQuery({
-    queryKey: ["progress", primaryProgram?.programId],
-    queryFn: async () => {
-      if (!primaryProgram) return null;
-      const res = await fetch(
-        `/api/progress?programId=${primaryProgram.programId}`
-      );
-      if (!res.ok) throw new Error("Failed to fetch progress");
-      return res.json();
-    },
-    enabled: !!primaryProgram,
-  });
-
   const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({
     queryKey: ["enrollments", userId],
     queryFn: async () => {
@@ -71,81 +70,57 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     },
   });
 
-  if (programsLoading || !programs) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="bg-surface rounded-xl border border-border shadow-sm p-6 animate-pulse"
-            >
-              <div className="h-4 bg-background-secondary dark:bg-background rounded w-3/4 mb-4"></div>
-              <div className="h-8 bg-background-secondary dark:bg-background rounded w-1/2"></div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const allEnrollments = enrollments || [];
 
-  if (programs.length === 0) {
-    return (
-      <div className="bg-surface rounded-xl shadow-sm border border-border p-12 text-center">
-        <div className="w-20 h-20 bg-warning/10 dark:bg-warning/20 rounded-full flex items-center justify-center mx-auto mb-6">
-          <AlertCircle className="w-10 h-10 text-warning" />
-        </div>
-        <h2 className="text-2xl font-bold text-foreground mb-3">
-          No Programs Enrolled
-        </h2>
-        <p className="text-foreground-secondary mb-8 max-w-md mx-auto">
-          Get started by enrolling in your major program to begin tracking your academic progress
-        </p>
-        <a
-          href="/dashboard/programs"
-          className="inline-flex items-center px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all shadow-sm hover:shadow-md"
-        >
-          <BookOpen className="w-5 h-5 mr-2" />
-          Browse Programs
-        </a>
-      </div>
-    );
-  }
+  const latestInProgressSemester =
+    allEnrollments.length > 0
+      ? Math.max(
+          0,
+          ...allEnrollments
+            .filter((e: any) => e.status === "IN_PROGRESS")
+            .map((e: any) => e.semester || 0)
+        )
+      : 0;
 
-  const currentSemesterFromEligibility =
-    progressData?.mtpEligibility?.semesterNumber ||
-    progressData?.istpEligibility?.semesterNumber ||
-    0;
+  const latestAnySemester =
+    allEnrollments.length > 0
+      ? Math.max(0, ...allEnrollments.map((e: any) => e.semester || 0))
+      : 0;
 
   const currentSemester =
-    enrollments && enrollments.length > 0
-      ? Math.max(...enrollments.map((e: any) => e.semester))
-      : currentSemesterFromEligibility > 0
-        ? currentSemesterFromEligibility
+    latestInProgressSemester > 0
+      ? latestInProgressSemester
+      : latestAnySemester > 0
+        ? latestAnySemester
         : 1;
 
-  const currentSemesterEnrollments = enrollments?.filter(
+  const currentSemesterEnrollments = allEnrollments.filter(
     (e: any) => e.semester === currentSemester && e.status === "IN_PROGRESS"
   );
 
-  const completedCourses = enrollments?.filter(
+  const completedCourses = allEnrollments.filter(
     (e: any) => e.status === "COMPLETED"
   );
 
-  const completedEnrollments = enrollments?.filter(
+  const completedEnrollments = allEnrollments.filter(
     (e: any) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F")
-  ) || [];
-
-  const sortedEnrollments = [...completedEnrollments].sort(
-    (a, b) => (a.semester || 0) - (b.semester || 0)
   );
-  
-  // Track which IC basket slots have been used
-  const icBasketUsed = { ic1: false, ic2: false };
 
-  const getCourseCategory = (enrollment: any, icBasketUsed?: any): string => {
+  const normalizeCourseCode = (text: string) =>
+    String(text ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+  const compareEnrollments = (a: any, b: any) =>
+    (a.semester || 0) - (b.semester || 0) ||
+    normalizeCourseCode(a.course?.code).localeCompare(normalizeCourseCode(b.course?.code));
+
+  const sortedEnrollments = [...completedEnrollments].sort(compareEnrollments);
+
+  const getCourseCategory = (
+    enrollment: any,
+    icBasketUsed?: { ic1: boolean; ic2: boolean }
+  ): keyof typeof categoryLabels => {
     const code = enrollment.course?.code?.toUpperCase() || "";
-    const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+    const normalizedCode = normalizeCourseCode(code);
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
 
@@ -186,7 +161,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
         : undefined);
 
       if (mapping && ["IC", "IC_BASKET", "DC", "DE", "FE", "HSS", "IKS", "MTP", "ISTP"].includes(mapping.courseCategory)) {
-        return mapping.courseCategory;
+        return mapping.courseCategory as keyof typeof categoryLabels;
       }
     }
 
@@ -206,6 +181,45 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     return "DC";
   };
 
+  const activeEnrollmentsForCategory = allEnrollments.filter(
+    (e: any) =>
+      (e.status === "COMPLETED" && (!e.grade || e.grade !== "F")) ||
+      e.status === "IN_PROGRESS"
+  );
+
+  const sortedActiveEnrollments = [...activeEnrollmentsForCategory].sort(compareEnrollments);
+  const icBasketUsedForCategory = { ic1: false, ic2: false };
+  const categorizedById = new Map<string, keyof typeof categoryLabels>();
+
+  sortedActiveEnrollments.forEach((e: any) => {
+    categorizedById.set(e.id, getCourseCategory(e, icBasketUsedForCategory));
+  });
+
+  const currentSemesterCourses = currentSemesterEnrollments
+    .map((e: any) => ({
+      ...e,
+      category: categorizedById.get(e.id) || getCourseCategory(e),
+    }))
+    .sort(compareEnrollments);
+
+  const currentSemesterBreakdown = currentSemesterCourses.reduce(
+    (acc: Record<string, { credits: number; count: number }>, e: any) => {
+      const category = e.category as keyof typeof categoryLabels;
+      const credits = e.course?.credits || 0;
+      const existing = acc[category] || { credits: 0, count: 0 };
+      acc[category] = { credits: existing.credits + credits, count: existing.count + 1 };
+      return acc;
+    },
+    {}
+  );
+
+  const currentSemesterTotalCredits = currentSemesterCourses.reduce(
+    (sum: number, e: any) => sum + (e.course?.credits || 0),
+    0
+  );
+
+  const icBasketUsedForSemesterStats = { ic1: false, ic2: false };
+
   const semesterStats = sortedEnrollments.reduce((acc: Record<number, any>, e: any) => {
     const sem = e.semester || 0;
     if (!acc[sem]) {
@@ -223,7 +237,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
         ISTP: 0,
       };
     }
-    const category = getCourseCategory(e, icBasketUsed);
+    const category = getCourseCategory(e, icBasketUsedForSemesterStats);
     acc[sem][category] = (acc[sem][category] || 0) + (e.course?.credits || 0);
     acc[sem].total += e.course?.credits || 0;
     return acc;
@@ -285,21 +299,107 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
         </div>
       </div>
 
-      {/* Progress Overview */}
-      {primaryProgram && progressData && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          <ProgressChart
-            progress={progressData.progress}
-            isLoading={progressLoading}
-            enrollments={enrollments}
-            userBranch={userSettings?.branch}
-          />
-          <CreditBreakdownCard
-            progress={progressData.progress}
-            isLoading={progressLoading}
-          />
-        </div>
-      )}
+      {/* Current Semester */}
+      <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">
+        <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 flex items-center">
+          <span className="w-1 h-6 bg-primary rounded-full mr-3"></span>
+          Current Semester (In Progress)
+        </h3>
+
+        {enrollmentsLoading ? (
+          <div className="space-y-3 animate-pulse">
+            <div className="h-4 bg-background-secondary dark:bg-background rounded w-1/3"></div>
+            <div className="h-10 bg-background-secondary dark:bg-background rounded"></div>
+            <div className="h-10 bg-background-secondary dark:bg-background rounded"></div>
+          </div>
+        ) : currentSemesterCourses.length === 0 ? (
+          <div className="text-center py-6">
+            <div className="w-14 h-14 bg-warning/10 dark:bg-warning/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-7 h-7 text-warning" />
+            </div>
+            <p className="text-foreground font-semibold mb-1">No active courses found</p>
+            <p className="text-sm text-foreground-secondary">
+              Add courses in <span className="font-semibold text-foreground">My Courses</span> to see this semester&apos;s plan.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <p className="text-sm text-foreground-secondary">
+                Semester <span className="font-semibold text-foreground">{currentSemester}</span> •{" "}
+                <span className="font-semibold text-foreground">{currentSemesterCourses.length}</span> courses •{" "}
+                <span className="font-semibold text-foreground">{currentSemesterTotalCredits}</span> credits
+              </p>
+              <a
+                href="/dashboard/progress"
+                className="text-sm font-semibold text-primary hover:text-primary-hover transition-colors"
+              >
+                View full progress →
+              </a>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {(Object.keys(categoryLabels) as (keyof typeof categoryLabels)[])
+                .filter((key) => (currentSemesterBreakdown[key]?.count || 0) > 0)
+                .map((key) => {
+                  const meta = currentSemesterBreakdown[key];
+                  const colors = categoryColors[key];
+                  return (
+                    <span
+                      key={key}
+                      title={categoryLabels[key]}
+                      className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}
+                    >
+                      <span className={`font-semibold text-xs ${colors.text}`}>{key}</span>
+                      <span className="text-xs text-foreground-secondary">
+                        {meta.credits}cr ({meta.count})
+                      </span>
+                    </span>
+                  );
+                })}
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="text-foreground-secondary">
+                  <tr className="border-b border-border">
+                    <th className="py-2 pr-4 text-left whitespace-nowrap">Code</th>
+                    <th className="py-2 pr-4 text-left min-w-[16rem]">Course</th>
+                    <th className="py-2 pr-4 text-right whitespace-nowrap">Credits</th>
+                    <th className="py-2 text-left whitespace-nowrap">Counts As</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {currentSemesterCourses.map((e: any) => {
+                    const category = e.category as keyof typeof categoryLabels;
+                    const colors = categoryColors[category];
+                    return (
+                      <tr key={e.id} className="border-b border-border/60 last:border-0">
+                        <td className="py-2 pr-4 font-semibold text-foreground whitespace-nowrap">
+                          {formatCourseCode(e.course?.code)}
+                        </td>
+                        <td className="py-2 pr-4 text-foreground-secondary">
+                          {e.course?.name}
+                        </td>
+                        <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap">
+                          {e.course?.credits || 0}
+                        </td>
+                        <td className="py-2 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}>
+                            <span className={`font-semibold ${colors.text}`}>
+                              {categoryLabels[category]}
+                            </span>
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
 
       {enrollmentsLoading ? (
         <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6 animate-pulse">
@@ -353,43 +453,6 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
         </div>
       ) : null}
 
-      {/* Available DE Courses */}
-      {progressData?.availableDECourses && progressData.availableDECourses.length > 0 && (
-        <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 flex items-center">
-            <span className="w-1 h-6 bg-primary rounded-full mr-3"></span>
-            Available Discipline Electives
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-            {progressData.availableDECourses.slice(0, 6).map((course: any) => (
-              <div
-                key={course.id}
-                className="border border-border rounded-lg p-4 hover:border-primary hover:bg-primary/5 dark:hover:bg-primary/10 transition-all cursor-pointer group"
-              >
-                <p className="font-mono text-sm text-primary mb-1 font-semibold">
-                  {course.code}
-                </p>
-                <p className="font-medium text-foreground text-sm mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                  {course.name}
-                </p>
-                <p className="text-xs text-foreground-secondary">
-                  {course.credits} credits
-                </p>
-              </div>
-            ))}
-          </div>
-          {progressData.availableDECourses.length > 6 && (
-            <div className="mt-6 text-center">
-              <a
-                href="/dashboard/courses"
-                className="text-primary hover:text-primary-hover font-medium text-sm inline-flex items-center gap-2 hover:gap-3 transition-all"
-              >
-                View all {progressData.availableDECourses.length} available courses →
-              </a>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
