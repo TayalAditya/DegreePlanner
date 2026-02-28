@@ -160,6 +160,10 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
         ? enrollment.course.branchMappings.find((m: any) => m.branch.startsWith("GE"))
         : undefined);
 
+      if (mapping?.courseCategory === "NA") {
+        return "FE";
+      }
+
       if (mapping && ["IC", "IC_BASKET", "DC", "DE", "FE", "HSS", "IKS", "MTP", "ISTP"].includes(mapping.courseCategory)) {
         return mapping.courseCategory as keyof typeof categoryLabels;
       }

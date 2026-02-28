@@ -185,6 +185,10 @@ export default function ProgressPage() {
         ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
         : undefined);
 
+      if (mapping?.courseCategory === "NA") {
+        return "FE";
+      }
+
       if (mapping && mapping.courseCategory in categoryLabels) {
         return mapping.courseCategory as CourseCategory;
       }

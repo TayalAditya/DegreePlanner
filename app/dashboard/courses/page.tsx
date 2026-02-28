@@ -305,6 +305,9 @@ export default function CoursesPage() {
         : undefined);
 
       if (mapping) {
+        if (mapping.courseCategory === "NA") {
+          return "FE";
+        }
         return mapping.courseCategory;
       }
     }
