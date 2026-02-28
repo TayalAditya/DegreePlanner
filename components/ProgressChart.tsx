@@ -73,35 +73,33 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && userBranch) {
-      const branchCompulsion = IC_BASKET_COMPULSIONS[userBranch];
+      const branchCompulsion = IC_BASKET_COMPULSIONS[userBranch] || {};
       
-      if (branchCompulsion) {
-        // Check if this course matches branch's IC-I compulsion
-        if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
-          icBasketUsed.ic1 = true;
-          return "IC_BASKET";
-        }
-        
-        // Check if this course matches branch's IC-II compulsion
-        if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
-          icBasketUsed.ic2 = true;
-          return "IC_BASKET";
-        }
-        
-        // No compulsion for this basket type - first course counts as IC_BASKET
-        if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
-          icBasketUsed.ic1 = true;
-          return "IC_BASKET";
-        }
-        
-        if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
-          icBasketUsed.ic2 = true;
-          return "IC_BASKET";
-        }
-        
-        // Additional IC basket courses → FE
-        return "FE";
+      // Check if this course matches branch's IC-I compulsion
+      if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
+        icBasketUsed.ic1 = true;
+        return "IC_BASKET";
       }
+      
+      // Check if this course matches branch's IC-II compulsion
+      if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
+        icBasketUsed.ic2 = true;
+        return "IC_BASKET";
+      }
+      
+      // No compulsion for this basket type - first course counts as IC_BASKET
+      if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
+        icBasketUsed.ic1 = true;
+        return "IC_BASKET";
+      }
+      
+      if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
+        icBasketUsed.ic2 = true;
+        return "IC_BASKET";
+      }
+      
+      // Additional IC basket courses → FE
+      return "FE";
     }
 
     const mappings = enrollment.course?.branchMappings || [];
