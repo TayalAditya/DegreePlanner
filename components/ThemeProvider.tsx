@@ -3,11 +3,15 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 type ThemeMode = "light" | "dark" | "system";
+const PALETTES = ["default", "ocean", "sunset", "forest"] as const;
+type ThemePalette = (typeof PALETTES)[number];
 
 interface ThemeContextType {
   theme: ThemeMode;
   effectiveTheme: "light" | "dark";
   setTheme: (theme: ThemeMode) => void;
+  palette: ThemePalette;
+  setPalette: (palette: ThemePalette) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -15,12 +19,18 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>("system");
   const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">("light");
+  const [palette, setPaletteState] = useState<ThemePalette>("default");
 
   useEffect(() => {
     // Load theme from localStorage
     const savedTheme = localStorage.getItem("theme") as ThemeMode | null;
     if (savedTheme) {
       setThemeState(savedTheme);
+    }
+
+    const savedPalette = localStorage.getItem("degreePlanner.palette") as ThemePalette | null;
+    if (savedPalette && PALETTES.includes(savedPalette)) {
+      setPaletteState(savedPalette);
     }
   }, []);
 
@@ -58,13 +68,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, [theme]);
 
+  useEffect(() => {
+    const root = window.document.documentElement;
+
+    if (palette === "default") {
+      delete root.dataset.palette;
+      return;
+    }
+
+    root.dataset.palette = palette;
+  }, [palette]);
+
   const setTheme = (newTheme: ThemeMode) => {
     localStorage.setItem("theme", newTheme);
     setThemeState(newTheme);
   };
 
+  const setPalette = (newPalette: ThemePalette) => {
+    localStorage.setItem("degreePlanner.palette", newPalette);
+    setPaletteState(newPalette);
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, effectiveTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, effectiveTheme, setTheme, palette, setPalette }}>
       {children}
     </ThemeContext.Provider>
   );

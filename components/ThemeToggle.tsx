@@ -1,11 +1,11 @@
 "use client";
 
 import { useTheme } from "./ThemeProvider";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { Sun, Moon, Monitor, Palette } from "lucide-react";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, palette, setPalette } = useTheme();
   const reducedMotion = useReducedMotion();
 
   const themes = [
@@ -13,6 +13,13 @@ export function ThemeToggle() {
     { value: "dark" as const, icon: Moon, label: "Dark" },
     { value: "system" as const, icon: Monitor, label: "System" },
   ];
+
+  const paletteCycle = ["default", "ocean", "sunset", "forest"] as const;
+  const cyclePalette = () => {
+    const currentIndex = paletteCycle.indexOf(palette);
+    const next = paletteCycle[(currentIndex + 1) % paletteCycle.length];
+    setPalette(next);
+  };
 
   return (
     <div className="flex items-center gap-1 bg-background-secondary dark:bg-surface rounded-lg p-1">
@@ -45,6 +52,18 @@ export function ThemeToggle() {
           );
         })}
       </LayoutGroup>
+
+      <button
+        onClick={cyclePalette}
+        className="relative p-2 rounded-md transition-colors hover:bg-surface dark:hover:bg-background focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+        title={`Palette: ${palette} (click to change)`}
+        aria-label="Change accent palette"
+        type="button"
+      >
+        <span className="relative z-10 text-foreground-secondary">
+          <Palette className="w-4 h-4" />
+        </span>
+      </button>
     </div>
   );
 }
