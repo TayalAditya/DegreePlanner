@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { GraduationCap, Award, BookOpen, Target, ChevronDown, AlertCircle } from "lucide-react";
 import { ProgressChart } from "@/components/ProgressChart";
+import { MinorPlannerCard } from "@/components/MinorPlannerCard";
 import { formatCourseCode } from "@/lib/utils";
 
 interface Program {
@@ -416,6 +417,8 @@ export default function ProgramsPage() {
                   )}
                 </div>
               </div>
+
+              <MinorPlannerCard enrollments={enrollments} isLoading={enrollmentsLoading} />
             </div>
           )}
 
