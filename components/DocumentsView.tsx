@@ -642,7 +642,7 @@ function AddLinkModal({
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://drive.google.com/drive/folders/...  or  https://www.canva.com/design/..."
+              placeholder="https://drive.google.com/file/d/...  or  https://drive.google.com/drive/folders/...  or  https://www.canva.com/design/...  or  https://youtu.be/..."
               className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
             />
           </div>
