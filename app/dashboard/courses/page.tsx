@@ -72,6 +72,63 @@ const categoryColors = {
 
 const DEPARTMENT_PAGE_SIZE = 20;
 
+type SchoolKey =
+  | "SCEE" // School of Computing and Electrical Engineering
+  | "SMSS" // School of Mathematical and Statistical Sciences
+  | "SMME" // School of Mechanical, Materials and Energy Engineering
+  | "SPS" // School of Physical Sciences
+  | "SCENE" // School of Civil and Environmental Engineering
+  | "SCS" // School of Chemical Sciences
+  | "SBS" // School of Bio Sciences
+  | "SHSS" // School of Humanities & Social Sciences
+  | "COMMON"
+  | "OTHER";
+
+type SchoolFilter = "all" | SchoolKey;
+
+const SCHOOL_META: Record<SchoolKey, { label: string; order: number; prefixes: string[] }> = {
+  SCEE: { label: "SCEE (CSE, DSE, EE, VL)", order: 10, prefixes: ["CS", "DS", "EE", "VL", "MV"] },
+  SMSS: { label: "SMSS (MNC)", order: 20, prefixes: ["MC", "MA", "ST"] },
+  SMME: { label: "SMME (GE, MSE, ME)", order: 30, prefixes: ["GE", "ME", "MS", "MT", "AR"] },
+  SPS: { label: "SPS (EP)", order: 40, prefixes: ["EP", "PH"] },
+  SCENE: { label: "SCENE (CE)", order: 50, prefixes: ["CE"] },
+  SCS: { label: "SCS (BS CS)", order: 60, prefixes: ["CY", "CH"] },
+  SBS: { label: "SBS (BE)", order: 70, prefixes: ["BE", "BY", "BS"] },
+  SHSS: { label: "SHSS (HS)", order: 80, prefixes: ["HS"] },
+  COMMON: { label: "Common (IC/IKS/DP)", order: 90, prefixes: ["IC", "IK", "IKS", "DP"] },
+  OTHER: { label: "Other", order: 99, prefixes: [] },
+};
+
+const SCHOOL_ORDER: SchoolKey[] = Object.entries(SCHOOL_META)
+  .sort(([, a], [, b]) => a.order - b.order)
+  .map(([key]) => key as SchoolKey);
+
+function getCoursePrefix(code: string): string {
+  const upper = String(code ?? "").trim().toUpperCase();
+  const match = upper.match(/^([A-Z]{2,4})/);
+  return match?.[1] ?? "";
+}
+
+function getCourseSchoolKey(course: Pick<Course, "code" | "department">): SchoolKey {
+  const prefix = getCoursePrefix(course.code);
+  for (const key of SCHOOL_ORDER) {
+    const meta = SCHOOL_META[key];
+    if (meta.prefixes.includes(prefix)) return key;
+  }
+
+  const dept = String(course.department ?? "").toLowerCase();
+  if (dept.includes("humanities")) return "SHSS";
+  if (dept.includes("comput") || dept.includes("electrical") || dept.includes("vlsi")) return "SCEE";
+  if (dept.includes("mathemat") || dept.includes("statistical")) return "SMSS";
+  if (dept.includes("mechanical") || dept.includes("material") || dept.includes("energy")) return "SMME";
+  if (dept.includes("physical") || dept.includes("physics")) return "SPS";
+  if (dept.includes("civil") || dept.includes("environment")) return "SCENE";
+  if (dept.includes("chemical")) return "SCS";
+  if (dept.includes("bio")) return "SBS";
+  if (dept.includes("institute core") || dept.includes("indian knowledge") || dept === "dp") return "COMMON";
+  return "OTHER";
+}
+
 export default function CoursesPage() {
   const [tab, setTab] = useState<"my-courses" | "catalog">("my-courses");
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -79,7 +136,7 @@ export default function CoursesPage() {
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedDept, setSelectedDept] = useState<string>("all");
+  const [selectedDept, setSelectedDept] = useState<SchoolFilter>("all");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [addingCourse, setAddingCourse] = useState<Course | null>(null);
   const [semester, setSemester] = useState<string>("");
@@ -126,9 +183,15 @@ export default function CoursesPage() {
     }
   };
 
-  const departments = Array.from(
-    new Set(allCourses.map((c) => c.department))
-  ).sort();
+  const schoolCounts: Record<string, number> = {};
+  for (const course of allCourses) {
+    const key = getCourseSchoolKey(course);
+    schoolCounts[key] = (schoolCounts[key] ?? 0) + 1;
+  }
+
+  const schoolOptions = SCHOOL_ORDER
+    .map((key) => ({ key, label: SCHOOL_META[key].label, count: schoolCounts[key] ?? 0 }))
+    .filter((o) => o.count > 0);
 
   const normalizeCourseCodeForSearch = (text: string) =>
     text.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -141,24 +204,26 @@ export default function CoursesPage() {
       !searchLower ||
       normalizeCourseCodeForSearch(course.code).includes(searchNormalized) ||
       course.name.toLowerCase().includes(searchLower);
-    const matchesDept = selectedDept === "all" || course.department === selectedDept;
+    const matchesDept = selectedDept === "all" || getCourseSchoolKey(course) === selectedDept;
     return matchesSearch && matchesDept;
   });
 
   const departmentGroups = (() => {
-    const byDept: Record<string, Course[]> = {};
+    const bySchool: Record<string, Course[]> = {};
     for (const course of filteredCourses) {
-      const dept = course.department || "Other";
-      if (!byDept[dept]) byDept[dept] = [];
-      byDept[dept].push(course);
+      const key = getCourseSchoolKey(course);
+      const list = bySchool[key] ?? [];
+      list.push(course);
+      bySchool[key] = list;
     }
 
-    return Object.entries(byDept)
-      .map(([dept, courses]) => ({
-        dept,
-        courses: courses.sort((a, b) => a.code.localeCompare(b.code)),
-      }))
-      .sort((a, b) => a.dept.localeCompare(b.dept));
+    return SCHOOL_ORDER
+      .filter((key) => (bySchool[key]?.length ?? 0) > 0)
+      .map((key) => ({
+        dept: key,
+        label: SCHOOL_META[key].label,
+        courses: (bySchool[key] ?? []).sort((a, b) => a.code.localeCompare(b.code)),
+      }));
   })();
 
   const toggleDepartment = (dept: string) => {
@@ -251,7 +316,7 @@ export default function CoursesPage() {
     
     // Branch-specific course patterns
     if (user?.branch === "CSE" && code.startsWith("DS")) return "DE";
-    if (user?.branch === "DSE" && code.startsWith("CS")) return "DE";
+    if (user?.branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
     
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("HS")) return "HSS";
@@ -717,13 +782,13 @@ export default function CoursesPage() {
               </div>
               <select
                 value={selectedDept}
-                onChange={(e) => setSelectedDept(e.target.value)}
+                onChange={(e) => setSelectedDept(e.target.value as SchoolFilter)}
                 className="px-6 py-3 bg-surface border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground font-medium shadow-sm transition-all cursor-pointer min-w-[200px]"
               >
-                <option value="all">All Departments ({departments.length})</option>
-                {departments.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
+                <option value="all">All Schools ({schoolOptions.length})</option>
+                {schoolOptions.map((opt) => (
+                  <option key={opt.key} value={opt.key}>
+                    {opt.label}
                   </option>
                 ))}
               </select>
@@ -773,12 +838,20 @@ export default function CoursesPage() {
                           </div>
 
                           <div className="flex flex-wrap items-center gap-2 text-sm">
-                            <span className="px-3 py-1 bg-surface-hover rounded font-medium text-foreground">
-                              {course.department}
+                        {(() => {
+                          const schoolKey = getCourseSchoolKey(course);
+                          return (
+                            <span
+                              title={SCHOOL_META[schoolKey].label}
+                              className="px-3 py-1 bg-surface-hover rounded font-medium text-foreground"
+                            >
+                              {schoolKey}
                             </span>
-                            <span className="px-3 py-1 bg-surface-hover rounded text-foreground-secondary">
-                              L{course.level}
-                            </span>
+                          );
+                        })()}
+                        <span className="px-3 py-1 bg-surface-hover rounded text-foreground-secondary">
+                          L{course.level}
+                        </span>
                             {enrolledCourseIds.has(course.id) ? (
                               <span className="px-3 py-1 bg-green-500/10 text-green-600 rounded font-medium border border-green-500/30 ml-auto">
                                 ✓ Enrolled
@@ -821,7 +894,7 @@ export default function CoursesPage() {
                 ) : (
                   <div className="space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-foreground-secondary">
-                      <p>Tap a department to expand its courses.</p>
+                      <p>Tap a school to expand its courses.</p>
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -840,7 +913,7 @@ export default function CoursesPage() {
                       </div>
                     </div>
 
-                    {departmentGroups.map(({ dept, courses }) => {
+                    {departmentGroups.map(({ dept, label, courses }) => {
                       const isExpanded = expandedDepartments.includes(dept);
                       const visibleCount = departmentVisibleCounts[dept] || DEPARTMENT_PAGE_SIZE;
                       const visibleCourses = courses.slice(0, visibleCount);
@@ -854,7 +927,7 @@ export default function CoursesPage() {
                             className="w-full p-4 hover:bg-surface-hover transition-colors flex items-center justify-between gap-4 text-left"
                           >
                             <div className="min-w-0">
-                              <p className="font-semibold text-foreground truncate">{dept}</p>
+                              <p className="font-semibold text-foreground truncate">{label}</p>
                               <p className="text-xs text-foreground-secondary">
                                 {courses.length} courses
                               </p>
