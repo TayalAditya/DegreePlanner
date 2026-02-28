@@ -687,7 +687,7 @@ export default function ImportCoursesPage() {
                               <span className="text-sm text-foreground">{course.name}</span>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <span className={`text-xs px-2 py-1 rounded-full ${
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                                 course.category === "ICB"
                                   ? "bg-orange-500/10 text-orange-600"
                                   : "bg-purple-500/10 text-purple-600"

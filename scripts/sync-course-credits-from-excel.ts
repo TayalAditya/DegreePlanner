@@ -12,7 +12,7 @@ type SheetObservation = {
 };
 
 type CanonicalCourse = {
-  normalizedKey: string;
+  identityKey: string;
   codeExample: string;
   nameExample: string;
   credits: number;
@@ -22,8 +22,64 @@ type CanonicalCourse = {
 
 const prisma = new PrismaClient();
 
-function normalizeCourseKey(code: string): string {
-  return code.toUpperCase().replace(/[^A-Z0-9]/g, '');
+function courseIdentityKey(code: string): string | null {
+  const text = String(code ?? '')
+    .replace(/\u00a0/g, ' ')
+    .trim()
+    .toUpperCase();
+
+  // Standard course codes: "IC-102P", "IC 102P", "IC102P"
+  // Also allow section suffixes from Excel dumps: "BE-203_1", "AR-593_2025_01" -> "BE203", "AR593"
+  const standard = text.match(/^([A-Z]{2,4})\s*[- ]?\s*(\d{3})\s*([A-Z])?(?:\s*_\s*\d+)*$/);
+  if (standard) {
+    const [, prefix, digits, maybeSuffix] = standard;
+    return `${prefix}${digits}${maybeSuffix ?? ''}`;
+  }
+
+  return null;
+}
+
+function identityKeyToDbCode(identityKey: string): string | null {
+  const match = identityKey.match(/^([A-Z]{2,4})(\d{3}[A-Z]?)$/);
+  if (!match) return null;
+  return `${match[1]}-${match[2]}`;
+}
+
+function inferDepartmentFromCode(code: string): string {
+  const prefixMatch = code.match(/^([A-Z]{2,4})/);
+  const prefix = prefixMatch ? prefixMatch[1] : '';
+
+  const departmentMap: Record<string, string> = {
+    IC: 'Institute Core',
+    CS: 'Computer Science',
+    EE: 'Electrical Engineering',
+    ME: 'Mechanical Engineering',
+    CE: 'Civil Engineering',
+    BE: 'Bioengineering',
+    EP: 'Engineering Physics',
+    MA: 'Mathematics',
+    MT: 'Materials Science',
+    DS: 'Data Science',
+    CY: 'Chemical Sciences',
+    PH: 'Physics',
+    VL: 'Microelectronics and VLSI',
+    AR: 'General Engineering',
+    HS: 'Humanities & Social Sciences',
+    IK: 'Indian Knowledge System',
+    BY: 'Bioengineering',
+  };
+
+  return departmentMap[prefix] || 'General';
+}
+
+function inferLevelFromCode(code: string): number {
+  const numMatch = code.match(/\d{3}/);
+  const num = numMatch ? parseInt(numMatch[0], 10) : 100;
+  if (num >= 500) return 500;
+  if (num >= 400) return 400;
+  if (num >= 300) return 300;
+  if (num >= 200) return 200;
+  return 100;
 }
 
 function getSheetPriority(sheetName: string): number {
@@ -115,7 +171,7 @@ function findColumnIndex(headers: string[], patterns: RegExp[]): number {
 function buildCanonicalCourses(observations: SheetObservation[]): CanonicalCourse[] {
   const byKey = new Map<string, SheetObservation[]>();
   for (const obs of observations) {
-    const key = normalizeCourseKey(obs.rawCode);
+    const key = courseIdentityKey(obs.rawCode);
     if (!key) continue;
     const list = byKey.get(key) ?? [];
     list.push(obs);
@@ -153,10 +209,15 @@ function buildCanonicalCourses(observations: SheetObservation[]): CanonicalCours
 
     const chosen = creditOptions[0];
 
+    const bestNameSource =
+      obsList
+        .filter((o) => o.rawName && o.rawName.trim().length > 0)
+        .sort((a, b) => b.sheetPriority - a.sheetPriority)[0] ?? obsList[0];
+
     canonical.push({
-      normalizedKey: key,
-      codeExample: obsList[0]?.rawCode ?? key,
-      nameExample: obsList[0]?.rawName ?? '',
+      identityKey: key,
+      codeExample: bestNameSource?.rawCode ?? key,
+      nameExample: bestNameSource?.rawName ?? '',
       credits: chosen.credits,
       sources: obsList,
       conflicts: creditOptions
@@ -197,6 +258,7 @@ function cleanCourseDescription(description: string | null | undefined): string 
 async function main() {
   const args = new Set(process.argv.slice(2));
   const apply = args.has('--apply');
+  const createMissing = args.has('--create-missing');
   const dryRun = !apply || args.has('--dry-run');
 
   const excelPath = path.join(process.cwd(), 'docs', 'Course List semester wise.xlsx');
@@ -288,18 +350,23 @@ async function main() {
 
   // Load DB courses once for fast matching
   const dbCourses = await prisma.course.findMany({
-    select: { id: true, code: true, credits: true, description: true },
+    select: { id: true, code: true, name: true, credits: true, description: true },
   });
 
-  const dbByKey = new Map<string, Array<{ id: string; code: string; credits: number; description: string | null }>>();
+  const dbByKey = new Map<
+    string,
+    Array<{ id: string; code: string; name: string; credits: number; description: string | null }>
+  >();
   for (const c of dbCourses) {
-    const key = normalizeCourseKey(c.code);
+    const key = courseIdentityKey(c.code);
+    if (!key) continue;
     const list = dbByKey.get(key) ?? [];
-    list.push({ id: c.id, code: c.code, credits: c.credits, description: c.description });
+    list.push({ id: c.id, code: c.code, name: c.name, credits: c.credits, description: c.description });
     dbByKey.set(key, list);
   }
 
   let missingInDb = 0;
+  let createdMissing = 0;
   let creditMatches = 0;
   let creditMismatches = 0;
   let descriptionsCleaned = 0;
@@ -314,9 +381,57 @@ async function main() {
   }> = [];
 
   for (const excelCourse of canonicalCourses) {
-    const matches = dbByKey.get(excelCourse.normalizedKey);
+    const matches = dbByKey.get(excelCourse.identityKey);
     if (!matches || matches.length === 0) {
       missingInDb++;
+
+      const dbCode = identityKeyToDbCode(excelCourse.identityKey);
+      if (!dbCode) continue;
+
+      if (!dryRun && createMissing) {
+        const department = inferDepartmentFromCode(dbCode);
+        const level = inferLevelFromCode(dbCode);
+        const safeName = excelCourse.nameExample?.trim() || dbCode;
+
+        const created = await prisma.course.upsert({
+          where: { code: dbCode },
+          update: {
+            credits: excelCourse.credits,
+            name: safeName,
+            department,
+            level,
+            description: null,
+          },
+          create: {
+            code: dbCode,
+            name: safeName,
+            credits: excelCourse.credits,
+            department,
+            level,
+            description: null,
+            isActive: true,
+            offeredInFall: true,
+            offeredInSpring: true,
+            offeredInSummer: false,
+            isPassFailEligible: false,
+            isBranchSpecific: false,
+            requiredBranches: [],
+          },
+        });
+
+        const list = dbByKey.get(excelCourse.identityKey) ?? [];
+        list.push({
+          id: created.id,
+          code: created.code,
+          name: created.name,
+          credits: created.credits,
+          description: created.description,
+        });
+        dbByKey.set(excelCourse.identityKey, list);
+
+        createdMissing++;
+      }
+
       continue;
     }
 
@@ -393,4 +508,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-
