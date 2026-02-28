@@ -223,7 +223,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
         ISTP: 0,
       };
     }
-    const category = getCourseCategory(e);
+    const category = getCourseCategory(e, icBasketUsed);
     acc[sem][category] = (acc[sem][category] || 0) + (e.course?.credits || 0);
     acc[sem].total += e.course?.credits || 0;
     return acc;
