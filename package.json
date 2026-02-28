@@ -12,7 +12,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "add-users": "tsx scripts/add-users.ts",
-    "import-users": "tsx scripts/import-users.ts"
+    "import-users": "tsx scripts/import-users.ts",
+    "verify:default-dc": "tsx scripts/verify-default-curriculum-dc.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
