@@ -19,44 +19,6 @@ export const authOptions: NextAuthOptions = {
 
       console.log("🔐 Login attempt with email:", user.email);
 
-      // Ensure the account is linked to the user
-      if (account && user.email) {
-        const existingAccount = await prisma.account.findUnique({
-          where: {
-            provider_providerAccountId: {
-              provider: account.provider,
-              providerAccountId: account.providerAccountId,
-            },
-          },
-        });
-
-        if (!existingAccount) {
-          const dbUser = await prisma.user.findUnique({
-            where: { email: user.email },
-          });
-
-          if (dbUser) {
-            // Link the account to the existing user
-            await prisma.account.create({
-              data: {
-                userId: dbUser.id,
-                type: account.type,
-                provider: account.provider,
-                providerAccountId: account.providerAccountId,
-                refresh_token: account.refresh_token,
-                access_token: account.access_token,
-                expires_at: account.expires_at,
-                token_type: account.token_type,
-                scope: account.scope,
-                id_token: account.id_token,
-                session_state: account.session_state,
-              },
-            });
-            console.log("✅ Account linked to existing user");
-          }
-        }
-      }
-
       // Check if user is approved by email (direct match)
       let approvedUser = await prisma.approvedUser.findUnique({
         where: { email: user.email },
@@ -110,7 +72,7 @@ export const authOptions: NextAuthOptions = {
 
       const isDocumentsAdmin = (approvedUser.enrollmentId || "").toUpperCase() === DOCS_ADMIN_ENROLLMENT_ID;
 
-      // Update or create user with approval status
+      // Let PrismaAdapter handle account linking - just ensure user data is updated
       const existingUser = await prisma.user.findUnique({
         where: { email: user.email },
       });
@@ -136,23 +98,22 @@ export const authOptions: NextAuthOptions = {
             data: updates,
           });
         }
-      }
-
-      // Auto-create user if approved
-      if (!existingUser) {
+      } else {
+        // Create user (PrismaAdapter will link the account automatically)
         await prisma.user.create({
           data: {
             email: user.email,
-            name: user.name,
+            name: user.name || approvedUser.enrollmentId,
             image: user.image,
             isApproved: true,
-            ...(isDocumentsAdmin ? { role: "ADMIN" } : {}),
+            role: isDocumentsAdmin ? "ADMIN" : "STUDENT",
             enrollmentId: approvedUser.enrollmentId,
             department: approvedUser.department,
             branch: approvedUser.branch,
             batch: approvedUser.batch,
           },
         });
+        console.log("✅ Created new user:", user.email);
       }
 
       // Auto-enroll user in their branch program if not already enrolled
