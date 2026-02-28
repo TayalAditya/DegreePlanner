@@ -139,8 +139,11 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
   const sortedEnrollments = [...completedEnrollments].sort(
     (a, b) => (a.semester || 0) - (b.semester || 0)
   );
+  
+  // Track which IC basket slots have been used
+  const icBasketUsed = { ic1: false, ic2: false };
 
-  const getCourseCategory = (enrollment: any): string => {
+  const getCourseCategory = (enrollment: any, icBasketUsed?: any): string => {
     const code = enrollment.course?.code?.toUpperCase() || "";
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     const isICB1 = ICB1_CODES.has(normalizedCode);
@@ -156,6 +159,19 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       
       if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
         return "IC_BASKET";
+      }
+      
+      // No compulsion - first course counts as IC_BASKET
+      if (icBasketUsed) {
+        if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
+          icBasketUsed.ic1 = true;
+          return "IC_BASKET";
+        }
+        
+        if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
+          icBasketUsed.ic2 = true;
+          return "IC_BASKET";
+        }
       }
       
       return "FE";
