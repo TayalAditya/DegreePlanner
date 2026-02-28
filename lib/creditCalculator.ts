@@ -383,14 +383,14 @@ export class CreditCalculator {
           return;
         }
         
-        // No compulsion - first course counts as core (IC_BASKET)
-        if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
+        // First course of each basket type counts as core (IC_BASKET) if not compulsory
+        if (isICB1 && !icBasketUsed.ic1) {
           icBasketUsed.ic1 = true;
           breakdown.core += credits;
           return;
         }
         
-        if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
+        if (isICB2 && !icBasketUsed.ic2) {
           icBasketUsed.ic2 = true;
           breakdown.core += credits;
           return;
