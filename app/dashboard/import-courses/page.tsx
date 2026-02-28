@@ -392,16 +392,16 @@ export default function ImportCoursesPage() {
           animate={{ scale: 1 }}
           className="text-center"
         >
-          <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="h-12 w-12 text-green-600" />
+          <div className="w-24 h-24 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="h-12 w-12 text-success" />
           </div>
-          <h2 className="text-3xl font-bold mb-4">Courses Imported Successfully!</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold mb-4">Courses Imported Successfully!</h2>
           <p className="text-foreground-secondary mb-6">
             Your courses have been added to your profile. You can now view them in My Courses.
           </p>
           <a
             href="/dashboard/courses"
-            className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all inline-block"
+            className="px-6 py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:shadow-lg transition-all inline-block"
           >
             View Courses
           </a>
@@ -426,27 +426,27 @@ export default function ImportCoursesPage() {
   return (
     <div className="space-y-6">
       {errorMessage && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-lg overflow-hidden">
+        <div className="bg-error/10 border border-error/20 rounded-lg overflow-hidden">
           <div className="px-4 py-3 flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="h-5 w-5 text-error flex-shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h3 className="font-semibold text-red-700 dark:text-red-300 mb-1">Import Errors</h3>
-              <pre className="text-sm text-red-600 dark:text-red-400 whitespace-pre-wrap font-mono">
+              <h3 className="font-semibold text-error mb-1">Import Errors</h3>
+              <pre className="text-sm text-error/90 whitespace-pre-wrap font-mono">
                 {errorMessage}
               </pre>
             </div>
             <button
               onClick={() => setErrorMessage(null)}
-              className="text-red-600 hover:text-red-700 p-1"
+              className="text-error/80 hover:text-error p-1"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
         </div>
       )}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
             Import Your Courses
           </h1>
           <p className="text-foreground-secondary mt-2">
@@ -456,7 +456,7 @@ export default function ImportCoursesPage() {
         <button
           onClick={handleReset}
           disabled={resetting}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors disabled:opacity-50 flex-shrink-0"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-2 text-sm text-error border border-error/20 rounded-lg hover:bg-error/10 transition-colors disabled:opacity-50 flex-shrink-0"
         >
           {resetting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
           Reset All
@@ -464,9 +464,9 @@ export default function ImportCoursesPage() {
       </div>
 
       {/* Configuration */}
-      <div className="bg-gradient-to-br from-blue-500/10 to-purple-500/10 p-6 rounded-xl border border-blue-500/20">
+      <div className="bg-gradient-to-br from-primary/10 to-secondary/10 dark:from-primary/15 dark:to-secondary/15 p-6 rounded-xl border border-primary/20 dark:border-primary/30">
         <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-          <Info className="h-5 w-5 text-blue-600" />
+          <Info className="h-5 w-5 text-primary" />
           Your Configuration
         </h3>
         <div className="grid gap-4 md:grid-cols-3">
@@ -529,7 +529,7 @@ export default function ImportCoursesPage() {
           <div className="flex items-end">
             <button
               onClick={loadDefaultCourses}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
             >
               Reload Courses
             </button>
@@ -581,7 +581,7 @@ export default function ImportCoursesPage() {
                 </div>
                 <button
                   onClick={() => addCustomCourse(course)}
-                  className="px-3 py-1.5 bg-green-600 text-white rounded-md text-sm font-medium hover:bg-green-700"
+                  className="px-3 py-1.5 bg-success text-white rounded-md text-sm font-medium hover:bg-success/90"
                 >
                   Add
                 </button>
@@ -595,29 +595,29 @@ export default function ImportCoursesPage() {
       <div className="grid gap-4 md:grid-cols-3">
         <div className="bg-surface p-4 rounded-xl border border-border">
           <div className="text-sm text-foreground-secondary mb-1">Selected Courses</div>
-          <div className="text-3xl font-bold text-blue-600">{selectedCount}</div>
+          <div className="text-3xl font-bold text-primary">{selectedCount}</div>
         </div>
         <div className="bg-surface p-4 rounded-xl border border-border">
           <div className="text-sm text-foreground-secondary mb-1">Total Credits</div>
-          <div className="text-3xl font-bold text-purple-600">{totalCredits}</div>
+          <div className="text-3xl font-bold text-accent">{totalCredits}</div>
         </div>
         <div className="bg-surface p-4 rounded-xl border border-border">
           <div className="text-sm text-foreground-secondary mb-1">Semesters</div>
-          <div className="text-3xl font-bold text-pink-600">1-{currentSemester}</div>
+          <div className="text-3xl font-bold text-secondary">1-{currentSemester}</div>
         </div>
       </div>
 
       {/* Info Banner */}
-      <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-xl flex gap-3">
-        <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+      <div className="bg-warning/10 border border-warning/20 p-4 rounded-xl flex gap-3">
+        <AlertCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
         <div className="text-sm">
-          <p className="font-semibold text-yellow-900 dark:text-yellow-100">
+          <p className="font-semibold text-foreground">
             These are the standard courses for {branch} branch
           </p>
-          <p className="text-yellow-800 dark:text-yellow-200 mt-1">
+          <p className="text-foreground-secondary mt-1">
             Uncheck any courses you haven't taken. You can add grades optionally. Additional courses can be added later from "My Courses" page.
           </p>
-          <p className="text-yellow-800 dark:text-yellow-200 mt-2">
+          <p className="text-foreground-secondary mt-2">
             Selecting IC140 in a semester auto-checks IC102P in the other (they always pair across semesters). IC181 is semester-exclusive. IC Basket courses allow only one selection per semester.
           </p>
         </div>
@@ -651,9 +651,9 @@ export default function ImportCoursesPage() {
                       className="p-1 hover:bg-surface-hover rounded"
                     >
                       {semCourses.every((c) => c.selected) ? (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <CheckCircle className="h-5 w-5 text-success" />
                       ) : semCourses.some((c) => c.selected) ? (
-                        <Circle className="h-5 w-5 text-blue-600" />
+                        <Circle className="h-5 w-5 text-primary" />
                       ) : (
                         <Circle className="h-5 w-5 text-foreground-secondary" />
                       )}
@@ -676,7 +676,7 @@ export default function ImportCoursesPage() {
                   <div className="border-t border-border p-4 space-y-2">
                     {/* ICB basket header — shown once before first basket course */}
                     {semCourses.some((c) => c.category === "ICB") && (
-                      <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wide px-1 pt-1">
+                      <p className="text-xs font-semibold text-warning uppercase tracking-wide px-1 pt-1">
                         IC Basket — choose exactly one ↓
                       </p>
                     )}
@@ -684,10 +684,10 @@ export default function ImportCoursesPage() {
                       <div
                         key={`${course.code}-${course.semester}`}
                         className={`p-4 rounded-lg border transition-all ${
-                          course.selected
+                              course.selected
                             ? course.category === "ICB"
-                              ? "bg-orange-500/5 border-orange-500/40"
-                              : "bg-blue-500/5 border-blue-500/20"
+                              ? "bg-warning/5 border-warning/40"
+                              : "bg-primary/5 border-primary/20"
                             : "bg-background-secondary/60 border-border"
                         }`}
                       >
@@ -697,14 +697,14 @@ export default function ImportCoursesPage() {
                             className="mt-1"
                           >
                             {course.selected ? (
-                              <CheckCircle className="h-5 w-5 text-blue-600" />
+                              <CheckCircle className="h-5 w-5 text-primary" />
                             ) : (
                               <Circle className="h-5 w-5 text-foreground-secondary" />
                             )}
                           </button>
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <span className="font-mono text-sm font-semibold text-blue-600">
+                              <span className="font-mono text-sm font-semibold text-primary">
                                 {formatCourseCode(course.code)}
                               </span>
                               <span className="text-sm text-foreground">{course.name}</span>
@@ -712,8 +712,8 @@ export default function ImportCoursesPage() {
                             <div className="flex flex-wrap items-center gap-2 mb-2">
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                                 course.category === "ICB"
-                                  ? "bg-orange-500/10 text-orange-600"
-                                  : "bg-purple-500/10 text-purple-600"
+                                  ? "bg-warning/10 text-warning"
+                                  : "bg-primary/10 text-primary"
                               }`}>
                                 {course.category === "ICB" ? "IC Basket" : course.category}
                               </span>
@@ -753,7 +753,7 @@ export default function ImportCoursesPage() {
       </div>
 
       {/* Submit Button */}
-      <div className="sticky bottom-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 sm:p-6 shadow-2xl">
+      <div className="sticky bottom-[calc(1rem+env(safe-area-inset-bottom))] bg-gradient-to-r from-primary to-secondary rounded-xl p-4 sm:p-6 shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="text-white">
             <p className="text-sm opacity-90">Ready to import</p>
@@ -764,7 +764,7 @@ export default function ImportCoursesPage() {
           <button
             onClick={handleSubmit}
             disabled={loading || selectedCount === 0}
-            className="w-full sm:w-auto px-8 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full sm:w-auto px-8 py-3 bg-surface-elevated text-foreground rounded-lg font-semibold border border-white/10 hover:border-white/20 hover:bg-surface-hover hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {loading ? (
               <>

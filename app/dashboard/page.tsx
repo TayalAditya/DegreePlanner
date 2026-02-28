@@ -27,32 +27,32 @@ export default async function DashboardPage() {
       description: "Explore available courses and enroll",
       href: "/dashboard/courses",
       icon: BookOpen,
-      gradient: "from-blue-500 to-cyan-500",
-      bgGradient: "from-blue-500/10 to-cyan-500/10",
+      gradient: "from-info to-primary",
+      bgGradient: "from-info/10 to-primary/10",
     },
     {
       title: "View Programs",
       description: "Check your program requirements",
       href: "/dashboard/programs",
       icon: GraduationCap,
-      gradient: "from-purple-500 to-pink-500",
-      bgGradient: "from-purple-500/10 to-pink-500/10",
+      gradient: "from-primary to-secondary",
+      bgGradient: "from-primary/10 to-secondary/10",
     },
     {
       title: "Track Progress",
       description: "Monitor your academic journey",
       href: "/dashboard/progress",
       icon: TrendingUp,
-      gradient: "from-green-500 to-emerald-500",
-      bgGradient: "from-green-500/10 to-emerald-500/10",
+      gradient: "from-success to-accent",
+      bgGradient: "from-success/10 to-accent/10",
     },
     {
       title: "Plan Timetable",
       description: "Organize your class schedule",
       href: "/dashboard/timetable",
       icon: Calendar,
-      gradient: "from-orange-500 to-red-500",
-      bgGradient: "from-orange-500/10 to-red-500/10",
+      gradient: "from-warning to-error",
+      bgGradient: "from-warning/10 to-error/10",
     },
   ];
 
@@ -136,47 +136,47 @@ export default async function DashboardPage() {
 
       {/* Tips & Reminders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/10 rounded-xl border border-blue-500/20 p-6">
+        <div className="bg-gradient-to-br from-info/10 to-accent/10 rounded-xl border border-info/20 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-blue-500/20 rounded-lg flex items-center justify-center">
-              <Target className="w-5 h-5 text-blue-500" />
+            <div className="w-10 h-10 bg-info/20 rounded-lg flex items-center justify-center">
+              <Target className="w-5 h-5 text-info" />
             </div>
             <h3 className="font-semibold text-foreground">Academic Goals</h3>
           </div>
           <ul className="space-y-3">
             <li className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
               <span className="text-foreground-secondary">Complete 160 credits for degree</span>
             </li>
             <li className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+              <CheckCircle className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
               <span className="text-foreground-secondary">Maintain CGPA above 8.0 for honours</span>
             </li>
             <li className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+              <Clock className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
               <span className="text-foreground-secondary">Complete MTP in final year</span>
             </li>
           </ul>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl border border-purple-500/20 p-6">
+        <div className="bg-gradient-to-br from-primary/10 to-secondary/10 rounded-xl border border-primary/20 p-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center">
-              <Award className="w-5 h-5 text-purple-500" />
+            <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center">
+              <Award className="w-5 h-5 text-primary" />
             </div>
             <h3 className="font-semibold text-foreground">Quick Tips</h3>
           </div>
           <ul className="space-y-3">
             <li className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+              <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
               <span className="text-foreground-secondary">Plan your electives based on interests</span>
             </li>
             <li className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-pink-500 rounded-full mt-2 flex-shrink-0"></div>
+              <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></div>
               <span className="text-foreground-secondary">Check prerequisites before enrolling</span>
             </li>
             <li className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+              <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
               <span className="text-foreground-secondary">Track your credit distribution regularly</span>
             </li>
           </ul>

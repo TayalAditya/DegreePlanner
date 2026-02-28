@@ -79,15 +79,15 @@ interface ProgressData {
 
 // Color scheme for each category
 const categoryColors = {
-  IC: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400", bar: "bg-blue-500" },
-  IC_BASKET: { bg: "bg-cyan-500/10", text: "text-cyan-600 dark:text-cyan-400", bar: "bg-cyan-500" },
-  DC: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", bar: "bg-purple-500" },
-  DE: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400", bar: "bg-pink-500" },
-  FE: { bg: "bg-green-500/10", text: "text-green-600 dark:text-green-400", bar: "bg-green-500" },
-  HSS: { bg: "bg-orange-500/10", text: "text-orange-600 dark:text-orange-400", bar: "bg-orange-500" },
-  IKS: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", bar: "bg-amber-500" },
-  MTP: { bg: "bg-red-500/10", text: "text-red-600 dark:text-red-400", bar: "bg-red-500" },
-  ISTP: { bg: "bg-teal-500/10", text: "text-teal-600 dark:text-teal-400", bar: "bg-teal-500" },
+  IC: { bg: "bg-info/10", text: "text-info", bar: "bg-info" },
+  IC_BASKET: { bg: "bg-accent/10", text: "text-accent", bar: "bg-accent" },
+  DC: { bg: "bg-primary/10", text: "text-primary", bar: "bg-primary" },
+  DE: { bg: "bg-secondary/10", text: "text-secondary", bar: "bg-secondary" },
+  FE: { bg: "bg-success/10", text: "text-success", bar: "bg-success" },
+  HSS: { bg: "bg-warning/10", text: "text-warning", bar: "bg-warning" },
+  IKS: { bg: "bg-warning/10", text: "text-warning", bar: "bg-warning" },
+  MTP: { bg: "bg-error/10", text: "text-error", bar: "bg-error" },
+  ISTP: { bg: "bg-accent/10", text: "text-accent", bar: "bg-accent" },
 };
 
 const categoryLabels = {
@@ -535,8 +535,8 @@ export default function ProgressPage() {
       <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
         <div className="bg-surface rounded-lg border border-border p-3 sm:p-6">
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-green-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <CheckCircle className="w-4 h-4 sm:w-6 sm:h-6 text-green-500" />
+            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-success/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="w-4 h-4 sm:w-6 sm:h-6 text-success" />
             </div>
             <div>
               <p className="text-xs sm:text-sm text-foreground-secondary">Completed</p>
@@ -549,8 +549,8 @@ export default function ProgressPage() {
 
         <div className="bg-surface rounded-lg border border-border p-3 sm:p-6">
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-blue-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Clock className="w-4 h-4 sm:w-6 sm:h-6 text-blue-500" />
+            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-info/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Clock className="w-4 h-4 sm:w-6 sm:h-6 text-info" />
             </div>
             <div>
               <p className="text-xs sm:text-sm text-foreground-secondary">In Progress</p>
@@ -563,8 +563,8 @@ export default function ProgressPage() {
 
         <div className="bg-surface rounded-lg border border-border p-3 sm:p-6">
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-orange-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Target className="w-4 h-4 sm:w-6 sm:h-6 text-orange-500" />
+            <div className="w-8 h-8 sm:w-12 sm:h-12 bg-warning/10 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Target className="w-4 h-4 sm:w-6 sm:h-6 text-warning" />
             </div>
             <div>
               <p className="text-xs sm:text-sm text-foreground-secondary">Remaining</p>
@@ -601,7 +601,7 @@ export default function ProgressPage() {
                     </span>
                   </div>
                   <span className="text-foreground font-bold sm:text-right">
-                    {credits} {inProgress > 0 && <span className="text-blue-500">(+{inProgress})</span>}
+                    {credits} {inProgress > 0 && <span className="text-info">(+{inProgress})</span>}
                   </span>
                 </div>
                 <div className="w-full bg-border rounded-full h-2.5 overflow-hidden">
@@ -661,7 +661,7 @@ export default function ProgressPage() {
                       <p className="text-xs text-foreground-secondary">
                         {courses.length} courses • {completedCredits}
                         {inProgressCredits > 0 ? (
-                          <span className="text-blue-500"> (+{inProgressCredits})</span>
+                          <span className="text-info"> (+{inProgressCredits})</span>
                         ) : null}{" "}
                         credits{inProgressCredits > 0 ? ` • ${totalCredits} total` : ""}
                       </p>
@@ -686,8 +686,8 @@ export default function ProgressPage() {
                           const label = categoryLabels[c.category as CourseCategory];
                           const statusBadge =
                             c.status === "COMPLETED"
-                              ? "bg-green-500/10 text-green-600 dark:text-green-400"
-                              : "bg-blue-500/10 text-blue-600 dark:text-blue-400";
+                              ? "bg-success/10 text-success"
+                              : "bg-info/10 text-info";
                           const statusText =
                             c.status === "COMPLETED"
                               ? `Completed${c.grade ? ` (${c.grade})` : ""}`

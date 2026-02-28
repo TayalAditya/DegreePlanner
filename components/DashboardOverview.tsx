@@ -40,15 +40,15 @@ const categoryLabels = {
 } as const;
 
 const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: string }> = {
-  IC: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400" },
-  IC_BASKET: { bg: "bg-cyan-500/10", text: "text-cyan-600 dark:text-cyan-400" },
-  DC: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400" },
-  DE: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400" },
-  FE: { bg: "bg-green-500/10", text: "text-green-600 dark:text-green-400" },
-  HSS: { bg: "bg-orange-500/10", text: "text-orange-600 dark:text-orange-400" },
-  IKS: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400" },
-  MTP: { bg: "bg-red-500/10", text: "text-red-600 dark:text-red-400" },
-  ISTP: { bg: "bg-teal-500/10", text: "text-teal-600 dark:text-teal-400" },
+  IC: { bg: "bg-info/10", text: "text-info" },
+  IC_BASKET: { bg: "bg-accent/10", text: "text-accent" },
+  DC: { bg: "bg-primary/10", text: "text-primary" },
+  DE: { bg: "bg-secondary/10", text: "text-secondary" },
+  FE: { bg: "bg-success/10", text: "text-success" },
+  HSS: { bg: "bg-warning/10", text: "text-warning" },
+  IKS: { bg: "bg-warning/10", text: "text-warning" },
+  MTP: { bg: "bg-error/10", text: "text-error" },
+  ISTP: { bg: "bg-accent/10", text: "text-accent" },
 };
 
 export function DashboardOverview({ userId }: DashboardOverviewProps) {
