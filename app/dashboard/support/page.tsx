@@ -121,7 +121,7 @@ export default function SupportPage() {
   return (
     <div className="space-y-6">
       <div className="bg-surface rounded-2xl border border-border p-6 sm:p-8">
-        <h1 className="text-3xl font-bold text-foreground">Support & Feedback</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Support & Feedback</h1>
         <p className="text-foreground-secondary mt-2">
           Contact us, suggest improvements, or report issues — directly inside the app.
         </p>
@@ -139,7 +139,7 @@ export default function SupportPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">Type</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {TYPE_OPTIONS.map((opt) => {
                   const Icon = opt.icon;
                   const selected = opt.value === type;

@@ -99,14 +99,14 @@ export default async function DashboardPage() {
           <h2 className="text-xl sm:text-2xl font-bold text-foreground">Quick Actions</h2>
           <span className="text-xs sm:text-sm text-foreground-secondary hidden sm:block">Jump to what you need</span>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
               <Link
                 key={action.href}
                 href={action.href}
-                className="group relative overflow-hidden bg-surface rounded-xl border border-border p-4 sm:p-6 hover:border-primary transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 will-change-transform focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                className="group relative overflow-hidden bg-surface rounded-xl border border-border p-4 sm:p-6 hover:border-primary transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 will-change-transform focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 min-w-0"
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${action.bgGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
 
@@ -114,7 +114,7 @@ export default async function DashboardPage() {
                   <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br ${action.gradient} flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300`}>
                     <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   </div>
-                  <h3 className="font-semibold text-foreground text-sm sm:text-base mb-1 sm:mb-2 group-hover:text-primary transition-colors">
+                  <h3 className="font-semibold text-foreground text-sm sm:text-base mb-1 sm:mb-2 group-hover:text-primary transition-colors truncate">
                     {action.title}
                   </h3>
                   <p className="text-xs sm:text-sm text-foreground-secondary hidden sm:block mb-4">
