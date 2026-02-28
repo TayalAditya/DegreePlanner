@@ -11,13 +11,19 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      allowDangerousEmailAccountLinking: true, // Allow linking if user manually provides same email
     }),
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
-      if (!user.email) return false;
+      if (!user.email) {
+        console.log("❌ No email provided");
+        return false;
+      }
 
       console.log("🔐 Login attempt with email:", user.email);
+      console.log("Account provider:", account?.provider);
+      console.log("Profile:", profile?.email);
 
       // Check if user is approved by email (direct match)
       let approvedUser = await prisma.approvedUser.findUnique({
@@ -27,13 +33,10 @@ export const authOptions: NextAuthOptions = {
       console.log("Direct email match:", approvedUser ? "✅ Found" : "❌ Not found");
 
       // Fallback: look up by enrollmentId extracted from email prefix
-      // e.g. b23243@students.iitmandi.ac.in → enrollmentId = B23243
-      // Only allows emails that START with b23XXX
       if (!approvedUser) {
         const emailPrefix = user.email.split("@")[0].toUpperCase();
         console.log("Email prefix:", emailPrefix);
         
-        // Only match if email starts with B23 followed by digits
         const matches = emailPrefix.match(/^B23\d+$/i);
         console.log("Regex match:", matches ? "✅ Matches" : "❌ No match");
         
@@ -44,7 +47,6 @@ export const authOptions: NextAuthOptions = {
           });
           console.log("EnrollmentId lookup:", approvedUser ? "✅ Found" : "❌ Not found");
           
-          // If found by enrollmentId, update the ApprovedUser email to match Google email
           if (approvedUser) {
             await prisma.approvedUser.update({
               where: { enrollmentId: emailPrefix },
@@ -57,91 +59,82 @@ export const authOptions: NextAuthOptions = {
 
       if (!approvedUser) {
         console.log("❌ Login rejected: User not in approved list");
-        return "/auth/error?error=batch_not_supported";
+        return false; // Return false instead of redirect - let error page handle it
       }
 
       console.log("Approved user batch:", approvedUser.batch);
 
-      // Batch validation: Only Batch 2023 students allowed
+      // Batch validation
       if (approvedUser.batch && approvedUser.batch !== 2023) {
         console.log("❌ Login rejected: Batch", approvedUser.batch, "not supported");
-        return "/auth/error?error=batch_not_supported";
+        return false;
       }
 
       console.log("✅ Batch validation passed");
-
-      const isDocumentsAdmin = (approvedUser.enrollmentId || "").toUpperCase() === DOCS_ADMIN_ENROLLMENT_ID;
-
-      // Let PrismaAdapter handle account linking - just ensure user data is updated
-      const existingUser = await prisma.user.findUnique({
-        where: { email: user.email },
-      });
-
-      if (existingUser) {
-        const updates: any = {};
-
-        if (!existingUser.isApproved) {
-          updates.isApproved = true;
-          updates.enrollmentId = approvedUser.enrollmentId;
-          updates.department = approvedUser.department;
-          updates.branch = approvedUser.branch;
-          updates.batch = approvedUser.batch;
+      return true; // Allow the login
+    },
+    async jwt({ token, user, account }) {
+      // This runs after PrismaAdapter creates the user
+      if (user && user.email) {
+        console.log("📝 JWT callback - user created/found:", user.email);
+        
+        // Now update the user with approval data
+        let approvedUser = await prisma.approvedUser.findUnique({
+          where: { email: user.email },
+        });
+        
+        if (!approvedUser) {
+          const emailPrefix = user.email.split("@")[0].toUpperCase();
+          const matches = emailPrefix.match(/^B23\d+$/i);
+          if (matches) {
+            approvedUser = await prisma.approvedUser.findUnique({
+              where: { enrollmentId: emailPrefix },
+            });
+          }
         }
 
-        if (isDocumentsAdmin && existingUser.role !== "ADMIN") {
-          updates.role = "ADMIN";
-        }
-
-        if (Object.keys(updates).length > 0) {
+        if (approvedUser) {
+          const isDocumentsAdmin = (approvedUser.enrollmentId || "").toUpperCase() === DOCS_ADMIN_ENROLLMENT_ID;
+          
+          // Update the user with enrollment data
           await prisma.user.update({
             where: { email: user.email },
-            data: updates,
+            data: {
+              isApproved: true,
+              role: isDocumentsAdmin ? "ADMIN" : "STUDENT",
+              enrollmentId: approvedUser.enrollmentId,
+              department: approvedUser.department,
+              branch: approvedUser.branch,
+              batch: approvedUser.batch,
+            },
           });
-        }
-      } else {
-        // Create user (PrismaAdapter will link the account automatically)
-        await prisma.user.create({
-          data: {
-            email: user.email,
-            name: user.name || approvedUser.enrollmentId,
-            image: user.image,
-            isApproved: true,
-            role: isDocumentsAdmin ? "ADMIN" : "STUDENT",
-            enrollmentId: approvedUser.enrollmentId,
-            department: approvedUser.department,
-            branch: approvedUser.branch,
-            batch: approvedUser.batch,
-          },
-        });
-        console.log("✅ Created new user:", user.email);
-      }
+          console.log("✅ Updated user with enrollment data");
 
-      // Auto-enroll user in their branch program if not already enrolled
-      if (approvedUser.branch) {
-        const dbUser = await prisma.user.findUnique({ where: { email: user.email }, select: { id: true } });
-        if (dbUser) {
-          const program = await prisma.program.findUnique({ where: { code: approvedUser.branch } });
-          if (program) {
-            const alreadyEnrolled = await prisma.userProgram.findFirst({
-              where: { userId: dbUser.id, programId: program.id },
-            });
-            if (!alreadyEnrolled) {
-              await prisma.userProgram.create({
-                data: {
-                  userId: dbUser.id,
-                  programId: program.id,
-                  programType: "MAJOR",
-                  isPrimary: true,
-                  startSemester: 1,
-                  status: "ACTIVE",
-                },
+          // Auto-enroll in branch program
+          if (approvedUser.branch) {
+            const program = await prisma.program.findUnique({ where: { code: approvedUser.branch } });
+            if (program) {
+              const alreadyEnrolled = await prisma.userProgram.findFirst({
+                where: { userId: user.id, programId: program.id },
               });
+              if (!alreadyEnrolled) {
+                await prisma.userProgram.create({
+                  data: {
+                    userId: user.id,
+                    programId: program.id,
+                    programType: "MAJOR",
+                    isPrimary: true,
+                    startSemester: 1,
+                    status: "ACTIVE",
+                  },
+                });
+                console.log("✅ Auto-enrolled in program:", approvedUser.branch);
+              }
             }
           }
         }
       }
-
-      return true;
+      return token;
     },
     async session({ session, user }) {
       if (session.user) {
