@@ -41,6 +41,8 @@ model User {
   enrollments   CourseEnrollment[]
   timetableEntries TimetableEntry[]
   documents     Document[]
+  supportTickets SupportTicket[]
+  courseSuggestions CourseSuggestion[]
   accounts      Account[]
   sessions      Session[]
   
@@ -186,6 +188,7 @@ model Course {
   enrollments     CourseEnrollment[]
   timetableEntries TimetableEntry[]
   branchMappings  CourseBranchMapping[]
+  courseSuggestions CourseSuggestion[]
   
   @@index([code])
   @@index([department])
@@ -261,6 +264,36 @@ enum CourseCategoryType {
   INTERNSHIP      // Internship
   BACKLOG         // Cleared backlog (F/FS grades)
   NA              // Not Applicable
+}
+
+// When a student overrides a course-type/category, log it for admin review.
+// Note: `id` has no DB default in the existing migration, so Prisma generates it on create.
+model CourseSuggestion {
+  id                String   @id @default(cuid())
+  userId            String
+  courseId          String
+  suggestedCategory String
+  currentCategory   String
+  reason            String?
+  status            String   @default("PENDING")
+  reviewedBy        String?
+  reviewedAt        DateTime?
+
+  // Extra context (optional)
+  enrollmentId      String?
+  semester          Int?
+  year              Int?
+  term              Term?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course            Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
+
+  @@index([userId])
+  @@index([courseId])
+  @@index([status])
 }
 
 // Student course enrollments
@@ -428,6 +461,42 @@ enum VenueType {
   AUDITORIUM
   ONLINE
   OTHER
+}
+
+// Support & feedback (in-app contact / suggestions / issue reports)
+model SupportTicket {
+  id          String              @id @default(cuid())
+  userId      String
+  type        SupportTicketType
+  subject     String
+  message     String
+  pageUrl     String?
+  status      SupportTicketStatus @default(OPEN)
+  adminNote   String?
+
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum SupportTicketType {
+  CONTACT
+  SUGGESTION
+  ISSUE
+  FEEDBACK
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  CLOSED
 }
 
 // Document management
