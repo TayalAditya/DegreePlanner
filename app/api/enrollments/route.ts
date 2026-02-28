@@ -247,6 +247,22 @@ export async function POST(request: NextRequest) {
           ? EnrollmentStatus.COMPLETED
           : EnrollmentStatus.IN_PROGRESS;
 
+    const normalizedCourseCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const isDpIstp = normalizedCourseCode === "DP301P";
+    const isDpMtp = normalizedCourseCode === "DP498P" || normalizedCourseCode === "DP499P";
+
+    let finalCourseType: CourseType =
+      courseType && Object.values(CourseType).includes(courseType as CourseType)
+        ? (courseType as CourseType)
+        : CourseType.FREE_ELECTIVE;
+
+    // Special DP codes (always treated as ISTP/MTP)
+    if (isDpIstp) finalCourseType = CourseType.ISTP;
+    if (isDpMtp) finalCourseType = CourseType.MTP;
+
+    const finalIsPassFail =
+      finalCourseType === CourseType.FREE_ELECTIVE ? Boolean(isPassFail) : false;
+
     const enrollment = await prisma.courseEnrollment.create({
       data: {
         userId: session.user.id,
@@ -254,12 +270,12 @@ export async function POST(request: NextRequest) {
         semester,
         year,
         term,
-        courseType: courseType || CourseType.FREE_ELECTIVE,
+        courseType: finalCourseType,
         programId: finalProgramId,
         status: finalStatus,
         grade: grade || null,
-        isPassFail: isPassFail || false,
-        passFailCredits: isPassFail ? course.credits : 0,
+        isPassFail: finalIsPassFail,
+        passFailCredits: finalIsPassFail ? course.credits : 0,
         isInternship: isInternship || false,
         internshipType: isInternship ? internshipType : null,
         internshipDays: isInternship ? internshipDays : null,
@@ -270,7 +286,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Update user's P/F credits if applicable
-    if (isPassFail) {
+    if (finalIsPassFail) {
       await prisma.user.update({
         where: { id: session.user.id },
         data: {
