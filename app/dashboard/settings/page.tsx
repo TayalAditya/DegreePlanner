@@ -13,7 +13,7 @@ export default async function SettingsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Settings</h1>
         <p className="mt-2 text-foreground-secondary">
           Manage your profile and preferences
         </p>

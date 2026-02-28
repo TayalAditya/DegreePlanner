@@ -14,7 +14,7 @@ export default async function DocumentsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Documents & Forms</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Documents & Forms</h1>
         <p className="mt-2 text-foreground-secondary">
           Access important academic documents, forms, and procedures
         </p>

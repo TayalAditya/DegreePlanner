@@ -143,7 +143,7 @@ export default function InboxClient() {
       <div className="bg-surface rounded-2xl border border-border p-6 sm:p-8">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Admin Inbox</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admin Inbox</h1>
             <p className="text-foreground-secondary mt-2">
               Review support messages and course-type overrides.
             </p>
@@ -377,4 +377,3 @@ export default function InboxClient() {
     </div>
   );
 }
-
