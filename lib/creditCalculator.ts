@@ -392,6 +392,43 @@ export class CreditCalculator {
         return;
       }
 
+      // Apply prefix-based categorization (same as other components)
+      if (normalizedCode === "IC181") {
+        breakdown.core += credits; // IKS
+        return;
+      }
+      if (normalizedCode.startsWith("IC")) {
+        breakdown.core += credits;
+        return;
+      }
+      if (normalizedCode.startsWith("HS")) {
+        breakdown.core += credits; // HSS
+        return;
+      }
+      if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) {
+        breakdown.core += credits;
+        return;
+      }
+      if (normalizedCode.includes("MTP")) {
+        breakdown.mtp += credits;
+        return;
+      }
+      if (normalizedCode.includes("ISTP")) {
+        breakdown.istp += credits;
+        return;
+      }
+
+      // Branch-specific course patterns
+      if (branch === "CSE" && normalizedCode.startsWith("DS")) {
+        breakdown.de += credits;
+        return;
+      }
+      if (branch === "DSE" && normalizedCode.startsWith("CS")) {
+        breakdown.de += credits;
+        return;
+      }
+
+      // Fall back to courseType
       switch (enrollment.courseType) {
         case CourseType.CORE:
           breakdown.core += credits;
@@ -411,6 +448,8 @@ export class CreditCalculator {
         case CourseType.ISTP:
           breakdown.istp += credits;
           break;
+        default:
+          breakdown.core += credits; // Default to core (DC)
       }
     });
 
