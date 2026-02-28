@@ -53,6 +53,20 @@ export function CreditBreakdownCard({
       inProgress: progress.inProgress.freeElective,
       color: "emerald",
     },
+    {
+      name: "MTP",
+      completed: progress.completed.mtp,
+      required: progress.required.mtp,
+      inProgress: progress.inProgress.mtp,
+      color: "rose",
+    },
+    {
+      name: "ISTP",
+      completed: progress.completed.istp,
+      required: progress.required.istp,
+      inProgress: progress.inProgress.istp,
+      color: "teal",
+    },
   ].filter((cat) => cat.required > 0);
 
   const barClasses: Record<string, string> = {
@@ -60,6 +74,8 @@ export function CreditBreakdownCard({
     cyan: "bg-cyan-600 dark:bg-cyan-500",
     purple: "bg-purple-600 dark:bg-purple-500",
     emerald: "bg-emerald-600 dark:bg-emerald-500",
+    rose: "bg-rose-600 dark:bg-rose-500",
+    teal: "bg-teal-600 dark:bg-teal-500",
   };
 
   const getStatusIcon = (completed: number, required: number, inProgress: number) => {
