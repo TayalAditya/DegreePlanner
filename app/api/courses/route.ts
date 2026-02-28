@@ -85,10 +85,10 @@ export async function GET(req: NextRequest) {
         isActive: true,
         ...(searchTrimmed && {
           OR: [
-            { code: { contains: searchTrimmed, mode: "insensitive" } },
-            { name: { contains: searchTrimmed, mode: "insensitive" } },
+            { code: { contains: searchTrimmed, mode: "insensitive" as const } },
+            { name: { contains: searchTrimmed, mode: "insensitive" as const } },
             ...codeCandidates.map((candidate) => ({
-              code: { equals: candidate, mode: "insensitive" },
+              code: { equals: candidate, mode: "insensitive" as const },
             })),
           ],
         }),
