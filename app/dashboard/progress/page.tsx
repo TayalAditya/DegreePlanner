@@ -670,7 +670,7 @@ export default function ProgressPage() {
                   </summary>
 
                   <div className="px-4 pb-4 overflow-x-auto">
-                    <table className="min-w-full text-sm">
+                    <table className="min-w-[640px] w-full text-sm">
                       <thead className="text-foreground-secondary">
                         <tr className="border-b border-border">
                           <th className="py-2 pr-4 text-left whitespace-nowrap">Code</th>

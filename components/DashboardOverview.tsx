@@ -348,7 +348,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
               </a>
             </div>
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 min-w-0">
               {(Object.keys(categoryLabels) as (keyof typeof categoryLabels)[])
                 .filter((key) => (currentSemesterBreakdown[key]?.count || 0) > 0)
                 .map((key) => {
@@ -358,10 +358,10 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
                     <span
                       key={key}
                       title={categoryLabels[key]}
-                      className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}
+                      className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg} max-w-full`}
                     >
-                      <span className={`font-semibold text-xs ${colors.text}`}>{key}</span>
-                      <span className="text-xs text-foreground-secondary">
+                      <span className={`font-semibold text-xs ${colors.text} truncate`}>{key}</span>
+                      <span className="text-xs text-foreground-secondary whitespace-nowrap">
                         {meta.credits}cr ({meta.count})
                       </span>
                     </span>
@@ -370,7 +370,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
+              <table className="min-w-[640px] w-full text-sm">
                 <thead className="text-foreground-secondary">
                   <tr className="border-b border-border">
                     <th className="py-2 pr-4 text-left whitespace-nowrap">Code</th>
