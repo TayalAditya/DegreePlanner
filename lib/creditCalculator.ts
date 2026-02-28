@@ -454,8 +454,10 @@ export class CreditCalculator {
             return;
           case "INTERNSHIP":
           case "BACKLOG":
-          case "NA":
             break;
+          case "NA":
+            breakdown.freeElective += credits;
+            return;
         }
       }
 

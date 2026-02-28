@@ -129,6 +129,10 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       if (mapping && mapping.courseCategory in categoryCredits) {
         return mapping.courseCategory as keyof typeof categoryCredits;
       }
+
+      if (mapping?.courseCategory === "NA") {
+        return "FE";
+      }
     }
 
     if (normalizedCode === "IC181") return "IKS";
