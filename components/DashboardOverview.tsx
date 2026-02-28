@@ -192,18 +192,21 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
     if (isICB1 || isICB2) return "IC_BASKET";
 
-    // Branch-specific course patterns
-    if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return "DE";
-    if (userSettings?.branch === "DSE" && normalizedCode.startsWith("CS")) return "DE";
-
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("HS")) return "HSS";
     if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
     if (normalizedCode.includes("MTP")) return "MTP";
     if (normalizedCode.includes("ISTP")) return "ISTP";
+    
+    // Check courseType BEFORE branch-specific patterns
     if (enrollment.courseType === "DE") return "DE";
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
+    
+    // Branch-specific course patterns (only if no explicit courseType)
+    if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return "DE";
+    if (userSettings?.branch === "DSE" && normalizedCode.startsWith("CS")) return "DE";
+
     return "DC";
   };
 

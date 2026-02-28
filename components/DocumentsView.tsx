@@ -614,7 +614,7 @@ function AddLinkModal({
           <div>
             <h2 className="text-lg font-bold text-foreground">Add Link / Embed</h2>
             <p className="text-sm text-foreground-secondary mt-1">
-              Paste a Google Drive folder link or a Canva presentation link. We'll try to embed it automatically.
+              Paste a Google Drive file/folder link, a YouTube link, or a Canva presentation link. We&apos;ll try to embed it automatically.
             </p>
           </div>
           <button
