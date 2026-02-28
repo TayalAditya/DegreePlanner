@@ -45,6 +45,8 @@ export default function ImportCoursesPage() {
   const [branch, setBranch] = useState("CSE");
   const [geSubBranch, setGeSubBranch] = useState("GERAI");
   const [currentSemester, setCurrentSemester] = useState(6);
+  const [doingMTP, setDoingMTP] = useState(true);
+  const [doingISTP, setDoingISTP] = useState(true);
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
   const [importedCourseKeys, setImportedCourseKeys] = useState<Set<string>>(new Set());
   const [catalogIndex, setCatalogIndex] = useState<Record<string, CatalogCourse>>({});
@@ -67,7 +69,7 @@ export default function ImportCoursesPage() {
 
   useEffect(() => {
     loadDefaultCourses();
-  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex]);
+  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingISTP]);
 
   useEffect(() => {
     setCustomSemester(currentSemester);
@@ -79,6 +81,8 @@ export default function ImportCoursesPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.branch) setBranch(data.branch);
+        setDoingMTP(data.doingMTP ?? true);
+        setDoingISTP(data.doingISTP ?? true);
       }
     } catch (error) {
       console.error("Failed to load settings:", error);
@@ -139,14 +143,33 @@ export default function ImportCoursesPage() {
     const normalize = (code: string) => code.toUpperCase().replace(/[\s-]/g, "");
     // ICB basket + mixed-sem courses start unchecked — user must pick manually
     const MANUAL_PICK_CODES = ["IC140", "IC102P", "IC181"];
-    // ISTP/MTP courses are auto-selected for semester 6+ (all branches have them)
-    const ISTP_MTP_CODES = ["DP 301P", "DP 498P", "DP 499P"];
+    // ISTP/MTP courses
+    const ISTP_CODES = ["DP 301P", "DP301P"];
+    const MTP_CODES = ["DP 498P", "DP 499P", "DP498P", "DP499P"];
+    
     const coursesWithSelection = resolvedCourses
-      .filter((course) => !importedCourseKeys.has(`${normalize(course.code)}|${course.semester}`))
-      .map((course) => ({
-      ...course,
-      selected: (course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code)) || ISTP_MTP_CODES.includes(course.code),
-    }));
+      .filter((course) => {
+        const normalizedCode = normalize(course.code);
+        // Filter out ISTP if user disabled it
+        if (!doingISTP && ISTP_CODES.some(code => normalize(code) === normalizedCode)) {
+          return false;
+        }
+        // Filter out MTP if user disabled it
+        if (!doingMTP && MTP_CODES.some(code => normalize(code) === normalizedCode)) {
+          return false;
+        }
+        // Filter out already imported courses
+        return !importedCourseKeys.has(`${normalizedCode}|${course.semester}`);
+      })
+      .map((course) => {
+        const normalizedCode = normalize(course.code);
+        const isISTP = ISTP_CODES.some(code => normalize(code) === normalizedCode);
+        const isMTP = MTP_CODES.some(code => normalize(code) === normalizedCode);
+        return {
+          ...course,
+          selected: (course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code)) || isISTP || isMTP,
+        };
+      });
     setCourses(coursesWithSelection);
   };
 
