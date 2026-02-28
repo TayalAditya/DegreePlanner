@@ -4,14 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Mail, BookOpen, Save, Bug, Lightbulb } from "lucide-react";
+import { User, Mail, BookOpen, Save, Bug, Lightbulb, Palette, Check } from "lucide-react";
 import { getAllBranches } from "@/lib/branches";
+import { useTheme } from "./ThemeProvider";
 
 interface SettingsFormProps {
   user: any;
 }
 
 export function SettingsForm({ user }: SettingsFormProps) {
+  const { palette, setPalette } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const branches = getAllBranches();
@@ -26,6 +28,13 @@ export function SettingsForm({ user }: SettingsFormProps) {
   });
 
   const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "";
+
+  const paletteOptions = [
+    { value: "default" as const, label: "Default", swatches: ["#6366f1", "#ec4899", "#14b8a6"] },
+    { value: "ocean" as const, label: "Ocean", swatches: ["#0284c7", "#06b6d4", "#14b8a6"] },
+    { value: "sunset" as const, label: "Sunset", swatches: ["#f97316", "#db2777", "#8b5cf6"] },
+    { value: "forest" as const, label: "Forest", swatches: ["#16a34a", "#84cc16", "#14b8a6"] },
+  ];
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -73,6 +82,55 @@ export function SettingsForm({ user }: SettingsFormProps) {
   return (
     <div className="max-w-2xl mx-auto w-full">
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Appearance */}
+        <div className="bg-surface dark:bg-surface rounded-lg border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-1 flex items-center gap-2">
+            <Palette className="w-4 h-4" />
+            Appearance
+          </h3>
+          <p className="text-sm text-foreground-secondary mb-4">
+            Choose an accent palette (applies across the app).
+          </p>
+
+          <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-3">
+            {paletteOptions.map((opt) => {
+              const selected = palette === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setPalette(opt.value)}
+                  aria-pressed={selected}
+                  className={`text-left rounded-xl border px-3 py-3 transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+                    selected
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-background hover:bg-surface-hover"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-foreground">{opt.label}</p>
+                    {selected && <Check className="w-4 h-4 text-primary" />}
+                  </div>
+                  <div className="flex items-center gap-2 mt-2">
+                    {opt.swatches.map((c) => (
+                      <span
+                        key={c}
+                        className="w-3 h-3 rounded-full border border-border"
+                        style={{ backgroundColor: c }}
+                        aria-hidden="true"
+                      />
+                    ))}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="mt-3 text-xs text-foreground-secondary">
+            Tip: You can also cycle palettes from the theme button in the sidebar.
+          </p>
+        </div>
+
         {/* Personal Information */}
         <div className="bg-surface dark:bg-surface rounded-lg border border-border p-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">
@@ -313,7 +371,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
         </div>
 
         {/* Save Button */}
-        <div className="flex items-center justify-end gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3">
           {updateMutation.isError && (
             <p className="text-sm text-red-600 dark:text-red-400">
               Failed to update settings. Please try again.
@@ -327,7 +385,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
           <button
             type="submit"
             disabled={updateMutation.isPending}
-            className="px-6 py-2 bg-primary text-white rounded-md font-medium hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="w-full sm:w-auto px-6 py-2 bg-primary text-white rounded-md font-medium hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             <Save className="w-4 h-4" />
             {updateMutation.isPending ? "Saving..." : "Save Changes"}
