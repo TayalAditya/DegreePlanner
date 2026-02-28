@@ -143,55 +143,55 @@
 
 /* Dark mode - Rich, deep colors with excellent contrast */
 .dark {
-  /* Backgrounds - True dark with depth */
-  --background: #0f172a;
-  --background-rgb: 15 23 42;
-  --background-secondary: #1e293b;
-  --background-secondary-rgb: 30 41 59;
-  --surface: #1e293b;
-  --surface-rgb: 30 41 59;
-  --surface-elevated: #334155;
-  --surface-elevated-rgb: 51 65 85;
-  --surface-hover: #334155;
-  --surface-hover-rgb: 51 65 85;
+  /* Backgrounds - AMOLED-first (true black + subtle elevation) */
+  --background: #000000;
+  --background-rgb: 0 0 0;
+  --background-secondary: #0a0a0a;
+  --background-secondary-rgb: 10 10 10;
+  --surface: #0f0f0f;
+  --surface-rgb: 15 15 15;
+  --surface-elevated: #161616;
+  --surface-elevated-rgb: 22 22 22;
+  --surface-hover: #1e1e1e;
+  --surface-hover-rgb: 30 30 30;
   
-  /* Text - Excellent readability */
-  --foreground: #f1f5f9;
-  --foreground-rgb: 241 245 249;
-  --foreground-secondary: #cbd5e1;
-  --foreground-secondary-rgb: 203 213 225;
-  --foreground-muted: #64748b;
-  --foreground-muted-rgb: 100 116 139;
+  /* Text - Neutral, high-contrast */
+  --foreground: #fafafa;
+  --foreground-rgb: 250 250 250;
+  --foreground-secondary: #a1a1aa;
+  --foreground-secondary-rgb: 161 161 170;
+  --foreground-muted: #71717a;
+  --foreground-muted-rgb: 113 113 122;
   
   /* Borders & Dividers */
-  --border: #334155;
-  --border-rgb: 51 65 85;
-  --border-strong: #475569;
-  --border-strong-rgb: 71 85 105;
+  --border: #2d2d2d;
+  --border-rgb: 45 45 45;
+  --border-strong: #3a3a3a;
+  --border-strong-rgb: 58 58 58;
   
-  /* Brand Colors - Vibrant and eye-catching on dark */
-  --primary: #818cf8;        /* Lighter indigo for dark mode */
-  --primary-rgb: 129 140 248;
-  --primary-hover: #a5b4fc;
-  --primary-hover-rgb: 165 180 252;
-  --primary-light: #312e81;
-  --primary-light-rgb: 49 46 129;
+  /* Brand Colors - Saturated but not neon */
+  --primary: #6366f1;        /* Indigo */
+  --primary-rgb: 99 102 241;
+  --primary-hover: #818cf8;
+  --primary-hover-rgb: 129 140 248;
+  --primary-light: #1e1b4b;
+  --primary-light-rgb: 30 27 75;
   --primary-foreground: #ffffff;
   --primary-foreground-rgb: 255 255 255;
   
-  --secondary: #f472b6;      /* Lighter pink */
-  --secondary-rgb: 244 114 182;
-  --secondary-hover: #f9a8d4;
-  --secondary-hover-rgb: 249 168 212;
-  --secondary-light: #831843;
-  --secondary-light-rgb: 131 24 67;
+  --secondary: #db2777;      /* Deep pink */
+  --secondary-rgb: 219 39 119;
+  --secondary-hover: #ec4899;
+  --secondary-hover-rgb: 236 72 153;
+  --secondary-light: #2a0a18;
+  --secondary-light-rgb: 42 10 24;
   
-  --accent: #2dd4bf;         /* Lighter teal */
-  --accent-rgb: 45 212 191;
-  --accent-hover: #5eead4;
-  --accent-hover-rgb: 94 234 212;
-  --accent-light: #134e4a;
-  --accent-light-rgb: 19 78 74;
+  --accent: #14b8a6;         /* Teal */
+  --accent-rgb: 20 184 166;
+  --accent-hover: #2dd4bf;
+  --accent-hover-rgb: 45 212 191;
+  --accent-light: #042f2e;
+  --accent-light-rgb: 4 47 46;
   
   /* Semantic Colors */
   --success: #34d399;
@@ -212,20 +212,20 @@
   --info-light-rgb: 30 58 138;
   
   /* Interactive States */
-  --hover: #334155;
-  --hover-rgb: 51 65 85;
-  --active: #475569;
-  --active-rgb: 71 85 105;
-  --focus-ring: 0 0 0 3px rgba(129, 140, 248, 0.2);
+  --hover: #141414;
+  --hover-rgb: 20 20 20;
+  --active: #262626;
+  --active-rgb: 38 38 38;
+  --focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.25);
   
-  /* Shadows - Deeper for dark mode */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.5);
+  /* Shadows - Subtle lift on black */
+  --shadow-sm: 0 1px 0 0 rgba(255, 255, 255, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.7);
+  --shadow-md: 0 1px 0 0 rgba(255, 255, 255, 0.04), 0 8px 24px -8px rgba(0, 0, 0, 0.9);
+  --shadow-lg: 0 1px 0 0 rgba(255, 255, 255, 0.05), 0 16px 48px -16px rgba(0, 0, 0, 0.92);
+  --shadow-xl: 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 24px 72px -24px rgba(0, 0, 0, 0.95);
   
   /* Gradients - Vibrant on dark */
-  --gradient-primary: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%);
+  --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #db2777 100%);
   --gradient-success: linear-gradient(135deg, #34d399 0%, #10b981 100%);
   --gradient-warning: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   --gradient-info: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
