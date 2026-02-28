@@ -105,42 +105,42 @@ export async function POST(request: NextRequest) {
 
     console.log("Creating enrollment with semester:", semester, "type:", typeof semester);
 
-    // If no programId provided, get user's primary program
-    let finalProgramId = programId;
-    if (!finalProgramId) {
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: {
-          branch: true,
-          programs: {
-            where: { isPrimary: true },
-            select: { programId: true },
-          },
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        branch: true,
+        enrollmentId: true,
+        programs: {
+          where: { isPrimary: true },
+          select: { programId: true },
         },
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // If no programId provided, use user's primary program (or auto-enroll based on branch)
+    let finalProgramId = programId || user.programs[0]?.programId || null;
+
+    if (!finalProgramId && user.branch) {
+      const program = await prisma.program.findUnique({
+        where: { code: user.branch },
       });
 
-      // Get from existing primary program
-      finalProgramId = user?.programs[0]?.programId;
-
-      // Or auto-enroll based on branch
-      if (!finalProgramId && user?.branch) {
-        const program = await prisma.program.findUnique({
-          where: { code: user.branch },
+      if (program) {
+        const userProgram = await prisma.userProgram.create({
+          data: {
+            userId: session.user.id,
+            programId: program.id,
+            programType: "MAJOR",
+            isPrimary: true,
+            startSemester: 1,
+            status: "ACTIVE",
+          },
         });
-
-        if (program) {
-          const userProgram = await prisma.userProgram.create({
-            data: {
-              userId: session.user.id,
-              programId: program.id,
-              programType: "MAJOR",
-              isPrimary: true,
-              startSemester: 1,
-              status: "ACTIVE",
-            },
-          });
-          finalProgramId = userProgram.programId;
-        }
+        finalProgramId = userProgram.programId;
       }
     }
 
@@ -284,6 +284,81 @@ export async function POST(request: NextRequest) {
         course: true,
       },
     });
+
+    // If student overrides the inferred course type, log it for admin review.
+    // NOTE: This is not blocking logic, it's only an audit trail.
+    if (user.branch && !isDpIstp && !isDpMtp) {
+      const candidates: string[] = [user.branch];
+      if (user.branch === "CSE") candidates.push("CS");
+      if (user.branch === "CS") candidates.push("CSE");
+      if (user.branch === "DSE") candidates.push("DS");
+      if (user.branch === "DS") candidates.push("DSE");
+      if (user.branch === "MSE") candidates.push("MS");
+      if (user.branch === "MS") candidates.push("MSE");
+      if (user.branch === "MEVLSI") candidates.push("VL");
+      if (user.branch === "VL") candidates.push("MEVLSI");
+      if (user.branch === "BSCS") candidates.push("BS", "CH");
+      if (user.branch === "BS") candidates.push("BSCS", "CH");
+      if (user.branch === "BE") candidates.push("BIO");
+      if (user.branch === "BIO") candidates.push("BE");
+      candidates.push("COMMON");
+
+      const uniqueCandidates = Array.from(new Set(candidates.filter(Boolean)));
+      const mappings = await prisma.courseBranchMapping.findMany({
+        where: {
+          courseId,
+          branch: { in: uniqueCandidates },
+        },
+        select: {
+          branch: true,
+          courseCategory: true,
+        },
+      });
+
+      const pickMapping = () => {
+        for (const b of uniqueCandidates) {
+          const m = mappings.find((x) => x.branch === b);
+          if (m) return m;
+        }
+        return null;
+      };
+
+      const mapping = pickMapping();
+      if (mapping?.courseCategory) {
+        const expectedType = (() => {
+          switch (mapping.courseCategory) {
+            case "DE":
+              return CourseType.DE;
+            case "FE":
+            case "NA":
+            case "INTERNSHIP":
+              return CourseType.FREE_ELECTIVE;
+            case "MTP":
+              return CourseType.MTP;
+            case "ISTP":
+              return CourseType.ISTP;
+            default:
+              return CourseType.CORE;
+          }
+        })();
+
+        if (expectedType !== finalCourseType) {
+          await prisma.courseSuggestion.create({
+            data: {
+              userId: session.user.id,
+              courseId,
+              suggestedCategory: finalCourseType,
+              currentCategory: expectedType,
+              status: "PENDING",
+              enrollmentId: enrollment.id,
+              semester,
+              year,
+              term,
+            },
+          });
+        }
+      }
+    }
 
     // Update user's P/F credits if applicable
     if (finalIsPassFail) {

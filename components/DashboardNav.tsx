@@ -16,7 +16,9 @@ import {
   FileText,
   GitBranch,
   Info,
-  Download
+  Download,
+  LifeBuoy,
+  Inbox
 } from "lucide-react";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
@@ -45,11 +47,13 @@ export function DashboardNav({ user }: DashboardNavProps) {
     { name: "Progress", href: "/dashboard/progress", icon: BarChart3 },
     { name: "Documents", href: "/dashboard/documents", icon: FileText },
     { name: "Academics", href: "/dashboard/academics", icon: Info },
+    { name: "Support", href: "/dashboard/support", icon: LifeBuoy },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
   const adminNavigation = [
     { name: "Course Mappings", href: "/dashboard/course-mappings", icon: GitBranch },
+    { name: "Inbox", href: "/dashboard/inbox", icon: Inbox },
   ];
 
   const allNavigation = user.role === "ADMIN"
