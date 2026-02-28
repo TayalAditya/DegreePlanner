@@ -13,7 +13,7 @@ export default async function TimetablePage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">Timetable</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Timetable</h1>
         <p className="mt-2 text-foreground-secondary">
           Manage your class schedule and venues
         </p>
