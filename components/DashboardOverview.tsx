@@ -176,6 +176,8 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     if (normalizedCode.includes("MTP")) return "MTP";
     if (normalizedCode.includes("ISTP")) return "ISTP";
 
+    if (enrollment.courseType === "MTP") return "MTP";
+    if (enrollment.courseType === "ISTP") return "ISTP";
     if (enrollment.courseType === "DE") return "DE";
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     return "DC";
