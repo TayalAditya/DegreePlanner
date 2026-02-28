@@ -151,16 +151,39 @@ export default function ImportCoursesPage() {
   };
 
   const searchCatalogCourses = async () => {
-    if (!customQuery.trim()) return;
+    const query = customQuery.trim();
+    if (!query) return;
+
+    const normalizeCourseCodeForSearch = (text: string) =>
+      text.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const queryLower = query.toLowerCase();
+    const queryCode = normalizeCourseCodeForSearch(query);
+
     setCustomLoading(true);
     try {
-      const res = await fetch(`/api/courses?search=${encodeURIComponent(customQuery.trim())}`);
-      if (res.ok) {
-        const data: CatalogCourse[] = await res.json();
-        setCustomResults(data.slice(0, 8));
-      } else {
-        setCustomResults([]);
+      // Prefer local search (handles IC112 vs IC-112, etc.) because we already load the catalog once.
+      if (catalogCourses.length > 0) {
+        const results = catalogCourses.filter((c) => {
+          const codeNorm = normalizeCourseCodeForSearch(c.code);
+          return (
+            (queryCode && codeNorm.includes(queryCode)) ||
+            c.code.toLowerCase().includes(queryLower) ||
+            c.name.toLowerCase().includes(queryLower)
+          );
+        });
+        setCustomResults(results.slice(0, 8));
+        return;
       }
+
+      // Fallback: server-side search
+      const res = await fetch(`/api/courses?search=${encodeURIComponent(query)}`);
+      if (!res.ok) {
+        setCustomResults([]);
+        return;
+      }
+
+      const data: CatalogCourse[] = await res.json();
+      setCustomResults(data.slice(0, 8));
     } catch (error) {
       console.error("Failed to search courses:", error);
       setCustomResults([]);
