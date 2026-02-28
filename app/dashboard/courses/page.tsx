@@ -528,11 +528,11 @@ export default function CoursesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-700 rounded-2xl p-8 shadow-2xl">
+      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-700 rounded-2xl p-6 sm:p-8 shadow-2xl">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
         <div className="relative z-10">
-          <h1 className="text-4xl font-bold text-white mb-2">Courses</h1>
-          <p className="text-white/90 text-lg">
+          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">Courses</h1>
+          <p className="text-white/90 text-sm sm:text-lg">
             Manage your enrollments and explore the course catalog
           </p>
         </div>
@@ -578,14 +578,14 @@ export default function CoursesPage() {
       </div>
 
       {/* Category Breakdown */}
-      {enrollments.length > 0 && (
-        <div className="bg-surface rounded-lg border border-border p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Credits by Category</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {Object.entries(creditsByCategory)
-              .filter(([_, credits]) => credits > 0)
-              .map(([category, credits]) => {
-                const colors = categoryColors[category as keyof typeof categoryColors];
+          {enrollments.length > 0 && (
+          <div className="bg-surface rounded-lg border border-border p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Credits by Category</h3>
+            <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {Object.entries(creditsByCategory)
+                .filter(([_, credits]) => credits > 0)
+                .map(([category, credits]) => {
+                  const colors = categoryColors[category as keyof typeof categoryColors];
                 const labels: Record<string, string> = {
                   IC: "Institute Core",
                   IC_BASKET: "IC Basket",
@@ -1092,14 +1092,14 @@ export default function CoursesPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-surface rounded-2xl p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              className="bg-surface rounded-2xl p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
             >
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h2 className="text-3xl font-bold text-foreground mb-2">
+                  <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 break-all sm:break-normal">
                     {formatCourseCode(selectedCourse.code)}
                   </h2>
-                  <p className="text-xl text-foreground-secondary">
+                  <p className="text-base sm:text-xl text-foreground-secondary">
                     {selectedCourse.name}
                   </p>
                 </div>
@@ -1111,7 +1111,7 @@ export default function CoursesPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <div className="bg-surface-hover rounded-lg p-4">
                   <p className="text-sm text-foreground-secondary mb-1">
                     Credits
@@ -1161,13 +1161,13 @@ export default function CoursesPage() {
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(selectedCourse.code);
                     showToast("success", "Course code copied!");
                   }}
-                  className="flex-1 px-6 py-3 border-2 border-border text-foreground rounded-lg hover:bg-surface-hover transition-all font-medium"
+                  className="w-full sm:flex-1 px-6 py-3 border-2 border-border text-foreground rounded-lg hover:bg-surface-hover transition-all font-medium"
                 >
                   Copy Code
                 </button>
@@ -1177,7 +1177,7 @@ export default function CoursesPage() {
                       setSelectedCourse(null);
                       handleAddCourse(selectedCourse);
                     }}
-                    className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all font-medium flex items-center justify-center gap-2"
+                    className="w-full sm:flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all font-medium flex items-center justify-center gap-2"
                   >
                     <Plus className="w-5 h-5" />
                     Add Course
@@ -1205,7 +1205,7 @@ export default function CoursesPage() {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-surface rounded-2xl p-8 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto mt-[0.8vh]"
+              className="bg-surface rounded-2xl p-4 sm:p-8 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto mt-[0.8vh]"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-foreground">Add Course</h2>
