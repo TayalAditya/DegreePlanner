@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { GraduationCap, ChevronDown } from "lucide-react";
+import { ChevronDown, GraduationCap } from "lucide-react";
 import { MINORS, type MinorDefinition, type MinorRequirementGroup } from "@/lib/minors";
 import { formatCourseCode } from "@/lib/utils";
 
@@ -54,7 +54,8 @@ type MinorProgressSummary = {
 
 const STORAGE_KEYS = {
   enabled: "degreePlanner.minorPlanner.enabled",
-  minorCode: "degreePlanner.minorPlanner.code",
+  minorCodes: "degreePlanner.minorPlanner.codes",
+  legacyMinorCode: "degreePlanner.minorPlanner.code",
 } as const;
 
 function isPassingCompletion(enrollment: EnrollmentLike): boolean {
@@ -103,15 +104,16 @@ function normalizeGroupCodes(group: MinorRequirementGroup): string[] {
 }
 
 function formatCodeList(codes: string[], limit = 6): string {
-  if (codes.length === 0) return "—";
+  if (codes.length === 0) return "\u2014";
   const shown = codes.slice(0, limit);
   const suffix = codes.length > limit ? ` (+${codes.length - limit} more)` : "";
   return `${shown.join(", ")}${suffix}`;
 }
 
-function computeMinorProgress(minor: MinorDefinition, enrollments: EnrollmentLike[]): MinorProgressSummary {
-  const courseStateByCode = buildCourseStateByCode(enrollments);
-
+function computeMinorProgress(
+  minor: MinorDefinition,
+  courseStateByCode: Map<string, CourseState>
+): MinorProgressSummary {
   const groups: GroupProgress[] = minor.groups.map((group) => {
     const codes = normalizeGroupCodes(group);
     const isConfigMissing = codes.length === 0;
@@ -156,14 +158,25 @@ function computeMinorProgress(minor: MinorDefinition, enrollments: EnrollmentLik
     0
   );
   const inProgressCourses = completionGroups.reduce(
-    (sum, g) => sum + Math.min(g.group.requiredCount - g.countedCompletedCodes.length, g.countedInProgressCodes.length),
+    (sum, g) =>
+      sum +
+      Math.min(
+        g.group.requiredCount - g.countedCompletedCodes.length,
+        g.countedInProgressCodes.length
+      ),
     0
   );
   const coveredCourses = completedCourses + inProgressCourses;
   const remainingCourses = Math.max(0, requiredCourses - coveredCourses);
 
-  const countedCompletedCredits = completionGroups.reduce((sum, g) => sum + g.countedCompletedCredits, 0);
-  const countedInProgressCredits = completionGroups.reduce((sum, g) => sum + g.countedInProgressCredits, 0);
+  const countedCompletedCredits = completionGroups.reduce(
+    (sum, g) => sum + g.countedCompletedCredits,
+    0
+  );
+  const countedInProgressCredits = completionGroups.reduce(
+    (sum, g) => sum + g.countedInProgressCredits,
+    0
+  );
 
   return {
     minor,
@@ -180,16 +193,34 @@ function computeMinorProgress(minor: MinorDefinition, enrollments: EnrollmentLik
 
 export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlannerCardProps) {
   const [enabled, setEnabled] = useState(false);
-  const [minorCode, setMinorCode] = useState<string>(MINORS[0]?.code ?? "");
+  const [selectedMinorCodes, setSelectedMinorCodes] = useState<string[]>(() =>
+    MINORS[0]?.code ? [MINORS[0].code] : []
+  );
+
+  const availableMinors = useMemo(() => {
+    return [...MINORS].sort((a, b) => a.name.localeCompare(b.name));
+  }, []);
 
   useEffect(() => {
     try {
       const storedEnabled = localStorage.getItem(STORAGE_KEYS.enabled);
       if (storedEnabled !== null) setEnabled(storedEnabled === "true");
 
-      const storedCode = localStorage.getItem(STORAGE_KEYS.minorCode);
-      if (storedCode && MINORS.some((m) => m.code === storedCode)) {
-        setMinorCode(storedCode);
+      const storedCodesRaw = localStorage.getItem(STORAGE_KEYS.minorCodes);
+      if (storedCodesRaw) {
+        const parsed = JSON.parse(storedCodesRaw);
+        if (Array.isArray(parsed)) {
+          const codes = parsed
+            .map((c) => String(c))
+            .filter((c) => MINORS.some((m) => m.code === c));
+          setSelectedMinorCodes(Array.from(new Set(codes)));
+          return;
+        }
+      }
+
+      const legacy = localStorage.getItem(STORAGE_KEYS.legacyMinorCode);
+      if (legacy && MINORS.some((m) => m.code === legacy)) {
+        setSelectedMinorCodes([legacy]);
       }
     } catch {
       // ignore
@@ -199,20 +230,32 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.enabled, String(enabled));
-      localStorage.setItem(STORAGE_KEYS.minorCode, minorCode);
+      localStorage.setItem(STORAGE_KEYS.minorCodes, JSON.stringify(selectedMinorCodes));
     } catch {
       // ignore
     }
-  }, [enabled, minorCode]);
+  }, [enabled, selectedMinorCodes]);
 
-  const selectedMinor = useMemo(() => {
-    return MINORS.find((m) => m.code === minorCode) ?? MINORS[0];
-  }, [minorCode]);
+  const courseStateByCode = useMemo(() => buildCourseStateByCode(enrollments), [enrollments]);
 
-  const progress = useMemo(() => {
-    if (!selectedMinor) return null;
-    return computeMinorProgress(selectedMinor, enrollments);
-  }, [selectedMinor, enrollments]);
+  const selectedMinors = useMemo(() => {
+    const selectedSet = new Set(selectedMinorCodes);
+    return availableMinors.filter((m) => selectedSet.has(m.code));
+  }, [availableMinors, selectedMinorCodes]);
+
+  const selectedProgress = useMemo(() => {
+    return selectedMinors.map((m) => computeMinorProgress(m, courseStateByCode));
+  }, [selectedMinors, courseStateByCode]);
+
+  const toggleMinor = (code: string) => {
+    setSelectedMinorCodes((prev) => {
+      if (prev.includes(code)) return prev.filter((c) => c !== code);
+      return [...prev, code];
+    });
+  };
+
+  const selectAllMinors = () => setSelectedMinorCodes(MINORS.map((m) => m.code));
+  const clearMinors = () => setSelectedMinorCodes([]);
 
   if (!MINORS.length) {
     return (
@@ -252,146 +295,204 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
 
       {enabled && (
         <div className="mt-4 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <p className="text-xs text-foreground-secondary">Minor</p>
-              <div className="relative">
-                <select
-                  value={minorCode}
-                  onChange={(e) => setMinorCode(e.target.value)}
-                  className="w-full appearance-none rounded-lg border border-border bg-background px-3 py-2 pr-9 text-sm text-foreground shadow-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-                >
-                  {MINORS.map((m) => (
-                    <option key={m.code} value={m.code}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <p className="text-xs text-foreground-secondary">Summary</p>
-              {isLoading || !progress ? (
-                <div className="h-9 rounded-lg bg-background-secondary dark:bg-background animate-pulse" />
-              ) : (
-                <div className="rounded-lg border border-border bg-surface-hover/50 px-3 py-2 text-sm">
-                  <p className="text-foreground">
-                    <span className="font-semibold">{progress.coveredCourses}</span> /{" "}
-                    <span className="font-semibold">{progress.requiredCourses}</span>{" "}
-                    <span className="text-foreground-secondary">courses covered</span>
-                    {progress.inProgressCourses > 0 && (
-                      <span className="text-yellow-600 dark:text-yellow-400">
-                        {" "}
-                        (+{progress.inProgressCourses} in progress)
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-foreground-secondary">
-                    Remaining:{" "}
-                    <span className="font-semibold text-foreground">{progress.remainingCourses}</span>{" "}
-                    {progress.minor.totalCreditsRequired ? (
-                      <>
-                        â€¢ Counted credits:{" "}
-                        <span className="font-semibold text-foreground">
-                          {progress.countedCompletedCredits + progress.countedInProgressCredits}
-                        </span>{" "}
-                        / {progress.minor.totalCreditsRequired}
-                      </>
-                    ) : (
-                      <>
-                        â€¢ Counted credits:{" "}
-                        <span className="font-semibold text-foreground">
-                          {progress.countedCompletedCredits + progress.countedInProgressCredits}
-                        </span>
-                      </>
-                    )}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
           <details className="group rounded-lg border border-border bg-surface-hover/50">
             <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <p className="font-semibold text-foreground">Breakdown</p>
+                <p className="font-semibold text-foreground">
+                  Select minors{" "}
+                  <span className="text-foreground-secondary">({selectedMinors.length} selected)</span>
+                </p>
                 <p className="text-xs text-foreground-secondary">
-                  Shows progress per requirement group (completed, in-progress, remaining).
+                  You can select multiple minors to compare. One course can only count towards one minor (in institute rules).
                 </p>
               </div>
               <ChevronDown className="w-4 h-4 text-foreground-secondary transition-transform duration-200 group-open:rotate-180" />
             </summary>
 
             <div className="px-4 pb-4 space-y-3">
-              {isLoading || !progress ? (
-                <div className="space-y-2 animate-pulse">
-                  <div className="h-10 rounded bg-background-secondary dark:bg-background" />
-                  <div className="h-10 rounded bg-background-secondary dark:bg-background" />
-                  <div className="h-10 rounded bg-background-secondary dark:bg-background" />
-                </div>
-              ) : (
-                progress.groups.map((g) => {
-                  const completedCount = Math.min(g.group.requiredCount, g.countedCompletedCodes.length);
-                  const inProgressCount = Math.min(
-                    g.group.requiredCount - completedCount,
-                    g.countedInProgressCodes.length
-                  );
-                  const covered = completedCount + inProgressCount;
-                  const remaining = Math.max(0, g.group.requiredCount - covered);
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={selectAllMinors}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-full border border-border bg-surface hover:bg-surface-hover text-foreground"
+                >
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={clearMinors}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-full border border-border bg-surface hover:bg-surface-hover text-foreground"
+                >
+                  Clear
+                </button>
+              </div>
 
-                  return (
-                    <div key={g.group.id} className="rounded-lg border border-border bg-surface px-4 py-3">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="font-semibold text-foreground">
-                            {g.group.title}
-                            {!g.group.countsTowardMinor && (
-                              <span className="text-xs text-foreground-secondary"> (not counted)</span>
-                            )}
-                          </p>
-                          {g.group.note && (
-                            <p className="text-xs text-foreground-secondary mt-0.5">{g.group.note}</p>
-                          )}
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-sm font-semibold text-foreground">
-                            {covered} / {g.group.requiredCount}
-                          </p>
-                          {inProgressCount > 0 && (
-                            <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                              +{inProgressCount} in progress
-                            </p>
-                          )}
-                          {remaining > 0 && (
-                            <p className="text-xs text-foreground-secondary">need {remaining} more</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
-                        <div>
-                          <p className="text-foreground-secondary">Completed</p>
-                          <p className="text-foreground">{formatCodeList(g.completedCodes)}</p>
-                        </div>
-                        <div>
-                          <p className="text-foreground-secondary">In progress</p>
-                          <p className="text-foreground">{formatCodeList(g.inProgressCodes)}</p>
-                        </div>
-                        <div>
-                          <p className="text-foreground-secondary">Not started</p>
-                          <p className="text-foreground">
-                            {g.isConfigMissing ? "Add course codes in lib/minors.ts" : formatCodeList(g.notStartedCodes)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-64 overflow-auto pr-1">
+                {availableMinors.map((m) => (
+                  <label
+                    key={m.code}
+                    className="flex items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground cursor-pointer hover:bg-surface-hover"
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-primary"
+                      checked={selectedMinorCodes.includes(m.code)}
+                      onChange={() => toggleMinor(m.code)}
+                    />
+                    <span className="truncate">{m.name}</span>
+                  </label>
+                ))}
+              </div>
             </div>
           </details>
+
+          {selectedMinors.length === 0 ? (
+            <div className="rounded-lg border border-border bg-surface-hover/50 p-4 text-sm text-foreground-secondary">
+              Select at least one minor to see progress.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {(isLoading ? Array.from({ length: Math.min(2, selectedMinors.length) }) : selectedProgress).map(
+                (item: any, idx) => {
+                  const progress: MinorProgressSummary | null = isLoading ? null : (item as MinorProgressSummary);
+
+                  return (
+                    <div
+                      key={progress?.minor.code ?? `skeleton-${idx}`}
+                      className="rounded-lg border border-border bg-surface-hover/50 p-4"
+                    >
+                      {isLoading || !progress ? (
+                        <div className="space-y-2 animate-pulse">
+                          <div className="h-4 bg-background-secondary dark:bg-background rounded w-1/2"></div>
+                          <div className="h-10 bg-background-secondary dark:bg-background rounded"></div>
+                          <div className="h-24 bg-background-secondary dark:bg-background rounded"></div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-foreground">{progress.minor.name}</p>
+                              <p className="text-xs text-foreground-secondary mt-0.5">
+                                <span className="font-semibold text-foreground">{progress.coveredCourses}</span> /{" "}
+                                <span className="font-semibold text-foreground">{progress.requiredCourses}</span>{" "}
+                                courses covered
+                                {progress.inProgressCourses > 0 && (
+                                  <span className="text-yellow-600 dark:text-yellow-400">
+                                    {" "}
+                                    (+{progress.inProgressCourses} in progress)
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="text-xs text-foreground-secondary">Remaining</p>
+                              <p className="text-sm font-semibold text-foreground">{progress.remainingCourses}</p>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-foreground-secondary">
+                            Counted credits:{" "}
+                            <span className="font-semibold text-foreground">
+                              {progress.countedCompletedCredits + progress.countedInProgressCredits}
+                            </span>
+                            {progress.minor.totalCreditsRequired ? (
+                              <>
+                                {" "}
+                                {"\u2022"} Required:{" "}
+                                <span className="font-semibold text-foreground">
+                                  {progress.minor.totalCreditsRequired}
+                                </span>
+                              </>
+                            ) : null}
+                          </div>
+
+                          <details className="group mt-3 rounded-lg border border-border bg-surface">
+                            <summary className="cursor-pointer list-none px-3 py-2 flex items-center justify-between gap-4">
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-foreground">Breakdown</p>
+                                <p className="text-xs text-foreground-secondary">
+                                  Per requirement group (completed, in-progress, remaining).
+                                </p>
+                              </div>
+                              <ChevronDown className="w-4 h-4 text-foreground-secondary transition-transform duration-200 group-open:rotate-180" />
+                            </summary>
+
+                            <div className="px-3 pb-3 space-y-2">
+                              {progress.groups.map((g) => {
+                                const completedCount = Math.min(
+                                  g.group.requiredCount,
+                                  g.countedCompletedCodes.length
+                                );
+                                const inProgressCount = Math.min(
+                                  g.group.requiredCount - completedCount,
+                                  g.countedInProgressCodes.length
+                                );
+                                const covered = completedCount + inProgressCount;
+                                const remaining = Math.max(0, g.group.requiredCount - covered);
+
+                                return (
+                                  <div
+                                    key={g.group.id}
+                                    className="rounded-lg border border-border bg-surface-hover/50 px-3 py-2"
+                                  >
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-foreground">
+                                          {g.group.title}
+                                          {!g.group.countsTowardMinor && (
+                                            <span className="text-xs text-foreground-secondary"> (not counted)</span>
+                                          )}
+                                        </p>
+                                        {g.group.note && (
+                                          <p className="text-xs text-foreground-secondary mt-0.5">{g.group.note}</p>
+                                        )}
+                                      </div>
+                                      <div className="text-right flex-shrink-0">
+                                        <p className="text-sm font-semibold text-foreground">
+                                          {covered} / {g.group.requiredCount}
+                                        </p>
+                                        {inProgressCount > 0 && (
+                                          <p className="text-xs text-yellow-600 dark:text-yellow-400">
+                                            +{inProgressCount} in progress
+                                          </p>
+                                        )}
+                                        {remaining > 0 && (
+                                          <p className="text-xs text-foreground-secondary">need {remaining} more</p>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                                      <div>
+                                        <p className="text-foreground-secondary">Completed</p>
+                                        <p className="text-foreground">{formatCodeList(g.completedCodes)}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-foreground-secondary">In progress</p>
+                                        <p className="text-foreground">{formatCodeList(g.inProgressCodes)}</p>
+                                      </div>
+                                      <div>
+                                        <p className="text-foreground-secondary">Not started</p>
+                                        <p className="text-foreground">
+                                          {g.isConfigMissing
+                                            ? "Add course codes in lib/minors.ts"
+                                            : formatCodeList(g.notStartedCodes)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </details>
+                        </>
+                      )}
+                    </div>
+                  );
+                }
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
