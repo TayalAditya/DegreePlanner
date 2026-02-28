@@ -144,7 +144,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     
     // Branch-specific course patterns (only if no explicit courseType)
     if (userBranch === "CSE" && code.startsWith("DS")) return "DE";
-    if (userBranch === "DSE" && code.startsWith("CS")) return "DE";
+    if (userBranch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
 
     return "DC";
   };
