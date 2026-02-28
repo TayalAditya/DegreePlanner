@@ -62,6 +62,9 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     ISTP: 0,
   };
 
+  // Track which IC basket slots have been used
+  const icBasketUsed = { ic1: false, ic2: false };
+
   const getCourseCategory = (enrollment: any): keyof typeof categoryCredits => {
     const code = enrollment.course?.code?.toUpperCase() || "";
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
@@ -75,15 +78,28 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       if (branchCompulsion) {
         // Check if this course matches branch's IC-I compulsion
         if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
+          icBasketUsed.ic1 = true;
           return "IC_BASKET";
         }
         
         // Check if this course matches branch's IC-II compulsion
         if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
+          icBasketUsed.ic2 = true;
           return "IC_BASKET";
         }
         
-        // Non-compulsory IC basket course → FE
+        // No compulsion for this basket type - first course counts as IC_BASKET
+        if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
+          icBasketUsed.ic1 = true;
+          return "IC_BASKET";
+        }
+        
+        if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
+          icBasketUsed.ic2 = true;
+          return "IC_BASKET";
+        }
+        
+        // Additional IC basket courses → FE
         return "FE";
       }
     }
@@ -121,7 +137,10 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
   };
 
   if (enrollments && enrollments.length > 0) {
-    enrollments
+    // Sort by semester to process in order for IC basket tracking
+    const sortedEnrollments = [...enrollments].sort((a: any, b: any) => (a.semester || 0) - (b.semester || 0));
+    
+    sortedEnrollments
       .filter((e: any) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
       .forEach((e: any) => {
         const category = getCourseCategory(e);
