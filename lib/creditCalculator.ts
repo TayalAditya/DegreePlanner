@@ -316,6 +316,7 @@ export class CreditCalculator {
     enrollments: Array<{
       course: { 
         credits: number; 
+        code: string;
         branchMappings?: Array<{ courseCategory: string; branch: string }>;
       };
       courseType: CourseType;
@@ -333,9 +334,69 @@ export class CreditCalculator {
       total: 0,
     };
 
+    const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
+      BIO: { ic1: "IC136", ic2: "IC240" },
+      CE: { ic1: "IC230", ic2: "IC240" },
+      CS: { ic2: "IC253" },
+      CSE: { ic2: "IC253" },
+      DSE: { ic2: "IC253" },
+      EP: { ic1: "IC230", ic2: "IC121" },
+      ME: { ic2: "IC240" },
+      CH: { ic1: "IC131", ic2: "IC121" },
+      MNC: { ic1: "IC136", ic2: "IC253" },
+      MS: { ic1: "IC131", ic2: "IC240" },
+      GE: { ic1: "IC230", ic2: "IC240" },
+    };
+
+    const ICB1_CODES = new Set(["IC131", "IC136", "IC230"]);
+    const ICB2_CODES = new Set(["IC121", "IC240", "IC241", "IC253"]);
+    
+    const icBasketUsed = { ic1: false, ic2: false };
+
     enrollments.forEach((enrollment) => {
       const credits = enrollment.course.credits;
       breakdown.total += credits;
+
+      const code = enrollment.course.code.toUpperCase();
+      const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+      const isICB1 = ICB1_CODES.has(normalizedCode);
+      const isICB2 = ICB2_CODES.has(normalizedCode);
+
+      // Apply IC basket compulsion logic
+      if ((isICB1 || isICB2) && branch) {
+        const branchCompulsion = IC_BASKET_COMPULSIONS[branch] || {};
+        
+        // Check if this course matches branch's IC-I compulsion
+        if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
+          icBasketUsed.ic1 = true;
+          breakdown.core += credits;
+          return;
+        }
+        
+        // Check if this course matches branch's IC-II compulsion
+        if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
+          icBasketUsed.ic2 = true;
+          breakdown.core += credits;
+          return;
+        }
+        
+        // No compulsion for this basket type - first course counts as core
+        if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
+          icBasketUsed.ic1 = true;
+          breakdown.core += credits;
+          return;
+        }
+        
+        if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
+          icBasketUsed.ic2 = true;
+          breakdown.core += credits;
+          return;
+        }
+        
+        // Additional IC basket courses → FE
+        breakdown.freeElective += credits;
+        return;
+      }
 
       const mappedCategory = branch
         ? enrollment.course.branchMappings?.find((m) => m.branch === branch)?.courseCategory
