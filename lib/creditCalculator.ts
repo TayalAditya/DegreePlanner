@@ -337,6 +337,22 @@ export class CreditCalculator {
     const ICB1_CODES = new Set(["IC131", "IC136", "IC230"]);
     const ICB2_CODES = new Set(["IC121", "IC240", "IC241", "IC253"]);
 
+    const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
+      BIO: { ic1: "IC136", ic2: "IC240" },
+      CE: { ic1: "IC230", ic2: "IC240" },
+      CS: { ic2: "IC253" },
+      CSE: { ic2: "IC253" },
+      DSE: { ic2: "IC253" },
+      EP: { ic1: "IC230", ic2: "IC121" },
+      ME: { ic2: "IC240" },
+      CH: { ic1: "IC131", ic2: "IC121" },
+      MNC: { ic1: "IC136", ic2: "IC253" },
+      MS: { ic1: "IC131", ic2: "IC240" },
+      GE: { ic1: "IC230", ic2: "IC240" },
+      EE: {},
+      VLSI: {},
+    };
+
     enrollments.forEach((enrollment) => {
       const credits = enrollment.course.credits;
       breakdown.total += credits;
@@ -345,6 +361,25 @@ export class CreditCalculator {
       const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
       const isICB1 = ICB1_CODES.has(normalizedCode);
       const isICB2 = ICB2_CODES.has(normalizedCode);
+
+      // IC Basket compulsion logic - check BEFORE branchMappings
+      if ((isICB1 || isICB2) && branch) {
+        const branchCompulsion = IC_BASKET_COMPULSIONS[branch] || {};
+        
+        if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
+          breakdown.core += credits;
+          return;
+        }
+        
+        if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
+          breakdown.core += credits;
+          return;
+        }
+        
+        // Non-compulsory IC basket course → FE
+        breakdown.freeElective += credits;
+        return;
+      }
 
       const mappingBranch = branch === "CSE" ? "CS" : branch;
       const mappedCategory = enrollment.course.branchMappings
