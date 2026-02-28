@@ -444,7 +444,7 @@ export default function ProgramsPage() {
                       {userProgram.program.code} • {userProgram.program.department}
                     </p>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <p className="text-sm text-foreground-secondary">Total Credits</p>
                         <p className="text-lg font-bold text-foreground">
