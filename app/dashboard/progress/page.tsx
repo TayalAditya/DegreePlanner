@@ -101,6 +101,21 @@ const categoryLabels = {
   ISTP: "Interactive Socio-Technical Practicum",
 };
 
+// IC Basket compulsions by branch
+const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
+  BIO: { ic1: "IC136", ic2: "IC240" },
+  CE: { ic1: "IC230", ic2: "IC240" },
+  CS: { ic2: "IC253" }, // CSE/DSE - only IC-II compulsory
+  CSE: { ic2: "IC253" },
+  DSE: { ic2: "IC253" },
+  EP: { ic1: "IC230", ic2: "IC121" },
+  ME: { ic2: "IC240" },
+  CH: { ic1: "IC131", ic2: "IC121" },
+  MNC: { ic1: "IC136", ic2: "IC253" }, // Mathematics and Computing
+  MS: { ic1: "IC131", ic2: "IC240" },
+  GE: { ic1: "IC230", ic2: "IC240" },
+};
+
 const ICB1_CODES = new Set([
   "IC131",
   "IC136",
@@ -231,27 +246,32 @@ export default function ProgressPage() {
       const isICB1 = ICB1_CODES.has(normalizedCode);
       const isICB2 = ICB2_CODES.has(normalizedCode);
 
-      // Branch-specific basket rules
-      if (user?.branch) {
-        // Sem 1: ICB1 is compulsory. If ICB2 taken → FE
-        if (enrollment.semester === 1 && isICB2) return "FE";
+      // IC Basket compulsion logic
+      if ((isICB1 || isICB2) && user?.branch) {
+        const branchCompulsion = IC_BASKET_COMPULSIONS[user.branch];
         
-        // Sem 2: Branch-specific
-        if (enrollment.semester === 2) {
-          if (user.branch === "CSE") {
-            // CSE Sem 2: IC253 (DSA) is compulsory. Other ICB2 → FE
-            if (isICB2 && normalizedCode !== "IC253") return "FE";
-          } else {
-            // Other branches Sem 2: ICB2 is compulsory. If ICB1 taken → FE
-            if (isICB1) return "FE";
+        if (branchCompulsion) {
+          // Check if this course matches branch's IC-I compulsion
+          if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
+            return "IC_BASKET";
           }
+          
+          // Check if this course matches branch's IC-II compulsion
+          if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
+            return "IC_BASKET";
+          }
+          
+          // Non-compulsory IC basket course → FE
+          return "FE";
         }
-
-        if (user.branch === "CSE" && code.startsWith("DS")) return "DE";
-        if (user.branch === "DSE" && code.startsWith("CS")) return "DE";
       }
 
+      // If no branch or not in IC basket codes
       if (isICB1 || isICB2) return "IC_BASKET";
+
+      if (user?.branch === "CSE" && code.startsWith("DS")) return "DE";
+      if (user?.branch === "DSE" && code.startsWith("CS")) return "DE";
+
       if (normalizedCode === "IC181") return "IKS";
       if (normalizedCode.startsWith("IC")) return "IC";
       if (normalizedCode.startsWith("HS")) return "HSS";
