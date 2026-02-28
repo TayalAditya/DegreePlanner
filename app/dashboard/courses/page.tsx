@@ -87,15 +87,19 @@ type SchoolKey =
 type SchoolFilter = "all" | SchoolKey;
 
 const SCHOOL_META: Record<SchoolKey, { label: string; order: number; prefixes: string[] }> = {
-  SCEE: { label: "SCEE (CSE, DSE, EE, VL)", order: 10, prefixes: ["CS", "DS", "EE", "VL", "MV"] },
+  SCEE: {
+    label: "SCEE (CSE, DSE, EE, VL)",
+    order: 10,
+    prefixes: ["CS", "DS", "EE", "VL", "MV", "EC", "ECE", "ET"],
+  },
   SMSS: { label: "SMSS (MNC)", order: 20, prefixes: ["MC", "MA", "ST"] },
-  SMME: { label: "SMME (GE, MSE, ME)", order: 30, prefixes: ["GE", "ME", "MS", "MT", "AR"] },
+  SMME: { label: "SMME (GE, MSE, ME)", order: 30, prefixes: ["GE", "ME", "MS", "MT", "AR", "EN", "EM", "MI"] },
   SPS: { label: "SPS (EP)", order: 40, prefixes: ["EP", "PH"] },
   SCENE: { label: "SCENE (CE)", order: 50, prefixes: ["CE"] },
   SCS: { label: "SCS (BS CS)", order: 60, prefixes: ["CY", "CH"] },
-  SBS: { label: "SBS (BE)", order: 70, prefixes: ["BE", "BY", "BS"] },
-  SHSS: { label: "SHSS (HS)", order: 80, prefixes: ["HS"] },
-  COMMON: { label: "Common (IC/IKS/DP)", order: 90, prefixes: ["IC", "IK", "IKS", "DP"] },
+  SBS: { label: "SBS (BE)", order: 70, prefixes: ["BE", "BY", "BT", "BS"] },
+  SHSS: { label: "SHSS (HS)", order: 80, prefixes: ["HS", "MB"] },
+  COMMON: { label: "Common (IC/IKS/DP)", order: 90, prefixes: ["IC", "IK", "IKS", "DP", "RM"] },
   OTHER: { label: "Other", order: 99, prefixes: [] },
 };
 
