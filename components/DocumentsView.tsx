@@ -80,6 +80,51 @@ function getDriveFolderId(url: string): string | null {
   return null;
 }
 
+function getDriveFileId(url: string): string | null {
+  try {
+    const u = new URL(url);
+
+    const id = u.searchParams.get("id");
+    if (id) return id;
+
+    const match = u.pathname.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i);
+    if (match?.[1]) return match[1];
+
+    const matchDocs = u.pathname.match(/\/d\/([a-zA-Z0-9_-]+)/i);
+    if (matchDocs?.[1]) return matchDocs[1];
+  } catch {
+    // fall through
+  }
+
+  const fileMatch = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/i);
+  if (fileMatch?.[1]) return fileMatch[1];
+
+  const docsMatch = url.match(/\/d\/([a-zA-Z0-9_-]+)/i);
+  if (docsMatch?.[1]) return docsMatch[1];
+
+  return null;
+}
+
+function getYouTubeVideoId(url: string): string | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.toLowerCase();
+    const parts = u.pathname.split("/").filter(Boolean);
+
+    if (host === "youtu.be" && parts[0]) return parts[0];
+
+    if (host.endsWith("youtube.com")) {
+      if (u.pathname === "/watch") return u.searchParams.get("v");
+      if (parts[0] === "embed" && parts[1]) return parts[1];
+      if (parts[0] === "shorts" && parts[1]) return parts[1];
+    }
+  } catch {
+    // fall through
+  }
+
+  return null;
+}
+
 function getPreviewConfig(fileUrl: string | null | undefined): PreviewConfig {
   if (!fileUrl) return { kind: "none", reason: "No URL available for preview." };
 
@@ -107,6 +152,15 @@ function getPreviewConfig(fileUrl: string | null | undefined): PreviewConfig {
         title: "Google Drive folder",
       };
     }
+
+    const fileId = getDriveFileId(url);
+    if (fileId) {
+      return {
+        kind: "iframe",
+        src: `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/preview`,
+        title: "Google Drive file",
+      };
+    }
   }
 
   if (url.includes("canva.com")) {
@@ -122,6 +176,16 @@ function getPreviewConfig(fileUrl: string | null | undefined): PreviewConfig {
       allowFullScreen: true,
       referrerPolicy: "no-referrer-when-downgrade",
       title: "Canva presentation",
+    };
+  }
+
+  const youtubeId = getYouTubeVideoId(url);
+  if (youtubeId) {
+    return {
+      kind: "iframe",
+      src: `https://www.youtube.com/embed/${encodeURIComponent(youtubeId)}`,
+      allowFullScreen: true,
+      title: "YouTube video",
     };
   }
 
