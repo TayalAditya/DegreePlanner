@@ -137,6 +137,7 @@ export default function ProgressPage() {
   const [totalCreditsRequired, setTotalCreditsRequired] = useState(160);
   const [programCredits, setProgramCredits] = useState<ProgramCredits>({});
   const [loading, setLoading] = useState(true);
+  const [includeCurrentSemesterCredits, setIncludeCurrentSemesterCredits] = useState(false);
 
   type CourseCategory = keyof typeof categoryLabels;
   type ICBasketUsed = { ic1: boolean; ic2: boolean };
@@ -228,6 +229,28 @@ export default function ProgressPage() {
   useEffect(() => {
     fetchProgress();
   }, []);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(
+        "degreePlanner.progress.includeCurrentSemesterCredits"
+      );
+      if (stored !== null) setIncludeCurrentSemesterCredits(stored === "true");
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "degreePlanner.progress.includeCurrentSemesterCredits",
+        String(includeCurrentSemesterCredits)
+      );
+    } catch {
+      // ignore
+    }
+  }, [includeCurrentSemesterCredits]);
 
   const fetchProgress = async () => {
     try {
@@ -447,9 +470,16 @@ export default function ProgressPage() {
     .map((s) => Number(s))
     .sort((a, b) => a - b);
   const latestSemester = semesters.length > 0 ? semesters[semesters.length - 1] : null;
-  const completionPercentage = Math.round(
-    (progress.totalCreditsEarned / progress.totalCreditsRequired) * 100
+  const totalCountedCredits = Math.min(
+    progress.totalCreditsRequired,
+    progress.totalCreditsEarned +
+      (includeCurrentSemesterCredits ? progress.totalCreditsInProgress : 0)
   );
+  const remainingCredits = Math.max(0, progress.totalCreditsRequired - totalCountedCredits);
+  const completionPercentage =
+    progress.totalCreditsRequired > 0
+      ? Math.round((totalCountedCredits / progress.totalCreditsRequired) * 100)
+      : 0;
 
   return (
     <div className="space-y-6">
@@ -466,11 +496,31 @@ export default function ProgressPage() {
           <div>
             <h2 className="text-2xl font-bold text-foreground">Overall Progress</h2>
             <p className="text-foreground-secondary">
-              {progress.totalCreditsEarned} / {progress.totalCreditsRequired} credits completed
+              {totalCountedCredits} / {progress.totalCreditsRequired} credits
+              {includeCurrentSemesterCredits ? " (incl. current semester)" : " completed"}
             </p>
           </div>
-          <div className="text-right">
+          <div className="flex flex-col items-start sm:items-end gap-2">
             <p className="text-3xl sm:text-4xl font-bold text-primary">{completionPercentage}%</p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={includeCurrentSemesterCredits}
+                onClick={() => setIncludeCurrentSemesterCredits((v) => !v)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full border border-border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+                  includeCurrentSemesterCredits ? "bg-primary" : "bg-border"
+                }`}
+              >
+                <span className="sr-only">Include current semester credits</span>
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    includeCurrentSemesterCredits ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+              <span className="text-xs text-foreground-secondary">Include current sem</span>
+            </div>
           </div>
         </div>
         <div className="w-full bg-surface rounded-full h-4 overflow-hidden">
@@ -519,9 +569,7 @@ export default function ProgressPage() {
             <div>
               <p className="text-xs sm:text-sm text-foreground-secondary">Remaining</p>
               <p className="text-xl sm:text-2xl font-bold text-foreground">
-                {progress.totalCreditsRequired -
-                  progress.totalCreditsEarned -
-                  progress.totalCreditsInProgress}
+                {remainingCredits}
               </p>
             </div>
           </div>
