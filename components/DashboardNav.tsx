@@ -165,7 +165,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
                 )}
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
-                  <p className="text-xs text-foreground-secondary truncate">{user.email}</p>
+                  <p className="text-[10px] text-foreground-secondary truncate">{user.email}</p>
                 </div>
               </div>
 
@@ -240,7 +240,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             )}
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
-              <p className="text-xs text-foreground-secondary truncate">{user.email}</p>
+              <p className="text-[10px] text-foreground-secondary truncate">{user.email}</p>
             </div>
           </div>
 
