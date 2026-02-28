@@ -353,7 +353,13 @@ export class CreditCalculator {
       VLSI: {},
     };
 
-    enrollments.forEach((enrollment) => {
+    // Sort enrollments by semester for IC basket first-course logic
+    const sortedEnrollments = [...enrollments].sort(
+      (a, b) => (a.semester || 0) - (b.semester || 0)
+    );
+    const icBasketUsed = { ic1: false, ic2: false };
+
+    sortedEnrollments.forEach((enrollment) => {
       const credits = enrollment.course.credits;
       breakdown.total += credits;
 
@@ -372,6 +378,19 @@ export class CreditCalculator {
         }
         
         if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
+          breakdown.core += credits;
+          return;
+        }
+        
+        // No compulsion - first course counts as core (IC_BASKET)
+        if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
+          icBasketUsed.ic1 = true;
+          breakdown.core += credits;
+          return;
+        }
+        
+        if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
+          icBasketUsed.ic2 = true;
           breakdown.core += credits;
           return;
         }
