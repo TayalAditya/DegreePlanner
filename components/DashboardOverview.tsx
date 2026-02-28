@@ -190,6 +190,19 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       }
     }
 
+    if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
+      const mappingBranch = userSettings.branch === "CSE" ? "CS" : userSettings.branch;
+      const mapping = enrollment.course.branchMappings.find(
+        (m: any) => m.branch === mappingBranch || m.branch === "COMMON"
+      ) || (userSettings.branch === "GE"
+        ? enrollment.course.branchMappings.find((m: any) => m.branch.startsWith("GE"))
+        : undefined);
+
+      if (mapping) {
+        return mapping.courseCategory;
+      }
+    }
+
     if (isICB1 || isICB2) return "IC_BASKET";
 
     if (normalizedCode === "IC181") return "IKS";
@@ -199,7 +212,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     if (normalizedCode.includes("MTP")) return "MTP";
     if (normalizedCode.includes("ISTP")) return "ISTP";
     
-    // Check courseType BEFORE branch-specific patterns
+    // Check courseType AFTER branchMappings
     if (enrollment.courseType === "DE") return "DE";
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     
