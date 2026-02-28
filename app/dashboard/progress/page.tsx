@@ -142,7 +142,7 @@ export default function ProgressPage() {
 
   const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-  const getCourseCategory = (enrollment: Enrollment): CourseCategory => {
+  const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any): CourseCategory => {
     const code = enrollment.course.code.toUpperCase();
     const normalizedCode = normalizeCode(code);
     const isICB1 = ICB1_CODES.has(normalizedCode);
@@ -158,6 +158,19 @@ export default function ProgressPage() {
       
       if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
         return "IC_BASKET";
+      }
+      
+      // No compulsion - first course counts as IC_BASKET
+      if (icBasketUsed) {
+        if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
+          icBasketUsed.ic1 = true;
+          return "IC_BASKET";
+        }
+        
+        if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
+          icBasketUsed.ic2 = true;
+          return "IC_BASKET";
+        }
       }
       
       return "FE";
@@ -268,6 +281,12 @@ export default function ProgressPage() {
       (e) => e.status === "IN_PROGRESS"
     );
 
+    // Sort completed enrollments by semester for IC basket first-course logic
+    const sortedCompleted = [...completedEnrollments].sort(
+      (a, b) => (a.semester || 0) - (b.semester || 0)
+    );
+    const icBasketUsed = { ic1: false, ic2: false };
+
     const creditsByCategory = {
       IC: 0,
       IC_BASKET: 0,
@@ -293,7 +312,7 @@ export default function ProgressPage() {
     };
 
     completedEnrollments.forEach((e) => {
-      const category = getCourseCategory(e);
+      const category = getCourseCategory(e, icBasketUsed);
       creditsByCategory[category] += e.course.credits;
     });
 

@@ -78,15 +78,16 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     ISTP: 0,
   };
 
-  const getCourseCategory = (enrollment: any): keyof typeof categoryCredits => {
+  const getCourseCategory = (enrollment: any, icBasketUsed?: any, branch?: string): keyof typeof categoryCredits => {
     const code = enrollment.course?.code?.toUpperCase() || "";
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
 
     // IC Basket compulsion logic - check BEFORE branchMappings
-    if ((isICB1 || isICB2) && userBranch) {
-      const branchCompulsion = IC_BASKET_COMPULSIONS[userBranch] || {};
+    if ((isICB1 || isICB2) && (branch || userBranch)) {
+      const checkBranch = (branch || userBranch) as string;
+      const branchCompulsion = IC_BASKET_COMPULSIONS[checkBranch] || {};
       
       // Check if this course matches branch's IC-I compulsion
       if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
@@ -98,7 +99,20 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
         return "IC_BASKET";
       }
       
-      // Non-compulsory IC basket course → FE
+      // No compulsion for this basket type - first course counts as IC_BASKET
+      if (icBasketUsed) {
+        if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
+          icBasketUsed.ic1 = true;
+          return "IC_BASKET";
+        }
+        
+        if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
+          icBasketUsed.ic2 = true;
+          return "IC_BASKET";
+        }
+      }
+      
+      // Additional IC basket courses → FE
       return "FE";
     }
 
@@ -136,12 +150,18 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
   };
 
   if (enrollments && enrollments.length > 0) {
-    enrollments
+    // Sort by semester to process in order
+    const sortedEnrollments = [...enrollments]
       .filter((e: any) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
-      .forEach((e: any) => {
-        const category = getCourseCategory(e);
-        categoryCredits[category] += e.course?.credits || 0;
-      });
+      .sort((a: any, b: any) => (a.semester || 0) - (b.semester || 0));
+    
+    // Track which IC basket slots have been used
+    const icBasketUsed = { ic1: false, ic2: false };
+
+    sortedEnrollments.forEach((e: any) => {
+      const category = getCourseCategory(e, icBasketUsed, userBranch);
+      categoryCredits[category] += e.course?.credits || 0;
+    });
   }
 
   const categoryData = Object.entries(categoryCredits)
