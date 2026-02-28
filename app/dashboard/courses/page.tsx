@@ -579,11 +579,11 @@ export default function CoursesPage() {
                                     <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
                                       {formatCourseCode(enrollment.course.code)}
                                     </h3>
-                                    <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20">
+                                    <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-semibold rounded-full border border-primary/20">
                                       {enrollment.course.credits} Cr
                                     </span>
                                     <span
-                                      className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                                      className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${
                                         enrollment.status === "COMPLETED"
                                           ? "bg-green-500/10 text-green-600 border border-green-500/30"
                                           : "bg-blue-500/10 text-blue-600 border border-blue-500/30"

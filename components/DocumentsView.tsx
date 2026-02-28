@@ -362,7 +362,7 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
               <div className="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-border">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs px-2 py-1 bg-primary/10 dark:bg-primary/20 text-primary rounded border border-primary/20">
+                    <span className="text-[10px] px-1.5 py-0.5 bg-primary/10 dark:bg-primary/20 text-primary rounded border border-primary/20">
                       {previewDoc.category}
                     </span>
                   </div>
@@ -460,7 +460,7 @@ function DocumentCard({
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <FileText className="w-5 h-5 text-primary" />
-          <span className="text-xs px-2 py-1 bg-primary bg-opacity-10 dark:bg-opacity-20 text-primary rounded">
+          <span className="text-[10px] px-1.5 py-0.5 bg-primary bg-opacity-10 dark:bg-opacity-20 text-primary rounded">
             {document.category}
           </span>
         </div>
