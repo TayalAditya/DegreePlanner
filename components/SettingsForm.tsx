@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Mail, BookOpen, Save } from "lucide-react";
+import { User, Mail, BookOpen, Save, Bug, Lightbulb, ExternalLink } from "lucide-react";
 import { getAllBranches } from "@/lib/branches";
 
 interface SettingsFormProps {
@@ -23,6 +23,13 @@ export function SettingsForm({ user }: SettingsFormProps) {
     doingMTP: user.doingMTP ?? true,
     doingISTP: user.doingISTP ?? true,
   });
+
+  const githubRepoUrl =
+    process.env.NEXT_PUBLIC_GITHUB_REPO_URL || "https://github.com/TayalAditya/DegreePlanner";
+  const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "";
+  const bugReportUrl = `${githubRepoUrl}/issues/new?labels=bug&title=Bug%3A+`;
+  const suggestionUrl = `${githubRepoUrl}/issues/new?labels=enhancement&title=Suggestion%3A+`;
+  const contactUrl = supportEmail ? `mailto:${supportEmail}` : `${githubRepoUrl}/issues/new`;
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -243,6 +250,80 @@ export function SettingsForm({ user }: SettingsFormProps) {
                 <strong>Note:</strong> These preferences affect your credit distribution. You can change them anytime before course registration.
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Support */}
+        <div className="bg-surface dark:bg-surface rounded-lg border border-border p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-1">
+            Support & Feedback
+          </h3>
+          <p className="text-sm text-foreground-secondary mb-4">
+            Share suggestions, report issues, or contact us for help.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <a
+              href={contactUrl}
+              target={supportEmail ? undefined : "_blank"}
+              rel={supportEmail ? undefined : "noreferrer"}
+              className="group flex items-start gap-3 rounded-lg border border-border bg-surface-hover/50 p-4 hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            >
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                <Mail className="w-5 h-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-foreground">Contact</p>
+                  {!supportEmail && (
+                    <ExternalLink className="w-4 h-4 text-foreground-secondary group-hover:text-foreground transition-colors" />
+                  )}
+                </div>
+                <p className="text-xs text-foreground-secondary">
+                  {supportEmail || "Open a ticket on GitHub"}
+                </p>
+              </div>
+            </a>
+
+            <a
+              href={suggestionUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="group flex items-start gap-3 rounded-lg border border-border bg-surface-hover/50 p-4 hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            >
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                <Lightbulb className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-foreground">Suggestion</p>
+                  <ExternalLink className="w-4 h-4 text-foreground-secondary group-hover:text-foreground transition-colors" />
+                </div>
+                <p className="text-xs text-foreground-secondary">
+                  Request a feature or improvement
+                </p>
+              </div>
+            </a>
+
+            <a
+              href={bugReportUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="group flex items-start gap-3 rounded-lg border border-border bg-surface-hover/50 p-4 hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            >
+              <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                <Bug className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-foreground">Report Issue</p>
+                  <ExternalLink className="w-4 h-4 text-foreground-secondary group-hover:text-foreground transition-colors" />
+                </div>
+                <p className="text-xs text-foreground-secondary">
+                  Something broken? Tell us
+                </p>
+              </div>
+            </a>
           </div>
         </div>
 
