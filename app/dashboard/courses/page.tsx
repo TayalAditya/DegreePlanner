@@ -157,20 +157,6 @@ export default function CoursesPage() {
   const passFailUsed = user?.totalPassFailCredits ?? 0;
   const passFailRemaining = Math.max(0, maxPassFailCredits - passFailUsed);
 
-  const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
-    BIO: { ic1: "IC136", ic2: "IC240" },
-    CE: { ic1: "IC230", ic2: "IC240" },
-    CS: { ic2: "IC253" },
-    CSE: { ic2: "IC253" },
-    DSE: { ic2: "IC253" },
-    EP: { ic1: "IC230", ic2: "IC121" },
-    ME: { ic2: "IC240" },
-    CH: { ic1: "IC131", ic2: "IC121" },
-    MNC: { ic1: "IC136", ic2: "IC253" },
-    MS: { ic1: "IC131", ic2: "IC240" },
-    GE: { ic1: "IC230", ic2: "IC240" },
-  };
-
   const ICB1_CODES = new Set([
     "IC131",
     "IC136",
@@ -188,8 +174,9 @@ export default function CoursesPage() {
   const getCourseCategory = (enrollment: Enrollment): string => {
     // First try to get from branchMappings if available
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
+      const mappingBranch = user.branch === "CSE" ? "CS" : user.branch;
       const mapping = enrollment.course.branchMappings.find(
-        (m) => m.branch === user.branch
+        (m) => m.branch === mappingBranch || m.branch === "COMMON"
       ) || (user.branch === "GE"
         ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
         : undefined);
@@ -204,26 +191,6 @@ export default function CoursesPage() {
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
-
-    // IC Basket compulsion logic
-    if ((isICB1 || isICB2) && user?.branch) {
-      const branchCompulsion = IC_BASKET_COMPULSIONS[user.branch];
-      
-      if (branchCompulsion) {
-        // Check if this course matches branch's IC-I compulsion
-        if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
-          return "IC_BASKET";
-        }
-        
-        // Check if this course matches branch's IC-II compulsion
-        if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
-          return "IC_BASKET";
-        }
-        
-        // Non-compulsory IC basket course → FE
-        return "FE";
-      }
-    }
 
     if (isICB1 || isICB2) return "IC_BASKET";
     if (normalizedCode === "IC181") return "IKS";
