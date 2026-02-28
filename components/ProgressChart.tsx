@@ -285,26 +285,26 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     : [
         {
           name: "Core",
-          value: progress.completed.core,
-          total: progress.required.core,
+          value: Number(progress?.completed?.core || 0),
+          total: Number(progress?.required?.core || 0),
           color: COLORS.core,
         },
         {
           name: "DE",
-          value: progress.completed.de,
-          total: progress.required.de,
+          value: Number(progress?.completed?.de || 0),
+          total: Number(progress?.required?.de || 0),
           color: COLORS.de,
         },
         {
           name: "PE",
-          value: progress.completed.pe,
-          total: progress.required.pe,
+          value: Number(progress?.completed?.pe || 0),
+          total: Number(progress?.required?.pe || 0),
           color: COLORS.pe,
         },
         {
           name: "Free Elective",
-          value: progress.completed.freeElective,
-          total: progress.required.freeElective,
+          value: Number(progress?.completed?.freeElective || 0),
+          total: Number(progress?.required?.freeElective || 0),
           color: COLORS.freeElective,
         },
       ].filter((item) => item.total > 0);
