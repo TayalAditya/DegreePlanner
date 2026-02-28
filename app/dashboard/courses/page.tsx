@@ -12,6 +12,7 @@ import {
   Clock,
   X,
   Award,
+  ChevronDown,
   ChevronRight,
 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
@@ -69,6 +70,8 @@ const categoryColors = {
   ISTP: { bg: "bg-teal-500/10", text: "text-teal-600 dark:text-teal-400", bar: "bg-teal-500" },
 };
 
+const DEPARTMENT_PAGE_SIZE = 20;
+
 export default function CoursesPage() {
   const [tab, setTab] = useState<"my-courses" | "catalog">("my-courses");
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -84,6 +87,8 @@ export default function CoursesPage() {
   const [courseType, setCourseType] = useState<string>("AUTO");
   const [isPassFail, setIsPassFail] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [expandedDepartments, setExpandedDepartments] = useState<string[]>([]);
+  const [departmentVisibleCounts, setDepartmentVisibleCounts] = useState<Record<string, number>>({});
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
 
@@ -139,6 +144,55 @@ export default function CoursesPage() {
     const matchesDept = selectedDept === "all" || course.department === selectedDept;
     return matchesSearch && matchesDept;
   });
+
+  const departmentGroups = (() => {
+    const byDept: Record<string, Course[]> = {};
+    for (const course of filteredCourses) {
+      const dept = course.department || "Other";
+      if (!byDept[dept]) byDept[dept] = [];
+      byDept[dept].push(course);
+    }
+
+    return Object.entries(byDept)
+      .map(([dept, courses]) => ({
+        dept,
+        courses: courses.sort((a, b) => a.code.localeCompare(b.code)),
+      }))
+      .sort((a, b) => a.dept.localeCompare(b.dept));
+  })();
+
+  const toggleDepartment = (dept: string) => {
+    setExpandedDepartments((prev) =>
+      prev.includes(dept) ? prev.filter((d) => d !== dept) : [...prev, dept]
+    );
+    setDepartmentVisibleCounts((prev) =>
+      prev[dept] ? prev : { ...prev, [dept]: DEPARTMENT_PAGE_SIZE }
+    );
+  };
+
+  const expandAllDepartments = () => {
+    const all = departmentGroups.map((g) => g.dept);
+    setExpandedDepartments(all);
+    setDepartmentVisibleCounts((prev) => {
+      const next = { ...prev };
+      for (const dept of all) {
+        if (!next[dept]) next[dept] = DEPARTMENT_PAGE_SIZE;
+      }
+      return next;
+    });
+  };
+
+  const collapseAllDepartments = () => setExpandedDepartments([]);
+
+  useEffect(() => {
+    if (tab !== "catalog") return;
+    if (selectedDept === "all") return;
+
+    setExpandedDepartments([selectedDept]);
+    setDepartmentVisibleCounts((prev) =>
+      prev[selectedDept] ? prev : { ...prev, [selectedDept]: DEPARTMENT_PAGE_SIZE }
+    );
+  }, [selectedDept, tab]);
 
   const enrolledCourseIds = new Set(enrollments.map((e) => e.courseId));
   const availableCourses = filteredCourses.filter(
@@ -682,77 +736,252 @@ export default function CoursesPage() {
                 <p className="text-foreground-secondary">No courses found</p>
               </div>
             ) : (
-              <div className="grid gap-3">
-                {filteredCourses.map((course) => (
-                  <motion.button
-                    key={course.id}
-                    onClick={() => setSelectedCourse(course)}
-                    whileHover={{ scale: 1.01 }}
-                    className="group relative overflow-hidden bg-surface rounded-lg border border-border p-5 hover:border-primary hover:shadow-xl transition-all text-left"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <div className="relative z-10">
-                      <div className="flex items-start justify-between gap-4 mb-2">
-                        <div>
-                          <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors mb-1">
-                            {formatCourseCode(course.code)} - {course.name}
-                          </h3>
-                          {course.description && (
-                            <p className="text-sm text-foreground-secondary line-clamp-1">
-                              {course.description}
-                            </p>
-                          )}
-                        </div>
-                        <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-full border border-primary/20 whitespace-nowrap">
-                          {course.credits} Cr
-                        </span>
-                      </div>
+              <>
+                {searchLower ? (
+                  <div className="grid gap-3">
+                    {filteredCourses.map((course) => (
+                      <motion.div
+                        key={course.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedCourse(course)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedCourse(course);
+                          }
+                        }}
+                        whileHover={{ scale: 1.01 }}
+                        className="group relative overflow-hidden bg-surface rounded-lg border border-border p-5 hover:border-primary hover:shadow-xl transition-all text-left cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <div className="relative z-10">
+                          <div className="flex items-start justify-between gap-4 mb-2">
+                            <div className="min-w-0">
+                              <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors mb-1 truncate">
+                                {formatCourseCode(course.code)} - {course.name}
+                              </h3>
+                              {course.description && (
+                                <p className="text-sm text-foreground-secondary line-clamp-1">
+                                  {course.description}
+                                </p>
+                              )}
+                            </div>
+                            <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-full border border-primary/20 whitespace-nowrap">
+                              {course.credits} Cr
+                            </span>
+                          </div>
 
-                      <div className="flex flex-wrap items-center gap-2 text-sm">
-                        <span className="px-3 py-1 bg-surface-hover rounded font-medium text-foreground">
-                          {course.department}
-                        </span>
-                        <span className="px-3 py-1 bg-surface-hover rounded text-foreground-secondary">
-                          L{course.level}
-                        </span>
-                        {enrolledCourseIds.has(course.id) ? (
-                          <span className="px-3 py-1 bg-green-500/10 text-green-600 rounded font-medium border border-green-500/30 ml-auto">
-                            ✓ Enrolled
-                          </span>
-                        ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddCourse(course);
-                            }}
-                            className="ml-auto px-4 py-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover font-medium transition-colors flex items-center gap-1"
-                          >
-                            <Plus className="w-4 h-4" />
-                            Add
-                          </button>
-                        )}
-                        <div className="flex gap-2">
-                          {course.offeredInFall && (
-                            <span className="px-2 py-1 bg-orange-500/10 text-orange-600 rounded text-xs font-semibold">
-                              Fall
+                          <div className="flex flex-wrap items-center gap-2 text-sm">
+                            <span className="px-3 py-1 bg-surface-hover rounded font-medium text-foreground">
+                              {course.department}
                             </span>
-                          )}
-                          {course.offeredInSpring && (
-                            <span className="px-2 py-1 bg-green-500/10 text-green-600 rounded text-xs font-semibold">
-                              Spring
+                            <span className="px-3 py-1 bg-surface-hover rounded text-foreground-secondary">
+                              L{course.level}
                             </span>
-                          )}
-                          {course.offeredInSummer && (
-                            <span className="px-2 py-1 bg-blue-500/10 text-blue-600 rounded text-xs font-semibold">
-                              Summer
-                            </span>
-                          )}
+                            {enrolledCourseIds.has(course.id) ? (
+                              <span className="px-3 py-1 bg-green-500/10 text-green-600 rounded font-medium border border-green-500/30 ml-auto">
+                                ✓ Enrolled
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAddCourse(course);
+                                }}
+                                className="ml-auto px-4 py-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover font-medium transition-colors flex items-center gap-1"
+                              >
+                                <Plus className="w-4 h-4" />
+                                Add
+                              </button>
+                            )}
+                            <div className="flex gap-2">
+                              {course.offeredInFall && (
+                                <span className="px-2 py-1 bg-orange-500/10 text-orange-600 rounded text-xs font-semibold">
+                                  Fall
+                                </span>
+                              )}
+                              {course.offeredInSpring && (
+                                <span className="px-2 py-1 bg-green-500/10 text-green-600 rounded text-xs font-semibold">
+                                  Spring
+                                </span>
+                              )}
+                              {course.offeredInSummer && (
+                                <span className="px-2 py-1 bg-blue-500/10 text-blue-600 rounded text-xs font-semibold">
+                                  Summer
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-foreground-secondary">
+                      <p>Tap a department to expand its courses.</p>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={expandAllDepartments}
+                          className="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors"
+                        >
+                          Expand all
+                        </button>
+                        <button
+                          type="button"
+                          onClick={collapseAllDepartments}
+                          className="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors"
+                        >
+                          Collapse all
+                        </button>
                       </div>
                     </div>
-                  </motion.button>
-                ))}
-              </div>
+
+                    {departmentGroups.map(({ dept, courses }) => {
+                      const isExpanded = expandedDepartments.includes(dept);
+                      const visibleCount = departmentVisibleCounts[dept] || DEPARTMENT_PAGE_SIZE;
+                      const visibleCourses = courses.slice(0, visibleCount);
+
+                      return (
+                        <div key={dept} className="bg-surface rounded-xl border border-border overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => toggleDepartment(dept)}
+                            aria-expanded={isExpanded}
+                            className="w-full p-4 hover:bg-surface-hover transition-colors flex items-center justify-between gap-4 text-left"
+                          >
+                            <div className="min-w-0">
+                              <p className="font-semibold text-foreground truncate">{dept}</p>
+                              <p className="text-xs text-foreground-secondary">
+                                {courses.length} courses
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <span className="px-2 py-0.5 text-xs font-semibold rounded-full border border-border bg-surface-hover text-foreground-secondary">
+                                {courses.length}
+                              </span>
+                              <ChevronDown
+                                className={`w-4 h-4 text-foreground-secondary transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                              />
+                            </div>
+                          </button>
+
+                          <AnimatePresence initial={false}>
+                            {isExpanded && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="border-t border-border p-4 space-y-3">
+                                  {visibleCourses.map((course) => (
+                                    <motion.div
+                                      key={course.id}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() => setSelectedCourse(course)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                          e.preventDefault();
+                                          setSelectedCourse(course);
+                                        }
+                                      }}
+                                      whileHover={{ scale: 1.01 }}
+                                      className="group relative overflow-hidden bg-card rounded-lg border border-border p-4 hover:border-primary hover:shadow-lg transition-all text-left w-full cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                                    >
+                                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                      <div className="relative z-10">
+                                        <div className="flex items-start justify-between gap-4 mb-2">
+                                          <div className="min-w-0">
+                                            <h3 className="text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors mb-1 truncate">
+                                              {formatCourseCode(course.code)} - {course.name}
+                                            </h3>
+                                            {course.description && (
+                                              <p className="text-xs sm:text-sm text-foreground-secondary line-clamp-1">
+                                                {course.description}
+                                              </p>
+                                            )}
+                                          </div>
+                                          <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20 whitespace-nowrap">
+                                            {course.credits} Cr
+                                          </span>
+                                        </div>
+
+                                        <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+                                          <span className="px-3 py-1 bg-surface-hover rounded font-medium text-foreground">
+                                            L{course.level}
+                                          </span>
+                                          {enrolledCourseIds.has(course.id) ? (
+                                            <span className="px-3 py-1 bg-green-500/10 text-green-600 rounded font-medium border border-green-500/30 ml-auto">
+                                              ✓ Enrolled
+                                            </span>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleAddCourse(course);
+                                              }}
+                                              className="ml-auto px-4 py-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover font-medium transition-colors flex items-center gap-1"
+                                            >
+                                              <Plus className="w-4 h-4" />
+                                              Add
+                                            </button>
+                                          )}
+                                          <div className="flex gap-2">
+                                            {course.offeredInFall && (
+                                              <span className="px-2 py-1 bg-orange-500/10 text-orange-600 rounded text-xs font-semibold">
+                                                Fall
+                                              </span>
+                                            )}
+                                            {course.offeredInSpring && (
+                                              <span className="px-2 py-1 bg-green-500/10 text-green-600 rounded text-xs font-semibold">
+                                                Spring
+                                              </span>
+                                            )}
+                                            {course.offeredInSummer && (
+                                              <span className="px-2 py-1 bg-blue-500/10 text-blue-600 rounded text-xs font-semibold">
+                                                Summer
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  ))}
+
+                                  {visibleCount < courses.length && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setDepartmentVisibleCounts((prev) => ({
+                                          ...prev,
+                                          [dept]: Math.min(
+                                            (prev[dept] || DEPARTMENT_PAGE_SIZE) + DEPARTMENT_PAGE_SIZE,
+                                            courses.length
+                                          ),
+                                        }))
+                                      }
+                                      className="w-full px-4 py-2 rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors text-sm font-medium text-foreground"
+                                    >
+                                      Show more ({courses.length - visibleCount} remaining)
+                                    </button>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
           </motion.div>
         )}
