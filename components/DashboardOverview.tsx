@@ -12,20 +12,6 @@ interface DashboardOverviewProps {
 const ICB1_CODES = new Set(["IC131", "IC136", "IC230"]);
 const ICB2_CODES = new Set(["IC121", "IC240", "IC241", "IC253"]);
 
-const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
-  BIO: { ic1: "IC136", ic2: "IC240" },
-  CE: { ic1: "IC230", ic2: "IC240" },
-  CS: { ic2: "IC253" },
-  CSE: { ic2: "IC253" },
-  DSE: { ic2: "IC253" },
-  EP: { ic1: "IC230", ic2: "IC121" },
-  ME: { ic2: "IC240" },
-  CH: { ic1: "IC131", ic2: "IC121" },
-  MNC: { ic1: "IC136", ic2: "IC253" },
-  MS: { ic1: "IC131", ic2: "IC240" },
-  GE: { ic1: "IC230", ic2: "IC240" },
-};
-
 export function DashboardOverview({ userId }: DashboardOverviewProps) {
   const { data: programs, isLoading: programsLoading } = useQuery({
     queryKey: ["user-programs", userId],
@@ -134,76 +120,35 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     (e: any) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F")
   ) || [];
 
-  // Sort by semester to process in order
-  const sortedEnrollments = [...completedEnrollments].sort((a, b) => (a.semester || 0) - (b.semester || 0));
-  
-  // Track which IC basket slots have been used
-  const icBasketUsed = { ic1: false, ic2: false };
+  const sortedEnrollments = [...completedEnrollments].sort(
+    (a, b) => (a.semester || 0) - (b.semester || 0)
+  );
 
   const getCourseCategory = (enrollment: any): string => {
     const code = enrollment.course?.code?.toUpperCase() || "";
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+
+    if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
+      const mappingBranch = userSettings.branch === "CSE" ? "CS" : userSettings.branch;
+      const mapping = enrollment.course.branchMappings.find(
+        (m: any) => m.branch === mappingBranch || m.branch === "COMMON"
+      ) || (userSettings.branch === "GE"
+        ? enrollment.course.branchMappings.find((m: any) => m.branch.startsWith("GE"))
+        : undefined);
+
+      if (mapping && ["IC", "IC_BASKET", "DC", "DE", "FE", "HSS", "IKS", "MTP", "ISTP"].includes(mapping.courseCategory)) {
+        return mapping.courseCategory;
+      }
+    }
+
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
 
-    // IC Basket compulsion logic - check BEFORE branchMappings
-    if ((isICB1 || isICB2) && userSettings?.branch) {
-      const branchCompulsion = IC_BASKET_COMPULSIONS[userSettings.branch] || {};
-      
-      // Check if this course matches branch's IC-I compulsion
-      if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
-        icBasketUsed.ic1 = true;
-        return "IC_BASKET";
-      }
-      
-      // Check if this course matches branch's IC-II compulsion
-      if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
-        icBasketUsed.ic2 = true;
-        return "IC_BASKET";
-      }
-      
-      // No compulsion for this basket type - first course counts as IC_BASKET
-      if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
-        icBasketUsed.ic1 = true;
-        return "IC_BASKET";
-      }
-      
-      if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
-        icBasketUsed.ic2 = true;
-        return "IC_BASKET";
-      }
-      
-      // Additional IC basket courses → FE
-      return "FE";
-    }
-
-    if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
-      const mappingBranch = userSettings.branch === "CSE" ? "CS" : userSettings.branch;
-      const mapping = enrollment.course.branchMappings.find(
-        (m: any) => m.branch === mappingBranch || m.branch === "COMMON"
-      ) || (userSettings.branch === "GE"
-        ? enrollment.course.branchMappings.find((m: any) => m.branch.startsWith("GE"))
-        : undefined);
-
-      if (mapping) {
-        return mapping.courseCategory;
-      }
-    }
-
-    if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
-      const mappingBranch = userSettings.branch === "CSE" ? "CS" : userSettings.branch;
-      const mapping = enrollment.course.branchMappings.find(
-        (m: any) => m.branch === mappingBranch || m.branch === "COMMON"
-      ) || (userSettings.branch === "GE"
-        ? enrollment.course.branchMappings.find((m: any) => m.branch.startsWith("GE"))
-        : undefined);
-
-      if (mapping) {
-        return mapping.courseCategory;
-      }
-    }
-
     if (isICB1 || isICB2) return "IC_BASKET";
+
+    // Branch-specific course patterns
+    if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return "DE";
+    if (userSettings?.branch === "DSE" && normalizedCode.startsWith("CS")) return "DE";
 
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
@@ -211,15 +156,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
     if (normalizedCode.includes("MTP")) return "MTP";
     if (normalizedCode.includes("ISTP")) return "ISTP";
-    
-    // Check courseType AFTER branchMappings
+
     if (enrollment.courseType === "DE") return "DE";
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
-    
-    // Branch-specific course patterns (only if no explicit courseType)
-    if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return "DE";
-    if (userSettings?.branch === "DSE" && normalizedCode.startsWith("CS")) return "DE";
-
     return "DC";
   };
 
