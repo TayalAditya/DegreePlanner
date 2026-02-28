@@ -52,6 +52,7 @@ const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
   MNC: { ic1: "IC136", ic2: "IC253" },
   MS: { ic1: "IC131", ic2: "IC240" },
   GE: { ic1: "IC230", ic2: "IC240" },
+  // Fallback for any branch not explicitly listed
 };
 
 export function ProgressChart({ progress, isLoading, enrollments, userBranch }: ProgressChartProps) {
