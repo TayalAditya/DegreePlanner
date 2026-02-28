@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { ChevronDown } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { getAllDefaultCourses, type DefaultCourse } from "@/lib/defaultCurriculum";
@@ -71,28 +71,50 @@ const normalizeBranchForIcBasket = (branch?: string) => {
   return upper;
 };
 
-export function ProgressChart({ progress, isLoading, enrollments, userBranch }: ProgressChartProps) {
-  const [includeCurrentSemesterCredits, setIncludeCurrentSemesterCredits] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      const stored = localStorage.getItem("degreePlanner.progress.includeCurrentSemesterCredits");
-      return stored === "true";
-    } catch {
-      return false;
-    }
-  });
-  const [remainingOpen, setRemainingOpen] = useState(false);
+const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
 
-  useEffect(() => {
+export function ProgressChart({ progress, isLoading, enrollments, userBranch }: ProgressChartProps) {
+  const includeCurrentSemesterCredits = useSyncExternalStore(
+    (callback) => {
+      if (typeof window === "undefined") return () => {};
+      const onStorage = (e: StorageEvent) => {
+        if (e.key === INCLUDE_CURRENT_SEM_KEY) callback();
+      };
+      const onLocal = () => callback();
+      window.addEventListener("storage", onStorage);
+      window.addEventListener("degreePlanner:storage", onLocal);
+      return () => {
+        window.removeEventListener("storage", onStorage);
+        window.removeEventListener("degreePlanner:storage", onLocal);
+      };
+    },
+    () => {
+      if (typeof window === "undefined") return false;
+      try {
+        return localStorage.getItem(INCLUDE_CURRENT_SEM_KEY) === "true";
+      } catch {
+        return false;
+      }
+    },
+    () => false
+  );
+
+  const setIncludeCurrentSemesterCredits = (next: boolean | ((prev: boolean) => boolean)) => {
+    const nextValue = typeof next === "function"
+      ? next(includeCurrentSemesterCredits)
+      : next;
+
     try {
-      localStorage.setItem(
-        "degreePlanner.progress.includeCurrentSemesterCredits",
-        String(includeCurrentSemesterCredits)
-      );
+      localStorage.setItem(INCLUDE_CURRENT_SEM_KEY, String(nextValue));
     } catch {
       // ignore
     }
-  }, [includeCurrentSemesterCredits]);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("degreePlanner:storage"));
+    }
+  };
+  const [remainingOpen, setRemainingOpen] = useState(false);
 
   const totals = useMemo(() => {
     const requiredTotal = Number(progress?.required?.total || 0);
@@ -228,11 +250,6 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     });
     return set;
   }, [enrollments]);
-
-  const countedCodes = useMemo(() => {
-    if (!includeCurrentSemesterCredits) return completedCodes;
-    return new Set([...completedCodes, ...inProgressCodes]);
-  }, [completedCodes, inProgressCodes, includeCurrentSemesterCredits]);
 
   if (enrollments && enrollments.length > 0) {
     const shouldCount = (e: any) => {
