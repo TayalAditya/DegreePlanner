@@ -321,6 +321,7 @@ export class CreditCalculator {
       };
       courseType: CourseType;
       grade?: string | null;
+      semester?: number;
     }>,
     branch?: string
   ): CreditBreakdown {
