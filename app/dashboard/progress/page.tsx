@@ -115,6 +115,22 @@ const ICB2_CODES = new Set([
   "IC253",
 ]);
 
+const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
+  BIO: { ic1: "IC136", ic2: "IC240" },
+  CE: { ic1: "IC230", ic2: "IC240" },
+  CS: { ic2: "IC253" },
+  CSE: { ic2: "IC253" },
+  DSE: { ic2: "IC253" },
+  EP: { ic1: "IC230", ic2: "IC121" },
+  ME: { ic2: "IC240" },
+  CH: { ic1: "IC131", ic2: "IC121" },
+  MNC: { ic1: "IC136", ic2: "IC253" },
+  MS: { ic1: "IC131", ic2: "IC240" },
+  GE: { ic1: "IC230", ic2: "IC240" },
+  EE: {},
+  VLSI: {},
+};
+
 export default function ProgressPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -127,6 +143,26 @@ export default function ProgressPage() {
   const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
   const getCourseCategory = (enrollment: Enrollment): CourseCategory => {
+    const code = enrollment.course.code.toUpperCase();
+    const normalizedCode = normalizeCode(code);
+    const isICB1 = ICB1_CODES.has(normalizedCode);
+    const isICB2 = ICB2_CODES.has(normalizedCode);
+
+    // IC Basket compulsion logic - check BEFORE branchMappings
+    if ((isICB1 || isICB2) && user?.branch) {
+      const branchCompulsion = IC_BASKET_COMPULSIONS[user.branch] || {};
+      
+      if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
+        return "IC_BASKET";
+      }
+      
+      if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
+        return "IC_BASKET";
+      }
+      
+      return "FE";
+    }
+
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
       const mappingBranch = user.branch === "CSE" ? "CS" : user.branch;
       const mapping = enrollment.course.branchMappings.find(
@@ -139,13 +175,6 @@ export default function ProgressPage() {
         return mapping.courseCategory as CourseCategory;
       }
     }
-
-    const code = enrollment.course.code.toUpperCase();
-    const normalizedCode = normalizeCode(code);
-    const isICB1 = ICB1_CODES.has(normalizedCode);
-    const isICB2 = ICB2_CODES.has(normalizedCode);
-
-    if (isICB1 || isICB2) return "IC_BASKET";
 
     if (user?.branch === "CSE" && code.startsWith("DS")) return "DE";
     if (user?.branch === "DSE" && code.startsWith("CS")) return "DE";
