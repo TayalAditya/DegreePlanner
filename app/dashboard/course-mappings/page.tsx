@@ -25,7 +25,7 @@ interface CourseMapping {
 const BRANCHES = [
   { code: "CSE", name: "Computer Science & Engineering" },
   { code: "DSE", name: "Data Science & Engineering" },
-  { code: "ECE", name: "Electronics & Communication Engineering" },
+  { code: "EE", name: "Electrical Engineering" },
   { code: "ME", name: "Mechanical Engineering" },
   { code: "CE", name: "Civil Engineering" },
   { code: "BE", name: "Bio Engineering" },
@@ -167,6 +167,46 @@ export default function CourseMappingsPage() {
     }
   };
 
+  // Smart defaults: for CSE, CS-* and DS-* (not already DC) → DE
+  //                 for BSCS, CH-* → DC
+  const handleApplyBranchDefaults = () => {
+    const newChanges = new Map(changes);
+    let count = 0;
+
+    for (const course of courses) {
+      const key = `${course.id}-${selectedBranch}`;
+      const existingCategory = mappings.get(key)?.courseCategory;
+      const code = course.code.toUpperCase().replace(/[-\s]/g, "");
+
+      let targetCategory: string | null = null;
+
+      if (selectedBranch === "CSE") {
+        if ((code.startsWith("CS") || code.startsWith("DS")) && existingCategory !== "DC") {
+          targetCategory = "DE";
+        }
+      } else if (selectedBranch === "BSCS") {
+        if (code.startsWith("CH")) {
+          targetCategory = "DC";
+        }
+      }
+
+      if (targetCategory && existingCategory !== targetCategory) {
+        newChanges.set(key, {
+          ...newChanges.get(key),
+          courseId: course.id,
+          branch: selectedBranch,
+          courseCategory: targetCategory,
+          isRequired: mappings.get(key)?.isRequired || false,
+          semester: mappings.get(key)?.semester || null,
+        });
+        count++;
+      }
+    }
+
+    setChanges(newChanges);
+    showToast("info", count > 0 ? `Queued ${count} defaults — review and save` : "No new defaults to apply");
+  };
+
   const filteredCourses = courses.filter((course) =>
     course.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
     course.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -230,15 +270,25 @@ export default function CourseMappingsPage() {
             />
           </div>
 
-          {/* Save Button */}
-          <div className="flex items-end">
+          {/* Actions */}
+          <div className="flex items-end gap-2">
+            {(selectedBranch === "CSE" || selectedBranch === "BSCS") && (
+              <button
+                onClick={handleApplyBranchDefaults}
+                disabled={loading}
+                className="flex-1 px-4 py-2 border border-border rounded-md text-sm font-medium text-foreground-secondary hover:bg-background-secondary disabled:opacity-50 flex items-center justify-center gap-2"
+                title={selectedBranch === "CSE" ? "Set CS-* and DS-* (non-DC) → DE" : "Set CH-* → DC"}
+              >
+                ✨ Smart defaults
+              </button>
+            )}
             <button
               onClick={handleSaveChanges}
               disabled={saving || changes.size === 0}
-              className="w-full px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               <Save className="w-4 h-4" />
-              {saving ? "Saving..." : `Save Changes (${changes.size})`}
+              {saving ? "Saving..." : `Save (${changes.size})`}
             </button>
           </div>
         </div>
