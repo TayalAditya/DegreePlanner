@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { db } from "@/lib/db";
+import prisma from "@/lib/prisma";
 
 // @ts-ignore - googleapis types might not be available in dev
 import { google } from "googleapis";
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user has granted calendar scope
-    const account = await db.account.findFirst({
+    const account = await prisma.account.findFirst({
       where: {
         userId: session.user.id,
         provider: "google",
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
         const eventId = response.data.id;
         if (eventId) {
           // Save event ID to database
-          await db.timetableEntry.update({
+          await prisma.timetableEntry.update({
             where: { id: entry.id },
             data: { googleEventId: eventId },
           });

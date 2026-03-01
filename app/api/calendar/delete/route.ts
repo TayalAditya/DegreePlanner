@@ -1,11 +1,12 @@
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { authOptions } from "@/lib/auth";
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import prisma from "@/lib/prisma";
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -16,7 +17,7 @@ export async function POST(req: Request) {
     }
 
     // Get user's Google OAuth token
-    const account = await db.account.findFirst({
+    const account = await prisma.account.findFirst({
       where: {
         userId: session.user.id,
         provider: "google",
@@ -30,21 +31,18 @@ export async function POST(req: Request) {
       );
     }
 
-    const calendar = google.calendar({
-      version: "v3",
-      auth: new google.auth.OAuth2(
-        process.env.GOOGLE_OAUTH_ID,
-        process.env.GOOGLE_OAUTH_SECRET,
-        `${process.env.NEXTAUTH_URL}/api/auth/callback/google`
-      ),
-    });
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET
+    );
 
-    // Use the access token
-    calendar.auth?.setCredentials({
+    oauth2Client.setCredentials({
       access_token: account.access_token,
       refresh_token: account.refresh_token || undefined,
       expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
     });
+
+    const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
     // Delete the event from Google Calendar
     await calendar.events.delete({
@@ -53,7 +51,7 @@ export async function POST(req: Request) {
     });
 
     // Remove eventId from timetable entry
-    await db.timetableEntry.updateMany({
+    await prisma.timetableEntry.updateMany({
       where: {
         googleEventId: eventId,
       },

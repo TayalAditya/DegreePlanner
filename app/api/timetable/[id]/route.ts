@@ -39,20 +39,23 @@ export async function GET(
       return NextResponse.json({ error: "This entry is not in your current semester" }, { status: 409 });
     }
 
-    const isEnrolled = await prisma.courseEnrollment.findFirst({
-      where: {
-        userId: session.user.id,
-        courseId: entry.courseId,
-        semester: context.semester,
-        year: context.year,
-        term: context.term,
-        status: EnrollmentStatus.IN_PROGRESS,
-      },
-      select: { id: true },
-    });
+    // TA duties don't require enrollment check
+    if (entry.courseId) {
+      const isEnrolled = await prisma.courseEnrollment.findFirst({
+        where: {
+          userId: session.user.id,
+          courseId: entry.courseId,
+          semester: context.semester,
+          year: context.year,
+          term: context.term,
+          status: EnrollmentStatus.IN_PROGRESS,
+        },
+        select: { id: true },
+      });
 
-    if (!isEnrolled) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (!isEnrolled) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     return NextResponse.json(entry);
@@ -90,20 +93,23 @@ export async function PATCH(
       return NextResponse.json({ error: "This entry is not in your current semester" }, { status: 409 });
     }
 
-    const isEnrolled = await prisma.courseEnrollment.findFirst({
-      where: {
-        userId: session.user.id,
-        courseId: existing.courseId,
-        semester: context.semester,
-        year: context.year,
-        term: context.term,
-        status: EnrollmentStatus.IN_PROGRESS,
-      },
-      select: { id: true },
-    });
+    // TA duties don't require enrollment check
+    if (existing.courseId) {
+      const isEnrolled = await prisma.courseEnrollment.findFirst({
+        where: {
+          userId: session.user.id,
+          courseId: existing.courseId,
+          semester: context.semester,
+          year: context.year,
+          term: context.term,
+          status: EnrollmentStatus.IN_PROGRESS,
+        },
+        select: { id: true },
+      });
 
-    if (!isEnrolled) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (!isEnrolled) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     const data: Record<string, any> = {};
@@ -213,20 +219,23 @@ export async function DELETE(
       return NextResponse.json({ error: "This entry is not in your current semester" }, { status: 409 });
     }
 
-    const isEnrolled = await prisma.courseEnrollment.findFirst({
-      where: {
-        userId: session.user.id,
-        courseId: entry.courseId,
-        semester: context.semester,
-        year: context.year,
-        term: context.term,
-        status: EnrollmentStatus.IN_PROGRESS,
-      },
-      select: { id: true },
-    });
+    // TA duties don't require enrollment check
+    if (entry.courseId) {
+      const isEnrolled = await prisma.courseEnrollment.findFirst({
+        where: {
+          userId: session.user.id,
+          courseId: entry.courseId,
+          semester: context.semester,
+          year: context.year,
+          term: context.term,
+          status: EnrollmentStatus.IN_PROGRESS,
+        },
+        select: { id: true },
+      });
 
-    if (!isEnrolled) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      if (!isEnrolled) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     await prisma.timetableEntry.delete({
