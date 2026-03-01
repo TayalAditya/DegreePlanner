@@ -377,7 +377,7 @@ model ApprovedUser {
 // Timetable management
 model TimetableEntry {
   id              String   @id @default(cuid())
-  courseId        String
+  courseId        String?  // Optional - for TA duties not tied to a course
   semester        Int
   year            Int
   term            Term
@@ -398,6 +398,9 @@ model TimetableEntry {
   instructor      String?
   notes           String?
 
+  // Google Calendar integration
+  googleEventId   String?  // Event ID from Google Calendar API
+
   // Admin approval for manual changes
   isApproved      Boolean  @default(false)
   approvedById    String?
@@ -413,7 +416,7 @@ model TimetableEntry {
   
   createdBy       User?    @relation("TimetableCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   updatedBy       User?    @relation("TimetableUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
-  course          Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  course          Course?  @relation(fields: [courseId], references: [id], onDelete: Restrict)
   
   @@index([courseId])
   @@index([semester])

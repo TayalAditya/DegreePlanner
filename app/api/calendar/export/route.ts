@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 // @ts-ignore - googleapis types might not be available in dev
 import { google } from "googleapis";
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user has granted calendar scope
-    const account = await prisma?.account.findFirst({
+    const account = await db.account.findFirst({
       where: {
         userId: session.user.id,
         provider: "google",
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
     const endDate = new Date("2026-05-01");
-    const createdEvents: string[] = [];
+    const createdEvents: { entryId: string; eventId: string }[] = [];
 
     // Create events
     for (const entry of entries as TimetableEntry[]) {
@@ -140,7 +140,16 @@ export async function POST(request: NextRequest) {
           calendarId: "primary",
           requestBody: event,
         });
-        createdEvents.push(response.data.id || "");
+
+        const eventId = response.data.id;
+        if (eventId) {
+          // Save event ID to database
+          await db.timetableEntry.update({
+            where: { id: entry.id },
+            data: { googleEventId: eventId },
+          });
+          createdEvents.push({ entryId: entry.id, eventId });
+        }
       } catch (error) {
         console.error("Error creating event:", error);
       }
@@ -149,7 +158,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: `${createdEvents.length} events added to Google Calendar`,
-      eventIds: createdEvents,
+      events: createdEvents,
     });
   } catch (error: any) {
     console.error("Calendar export error:", error);

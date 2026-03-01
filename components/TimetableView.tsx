@@ -904,27 +904,54 @@ function WeekView({
   onEdit: (entry: TimetableEntry) => void;
   onDelete: (entry: TimetableEntry) => void;
 }) {
-  const index = useMemo(() => {
-    const map = new Map<string, TimetableEntry>();
+  // Helper to convert time string to minutes
+  const timeToMinutes = (timeStr: string) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  // Helper to calculate row span (how many time slots the class spans)
+  const calculateRowSpan = (startTime: string, endTime: string) => {
+    const startMin = timeToMinutes(startTime);
+    const endMin = timeToMinutes(endTime);
+    const durationMin = endMin - startMin;
+    // Each time slot is 10 minutes, so rowspan = duration / 10
+    return Math.max(1, Math.ceil(durationMin / 10));
+  };
+
+  // Track which cells have already been rendered (to skip duplicate entries)
+  const renderedCells = useMemo(() => {
+    const set = new Set<string>();
     for (const entry of timetable) {
-      map.set(`${entry.dayOfWeek}-${entry.startTime}`, entry);
+      const rowSpan = calculateRowSpan(entry.startTime, entry.endTime);
+      for (let i = 0; i < rowSpan; i++) {
+        const timeIdx = START_TIMES.indexOf(entry.startTime) + i;
+        if (timeIdx >= 0 && timeIdx < START_TIMES.length) {
+          set.add(`${entry.dayOfWeek}-${timeIdx}`);
+        }
+      }
     }
-    return map;
+    return set;
   }, [timetable]);
+
+  // Get entry for a specific day and time
+  const getEntry = (day: string, time: string) => {
+    return timetable.find(e => e.dayOfWeek === day && e.startTime === time);
+  };
 
   return (
     <div className="bg-surface dark:bg-surface rounded-lg border border-border overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-[720px] w-full divide-y divide-border">
-          <thead className="bg-background-secondary dark:bg-background">
+        <table className="w-full divide-y divide-border border-collapse">
+          <thead className="bg-background-secondary dark:bg-background sticky top-0 z-10">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-foreground-secondary uppercase tracking-wider w-24">
+              <th className="px-3 py-3 text-left text-xs font-medium text-foreground-secondary uppercase tracking-wider w-20 border-r border-border">
                 Time
               </th>
               {DAYS.map((day) => (
                 <th
                   key={day}
-                  className="px-4 py-3 text-left text-xs font-medium text-foreground-secondary uppercase tracking-wider"
+                  className="px-3 py-3 text-left text-xs font-medium text-foreground-secondary uppercase tracking-wider flex-1 border-r border-border last:border-r-0"
                 >
                   {day.slice(0, 3)}
                 </th>
@@ -932,33 +959,51 @@ function WeekView({
             </tr>
           </thead>
           <tbody className="bg-surface divide-y divide-border">
-            {START_TIMES.map((time) => (
-              <tr key={time}>
-                <td className="px-4 py-3 text-sm text-foreground-secondary font-medium">
-                  {time}
-                </td>
-                {DAYS.map((day) => {
-                  const entry = index.get(`${day}-${time}`);
-                  return (
-                    <td
-                      key={day}
-                      className="px-2 py-2 text-sm border-l border-border"
-                    >
-                      {entry && (() => {
-                        const color = getCourseColor(entry.course?.code || "", entry.classType);
-                        return (
-                        <div className="relative group">
+            {START_TIMES.map((time, timeIdx) => {
+              const isSkipped = Array.from(renderedCells).some(key => key.endsWith(`-${timeIdx}`) && !key.endsWith(`${time.split(':')[0]}:${time.split(':')[1]}`));
+              if (isSkipped) return null;
+
+              return (
+                <tr key={time} className="divide-x divide-border">
+                  <td className="px-3 py-2 text-xs text-foreground-secondary font-medium w-20 border-r border-border bg-background-secondary/50 dark:bg-background/50">
+                    {time}
+                  </td>
+                  {DAYS.map((day) => {
+                    const entry = getEntry(day, time);
+                    
+                    if (!entry) {
+                      return (
+                        <td
+                          key={day}
+                          className="px-2 py-2 text-sm border-r border-border last:border-r-0 hover:bg-background-secondary/30 transition-colors h-12"
+                        />
+                      );
+                    }
+
+                    const rowSpan = calculateRowSpan(entry.startTime, entry.endTime);
+                    const color = getCourseColor(entry.course?.code || "", entry.classType);
+                    
+                    return (
+                      <td
+                        key={day}
+                        rowSpan={rowSpan}
+                        className="px-2 py-2 text-sm border-r border-border last:border-r-0 align-top"
+                      >
+                        <div className="relative group h-full">
                           <button
                             type="button"
                             onClick={() => onEdit(entry)}
-                            className={`w-full text-left ${color.bg} border-l-4 ${color.border} rounded p-2 pr-6 ${color.hover} transition-colors`}
+                            className={`w-full h-full text-left ${color.bg} border-l-4 ${color.border} rounded p-2 pr-6 ${color.hover} transition-colors flex flex-col justify-center`}
                           >
                             <p className={`font-medium ${color.text} text-xs truncate`}>
                               {formatCourseCode(entry.course?.code || "")}
                             </p>
+                            <p className={`text-xs ${color.text} opacity-80 mt-0.5`}>
+                              {entry.startTime} - {entry.endTime}
+                            </p>
                             <div className={`flex items-center gap-1 text-xs ${color.text} mt-1`}>
-                              <MapPin className="w-3 h-3" />
-                              <span className="truncate">
+                              <MapPin className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate text-xs">
                                 {entry.venue || "TBA"}
                                 {entry.slot ? ` • Slot ${entry.slot}` : ""}
                               </span>
@@ -973,13 +1018,12 @@ function WeekView({
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
-                        );
-                      })()}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -1332,8 +1376,9 @@ function TimetableEntryModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!courseId) {
-      showToast("warning", "Select a course first");
+    // TA duties don't require a course
+    if (!courseId && classType !== "TA_DUTY") {
+      showToast("warning", "Select a course first (or create a TA duty without a course)");
       return;
     }
 
@@ -1348,7 +1393,7 @@ function TimetableEntryModal({
       }
 
       onSave({
-        courseId,
+        courseId: courseId || undefined,
         dayOfWeek,
         startTime,
         endTime,
@@ -1361,7 +1406,7 @@ function TimetableEntryModal({
       return;
     }
 
-    if (!selectedCourse) {
+    if (!selectedCourse && courseId) {
       showToast("warning", "Please select a valid course");
       return;
     }
@@ -1392,7 +1437,7 @@ function TimetableEntryModal({
     }
 
     onSaveBulk({
-      courseId,
+      courseId: courseId || undefined,
       replaceExisting,
       entries: activeDrafts.map((d) => ({
         dayOfWeek: d.dayOfWeek,
@@ -1459,15 +1504,17 @@ function TimetableEntryModal({
             <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1">
               {/* Course picker */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Course</label>
+                <label className="text-sm font-medium text-foreground">
+                  Course {classType === "TA_DUTY" && "(optional for TA duties)"}
+                </label>
 
                 {initial ? (
                   <div className="p-3 rounded-xl bg-background-secondary border border-border">
                     <p className="text-sm text-foreground truncate">
-                      {initial.course ? `${formatCourseCode(initial.course.code)} — ${initial.course.name}` : "Selected course"}
+                      {initial.course ? `${formatCourseCode(initial.course.code)} — ${initial.course.name}` : "TA Duty (No course)"}
                     </p>
                     <p className="text-xs text-foreground-secondary mt-0.5">
-                      Course is fixed for an existing schedule entry.
+                      {initial.course ? "Course is fixed for an existing schedule entry." : "TA duties don't require a specific course."}
                     </p>
                   </div>
                 ) : (
@@ -1485,14 +1532,14 @@ function TimetableEntryModal({
                       setReplaceExisting(existingEntries.filter((en) => en.courseId === nextCourseId).length > 0);
                       }}
                       className="w-full px-3 py-3 min-h-[44px] rounded-xl border border-border bg-surface text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
-                      disabled={courses.length === 0}
+                      disabled={courses.length === 0 && classType !== "TA_DUTY"}
                     >
-                    {courses.length === 0 ? (
+                    {courses.length === 0 && classType !== "TA_DUTY" ? (
                       <option value="">No courses enrolled</option>
                     ) : (
                       <>
-                        <option value="" disabled>
-                          Select a course
+                        <option value="" disabled={classType !== "TA_DUTY"}>
+                          {classType === "TA_DUTY" ? "No course (optional)" : "Select a course"}
                         </option>
                         {courses.map((c) => (
                           <option key={c.id} value={c.id}>
@@ -1838,6 +1885,28 @@ function TimetableEntryModal({
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                {initial?.googleEventId && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!confirm("Delete this event from Google Calendar? It will remain in the app.")) return;
+                      try {
+                        const res = await fetch("/api/calendar/delete", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ eventId: initial.googleEventId }),
+                        });
+                        if (!res.ok) throw new Error("Failed to delete from Google Calendar");
+                        showToast("success", "Removed from Google Calendar");
+                      } catch (error) {
+                        showToast("error", "Failed to delete from Google Calendar");
+                      }
+                    }}
+                    className="px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 font-medium transition-colors"
+                  >
+                    Remove from Google Calendar
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={onClose}
