@@ -153,6 +153,14 @@ export async function PATCH(
       data.classType = body.classType;
     }
 
+    // If non-admin is editing, reset approval status
+    const isAdmin = session.user.role === "ADMIN";
+    if (!isAdmin) {
+      data.isApproved = false;
+      data.approvedById = null;
+      data.approvedAt = null;
+    }
+
     const updated = await prisma.timetableEntry.update({
       where: { id },
       data: {

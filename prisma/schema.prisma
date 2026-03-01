@@ -41,6 +41,7 @@ model User {
   enrollments   CourseEnrollment[]
   createdTimetableEntries TimetableEntry[] @relation("TimetableCreatedBy")
   updatedTimetableEntries TimetableEntry[] @relation("TimetableUpdatedBy")
+  approvedTimetableEntries TimetableEntry[] @relation("TimetableApprovedBy")
   documents     Document[]
   supportTickets SupportTicket[]
   courseSuggestions CourseSuggestion[]
@@ -397,6 +398,12 @@ model TimetableEntry {
   instructor      String?
   notes           String?
 
+  // Admin approval for manual changes
+  isApproved      Boolean  @default(false)
+  approvedById    String?
+  approvedAt      DateTime?
+  approvedBy      User?    @relation("TimetableApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+
   // Audit (who created/last updated this shared schedule entry)
   createdById     String?
   updatedById     String?
@@ -414,6 +421,8 @@ model TimetableEntry {
   @@index([term, year])
   @@index([createdById])
   @@index([updatedById])
+  @@index([isApproved])
+  @@index([approvedById])
 }
 
 enum DayOfWeek {
@@ -432,6 +441,7 @@ enum ClassType {
   TUTORIAL
   SEMINAR
   WORKSHOP
+  TA_DUTY
 }
 
 // Venue management for custom locations
