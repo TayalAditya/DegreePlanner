@@ -23,22 +23,21 @@ interface CourseMapping {
 }
 
 const BRANCHES = [
-  { code: "CS", name: "Computer Science & Engineering" },
+  { code: "CSE", name: "Computer Science & Engineering" },
   { code: "DSE", name: "Data Science & Engineering" },
-  { code: "EE", name: "Electrical Engineering" },
+  { code: "ECE", name: "Electronics & Communication Engineering" },
   { code: "ME", name: "Mechanical Engineering" },
   { code: "CE", name: "Civil Engineering" },
   { code: "BE", name: "Bio Engineering" },
   { code: "EP", name: "Engineering Physics" },
   { code: "MSE", name: "Materials Science & Engineering" },
   { code: "MNC", name: "Mathematics & Computing" },
-  { code: "VLSI", name: "Microelectronics & VLSI" },
+  { code: "MEVLSI", name: "Microelectronics & VLSI" },
   { code: "GE", name: "General Engineering (No Specialization)" },
   { code: "GE-MECH", name: "General Engineering – Mechatronics" },
   { code: "GE-COMM", name: "General Engineering – Communication Tech" },
   { code: "GE-ROBO", name: "General Engineering – AI & Robotics" },
-  { code: "BS", name: "B.S. Chemical Sciences" },
-  { code: "BSCS", name: "B.S. Computer Science" },
+  { code: "BSCS", name: "B.S. Chemical Sciences" },
 ];
 
 const COURSE_CATEGORIES = [
