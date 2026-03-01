@@ -44,6 +44,13 @@ for (let hour = 8; hour <= 20; hour++) {
 }
 const START_TIMES = TIME_OPTIONS.slice(0, -1);
 const END_TIMES = TIME_OPTIONS.slice(1);
+
+// Week view display times — 30-minute intervals (08:00, 08:30, 09:00 … 19:30)
+const WEEK_VIEW_TIMES: string[] = [];
+for (let hour = 8; hour < 20; hour++) {
+  WEEK_VIEW_TIMES.push(`${pad2(hour)}:00`);
+  WEEK_VIEW_TIMES.push(`${pad2(hour)}:30`);
+}
 const DEFAULT_START_TIME = START_TIMES.includes("10:00") ? "10:00" : START_TIMES[0];
 // Default to 50 minutes duration
 const DEFAULT_END_TIME = START_TIMES.includes("10:00") && END_TIMES.includes("10:50") ? "10:50" : (END_TIMES.find(t => {
@@ -700,21 +707,36 @@ export function TimetableView({ userId }: TimetableViewProps) {
     
     // Try to add directly to Google Calendar via API
     try {
+      console.log("[Calendar Export] Sending", entries.length, "entries to API...");
       const response = await fetch("/api/calendar/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entries }),
       });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          showToast("success", "Events added to Google Calendar");
-          return;
+
+      const data = await response.json();
+      console.log("[Calendar Export] Response:", response.status, data);
+
+      if (response.ok && data.success) {
+        const msg = data.failures?.length > 0
+          ? `${data.message}`
+          : data.message || "Events added to Google Calendar";
+        showToast("success", msg);
+        if (data.failures?.length > 0) {
+          console.warn("[Calendar Export] Failed events:", data.failures);
         }
+        return;
+      }
+
+      if (!response.ok) {
+        const errorMsg = data.error || `Server error ${response.status}`;
+        console.error("[Calendar Export] API error:", errorMsg, data);
+        showToast("error", `Google Calendar: ${errorMsg}`);
+        return;
       }
     } catch (error) {
-      console.log("Google Calendar API not available, falling back to .ics download");
+      console.error("[Calendar Export] Network error:", error);
+      showToast("error", "Could not reach calendar API — downloading .ics instead");
     }
     
     // Fallback to .ics download
@@ -923,21 +945,25 @@ function WeekView({
     return h * 60 + m;
   };
 
-  // Helper to calculate row span (how many time slots the class spans)
+  // Count how many WEEK_VIEW_TIMES rows this entry covers (rows with time < endTime)
   const calculateRowSpan = (startTime: string, endTime: string) => {
-    const startMin = timeToMinutes(startTime);
-    const endMin = timeToMinutes(endTime);
-    const durationMin = endMin - startMin;
-    // Each time slot is 10 minutes, so rowspan = duration / 10
-    return Math.max(1, Math.ceil(durationMin / 10));
+    const startIdx = WEEK_VIEW_TIMES.indexOf(startTime);
+    if (startIdx < 0) return 1;
+    const endMinutes = timeToMinutes(endTime);
+    let count = 0;
+    for (let i = startIdx; i < WEEK_VIEW_TIMES.length; i++) {
+      if (timeToMinutes(WEEK_VIEW_TIMES[i]) < endMinutes) count++;
+      else break;
+    }
+    return Math.max(1, count);
   };
 
-  // Track covered cells for each day (excluding start row, which renders the entry)
+  // Track covered cells (rows after the start row that are spanned over)
   const coveredCellsByDay = useMemo(() => {
     const map: Record<string, Set<number>> = Object.fromEntries(DAYS.map((d) => [d, new Set<number>()]));
 
     for (const entry of timetable) {
-      const startIdx = START_TIMES.indexOf(entry.startTime);
+      const startIdx = WEEK_VIEW_TIMES.indexOf(entry.startTime);
       if (startIdx < 0) continue;
 
       const rowSpan = calculateRowSpan(entry.startTime, entry.endTime);
@@ -974,7 +1000,7 @@ function WeekView({
             </tr>
           </thead>
           <tbody className="bg-surface divide-y divide-border">
-            {START_TIMES.map((time, timeIdx) => {
+            {WEEK_VIEW_TIMES.map((time, timeIdx) => {
               return (
                 <tr key={time} className="divide-x divide-border">
                   <td className="px-3 py-2 text-xs text-foreground-secondary font-medium w-20 border-r border-border bg-background-secondary/50 dark:bg-background/50">
@@ -991,7 +1017,7 @@ function WeekView({
                       return (
                         <td
                           key={day}
-                          className="px-2 py-2 text-sm border-r border-border last:border-r-0 hover:bg-background-secondary/30 transition-colors h-12"
+                          className="px-2 py-2 text-sm border-r border-border last:border-r-0 hover:bg-background-secondary/30 transition-colors h-10"
                         />
                       );
                     }
