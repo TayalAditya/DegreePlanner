@@ -44,10 +44,8 @@ export default async function DashboardLayout({
           </main>
           <footer className="border-t border-border bg-surface/40 backdrop-blur-sm">
             <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-5 text-center text-sm text-foreground-secondary">
-              Made with love by{" "}
-              <span className="font-semibold text-foreground">
-                Aditya Tayal
-              </span>
+              Degree Planner · Built by{" "}
+              <span className="font-semibold text-foreground">Aditya Tayal</span>
             </div>
           </footer>
         </div>
