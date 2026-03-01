@@ -678,6 +678,9 @@ export function TimetableView({ userId }: TimetableViewProps) {
   };
 
   const [clearingCalendar, setClearingCalendar] = useState(false);
+  const [calendarPickerOpen, setCalendarPickerOpen] = useState(false);
+  const [calendarSelected, setCalendarSelected] = useState<Set<string>>(new Set());
+  const [calendarExporting, setCalendarExporting] = useState(false);
   const [autofillPickerOpen, setAutofillPickerOpen] = useState(false);
   const [autofillSelected, setAutofillSelected] = useState<Set<string>>(new Set());
   const handleClearAllCalendar = async () => {
@@ -751,65 +754,56 @@ export function TimetableView({ userId }: TimetableViewProps) {
 
   const canAutofill = canAddClass && autofillCandidates.length > 0;
 
-  const handleExportCalendar = async () => {
-    if (entries.length === 0) {
-      showToast("warning", "No classes to export");
-      return;
-    }
-    
-    // Try to add directly to Google Calendar via API
+  const openCalendarPicker = () => {
+    if (entries.length === 0) { showToast("warning", "No classes to export"); return; }
+    // Pre-select all entries (synced + unsynced); user can deselect
+    setCalendarSelected(new Set(entries.map((e) => e.id)));
+    setCalendarPickerOpen(true);
+  };
+
+  const handleConfirmCalendarExport = async (selected: Set<string>) => {
+    const toExport = entries.filter((e) => selected.has(e.id));
+    if (toExport.length === 0) { setCalendarPickerOpen(false); return; }
+    setCalendarExporting(true);
     try {
-      console.log("[Calendar Export] Sending", entries.length, "entries to API...");
       const response = await fetch("/api/calendar/export", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entries }),
+        body: JSON.stringify({ entries: toExport }),
       });
-
       const data = await response.json();
-      console.log("[Calendar Export] Response:", response.status, data);
+
+      // Always refresh cache so googleEventId reflects new state
+      await queryClient.invalidateQueries({ queryKey: ["timetable", userId] });
+      setCalendarPickerOpen(false);
 
       if (response.ok && data.success) {
-        const msg = data.failures?.length > 0
-          ? `${data.message}`
-          : data.message || "Events added to Google Calendar";
-        showToast("success", msg);
-        if (data.failures?.length > 0) {
-          console.warn("[Calendar Export] Failed events:", data.failures);
-        }
+        showToast("success", data.message || "Events added to Google Calendar");
+        if (data.failures?.length > 0) console.warn("[Calendar] Failed events:", data.failures);
         return;
       }
-
       if (response.ok && !data.success) {
-        // All events failed (200 but no events created)
         const firstErr = data.failures?.[0]?.error || "Unknown error";
-        console.error("[Calendar Export] All events failed. First error:", firstErr, data.failures);
         if (data.needs_reauth || /insufficient|scope|unauthorized|invalid_grant|token/i.test(firstErr)) {
-          showToast("error", "Google Calendar: No permission — please Sign Out and Sign In again to grant calendar access.");
+          showToast("error", "Google Calendar: No permission — please Sign Out and Sign In again.");
         } else {
           showToast("error", `Calendar sync failed: ${firstErr}`);
         }
         return;
       }
-
       if (!response.ok) {
-        const errorMsg = data.error || `Server error ${response.status}`;
-        console.error("[Calendar Export] API error:", errorMsg, data);
         if (response.status === 401 || response.status === 403) {
           showToast("error", data.error || "Google Calendar auth expired — please sign out and sign in again.");
         } else {
-          window.open("https://calendar.google.com", "_blank");
-          showToast("warning", `Calendar sync failed — opening Google Calendar. Re-sign in if needed.`);
+          showToast("error", data.error || `Calendar error (${response.status})`);
         }
-        return;
       }
-    } catch (error) {
-      console.error("[Calendar Export] Network error:", error);
-      // Fallback to .ics on network error only
+    } catch {
       const endDate = new Date("2026-05-01");
-      const filename = `timetable-${context?.term || "current"}-${context?.year || "semester"}.ics`;
-      downloadICS(entries, filename, endDate);
+      downloadICS(entries, `timetable-${context?.term || "current"}.ics`, endDate);
       showToast("warning", "Network error — calendar file downloaded as backup");
+    } finally {
+      setCalendarExporting(false);
     }
   };
 
@@ -895,7 +889,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
           <div className="flex items-center gap-2">
             {/* Calendar add */}
             <button
-              onClick={handleExportCalendar}
+              onClick={openCalendarPicker}
               disabled={entries.length === 0}
               className="dp-icon-btn sm:hidden disabled:opacity-50 disabled:cursor-not-allowed"
               title="Add to Google Calendar"
@@ -903,7 +897,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
               <Download className="w-4 h-4" />
             </button>
             <button
-              onClick={handleExportCalendar}
+              onClick={openCalendarPicker}
               disabled={entries.length === 0}
               className="hidden sm:flex px-3 py-2 min-h-[36px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center gap-2 transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -1024,6 +1018,26 @@ export function TimetableView({ userId }: TimetableViewProps) {
       )}
 
       <AnimatePresence>
+        {calendarPickerOpen && (
+          <CalendarPickerModal
+            key="calendar-picker"
+            entries={entries}
+            selected={calendarSelected}
+            exporting={calendarExporting}
+            onToggle={(id) =>
+              setCalendarSelected((prev) => {
+                const next = new Set(prev);
+                if (next.has(id)) next.delete(id); else next.add(id);
+                return next;
+              })
+            }
+            onToggleAll={(all) =>
+              setCalendarSelected(all ? new Set(entries.map((e) => e.id)) : new Set())
+            }
+            onConfirm={() => handleConfirmCalendarExport(calendarSelected)}
+            onClose={() => setCalendarPickerOpen(false)}
+          />
+        )}
         {modalOpen && (
           <TimetableEntryModal
             key={editingEntry?.id || "new"}
@@ -1073,6 +1087,152 @@ export function TimetableView({ userId }: TimetableViewProps) {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function CalendarPickerModal({
+  entries,
+  selected,
+  exporting,
+  onToggle,
+  onToggleAll,
+  onConfirm,
+  onClose,
+}: {
+  entries: TimetableEntry[];
+  selected: Set<string>;
+  exporting: boolean;
+  onToggle: (id: string) => void;
+  onToggleAll: (all: boolean) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const reducedMotion = useReducedMotion();
+  const allSelected = selected.size === entries.length;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Group entries by course
+  const grouped = useMemo(() => {
+    const map = new Map<string, TimetableEntry[]>();
+    for (const e of entries) {
+      const key = e.course?.code ?? "Other";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(e);
+    }
+    return Array.from(map.entries());
+  }, [entries]);
+
+  const syncedCount = entries.filter((e) => e.googleEventId).length;
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={reducedMotion ? { duration: 0 } : { duration: 0.15 }}
+    >
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        className="relative z-10 w-full sm:max-w-md bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl flex flex-col max-h-[85vh]"
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 35 }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Add to Google Calendar</h2>
+            <p className="text-xs text-foreground-secondary mt-0.5">
+              {syncedCount > 0
+                ? `${syncedCount} already synced — re-selecting will replace them`
+                : "Select which classes to add as weekly recurring events"}
+            </p>
+          </div>
+          <button onClick={onClose} className="dp-icon-btn" aria-label="Close"><X className="w-4 h-4" /></button>
+        </div>
+
+        {/* Select all */}
+        <div className="px-5 py-3 border-b border-border/50 flex-shrink-0">
+          <button
+            onClick={() => onToggleAll(!allSelected)}
+            className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            <span className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${allSelected ? "bg-primary border-primary" : "border-border"}`}>
+              {allSelected && <span className="text-white text-[10px] font-bold">✓</span>}
+            </span>
+            {allSelected ? "Deselect all" : "Select all"}
+            <span className="text-foreground-secondary font-normal">({selected.size}/{entries.length})</span>
+          </button>
+        </div>
+
+        {/* Entry list */}
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+          {grouped.map(([courseCode, courseEntries]) => (
+            <div key={courseCode}>
+              <p className="text-[11px] font-semibold text-foreground-secondary uppercase tracking-wider px-2 mb-1">
+                {formatCourseCode(courseCode)}
+              </p>
+              <div className="space-y-1">
+                {courseEntries.map((entry) => {
+                  const isChecked = selected.has(entry.id);
+                  const isSynced = Boolean(entry.googleEventId);
+                  return (
+                    <button
+                      key={entry.id}
+                      type="button"
+                      onClick={() => onToggle(entry.id)}
+                      className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors border ${
+                        isChecked ? "bg-primary/8 border-primary/25" : "bg-transparent border-transparent hover:bg-surface-hover"
+                      }`}
+                    >
+                      <span className={`w-4 h-4 flex-shrink-0 rounded border-2 flex items-center justify-center transition-colors ${isChecked ? "bg-primary border-primary" : "border-border"}`}>
+                        {isChecked && <span className="text-white text-[10px] font-bold">✓</span>}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-foreground">
+                            {entry.dayOfWeek.slice(0, 3).charAt(0) + entry.dayOfWeek.slice(1, 3).toLowerCase()} · {entry.startTime}–{entry.endTime}
+                          </p>
+                          <span className="text-xs text-foreground-secondary">
+                            {CLASS_TYPE_LABEL[entry.classType as ClassType] ?? entry.classType}
+                          </span>
+                        </div>
+                        {entry.venue && <p className="text-xs text-foreground-secondary truncate">{entry.venue}</p>}
+                      </div>
+                      {isSynced && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20 font-medium flex-shrink-0">
+                          synced
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center gap-2 px-5 py-4 border-t border-border flex-shrink-0">
+          <button onClick={onClose} className="dp-btn dp-btn-outline flex-1">Cancel</button>
+          <button
+            onClick={onConfirm}
+            disabled={selected.size === 0 || exporting}
+            className="dp-btn dp-btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Add {selected.size} {selected.size === 1 ? "class" : "classes"}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
