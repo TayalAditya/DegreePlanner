@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
 import {
   X,
   GraduationCap,
@@ -69,28 +70,15 @@ interface UserProgramModalProps {
 }
 
 export function UserProgramModal({ userId, userName, onClose }: UserProgramModalProps) {
-  const [data, setData] = useState<UserProgramData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoading(true);
-    setError(null);
-
-    fetch(`/api/admin/users/${userId}/programs`, { signal: controller.signal })
-      .then((res) => {
-        if (!res.ok) throw new Error("Failed to load");
-        return res.json();
-      })
-      .then(setData)
-      .catch((err) => {
-        if (err.name !== "AbortError") setError("Failed to load programs.");
-      })
-      .finally(() => setLoading(false));
-
-    return () => controller.abort();
-  }, [userId]);
+  const { data, isLoading, isError, error } = useQuery<UserProgramData>({
+    queryKey: ["admin-user-programs", userId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`/api/admin/users/${userId}/programs`, { signal });
+      if (!res.ok) throw new Error("Failed to load programs.");
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
 
   // Escape key to close
   useEffect(() => {
@@ -169,13 +157,15 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
 
         {/* Scrollable body */}
         <div className="overflow-y-auto flex-1 p-6 space-y-6">
-          {loading ? (
+          {isLoading ? (
             <div className="flex items-center justify-center h-48">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
-          ) : error ? (
+          ) : isError ? (
             <div className="flex items-center justify-center h-48">
-              <p className="text-error font-medium">{error}</p>
+              <p className="text-error font-medium">
+                {error instanceof Error ? error.message : "Failed to load programs."}
+              </p>
             </div>
           ) : programs.length === 0 ? (
             <div className="text-center py-12">

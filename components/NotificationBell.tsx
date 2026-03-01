@@ -30,12 +30,10 @@ function setLastSeen() {
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
-  const [lastSeen, setLastSeenState] = useState(0);
+  const [lastSeen, setLastSeenState] = useState(() =>
+    typeof window === "undefined" ? 0 : getLastSeen()
+  );
   const panelRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setLastSeenState(getLastSeen());
-  }, []);
 
   // Close on outside click
   useEffect(() => {

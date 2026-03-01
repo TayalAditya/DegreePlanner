@@ -52,6 +52,8 @@ interface Enrollment {
 
 interface UserSettings {
   branch?: string;
+  doingMTP?: boolean;
+  doingISTP?: boolean;
 }
 
 export default function ProgramsPage() {
@@ -63,6 +65,10 @@ export default function ProgramsPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(false);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
+  const [doingMTP, setDoingMTP] = useState(true);
+  const [doingISTP, setDoingISTP] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+  const [savedPrefs, setSavedPrefs] = useState(false);
 
   useEffect(() => {
     fetchPrograms();
@@ -114,6 +120,8 @@ export default function ProgramsPage() {
         if (userRes.ok) {
           const data = await userRes.json();
           setUserSettings(data ?? null);
+          setDoingMTP(data?.doingMTP ?? true);
+          setDoingISTP(data?.doingISTP ?? false);
         }
       } catch (error) {
         console.error("Failed to load program progress:", error);
@@ -126,6 +134,34 @@ export default function ProgramsPage() {
 
     loadExtras();
   }, [primaryProgram?.program?.id]);
+
+  const saveProjectPrefs = async (mtp: boolean, istp: boolean) => {
+    setSavingPrefs(true);
+    setSavedPrefs(false);
+    try {
+      await fetch("/api/user/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ doingMTP: mtp, doingISTP: istp }),
+      });
+      setSavedPrefs(true);
+      setTimeout(() => setSavedPrefs(false), 2000);
+    } catch {
+      // ignore
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
+  const handleMTPChange = (checked: boolean) => {
+    setDoingMTP(checked);
+    saveProjectPrefs(checked, doingISTP);
+  };
+
+  const handleISTPChange = (checked: boolean) => {
+    setDoingISTP(checked);
+    saveProjectPrefs(doingMTP, checked);
+  };
 
   if (loading) {
     return (
@@ -255,38 +291,98 @@ export default function ProgramsPage() {
                   </div>
                 </div>
 
-                {/* MTP/ISTP Info */}
+                {/* MTP/ISTP Preferences */}
                 {primaryProgram.program.mtpIstpCredits > 0 && (
                   <div className="mt-6 pt-6 border-t border-border">
-                    <h4 className="font-semibold text-foreground mb-3">Project Requirements</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {primaryProgram.program.code !== "BSCS" && (
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-orange-500/10 rounded-lg flex items-center justify-center">
-                            <Award className="w-5 h-5 text-orange-500" />
-                          </div>
+                    {primaryProgram.program.code !== "BSCS" ? (
+                      <>
+                        <div className="flex items-center justify-between mb-4">
                           <div>
-                            <p className="font-medium text-foreground">MTP Required</p>
-                            <p className="text-sm text-foreground-secondary">
-                              8 credits (MTP-1: 3cr + MTP-2: 5cr)
+                            <h4 className="font-semibold text-foreground">Project Preferences</h4>
+                            <p className="text-xs text-foreground-secondary mt-0.5">
+                              Toggle to adjust credit distribution in your progress tracker
                             </p>
                           </div>
+                          <span
+                            className={`text-xs transition-opacity duration-300 ${
+                              savingPrefs
+                                ? "text-foreground-secondary opacity-100"
+                                : savedPrefs
+                                ? "text-green-600 dark:text-green-400 opacity-100"
+                                : "opacity-0"
+                            }`}
+                          >
+                            {savingPrefs ? "Saving…" : "Saved ✓"}
+                          </span>
                         </div>
-                      )}
-                      {primaryProgram.program.code !== "BSCS" && (
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                            <Award className="w-5 h-5 text-blue-500" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-foreground">ISTP</p>
-                            <p className="text-sm text-foreground-secondary">
-                              4 credits (Semester 6)
-                            </p>
-                          </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <label
+                            className={`flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-xl border-2 transition-colors cursor-pointer hover:border-primary/50 focus-within:ring-4 focus-within:ring-primary/20 ${
+                              doingMTP ? "border-primary/40" : "border-border"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={doingMTP}
+                              onChange={(e) => handleMTPChange(e.target.checked)}
+                              className="mt-0.5 w-5 h-5 accent-primary cursor-pointer flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Award className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                                <span className="font-semibold text-foreground text-sm">
+                                  Major Technical Project (MTP)
+                                </span>
+                              </div>
+                              <p className="text-sm text-foreground-secondary">
+                                8 credits · MTP-1 (3cr) + MTP-2 (5cr)
+                              </p>
+                              {!doingMTP && (
+                                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
+                                  ⚠️ Skipping adds +8 credits to DE
+                                </p>
+                              )}
+                            </div>
+                          </label>
+
+                          <label
+                            className={`flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-xl border-2 transition-colors cursor-pointer hover:border-primary/50 focus-within:ring-4 focus-within:ring-primary/20 ${
+                              doingISTP ? "border-primary/40" : "border-border"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={doingISTP}
+                              onChange={(e) => handleISTPChange(e.target.checked)}
+                              className="mt-0.5 w-5 h-5 accent-primary cursor-pointer flex-shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Award className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                                <span className="font-semibold text-foreground text-sm">
+                                  Socio-Technical Practicum (ISTP)
+                                </span>
+                              </div>
+                              <p className="text-sm text-foreground-secondary">
+                                4 credits · Semester 6
+                              </p>
+                              {!doingISTP && (
+                                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
+                                  ⚠️ Skipping adds +4 credits to FE
+                                </p>
+                              )}
+                            </div>
+                          </label>
                         </div>
-                      )}
-                      {primaryProgram.program.code === "BSCS" && (
+
+                        <p className="mt-3 text-xs text-foreground-secondary">
+                          Changes save automatically and update your credit distribution.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <h4 className="font-semibold text-foreground mb-3">Project Requirements</h4>
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
                             <Award className="w-5 h-5 text-purple-500" />
@@ -298,8 +394,8 @@ export default function ProgramsPage() {
                             </p>
                           </div>
                         </div>
-                      )}
-                    </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
