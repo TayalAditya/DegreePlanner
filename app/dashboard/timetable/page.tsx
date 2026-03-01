@@ -15,7 +15,7 @@ export default async function TimetablePage() {
       <div className="mb-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Timetable</h1>
         <p className="mt-2 text-foreground-secondary">
-          Manage your class schedule and venues
+          Current semester schedule (shared across everyone enrolled in a course)
         </p>
       </div>
 

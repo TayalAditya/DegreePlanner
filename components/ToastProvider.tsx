@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import { CheckCircle, XCircle, AlertCircle, X } from "lucide-react";
 
 interface Toast {
@@ -20,9 +20,11 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const nextToastId = useRef(0);
 
   const showToast = (type: Toast["type"], message: string, duration = 5000) => {
-    const id = Math.random().toString(36).substring(7);
+    nextToastId.current += 1;
+    const id = String(nextToastId.current);
     setToasts((prev) => [...prev, { id, type, message, duration }]);
 
     if (duration > 0) {

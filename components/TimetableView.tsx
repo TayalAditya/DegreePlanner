@@ -10,7 +10,6 @@ import {
   Loader2,
   MapPin,
   Plus,
-  Search,
   Trash2,
   X,
 } from "lucide-react";
@@ -23,29 +22,41 @@ interface TimetableViewProps {
 }
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
-const START_TIMES = [
-  "08:00", "09:00", "10:00", "11:00", "12:00", "13:00", 
-  "14:00", "15:00", "16:00", "17:00", "18:00"
-];
-const END_TIMES = [
-  "09:00", "10:00", "11:00", "12:00", "13:00", "14:00",
-  "15:00", "16:00", "17:00", "18:00", "19:00",
-];
+
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const minutesToTime = (minutes: number) => `${pad2(Math.floor(minutes / 60))}:${pad2(minutes % 60)}`;
+
+const TIME_OPTIONS = Array.from({ length: (19 - 8) * 2 + 1 }, (_, i) => minutesToTime(8 * 60 + i * 30));
+const START_TIMES = TIME_OPTIONS.slice(0, -1);
+const END_TIMES = TIME_OPTIONS.slice(1);
+const DEFAULT_START_TIME = START_TIMES.includes("10:00") ? "10:00" : START_TIMES[0];
+const DEFAULT_END_TIME = END_TIMES.includes("11:00") ? "11:00" : END_TIMES[0];
 
 type DayOfWeek = (typeof DAYS)[number];
+type Term = "FALL" | "SPRING" | "SUMMER";
+type ClassType = "LECTURE" | "LAB" | "TUTORIAL" | "SEMINAR" | "WORKSHOP";
+
+const CLASS_TYPE_LABEL: Record<ClassType, string> = {
+  LECTURE: "Lecture",
+  LAB: "Lab",
+  TUTORIAL: "Tutorial",
+  SEMINAR: "Seminar",
+  WORKSHOP: "Workshop",
+};
 
 interface TimetableEntry {
   id: string;
   semester: number;
   year: number;
-  term: string;
+  term: Term;
   dayOfWeek: DayOfWeek;
   startTime: string;
   endTime: string;
+  slot?: string | null;
   venue?: string | null;
   roomNumber?: string | null;
   building?: string | null;
-  classType?: string | null;
+  classType: ClassType;
   instructor?: string | null;
   notes?: string | null;
   courseId: string;
@@ -62,23 +73,27 @@ interface CourseOption {
   code: string;
   name: string;
   credits: number;
-  department?: string;
 }
 
 type TimetableEntryPayload = {
-  semester: number;
   courseId: string;
   dayOfWeek: DayOfWeek;
   startTime: string;
   endTime: string;
+  slot?: string;
   venue?: string;
-  classType?: string;
+  classType?: ClassType;
   instructor?: string;
   notes?: string;
 };
 
+type TimetableResponse = {
+  context: { semester: number; year: number; term: Term };
+  courses: CourseOption[];
+  entries: TimetableEntry[];
+};
+
 export function TimetableView({ userId }: TimetableViewProps) {
-  const [selectedSemester, setSelectedSemester] = useState(1);
   const [view, setView] = useState<"week" | "list">("list");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
@@ -97,10 +112,10 @@ export function TimetableView({ userId }: TimetableViewProps) {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  const { data: timetable, isLoading } = useQuery({
-    queryKey: ["timetable", userId, selectedSemester],
+  const { data: timetable, isLoading } = useQuery<TimetableResponse>({
+    queryKey: ["timetable", userId],
     queryFn: async () => {
-      const res = await fetch(`/api/timetable?semester=${selectedSemester}`);
+      const res = await fetch("/api/timetable");
       if (!res.ok) throw new Error("Failed to fetch timetable");
       return res.json();
     },
@@ -121,7 +136,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
       return data as TimetableEntry;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["timetable", userId, selectedSemester] });
+      await queryClient.invalidateQueries({ queryKey: ["timetable", userId] });
       showToast("success", editingEntry ? "Class updated" : "Class added");
       setModalOpen(false);
       setEditingEntry(null);
@@ -139,7 +154,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
       return true;
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["timetable", userId, selectedSemester] });
+      await queryClient.invalidateQueries({ queryKey: ["timetable", userId] });
       showToast("success", "Class deleted");
     },
     onError: (error: any) => {
@@ -160,7 +175,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
   const handleDelete = async (entry: TimetableEntry) => {
     const ok = await confirm({
       title: "Delete class?",
-      message: `This will remove ${entry.course?.code || "this class"} from your timetable.`,
+      message: `This will remove ${entry.course?.code || "this class"} from the shared timetable for everyone enrolled in this course.`,
       confirmText: "Delete",
       variant: "danger",
     });
@@ -176,37 +191,41 @@ export function TimetableView({ userId }: TimetableViewProps) {
     );
   }
 
-  const entries: TimetableEntry[] = timetable || [];
+  const context = timetable?.context;
+  const courses = timetable?.courses || [];
+  const entries: TimetableEntry[] = timetable?.entries || [];
+  const canAdd = courses.length > 0 && Boolean(context);
 
   return (
     <div className="space-y-6">
       {/* Controls */}
       <div className="flex flex-col sm:flex-row justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <label className="text-sm font-medium text-foreground whitespace-nowrap">Semester:</label>
-          <select
-            value={selectedSemester}
-            onChange={(e) => setSelectedSemester(Number(e.target.value))}
-            className="flex-1 sm:flex-none px-3 py-2 min-h-[44px] border border-border rounded-md bg-surface text-foreground focus:ring-2 focus:ring-primary text-sm"
-          >
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-              <option key={sem} value={sem}>
-                Semester {sem}
-              </option>
-            ))}
-          </select>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">
+            {context ? `Semester ${context.semester} · ${context.term} ${context.year}` : "Current semester"}
+          </p>
+          <p className="mt-1 text-xs text-foreground-secondary">
+            Schedule is shared across everyone enrolled in a course. {courses.length > 0 ? `${courses.length} courses found.` : "No enrolled courses found."}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setView(view === "week" ? "list" : "week")}
-            className="hidden md:flex px-4 py-2 min-h-[44px] border border-border rounded-md text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center"
+            className="hidden md:flex px-4 py-2 min-h-[44px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center transition-colors"
           >
             {view === "week" ? "List View" : "Week View"}
           </button>
           <button
-            onClick={openAdd}
-            className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] bg-primary text-white rounded-md text-sm font-medium hover:bg-primary-hover flex items-center justify-center gap-2 active:scale-[0.99]"
+            onClick={() => {
+              if (!canAdd) {
+                showToast("warning", "Enroll in current semester courses to build the shared timetable");
+                return;
+              }
+              openAdd();
+            }}
+            disabled={!canAdd}
+            className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add Class
@@ -215,22 +234,27 @@ export function TimetableView({ userId }: TimetableViewProps) {
       </div>
 
       {view === "week" ? (
-        <WeekView timetable={entries} onEdit={openEdit} />
+        <WeekView timetable={entries} onEdit={openEdit} onDelete={handleDelete} />
       ) : (
         <ListView timetable={entries} onEdit={openEdit} onDelete={handleDelete} />
       )}
 
-      <TimetableEntryModal
-        open={modalOpen}
-        initial={editingEntry}
-        semester={selectedSemester}
-        saving={saveEntryMutation.isPending}
-        onClose={() => {
-          setModalOpen(false);
-          setEditingEntry(null);
-        }}
-        onSave={(payload) => saveEntryMutation.mutate({ id: editingEntry?.id, payload })}
-      />
+      <AnimatePresence>
+        {modalOpen && (
+          <TimetableEntryModal
+            key={editingEntry?.id || "new"}
+            initial={editingEntry}
+            context={context || null}
+            courses={courses}
+            saving={saveEntryMutation.isPending}
+            onClose={() => {
+              setModalOpen(false);
+              setEditingEntry(null);
+            }}
+            onSave={(payload) => saveEntryMutation.mutate({ id: editingEntry?.id, payload })}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -238,9 +262,11 @@ export function TimetableView({ userId }: TimetableViewProps) {
 function WeekView({
   timetable,
   onEdit,
+  onDelete,
 }: {
   timetable: TimetableEntry[];
   onEdit: (entry: TimetableEntry) => void;
+  onDelete: (entry: TimetableEntry) => void;
 }) {
   const index = useMemo(() => {
     const map = new Map<string, TimetableEntry>();
@@ -283,19 +309,32 @@ function WeekView({
                       className="px-2 py-2 text-sm border-l border-border"
                     >
                       {entry && (
-                        <button
-                          type="button"
-                          onClick={() => onEdit(entry)}
-                          className="w-full text-left bg-primary/10 dark:bg-primary/20 border-l-4 border-primary rounded p-2 hover:bg-primary/15 dark:hover:bg-primary/25 transition-colors"
-                        >
-                          <p className="font-medium text-foreground text-xs truncate">
-                            {formatCourseCode(entry.course?.code || "")}
-                          </p>
-                          <div className="flex items-center gap-1 text-xs text-foreground-secondary mt-1">
-                            <MapPin className="w-3 h-3" />
-                            <span className="truncate">{entry.venue || "TBA"}</span>
-                          </div>
-                        </button>
+                        <div className="relative group">
+                          <button
+                            type="button"
+                            onClick={() => onEdit(entry)}
+                            className="w-full text-left bg-primary/10 dark:bg-primary/20 border-l-4 border-primary rounded p-2 pr-6 hover:bg-primary/15 dark:hover:bg-primary/25 transition-colors"
+                          >
+                            <p className="font-medium text-foreground text-xs truncate">
+                              {formatCourseCode(entry.course?.code || "")}
+                            </p>
+                            <div className="flex items-center gap-1 text-xs text-foreground-secondary mt-1">
+                              <MapPin className="w-3 h-3" />
+                              <span className="truncate">
+                                {entry.venue || "TBA"}
+                                {entry.slot ? ` • Slot ${entry.slot}` : ""}
+                              </span>
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onDelete(entry); }}
+                            className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
+                            aria-label="Delete class"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   );
@@ -327,8 +366,10 @@ function ListView({
     return (
       <div className="bg-surface dark:bg-surface rounded-lg border border-border p-8 text-center">
         <Calendar className="w-12 h-12 text-foreground-secondary mx-auto mb-3 opacity-50" />
-        <p className="text-foreground-secondary">No classes scheduled for this semester</p>
-        <p className="text-xs text-foreground-muted mt-2">Tap “Add Class” to build your timetable.</p>
+        <p className="text-foreground-secondary">No schedule added yet</p>
+        <p className="text-xs text-foreground-muted mt-2">
+          Add timings for your enrolled courses — updates show up for everyone taking that course.
+        </p>
       </div>
     );
   }
@@ -362,11 +403,14 @@ function ListView({
                       <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                       {entry.venue || "TBA"}
                     </div>
-                    {entry.classType && (
-                      <span className="px-2 py-0.5 bg-primary/10 dark:bg-primary/20 text-primary rounded text-xs">
-                        {entry.classType}
+                    {entry.slot && (
+                      <span className="px-2 py-0.5 bg-background-secondary dark:bg-background border border-border/60 text-foreground-secondary rounded text-xs">
+                        Slot {entry.slot}
                       </span>
                     )}
+                    <span className="px-2 py-0.5 bg-primary/10 dark:bg-primary/20 text-primary rounded text-xs">
+                      {CLASS_TYPE_LABEL[entry.classType] || entry.classType}
+                    </span>
                   </div>
                 </button>
                 <div className="flex items-center gap-1 sm:ml-2 flex-shrink-0 self-end sm:self-auto">
@@ -397,16 +441,16 @@ function ListView({
 }
 
 function TimetableEntryModal({
-  open,
   initial,
-  semester,
+  context,
+  courses,
   saving,
   onClose,
   onSave,
 }: {
-  open: boolean;
   initial: TimetableEntry | null;
-  semester: number;
+  context: TimetableResponse["context"] | null;
+  courses: CourseOption[];
   saving: boolean;
   onClose: () => void;
   onSave: (payload: TimetableEntryPayload) => void;
@@ -414,82 +458,39 @@ function TimetableEntryModal({
   const reducedMotion = useReducedMotion();
   const { showToast } = useToast();
 
-  const [courseId, setCourseId] = useState<string>("");
-  const [courseLabel, setCourseLabel] = useState<string>("");
-  const [courseSearch, setCourseSearch] = useState("");
-  const [courseResults, setCourseResults] = useState<CourseOption[]>([]);
-  const [courseSearching, setCourseSearching] = useState(false);
+  const initialCourseId = initial?.courseId ?? courses[0]?.id ?? "";
+  const initialStartTime = initial?.startTime ?? DEFAULT_START_TIME;
+  const initialEndTime = initial?.endTime ?? DEFAULT_END_TIME;
+  const safeInitialEndTime =
+    initialEndTime > initialStartTime
+      ? initialEndTime
+      : END_TIMES.find((t) => t > initialStartTime) || DEFAULT_END_TIME;
 
-  const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>("MONDAY");
-  const [startTime, setStartTime] = useState(START_TIMES[2]);
-  const [endTime, setEndTime] = useState(END_TIMES[2]);
-  const [venue, setVenue] = useState("");
-  const [classType, setClassType] = useState("");
-  const [instructor, setInstructor] = useState("");
-  const [notes, setNotes] = useState("");
+  const [courseId, setCourseId] = useState<string>(initialCourseId);
+  const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>(initial?.dayOfWeek ?? "MONDAY");
+  const [startTime, setStartTime] = useState(initialStartTime);
+  const [endTime, setEndTime] = useState(safeInitialEndTime);
+  const [slot, setSlot] = useState(initial?.slot ?? "");
+  const [venue, setVenue] = useState(initial?.venue ?? "");
+  const [classType, setClassType] = useState<ClassType>(initial?.classType ?? "LECTURE");
+  const [instructor, setInstructor] = useState(initial?.instructor ?? "");
+  const [notes, setNotes] = useState(initial?.notes ?? "");
 
-  useEffect(() => {
-    if (!open) return;
-
-    setCourseId(initial?.courseId || "");
-    setCourseLabel(initial?.course ? `${initial.course.code} — ${initial.course.name}` : "");
-    setCourseSearch("");
-    setCourseResults([]);
-
-    setDayOfWeek(initial?.dayOfWeek || "MONDAY");
-    setStartTime(initial?.startTime || START_TIMES[2]);
-    setEndTime(initial?.endTime || END_TIMES[2]);
-    setVenue(initial?.venue || "");
-    setClassType(initial?.classType || "");
-    setInstructor(initial?.instructor || "");
-    setNotes(initial?.notes || "");
-  }, [open, initial]);
+  const selectedCourse = useMemo(() => {
+    return courses.find((c) => c.id === courseId) || null;
+  }, [courses, courseId]);
 
   useEffect(() => {
-    if (!open) return;
-
-    const q = courseSearch.trim();
-    if (q.length < 2) {
-      setCourseResults([]);
-      setCourseSearching(false);
-      return;
-    }
-
-    setCourseSearching(true);
-    const handle = window.setTimeout(async () => {
-      try {
-        const res = await fetch(`/api/courses?search=${encodeURIComponent(q)}`);
-        const data = await res.json().catch(() => []);
-        if (!res.ok) throw new Error(data?.error || "Failed to search courses");
-        setCourseResults((data || []).slice(0, 10));
-      } catch (error: any) {
-        setCourseResults([]);
-      } finally {
-        setCourseSearching(false);
-      }
-    }, 250);
-
-    return () => window.clearTimeout(handle);
-  }, [courseSearch, open]);
-
-  useEffect(() => {
-    if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  }, [onClose]);
 
   const endOptions = useMemo(() => {
     return END_TIMES.filter((t) => t > startTime);
   }, [startTime]);
-
-  useEffect(() => {
-    if (!endOptions.includes(endTime)) {
-      setEndTime(endOptions[0] || endTime);
-    }
-  }, [endOptions, endTime]);
 
   const title = initial ? "Edit class" : "Add class";
 
@@ -498,6 +499,10 @@ function TimetableEntryModal({
 
     if (!courseId) {
       showToast("warning", "Select a course first");
+      return;
+    }
+    if (!selectedCourse && !initial) {
+      showToast("warning", "Please select a valid course");
       return;
     }
     if (!dayOfWeek || !startTime || !endTime) {
@@ -510,57 +515,49 @@ function TimetableEntryModal({
     }
 
     onSave({
-      semester,
       courseId,
       dayOfWeek,
       startTime,
       endTime,
+      slot: slot.trim() || undefined,
       venue: venue.trim() || undefined,
-      classType: classType.trim() || undefined,
+      classType,
       instructor: instructor.trim() || undefined,
       notes: notes.trim() || undefined,
     });
   };
 
-  const selectCourse = (course: CourseOption) => {
-    setCourseId(course.id);
-    setCourseLabel(`${course.code} — ${course.name}`);
-    setCourseSearch("");
-    setCourseResults([]);
-  };
-
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.18, ease: "easeOut" }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-label={title}
-        >
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-            onClick={onClose}
-            aria-label="Close modal"
-          />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+        aria-label="Close modal"
+      />
 
-          <motion.div
-            initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
-            className="relative w-full sm:max-w-xl bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden"
-          >
+      <motion.div
+        initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
+        className="relative w-full sm:max-w-xl bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden"
+      >
             <div className="p-4 sm:p-6 border-b border-border flex items-start justify-between gap-4">
               <div className="min-w-0">
                 <h2 className="text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
                 <p className="text-xs sm:text-sm text-foreground-secondary mt-1">
-                  Semester {semester} • {initial ? "Update details" : "Create a new entry"}
+                  {context ? `Semester ${context.semester} • ${context.term} ${context.year}` : "Current semester"} •{" "}
+                  {initial ? "Update details" : "Create a new entry"}
                 </p>
               </div>
               <button
@@ -578,71 +575,42 @@ function TimetableEntryModal({
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Course</label>
 
-                {courseLabel ? (
-                  <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-background-secondary border border-border">
-                    <div className="min-w-0">
-                      <p className="text-sm text-foreground truncate">{courseLabel}</p>
-                      <p className="text-xs text-foreground-secondary mt-0.5">Tap to change course</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCourseLabel("");
-                        setCourseId("");
-                        setCourseSearch("");
-                        setCourseResults([]);
-                      }}
-                      className="shrink-0 px-3 py-2 rounded-lg bg-surface hover:bg-surface-hover border border-border text-sm font-medium"
-                    >
-                      Change
-                    </button>
+                {initial ? (
+                  <div className="p-3 rounded-xl bg-background-secondary border border-border">
+                    <p className="text-sm text-foreground truncate">
+                      {initial.course ? `${formatCourseCode(initial.course.code)} — ${initial.course.name}` : "Selected course"}
+                    </p>
+                    <p className="text-xs text-foreground-secondary mt-0.5">
+                      Course is fixed for an existing schedule entry.
+                    </p>
                   </div>
                 ) : (
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-secondary" />
-                    <input
-                      value={courseSearch}
-                      onChange={(e) => setCourseSearch(e.target.value)}
-                      placeholder="Search by course code or name…"
-                      className="w-full pl-10 pr-10 py-3 rounded-xl border border-border bg-surface text-foreground focus:outline-none focus:ring-4 focus:ring-primary/15"
-                    />
-                    {courseSearching && (
-                      <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-foreground-secondary animate-spin" />
+                  <select
+                    value={courseId}
+                    onChange={(e) => setCourseId(e.target.value)}
+                    className="w-full px-3 py-3 min-h-[44px] rounded-xl border border-border bg-surface text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
+                    disabled={courses.length === 0}
+                  >
+                    {courses.length === 0 ? (
+                      <option value="">No courses enrolled</option>
+                    ) : (
+                      <>
+                        <option value="" disabled>
+                          Select a course
+                        </option>
+                        {courses.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {formatCourseCode(c.code)} — {c.name}
+                          </option>
+                        ))}
+                      </>
                     )}
-
-                    {courseResults.length > 0 && (
-                      <div className="absolute z-10 mt-2 w-full rounded-xl border border-border bg-surface shadow-lg overflow-hidden">
-                        <div className="max-h-64 overflow-y-auto divide-y divide-border">
-                          {courseResults.map((course) => (
-                            <button
-                              key={course.id}
-                              type="button"
-                              onClick={() => selectCourse(course)}
-                              className="w-full text-left px-4 py-3 hover:bg-surface-hover transition-colors"
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="font-mono text-sm font-semibold text-primary">{course.code}</p>
-                                  <p className="text-sm text-foreground truncate">{course.name}</p>
-                                  {course.department && (
-                                    <p className="text-xs text-foreground-secondary mt-0.5">{course.department}</p>
-                                  )}
-                                </div>
-                                <span className="text-xs font-semibold text-foreground-secondary shrink-0">
-                                  {course.credits} cr
-                                </span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  </select>
                 )}
               </div>
 
               {/* Schedule */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">Day</label>
                   <select
@@ -662,7 +630,14 @@ function TimetableEntryModal({
                   <label className="block text-sm font-medium text-foreground mb-2">Start</label>
                   <select
                     value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
+                    onChange={(e) => {
+                      const nextStartTime = e.target.value;
+                      setStartTime(nextStartTime);
+                      if (endTime <= nextStartTime) {
+                        const nextEndTime = END_TIMES.find((t) => t > nextStartTime);
+                        if (nextEndTime) setEndTime(nextEndTime);
+                      }
+                    }}
                     className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
                   >
                     {START_TIMES.map((t) => (
@@ -687,6 +662,16 @@ function TimetableEntryModal({
                     ))}
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">Slot (optional)</label>
+                  <input
+                    value={slot}
+                    onChange={(e) => setSlot(e.target.value)}
+                    placeholder="e.g., A1"
+                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                  />
+                </div>
               </div>
 
               {/* Details */}
@@ -701,13 +686,18 @@ function TimetableEntryModal({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Class Type (optional)</label>
-                  <input
+                  <label className="block text-sm font-medium text-foreground mb-2">Class Type</label>
+                  <select
                     value={classType}
-                    onChange={(e) => setClassType(e.target.value)}
-                    placeholder="Lecture / Lab / Tutorial"
+                    onChange={(e) => setClassType(e.target.value as ClassType)}
                     className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
-                  />
+                  >
+                    {Object.entries(CLASS_TYPE_LABEL).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -750,15 +740,11 @@ function TimetableEntryModal({
                 </button>
               </div>
 
-              {!initial && (
-                <p className="text-xs text-foreground-secondary">
-                  Tip: You can tap a class in Week View to quickly edit it.
-                </p>
-              )}
+              <p className="text-xs text-foreground-secondary">
+                Changes update the shared timetable for everyone enrolled in the selected course.
+              </p>
             </form>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </motion.div>
+    </motion.div>
   );
 }

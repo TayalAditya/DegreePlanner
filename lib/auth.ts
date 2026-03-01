@@ -175,6 +175,7 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 365 * 24 * 60 * 60, // 1 year
+    updateAge: 7 * 24 * 60 * 60, // refresh token every 7 days (not on every request)
   },
 };

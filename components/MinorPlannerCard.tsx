@@ -192,20 +192,17 @@ function computeMinorProgress(
 }
 
 export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlannerCardProps) {
-  const [enabled, setEnabled] = useState(false);
-  const [selectedMinorCodes, setSelectedMinorCodes] = useState<string[]>(() =>
-    MINORS[0]?.code ? [MINORS[0].code] : []
-  );
-
-  const availableMinors = useMemo(() => {
-    return [...MINORS].sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
-
-  useEffect(() => {
+  const [enabled, setEnabled] = useState(() => {
     try {
       const storedEnabled = localStorage.getItem(STORAGE_KEYS.enabled);
-      if (storedEnabled !== null) setEnabled(storedEnabled === "true");
+      return storedEnabled === "true";
+    } catch {
+      return false;
+    }
+  });
 
+  const [selectedMinorCodes, setSelectedMinorCodes] = useState<string[]>(() => {
+    try {
       const storedCodesRaw = localStorage.getItem(STORAGE_KEYS.minorCodes);
       if (storedCodesRaw) {
         const parsed = JSON.parse(storedCodesRaw);
@@ -213,18 +210,24 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
           const codes = parsed
             .map((c) => String(c))
             .filter((c) => MINORS.some((m) => m.code === c));
-          setSelectedMinorCodes(Array.from(new Set(codes)));
-          return;
+          const unique = Array.from(new Set(codes));
+          if (unique.length > 0) return unique;
         }
       }
 
       const legacy = localStorage.getItem(STORAGE_KEYS.legacyMinorCode);
       if (legacy && MINORS.some((m) => m.code === legacy)) {
-        setSelectedMinorCodes([legacy]);
+        return [legacy];
       }
     } catch {
       // ignore
     }
+
+    return MINORS[0]?.code ? [MINORS[0].code] : [];
+  });
+
+  const availableMinors = useMemo(() => {
+    return [...MINORS].sort((a, b) => a.name.localeCompare(b.name));
   }, []);
 
   useEffect(() => {
@@ -498,4 +501,3 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
     </div>
   );
 }
-

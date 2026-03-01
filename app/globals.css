@@ -51,50 +51,50 @@
   }
 }
 
-/* Modern, vibrant color scheme with depth and personality */
+/* Modern, calm color scheme with depth and personality */
 :root {
   /* Backgrounds - Warm, inviting tones */
   --background: #fcfcfd;
   --background-rgb: 252 252 253;
-  --background-secondary: #f8f9fa;
-  --background-secondary-rgb: 248 249 250;
+  --background-secondary: #f5f6f8;
+  --background-secondary-rgb: 245 246 248;
   --surface: #ffffff;
   --surface-rgb: 255 255 255;
   --surface-elevated: #ffffff;
   --surface-elevated-rgb: 255 255 255;
-  --surface-hover: #f8f9fa;
-  --surface-hover-rgb: 248 249 250;
+  --surface-hover: #f4f5f7;
+  --surface-hover-rgb: 244 245 247;
   
   /* Text - High contrast for readability */
-  --foreground: #0f172a;
-  --foreground-rgb: 15 23 42;
+  --foreground: #0b1220;
+  --foreground-rgb: 11 18 32;
   --foreground-secondary: #64748b;
   --foreground-secondary-rgb: 100 116 139;
   --foreground-muted: #94a3b8;
   --foreground-muted-rgb: 148 163 184;
   
   /* Borders & Dividers - Subtle but visible */
-  --border: #e2e8f0;
-  --border-rgb: 226 232 240;
-  --border-strong: #cbd5e1;
-  --border-strong-rgb: 203 213 225;
+  --border: #e4e4e7;
+  --border-rgb: 228 228 231;
+  --border-strong: #d4d4d8;
+  --border-strong-rgb: 212 212 216;
   
   /* Brand Colors - Vibrant, modern, professional */
-  --primary: #6366f1;        /* Indigo - modern and trustworthy */
-  --primary-rgb: 99 102 241;
-  --primary-hover: #4f46e5;
-  --primary-hover-rgb: 79 70 229;
+  --primary: #4f46e5;        /* Indigo - modern and trustworthy */
+  --primary-rgb: 79 70 229;
+  --primary-hover: #4338ca;
+  --primary-hover-rgb: 67 56 202;
   --primary-light: #eef2ff;
   --primary-light-rgb: 238 242 255;
   --primary-foreground: #ffffff;
   --primary-foreground-rgb: 255 255 255;
   
-  --secondary: #ec4899;      /* Pink - energetic and friendly */
-  --secondary-rgb: 236 72 153;
-  --secondary-hover: #db2777;
-  --secondary-hover-rgb: 219 39 119;
-  --secondary-light: #fce7f3;
-  --secondary-light-rgb: 252 231 243;
+  --secondary: #7c3aed;      /* Violet - energetic but refined */
+  --secondary-rgb: 124 58 237;
+  --secondary-hover: #6d28d9;
+  --secondary-hover-rgb: 109 40 217;
+  --secondary-light: #f3e8ff;
+  --secondary-light-rgb: 243 232 255;
   
   --accent: #14b8a6;         /* Teal - fresh and professional */
   --accent-rgb: 20 184 166;
@@ -126,7 +126,7 @@
   --hover-rgb: 248 250 252;
   --active: #e2e8f0;
   --active-rgb: 226 232 240;
-  --focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  --focus-ring: 0 0 0 3px rgba(79, 70, 229, 0.16);
   
   /* Shadows - Soft and natural */
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -135,7 +135,7 @@
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   
   /* Gradients */
-  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
   --gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
   --gradient-warning: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   --gradient-info: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -143,31 +143,31 @@
 
 /* Dark mode - Rich, deep colors with excellent contrast */
 .dark {
-  /* Backgrounds - AMOLED-first (true black + subtle elevation) */
-  --background: #000000;
-  --background-rgb: 0 0 0;
-  --background-secondary: #0a0a0a;
-  --background-secondary-rgb: 10 10 10;
-  --surface: #0f0f0f;
-  --surface-rgb: 15 15 15;
-  --surface-elevated: #161616;
-  --surface-elevated-rgb: 22 22 22;
-  --surface-hover: #1e1e1e;
-  --surface-hover-rgb: 30 30 30;
+  /* Backgrounds - Deep slate (easier on eyes than true black) */
+  --background: #0b0d12;
+  --background-rgb: 11 13 18;
+  --background-secondary: #0f121a;
+  --background-secondary-rgb: 15 18 26;
+  --surface: #121623;
+  --surface-rgb: 18 22 35;
+  --surface-elevated: #161c2c;
+  --surface-elevated-rgb: 22 28 44;
+  --surface-hover: #1b2235;
+  --surface-hover-rgb: 27 34 53;
   
   /* Text - Neutral, high-contrast */
-  --foreground: #fafafa;
-  --foreground-rgb: 250 250 250;
-  --foreground-secondary: #a1a1aa;
-  --foreground-secondary-rgb: 161 161 170;
-  --foreground-muted: #71717a;
-  --foreground-muted-rgb: 113 113 122;
+  --foreground: #f8fafc;
+  --foreground-rgb: 248 250 252;
+  --foreground-secondary: #a3adc2;
+  --foreground-secondary-rgb: 163 173 194;
+  --foreground-muted: #707a8f;
+  --foreground-muted-rgb: 112 122 143;
   
   /* Borders & Dividers */
-  --border: #2d2d2d;
-  --border-rgb: 45 45 45;
-  --border-strong: #3a3a3a;
-  --border-strong-rgb: 58 58 58;
+  --border: #242b3d;
+  --border-rgb: 36 43 61;
+  --border-strong: #313a52;
+  --border-strong-rgb: 49 58 82;
   
   /* Brand Colors - Saturated but not neon */
   --primary: #6366f1;        /* Indigo */
@@ -179,17 +179,17 @@
   --primary-foreground: #ffffff;
   --primary-foreground-rgb: 255 255 255;
   
-  --secondary: #db2777;      /* Deep pink */
-  --secondary-rgb: 219 39 119;
-  --secondary-hover: #ec4899;
-  --secondary-hover-rgb: 236 72 153;
-  --secondary-light: #2a0a18;
-  --secondary-light-rgb: 42 10 24;
+  --secondary: #a78bfa;      /* Violet */
+  --secondary-rgb: 167 139 250;
+  --secondary-hover: #c4b5fd;
+  --secondary-hover-rgb: 196 181 253;
+  --secondary-light: #1f1435;
+  --secondary-light-rgb: 31 20 53;
   
-  --accent: #14b8a6;         /* Teal */
-  --accent-rgb: 20 184 166;
-  --accent-hover: #2dd4bf;
-  --accent-hover-rgb: 45 212 191;
+  --accent: #2dd4bf;         /* Teal */
+  --accent-rgb: 45 212 191;
+  --accent-hover: #5eead4;
+  --accent-hover-rgb: 94 234 212;
   --accent-light: #042f2e;
   --accent-light-rgb: 4 47 46;
   
@@ -212,11 +212,11 @@
   --info-light-rgb: 30 58 138;
   
   /* Interactive States */
-  --hover: #141414;
-  --hover-rgb: 20 20 20;
-  --active: #262626;
-  --active-rgb: 38 38 38;
-  --focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  --hover: #121827;
+  --hover-rgb: 18 24 39;
+  --active: #1b2235;
+  --active-rgb: 27 34 53;
+  --focus-ring: 0 0 0 3px rgba(99, 102, 241, 0.28);
   
   /* Shadows - Subtle lift on black */
   --shadow-sm: 0 1px 0 0 rgba(255, 255, 255, 0.04), 0 1px 2px 0 rgba(0, 0, 0, 0.7);
@@ -225,7 +225,7 @@
   --shadow-xl: 0 1px 0 0 rgba(255, 255, 255, 0.06), 0 24px 72px -24px rgba(0, 0, 0, 0.95);
   
   /* Gradients - Vibrant on dark */
-  --gradient-primary: linear-gradient(135deg, #4f46e5 0%, #db2777 100%);
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #a78bfa 100%);
   --gradient-success: linear-gradient(135deg, #34d399 0%, #10b981 100%);
   --gradient-warning: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   --gradient-info: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);

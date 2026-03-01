@@ -247,16 +247,16 @@ function CreditsSection() {
                 <li>• Count towards B.Tech requirement</li>
                 <li>• Maximum 9 P/F credits total</li>
                 <li>• Not more than 6 in a semester</li>
-                <li>• Don't affect CGPA</li>
+                <li>• Don&apos;t affect CGPA</li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold text-purple-600 dark:text-purple-400 mb-2">Audit Courses</h4>
               <ul className="text-sm space-y-1 text-muted-foreground">
                 <li>• Grades: Audit Pass (AP) or Audit Fail (AF)</li>
-                <li>• Don't count towards requirements</li>
+                <li>• Don&apos;t count towards requirements</li>
                 <li>• No credit limit</li>
-                <li>• Don't affect CGPA</li>
+                <li>• Don&apos;t affect CGPA</li>
                 <li>• Good for workshops/conferences</li>
               </ul>
             </div>
@@ -431,7 +431,7 @@ function InternshipsSection() {
           <li>• 20-week internships = 2 credits (IC-010) + 6/9 credits (DP-396P/399P)</li>
           <li>• Get FA consent before applying, especially for general/non-core companies</li>
           <li>• Some FAs require min 105 credits by end of 5th semester for 6th semester onsite internship</li>
-          <li>• Projects under IIT Mandi faculty don't count as internships</li>
+          <li>• Projects under IIT Mandi faculty don&apos;t count as internships</li>
           <li>• Grading based on company feedback (Pass/Fail scheme)</li>
           <li>• Internship drop allowed before mid-semester with proper evaluation</li>
         </ul>

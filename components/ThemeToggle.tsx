@@ -1,7 +1,7 @@
 "use client";
 
 import { useTheme } from "./ThemeProvider";
-import { Sun, Moon, Monitor, Palette } from "lucide-react";
+import { Sun, Moon, Monitor, Check } from "lucide-react";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 
 export function ThemeToggle() {
@@ -14,56 +14,81 @@ export function ThemeToggle() {
     { value: "system" as const, icon: Monitor, label: "System" },
   ];
 
-  const paletteCycle = ["default", "ocean", "sunset", "forest"] as const;
-  const cyclePalette = () => {
-    const currentIndex = paletteCycle.indexOf(palette);
-    const next = paletteCycle[(currentIndex + 1) % paletteCycle.length];
-    setPalette(next);
-  };
+  const paletteOptions = [
+    { value: "default" as const, label: "Default", swatches: ["#4f46e5", "#7c3aed", "#14b8a6"] },
+    { value: "ocean" as const, label: "Ocean", swatches: ["#0284c7", "#06b6d4", "#14b8a6"] },
+    { value: "sunset" as const, label: "Sunset", swatches: ["#f97316", "#db2777", "#8b5cf6"] },
+    { value: "forest" as const, label: "Forest", swatches: ["#16a34a", "#84cc16", "#14b8a6"] },
+  ];
 
   return (
-    <div className="flex items-center gap-1 bg-background-secondary dark:bg-surface rounded-lg p-1">
-      <LayoutGroup id="theme-toggle">
-        {themes.map((t) => {
-          const Icon = t.icon;
-          const selected = theme === t.value;
+    <div className="w-full rounded-2xl border border-border bg-background-secondary/60 dark:bg-background/20 p-2 shadow-sm">
+      <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-surface/70 dark:bg-surface/50 p-1">
+        <LayoutGroup>
+          {themes.map((t) => {
+            const Icon = t.icon;
+            const selected = theme === t.value;
 
+            return (
+              <button
+                key={t.value}
+                onClick={() => setTheme(t.value)}
+                className="relative flex-1 min-h-[40px] inline-flex items-center justify-center rounded-lg transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                title={t.label}
+                aria-label={`Switch to ${t.label} theme`}
+                aria-pressed={selected}
+                type="button"
+              >
+                {selected && (
+                  <motion.span
+                    layoutId="theme-toggle-indicator"
+                    className="absolute inset-0 rounded-lg bg-background shadow-sm border border-border"
+                    transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 42 }}
+                    aria-hidden="true"
+                  />
+                )}
+                <span className={`relative z-10 ${selected ? "text-foreground" : "text-foreground-secondary"}`}>
+                  <Icon className="w-4 h-4" />
+                </span>
+              </button>
+            );
+          })}
+        </LayoutGroup>
+      </div>
+
+      <div className="mt-2 grid grid-cols-4 gap-1">
+        {paletteOptions.map((opt) => {
+          const selected = palette === opt.value;
           return (
             <button
-              key={t.value}
-              onClick={() => setTheme(t.value)}
-              className="relative p-2 rounded-md transition-colors hover:bg-surface dark:hover:bg-background focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-              title={t.label}
-              aria-label={`Switch to ${t.label} theme`}
-              aria-pressed={selected}
+              key={opt.value}
               type="button"
+              onClick={() => setPalette(opt.value)}
+              aria-pressed={selected}
+              className={`relative min-h-[40px] rounded-xl border bg-surface/70 dark:bg-surface/50 px-2 transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+                selected ? "border-primary/40" : "border-border/60"
+              }`}
+              title={opt.label}
+              aria-label={`Use ${opt.label} palette`}
             >
-              {selected && (
-                <motion.span
-                  layoutId="theme-toggle-indicator"
-                  className="absolute inset-0 rounded-md bg-primary shadow-sm"
-                  transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }}
-                />
-              )}
-              <span className={`relative z-10 ${selected ? "text-white" : "text-foreground-secondary"}`}>
-                <Icon className="w-4 h-4" />
+              <span className="flex items-center justify-center gap-1" aria-hidden="true">
+                {opt.swatches.map((c) => (
+                  <span
+                    key={c}
+                    className="h-2.5 w-2.5 rounded-full border border-border/60"
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
               </span>
+              {selected && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-primary text-white shadow-sm flex items-center justify-center">
+                  <Check className="w-3 h-3" />
+                </span>
+              )}
             </button>
           );
         })}
-      </LayoutGroup>
-
-      <button
-        onClick={cyclePalette}
-        className="relative p-2 rounded-md transition-colors hover:bg-surface dark:hover:bg-background focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-        title={`Palette: ${palette} (click to change)`}
-        aria-label="Change accent palette"
-        type="button"
-      >
-        <span className="relative z-10 text-foreground-secondary">
-          <Palette className="w-4 h-4" />
-        </span>
-      </button>
+      </div>
     </div>
   );
 }

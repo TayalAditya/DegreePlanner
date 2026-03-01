@@ -24,6 +24,7 @@ import {
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
+import { NotificationBell } from "./NotificationBell";
 
 interface DashboardNavProps {
   user: {
@@ -89,7 +90,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             </Link>
 
             <div className="flex items-center space-x-2">
-              <ThemeToggle />
+              <NotificationBell />
               <button
                 onClick={() => setMobileMenuOpen((v) => !v)}
                 className="inline-flex items-center justify-center p-2 rounded-lg border border-border bg-card text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
@@ -125,6 +126,10 @@ export function DashboardNav({ user }: DashboardNavProps) {
               >
                 <X className="w-5 h-5" />
               </button>
+            </div>
+
+            <div className="px-4 py-3 border-b border-border bg-surface/40 backdrop-blur-sm">
+              <ThemeToggle />
             </div>
 
             <LayoutGroup id="dashboard-nav-mobile">
@@ -189,7 +194,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
       {/* Desktop: Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/80 border-r border-border no-print sticky top-0 h-screen backdrop-blur-sm">
-        <div className="h-16 flex items-center px-4 border-b border-border">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-border">
           <Link
             href="/dashboard"
             className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
@@ -199,6 +204,11 @@ export function DashboardNav({ user }: DashboardNavProps) {
               Degree Planner
             </span>
           </Link>
+          <NotificationBell />
+        </div>
+
+        <div className="px-4 py-3 border-b border-border bg-surface/40 backdrop-blur-sm">
+          <ThemeToggle />
         </div>
 
         <LayoutGroup id="dashboard-nav-desktop">
@@ -234,8 +244,6 @@ export function DashboardNav({ user }: DashboardNavProps) {
         </LayoutGroup>
 
         <div className="border-t border-border px-4 py-4 space-y-3">
-          <ThemeToggle />
-
           <div className="flex items-center gap-3">
             {user.image && (
               <img

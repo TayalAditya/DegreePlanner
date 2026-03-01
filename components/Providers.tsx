@@ -2,7 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ThemeProvider } from "./ThemeProvider";
 import { ToastProvider, useToast } from "./ToastProvider";
 import { ConfirmDialogProvider } from "./ConfirmDialog";
@@ -48,24 +48,22 @@ export function Providers({ children }: { children: React.ReactNode }) {
           },
         },
       })
-  );
+    );
 
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== "undefined" ? navigator.onLine : true));
+
+  const handleOnline = useCallback(() => setIsOnline(true), []);
+  const handleOffline = useCallback(() => setIsOnline(false), []);
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
-
-    setIsOnline(navigator.onLine);
 
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, []);
+  }, [handleOffline, handleOnline]);
 
   return (
     <ErrorBoundary>

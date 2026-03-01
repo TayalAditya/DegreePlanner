@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { ClassType, DayOfWeek, EnrollmentStatus } from "@prisma/client";
+import { getCurrentTimetableContext } from "@/lib/timetable";
 
 export async function GET(
   req: NextRequest,
@@ -13,6 +15,7 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const context = await getCurrentTimetableContext(session.user.id);
     const { id } = await params;
     const entry = await prisma.timetableEntry.findUnique({
       where: { id },
@@ -32,7 +35,23 @@ export async function GET(
       return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     }
 
-    if (entry.userId !== session.user.id) {
+    if (entry.semester !== context.semester || entry.year !== context.year || entry.term !== context.term) {
+      return NextResponse.json({ error: "This entry is not in your current semester" }, { status: 409 });
+    }
+
+    const isEnrolled = await prisma.courseEnrollment.findFirst({
+      where: {
+        userId: session.user.id,
+        courseId: entry.courseId,
+        semester: context.semester,
+        year: context.year,
+        term: context.term,
+        status: EnrollmentStatus.IN_PROGRESS,
+      },
+      select: { id: true },
+    });
+
+    if (!isEnrolled) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -56,6 +75,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const context = await getCurrentTimetableContext(session.user.id);
     const { id } = await params;
     const body = await req.json();
     const existing = await prisma.timetableEntry.findUnique({
@@ -66,49 +86,79 @@ export async function PATCH(
       return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     }
 
-    if (existing.userId !== session.user.id) {
+    if (existing.semester !== context.semester || existing.year !== context.year || existing.term !== context.term) {
+      return NextResponse.json({ error: "This entry is not in your current semester" }, { status: 409 });
+    }
+
+    const isEnrolled = await prisma.courseEnrollment.findFirst({
+      where: {
+        userId: session.user.id,
+        courseId: existing.courseId,
+        semester: context.semester,
+        year: context.year,
+        term: context.term,
+        status: EnrollmentStatus.IN_PROGRESS,
+      },
+      select: { id: true },
+    });
+
+    if (!isEnrolled) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // Check for time conflicts (exclude current entry)
-    if (body.dayOfWeek || body.startTime || body.endTime) {
-      const dayOfWeek = body.dayOfWeek || existing.dayOfWeek;
-      const startTime = body.startTime || existing.startTime;
-      const endTime = body.endTime || existing.endTime;
+    const data: Record<string, any> = {};
 
-      const conflicts = await prisma.timetableEntry.findMany({
-        where: {
-          userId: session.user.id,
-          id: { not: id },
-          dayOfWeek,
-          OR: [
-            {
-              AND: [
-                { startTime: { lte: startTime } },
-                { endTime: { gt: startTime } },
-              ],
-            },
-            {
-              AND: [
-                { startTime: { lt: endTime } },
-                { endTime: { gte: endTime } },
-              ],
-            },
-          ],
-        },
-      });
-
-      if (conflicts.length > 0) {
-        return NextResponse.json(
-          { error: "Time conflict detected" },
-          { status: 409 }
-        );
+    if (body.dayOfWeek !== undefined) {
+      if (!Object.values(DayOfWeek).includes(body.dayOfWeek)) {
+        return NextResponse.json({ error: "Invalid dayOfWeek" }, { status: 400 });
       }
+      data.dayOfWeek = body.dayOfWeek;
+    }
+
+    const timeRegex = /^\d{2}:\d{2}$/;
+    const nextStartTime = body.startTime !== undefined ? body.startTime : existing.startTime;
+    const nextEndTime = body.endTime !== undefined ? body.endTime : existing.endTime;
+
+    if (body.startTime !== undefined) {
+      if (!timeRegex.test(body.startTime)) {
+        return NextResponse.json({ error: "Invalid startTime format" }, { status: 400 });
+      }
+      data.startTime = body.startTime;
+    }
+
+    if (body.endTime !== undefined) {
+      if (!timeRegex.test(body.endTime)) {
+        return NextResponse.json({ error: "Invalid endTime format" }, { status: 400 });
+      }
+      data.endTime = body.endTime;
+    }
+
+    if ((body.startTime !== undefined || body.endTime !== undefined) && nextEndTime <= nextStartTime) {
+      return NextResponse.json({ error: "End time must be after start time" }, { status: 400 });
+    }
+
+    if (body.slot !== undefined) {
+      data.slot = typeof body.slot === "string" ? body.slot.trim() || null : null;
+    }
+    if (body.venue !== undefined) data.venue = body.venue;
+    if (body.roomNumber !== undefined) data.roomNumber = body.roomNumber;
+    if (body.building !== undefined) data.building = body.building;
+    if (body.instructor !== undefined) data.instructor = body.instructor;
+    if (body.notes !== undefined) data.notes = body.notes;
+
+    if (body.classType !== undefined) {
+      if (!Object.values(ClassType).includes(body.classType)) {
+        return NextResponse.json({ error: "Invalid classType" }, { status: 400 });
+      }
+      data.classType = body.classType;
     }
 
     const updated = await prisma.timetableEntry.update({
       where: { id },
-      data: body,
+      data: {
+        ...data,
+        updatedById: session.user.id,
+      },
       include: {
         course: {
           select: {
@@ -141,6 +191,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const context = await getCurrentTimetableContext(session.user.id);
     const { id } = await params;
     const entry = await prisma.timetableEntry.findUnique({
       where: { id },
@@ -150,7 +201,23 @@ export async function DELETE(
       return NextResponse.json({ error: "Entry not found" }, { status: 404 });
     }
 
-    if (entry.userId !== session.user.id) {
+    if (entry.semester !== context.semester || entry.year !== context.year || entry.term !== context.term) {
+      return NextResponse.json({ error: "This entry is not in your current semester" }, { status: 409 });
+    }
+
+    const isEnrolled = await prisma.courseEnrollment.findFirst({
+      where: {
+        userId: session.user.id,
+        courseId: entry.courseId,
+        semester: context.semester,
+        year: context.year,
+        term: context.term,
+        status: EnrollmentStatus.IN_PROGRESS,
+      },
+      select: { id: true },
+    });
+
+    if (!isEnrolled) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
