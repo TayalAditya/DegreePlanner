@@ -295,8 +295,8 @@ export async function POST(request: NextRequest) {
       if (user.branch === "DS") candidates.push("DSE");
       if (user.branch === "MSE") candidates.push("MS");
       if (user.branch === "MS") candidates.push("MSE");
-      if (user.branch === "MEVLSI") candidates.push("VL");
-      if (user.branch === "VL") candidates.push("MEVLSI");
+      if (user.branch === "MEVLSI") candidates.push("VL", "VLSI");
+      if (user.branch === "VL") candidates.push("MEVLSI", "VLSI");
       if (user.branch === "BSCS") candidates.push("BS", "CH");
       if (user.branch === "BS") candidates.push("BSCS", "CH");
       if (user.branch === "BE") candidates.push("BIO");
