@@ -2,18 +2,18 @@
  * Generate ICS (iCalendar) file content for timetable entries
  */
 
-type DayOfWeek = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+import { DayOfWeek, Term, ClassType } from "@prisma/client";
 
 interface TimetableEntry {
   id: string;
   semester: number;
   year: number;
-  term: "FALL" | "SPRING" | "SUMMER";
+  term: Term;
   dayOfWeek: DayOfWeek;
   startTime: string;
   endTime: string;
   venue?: string | null;
-  classType: string;
+  classType: ClassType;
   instructor?: string | null;
   notes?: string | null;
   course?: {
