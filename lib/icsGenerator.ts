@@ -75,16 +75,6 @@ export function generateICS(entries: TimetableEntry[], endDate: Date = new Date(
   lines.push("X-WR-CALNAME:Class Timetable");
   lines.push("X-WR-TIMEZONE:Asia/Kolkata");
   
-  // Add timezone definition
-  lines.push("BEGIN:VTIMEZONE");
-  lines.push("TZID:Asia/Kolkata");
-  lines.push("BEGIN:STANDARD");
-  lines.push("DTSTART:19700101T000000");
-  lines.push("TZOFFSETFROM:+0530");
-  lines.push("TZOFFSETTO:+0530");
-  lines.push("END:STANDARD");
-  lines.push("END:VTIMEZONE");
-  
   // Add events
   for (const entry of entries) {
     const courseCode = entry.course?.code || "Unknown";
@@ -111,8 +101,8 @@ export function generateICS(entries: TimetableEntry[], endDate: Date = new Date(
     lines.push("BEGIN:VEVENT");
     lines.push(`UID:${entry.id}@degreeplanner.local`);
     lines.push(`DTSTAMP:${formatICSDate(new Date())}`);
-    lines.push(`DTSTART;TZID=Asia/Kolkata:${formatICSDate(startDateTime)}`);
-    lines.push(`DTEND;TZID=Asia/Kolkata:${formatICSDate(endDateTime)}`);
+    lines.push(`DTSTART:${formatICSDate(startDateTime)}`);
+    lines.push(`DTEND:${formatICSDate(endDateTime)}`);     // Floating datetime — displays as-is in any calendar timezone
     const dayCode = DAY_MAP[String(entry.dayOfWeek)] || "MO";
     lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${dayCode};UNTIL=${untilStr}`);
     lines.push(`SUMMARY:${escapeICSText(courseCode)} - ${escapeICSText(String(entry.classType))}`);

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle, ChevronDown, Clock, Target } from "lucide-react";
-import { ProgressChart } from "@/components/ProgressChart";
 import { formatCourseCode } from "@/lib/utils";
 
 interface Enrollment {
@@ -651,17 +650,7 @@ export default function ProgressPage() {
         )}
       </div>
 
-      {/* Progress Chart – pie + remaining breakdown with course lists */}
-      {primaryProgramId && (
-        <ProgressChart
-          progress={progressApiData}
-          isLoading={!progressApiData}
-          enrollments={enrollments as any}
-          userBranch={user?.branch}
-        />
-      )}
-
-      {/* Courses by Semester */}
+      {/* Courses by Semester */
       <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
         <h3 className="text-base sm:text-xl font-semibold text-foreground mb-2">
           Courses (Semester-wise)
