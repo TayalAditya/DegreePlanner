@@ -75,47 +75,42 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
   return (
     <>
-      {/* Desktop: Top bar with theme controls */}
-      <nav className="hidden lg:flex lg:fixed lg:top-0 lg:left-0 lg:right-0 lg:z-40 bg-surface/80 border-b border-border no-print backdrop-blur-sm h-16 px-6 items-center justify-between">
-        <div className="flex items-center gap-4">
-          <ThemeToggle variant="mode" />
-          <div className="text-foreground-secondary/30 text-lg">|</div>
-          <div className="w-96">
+      {/* Desktop & Mobile: Top Navbar */}
+      <nav className="bg-surface/80 border-b border-border no-print sticky top-0 z-50 backdrop-blur-sm h-16">
+        <div className="flex h-full items-center justify-between px-4 sm:px-6">
+          {/* Left: Logo (mobile only) */}
+          <Link
+            href="/dashboard"
+            className="lg:hidden flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+          >
+            <GraduationCap className="w-7 h-7 text-primary" />
+            <span className="ml-2 text-lg font-bold text-foreground">
+              Degree Planner
+            </span>
+          </Link>
+
+          {/* Center: Theme controls (desktop only) */}
+          <div className="hidden lg:flex items-center gap-4 flex-1 px-4 justify-center">
+            <ThemeToggle variant="mode" />
+            <div className="text-foreground-secondary/30 text-lg">|</div>
             <ThemeToggle variant="palette" className="bg-transparent border-0 p-0 shadow-none" />
           </div>
-        </div>
-        <NotificationBell />
-      </nav>
 
-      {/* Mobile: Top bar */}
-      <nav className="lg:hidden bg-surface/80 border-b border-border no-print sticky top-0 z-50 backdrop-blur-sm">
-        <div className="px-4 sm:px-6">
-          <div className="flex justify-between h-16 items-center">
-            <Link
-              href="/dashboard"
-              className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+          {/* Right: Notification & Menu Toggle */}
+          <div className="flex items-center space-x-2">
+            <NotificationBell />
+            {/* Mobile: Menu toggle */}
+            <button
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              className="lg:hidden dp-icon-btn"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
-              <GraduationCap className="w-7 h-7 text-primary" />
-              <span className="ml-2 text-lg font-bold text-foreground">
-                Degree Planner
-              </span>
-            </Link>
-
-            <div className="flex items-center space-x-2">
-              <ThemeToggle variant="mode" />
-              <NotificationBell />
-              <button
-                onClick={() => setMobileMenuOpen((v) => !v)}
-                className="dp-icon-btn"
-                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
-              >
-                {mobileMenuOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
-              </button>
-            </div>
+              {mobileMenuOpen ? (
+                <X className="w-5 h-5" />
+              ) : (
+                <Menu className="w-5 h-5" />
+              )}
+            </button>
           </div>
         </div>
       </nav>
@@ -151,13 +146,6 @@ export function DashboardNav({ user }: DashboardNavProps) {
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-hide">
-              <div className="px-1">
-                <p className="text-[11px] font-semibold text-foreground-secondary uppercase tracking-wider px-2 mb-2">
-                  Palette
-                </p>
-                <ThemeToggle variant="palette" className="bg-transparent border-0 p-0 shadow-none" />
-              </div>
-
               <LayoutGroup id="dashboard-nav-mobile">
                 <div className="space-y-1">
                   {allNavigation.map((item) => {
