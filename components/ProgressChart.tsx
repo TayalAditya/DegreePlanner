@@ -195,7 +195,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       // Map branch code: CSE → CS (since database uses CS code)
       const mappingBranch = userBranch === "CSE" ? "CS" : userBranch;
       const mapping = (mappingBranch
-        ? mappings.find((m: any) => m.branch === mappingBranch || m.branch === "COMMON")
+        ? mappings.find((m: any) => m.branch === mappingBranch || m.branch === userBranch || m.branch === "COMMON")
         : undefined) || (userBranch === "GE"
           ? mappings.find((m: any) => m.branch?.startsWith("GE"))
           : undefined);

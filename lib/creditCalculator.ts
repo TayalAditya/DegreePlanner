@@ -420,7 +420,7 @@ export class CreditCalculator {
       const mappedCategory = enrollment.course.branchMappings
         ? ((mappingBranch
           ? enrollment.course.branchMappings.find(
-              (m) => m.branch === mappingBranch || m.branch === "COMMON"
+              (m) => m.branch === mappingBranch || m.branch === branch || m.branch === "COMMON"
             )?.courseCategory
           : undefined) || (branch && branch.startsWith("GE")
             ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))?.courseCategory
