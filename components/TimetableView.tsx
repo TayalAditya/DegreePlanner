@@ -678,6 +678,8 @@ export function TimetableView({ userId }: TimetableViewProps) {
   };
 
   const [clearingCalendar, setClearingCalendar] = useState(false);
+  const [autofillPickerOpen, setAutofillPickerOpen] = useState(false);
+  const [autofillSelected, setAutofillSelected] = useState<Set<string>>(new Set());
   const handleClearAllCalendar = async () => {
     const synced = entries.filter((e) => e.googleEventId);
     if (synced.length === 0) {
@@ -920,23 +922,15 @@ export function TimetableView({ userId }: TimetableViewProps) {
             {view === "week" ? "List View" : "Week View"}
           </button>
           <button
-            onClick={async () => {
+            onClick={() => {
               if (!canAutofill) {
                 if (!canAddClass) showToast("warning", "Enroll in current semester courses to build the shared timetable");
                 else showToast("info", "No missing schedules found to auto-fill");
                 return;
               }
-
-              const totalClasses = autofillCandidates.reduce((sum, c) => sum + c.entries.length, 0);
-              const ok = await confirm({
-                title: "Auto-fill missing schedules?",
-                message: `This will create shared timetable entries for ${autofillCandidates.length} courses (${totalClasses} classes) for the current semester. Anyone enrolled will see them.`,
-                confirmText: "Auto-fill",
-                variant: "info",
-              });
-              if (!ok) return;
-
-              autofillMissingMutation.mutate(autofillCandidates);
+              // Pre-select all candidates and open picker
+              setAutofillSelected(new Set(autofillCandidates.map((c) => c.courseId)));
+              setAutofillPickerOpen(true);
             }}
             disabled={!canAutofill || autofillMissingMutation.isPending}
             className="w-full sm:w-auto px-4 py-2 min-h-[44px] rounded-xl border border-primary/25 bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/15 transition-colors transition-transform active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
@@ -1006,8 +1000,163 @@ export function TimetableView({ userId }: TimetableViewProps) {
             defaultClassType={addingTaDuty ? "TA_DUTY" : undefined}
           />
         )}
+        {autofillPickerOpen && (
+          <AutofillPickerModal
+            key="autofill-picker"
+            candidates={autofillCandidates}
+            selected={autofillSelected}
+            saving={autofillMissingMutation.isPending}
+            onToggle={(courseId) =>
+              setAutofillSelected((prev) => {
+                const next = new Set(prev);
+                if (next.has(courseId)) next.delete(courseId);
+                else next.add(courseId);
+                return next;
+              })
+            }
+            onToggleAll={(all) =>
+              setAutofillSelected(all ? new Set(autofillCandidates.map((c) => c.courseId)) : new Set())
+            }
+            onConfirm={() => {
+              const picked = autofillCandidates.filter((c) => autofillSelected.has(c.courseId));
+              if (picked.length === 0) { setAutofillPickerOpen(false); return; }
+              autofillMissingMutation.mutate(picked, {
+                onSettled: () => setAutofillPickerOpen(false),
+              });
+            }}
+            onClose={() => setAutofillPickerOpen(false)}
+          />
+        )}
       </AnimatePresence>
     </div>
+  );
+}
+
+const DAY_SHORT: Record<string, string> = {
+  MONDAY: "Mon", TUESDAY: "Tue", WEDNESDAY: "Wed",
+  THURSDAY: "Thu", FRIDAY: "Fri", SATURDAY: "Sat", SUNDAY: "Sun",
+};
+const CLASS_TYPE_SHORT: Record<string, string> = {
+  LECTURE: "Lec", LAB: "Lab", TUTORIAL: "Tut",
+  SEMINAR: "Sem", WORKSHOP: "Wkshp", TA_DUTY: "TA",
+};
+
+type AutofillCandidate = {
+  courseId: string;
+  courseCode: string;
+  entries: Array<Omit<TimetableEntryPayload, "courseId">>;
+};
+
+function AutofillPickerModal({
+  candidates,
+  selected,
+  saving,
+  onToggle,
+  onToggleAll,
+  onConfirm,
+  onClose,
+}: {
+  candidates: AutofillCandidate[];
+  selected: Set<string>;
+  saving: boolean;
+  onToggle: (courseId: string) => void;
+  onToggleAll: (all: boolean) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  const reducedMotion = useReducedMotion();
+  const allSelected = selected.size === candidates.length;
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={reducedMotion ? { duration: 0 } : { duration: 0.15 }}
+    >
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <motion.div
+        className="relative z-10 w-full sm:max-w-md bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl flex flex-col max-h-[85vh]"
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 40, opacity: 0 }}
+        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 35 }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Auto-fill schedules</h2>
+            <p className="text-xs text-foreground-secondary mt-0.5">Choose which courses to add</p>
+          </div>
+          <button onClick={onClose} className="dp-icon-btn" aria-label="Close"><X className="w-4 h-4" /></button>
+        </div>
+
+        {/* Select all toggle */}
+        <div className="px-5 py-3 border-b border-border/50 flex-shrink-0">
+          <button
+            onClick={() => onToggleAll(!allSelected)}
+            className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            <span className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${allSelected ? "bg-primary border-primary" : "border-border"}`}>
+              {allSelected && <span className="text-white text-[10px] font-bold">✓</span>}
+            </span>
+            {allSelected ? "Deselect all" : "Select all"}
+            <span className="text-foreground-secondary font-normal">({selected.size}/{candidates.length})</span>
+          </button>
+        </div>
+
+        {/* Course list */}
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
+          {candidates.map((c) => {
+            const isChecked = selected.has(c.courseId);
+            const sessionSummary = c.entries
+              .map((e) => `${DAY_SHORT[e.dayOfWeek] ?? e.dayOfWeek} ${e.startTime}${e.classType && e.classType !== "LECTURE" ? ` (${CLASS_TYPE_SHORT[e.classType] ?? e.classType})` : ""}`)
+              .join(" · ");
+            return (
+              <button
+                key={c.courseId}
+                type="button"
+                onClick={() => onToggle(c.courseId)}
+                className={`w-full flex items-start gap-3 rounded-xl px-3 py-3 text-left transition-colors border ${
+                  isChecked
+                    ? "bg-primary/8 border-primary/25"
+                    : "bg-transparent border-transparent hover:bg-surface-hover"
+                }`}
+              >
+                <span className={`mt-0.5 w-4 h-4 flex-shrink-0 rounded border-2 flex items-center justify-center transition-colors ${isChecked ? "bg-primary border-primary" : "border-border"}`}>
+                  {isChecked && <span className="text-white text-[10px] font-bold">✓</span>}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">{formatCourseCode(c.courseCode)}</p>
+                  <p className="text-xs text-foreground-secondary mt-0.5 truncate">{sessionSummary}</p>
+                  <p className="text-xs text-foreground-secondary/70 mt-0.5">{c.entries.length} {c.entries.length === 1 ? "class" : "classes"}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center gap-2 px-5 py-4 border-t border-border flex-shrink-0">
+          <button onClick={onClose} className="dp-btn dp-btn-outline flex-1">Cancel</button>
+          <button
+            onClick={onConfirm}
+            disabled={selected.size === 0 || saving}
+            className="dp-btn dp-btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            Fill {selected.size} {selected.size === 1 ? "course" : "courses"}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
