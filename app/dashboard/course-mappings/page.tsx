@@ -58,7 +58,7 @@ export default function CourseMappingsPage() {
   const { showToast } = useToast();
   const [courses, setCourses] = useState<Course[]>([]);
   const [mappings, setMappings] = useState<Map<string, CourseMapping>>(new Map());
-  const [selectedBranch, setSelectedBranch] = useState("CSE");
+  const [selectedBranch, setSelectedBranch] = useState(() => BRANCHES[0]?.code || "");
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

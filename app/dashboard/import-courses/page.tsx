@@ -490,7 +490,7 @@ export default function ImportCoursesPage() {
               <option value="MSE">MSE</option>
               <option value="GE">GE</option>
               <option value="MEVLSI">MEVLSI</option>
-              <option value="BSCS">BSCS (B.S.)</option>
+              <option value="BSCS">BSCS (B.S. Chemical Sciences)</option>
             </select>
             {branch && (
               <p className="text-xs text-foreground-secondary mt-1">
