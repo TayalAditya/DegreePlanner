@@ -174,8 +174,10 @@ export default function ProgramsPage() {
   const secondaryPrograms = userPrograms.filter((p) => !p.isPrimary);
 
   const programEnrollments = primaryProgram?.program?.id
-    ? enrollments.filter((e) => e.programId === primaryProgram.program.id)
-    : [];
+    ? enrollments.filter(
+        (e) => e.programId === primaryProgram.program.id || e.programId == null
+      )
+    : enrollments;
 
   const visibleEnrollments = programEnrollments.filter(
     (e) =>
