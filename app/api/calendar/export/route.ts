@@ -97,6 +97,44 @@ export async function POST(request: NextRequest) {
       expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
     });
 
+    // Force-refresh the access token before making API calls.
+    // Stored access_tokens expire after ~1 hour; this ensures we use a valid one.
+    try {
+      const tokenInfo = await oauth2Client.getAccessToken();
+      if (!tokenInfo.token) {
+        return NextResponse.json(
+          { error: "Could not obtain a valid Google access token. Please sign out and sign in again." },
+          { status: 401 }
+        );
+      }
+      // Persist the refreshed token to DB so future calls don't need to refresh again
+      const refreshed = oauth2Client.credentials;
+      if (refreshed.access_token && refreshed.access_token !== account.access_token) {
+        await prisma.account.update({
+          where: { id: account.id },
+          data: {
+            access_token: refreshed.access_token,
+            expires_at: refreshed.expiry_date
+              ? Math.floor(refreshed.expiry_date / 1000)
+              : account.expires_at,
+          },
+        });
+      }
+    } catch (tokenError: any) {
+      const msg: string = tokenError.message || "";
+      console.error("[Calendar] Token refresh failed:", msg);
+      if (msg.includes("invalid_grant") || msg.includes("Token has been expired or revoked")) {
+        return NextResponse.json(
+          { error: "Your Google session has expired. Please sign out and sign in again to re-authorize calendar access." },
+          { status: 401 }
+        );
+      }
+      return NextResponse.json(
+        { error: `Failed to authenticate with Google: ${msg}. Please sign out and sign in again.` },
+        { status: 401 }
+      );
+    }
+
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
     const endDate = new Date("2026-05-01");
