@@ -195,7 +195,7 @@ export default function ProgressPage() {
       }
     }
 
-    if (user?.branch === "CSE" && code.startsWith("DS")) return "DE";
+    if (user?.branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
     if (user?.branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
 
     if (normalizedCode === "IC181") return "IKS";

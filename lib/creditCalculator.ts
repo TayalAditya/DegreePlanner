@@ -500,7 +500,7 @@ export class CreditCalculator {
       }
 
       // Branch-specific course patterns
-      if (branch === "CSE" && normalizedCode.startsWith("DS")) {
+      if (branch === "CSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) {
         breakdown.de += credits;
         return;
       }
