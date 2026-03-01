@@ -189,7 +189,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
       )}
 
       {/* Desktop: Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/80 border-r border-border no-print sticky top-0 h-screen backdrop-blur-sm">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/80 border-l border-border no-print sticky top-0 h-screen backdrop-blur-sm">
         <div className="h-16 flex items-center justify-between px-4 border-b border-border">
           <Link
             href="/dashboard"
