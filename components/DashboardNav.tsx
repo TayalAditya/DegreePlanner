@@ -143,7 +143,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-hide">
+            <div className="flex-1 overflow-y-auto px-3 py-4 scrollbar-hide flex flex-col gap-4">
               <LayoutGroup id="dashboard-nav-mobile">
                 <div className="space-y-1">
                   {allNavigation.map((item) => {
@@ -155,10 +155,10 @@ export function DashboardNav({ user }: DashboardNavProps) {
                         href={item.href}
                         onClick={() => setMobileMenuOpen(false)}
                         aria-current={isActive ? "page" : undefined}
-                        className={`group relative overflow-hidden flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium border transition-all duration-200 no-touch:hover:-translate-y-px focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+                        className={`group relative overflow-hidden flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
                           isActive
-                            ? "text-primary border-transparent"
-                            : "bg-card border-border/60 text-foreground-secondary hover:text-foreground hover:bg-surface-hover hover:border-border-strong/60"
+                            ? "text-primary"
+                            : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
                         }`}
                       >
                         {isActive && (
@@ -176,37 +176,35 @@ export function DashboardNav({ user }: DashboardNavProps) {
                   })}
                 </div>
               </LayoutGroup>
-            </div>
 
-            <div className="border-t border-border px-4 py-4 space-y-3">
-              {/* Theme controls */}
-              <div>
-                <p className="text-[11px] font-semibold text-foreground-secondary uppercase tracking-wider mb-2">
+              {/* Appearance — inside scroll area so it doesn't crowd the footer */}
+              <div className="border-t border-border/60 pt-4">
+                <p className="text-[11px] font-semibold text-foreground-secondary uppercase tracking-wider px-1 mb-2">
                   Appearance
                 </p>
-                <ThemeToggle variant="full" />
+                <ThemeToggle variant="full" className="bg-transparent border-0 p-0 shadow-none" />
               </div>
+            </div>
 
-              <div className="flex items-center gap-3">
-                {user.image && (
-                  <img
-                    src={user.image}
-                    alt={user.name || "User"}
-                    className="w-10 h-10 rounded-full ring-2 ring-border"
-                  />
-                )}
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
-                  <p className="text-[10px] text-foreground-secondary truncate">{user.email}</p>
-                </div>
+            <div className="border-t border-border px-4 py-3 flex items-center gap-3">
+              {user.image && (
+                <img
+                  src={user.image}
+                  alt={user.name || "User"}
+                  className="w-9 h-9 rounded-full ring-2 ring-border flex-shrink-0"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-foreground truncate">{user.name}</p>
+                <p className="text-[10px] text-foreground-secondary truncate">{user.email}</p>
               </div>
-
               <button
                 onClick={signOutAndClose}
-                className="dp-btn dp-btn-outline w-full"
+                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium text-foreground-secondary border border-border hover:bg-surface-hover hover:text-foreground transition-colors"
+                aria-label="Sign out"
               >
                 <LogOut className="w-4 h-4" />
-                Sign Out
+                <span className="hidden xs:inline">Sign Out</span>
               </button>
             </div>
           </div>
