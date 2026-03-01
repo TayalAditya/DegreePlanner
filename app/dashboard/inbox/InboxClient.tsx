@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, ClipboardList, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle2, ClipboardList, Loader2, RefreshCw, Trash2 } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
 
@@ -138,6 +138,30 @@ export default function InboxClient() {
     return (await res.json()) as CourseSuggestionAdmin;
   };
 
+  const deleteTicket = async (id: string) => {
+    if (!window.confirm("Delete this ticket permanently?")) return;
+    try {
+      const res = await fetch(`/api/support/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      setTickets((cur) => cur.filter((t) => t.id !== id));
+      showToast("success", "Ticket deleted");
+    } catch {
+      showToast("error", "Failed to delete ticket");
+    }
+  };
+
+  const deleteSuggestion = async (id: string) => {
+    if (!window.confirm("Delete this override request permanently?")) return;
+    try {
+      const res = await fetch(`/api/course-suggestions/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      setSuggestions((cur) => cur.filter((s) => s.id !== id));
+      showToast("success", "Override deleted");
+    } catch {
+      showToast("error", "Failed to delete override");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-surface rounded-2xl border border-border p-6 sm:p-8">
@@ -213,8 +237,8 @@ export default function InboxClient() {
           ) : (
             tickets.map((t) => (
               <details key={t.id} className="group rounded-2xl border border-border bg-surface">
-                <summary className="cursor-pointer list-none p-4 sm:p-5 flex items-start justify-between gap-4">
-                  <div className="min-w-0">
+                <summary className="cursor-pointer list-none p-4 sm:p-5 flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-foreground truncate">{t.subject}</p>
                     <p className="text-xs text-foreground-secondary mt-1">
                       {t.user?.enrollmentId || t.user?.email || "Unknown user"} • {t.type} •{" "}
@@ -222,9 +246,19 @@ export default function InboxClient() {
                       {t.pageUrl ? ` • ${t.pageUrl}` : ""}
                     </p>
                   </div>
-                  <span className={`px-2 py-1 rounded-lg border text-xs font-semibold ${pillClasses(t.status)}`}>
-                    {t.status}
-                  </span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`px-2 py-1 rounded-lg border text-xs font-semibold ${pillClasses(t.status)}`}>
+                      {t.status}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); deleteTicket(t.id); }}
+                      className="p-1.5 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      title="Delete ticket"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </summary>
 
                 <div className="px-4 sm:px-5 pb-5 pt-0 space-y-3">
@@ -299,8 +333,8 @@ export default function InboxClient() {
           ) : (
             suggestions.map((s) => (
               <details key={s.id} className="group rounded-2xl border border-border bg-surface">
-                <summary className="cursor-pointer list-none p-4 sm:p-5 flex items-start justify-between gap-4">
-                  <div className="min-w-0">
+                <summary className="cursor-pointer list-none p-4 sm:p-5 flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-foreground truncate">
                       {s.course.code} • {s.suggestedCategory} (was {s.currentCategory})
                     </p>
@@ -310,9 +344,19 @@ export default function InboxClient() {
                       {s.semester ? ` • Sem ${s.semester}` : ""}
                     </p>
                   </div>
-                  <span className={`px-2 py-1 rounded-lg border text-xs font-semibold ${pillClasses(s.status)}`}>
-                    {s.status}
-                  </span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`px-2 py-1 rounded-lg border text-xs font-semibold ${pillClasses(s.status)}`}>
+                      {s.status}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.preventDefault(); deleteSuggestion(s.id); }}
+                      className="p-1.5 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                      title="Delete override"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </summary>
 
                 <div className="px-4 sm:px-5 pb-5 pt-0 space-y-3">

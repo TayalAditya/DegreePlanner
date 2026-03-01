@@ -2,7 +2,7 @@
 
 import type { ComponentType } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Bug, Lightbulb, Mail, MessageCircle, Send } from "lucide-react";
+import { Bug, Lightbulb, Mail, MessageCircle, Send, Trash2 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 import { useToast } from "@/components/ToastProvider";
@@ -45,6 +45,22 @@ export default function SupportPage() {
   const [message, setMessage] = useState("");
 
   const typeMeta = useMemo(() => TYPE_OPTIONS.find((t) => t.value === type), [type]);
+
+  const deleteTicket = async (id: string) => {
+    if (!window.confirm("Delete this message? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/support/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        showToast("error", err?.error || "Failed to delete");
+        return;
+      }
+      setTickets((cur) => cur.filter((t) => t.id !== id));
+      showToast("success", "Message deleted");
+    } catch {
+      showToast("error", "Failed to delete message");
+    }
+  };
 
   const loadTickets = async () => {
     setLoading(true);
@@ -227,12 +243,22 @@ export default function SupportPage() {
                   className="rounded-xl border border-border bg-background p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-foreground truncate">{t.subject}</p>
                       <p className="text-xs text-foreground-secondary mt-1">
                         {t.type} • {t.status} • {new Date(t.createdAt).toLocaleString()}
                       </p>
                     </div>
+                    {t.status === "OPEN" && (
+                      <button
+                        type="button"
+                        onClick={() => deleteTicket(t.id)}
+                        className="p-1.5 rounded-lg text-foreground-secondary hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex-shrink-0"
+                        title="Delete message"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                   <p className="text-sm text-foreground mt-3 whitespace-pre-wrap">{t.message}</p>
                   {t.adminNote && (
