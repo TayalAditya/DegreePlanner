@@ -890,86 +890,130 @@ export function TimetableView({ userId }: TimetableViewProps) {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          {/* Calendar sync controls */}
-          <div className="flex items-center gap-1 rounded-xl border border-border overflow-hidden">
+        <div className="flex flex-col gap-2">
+          {/* Secondary actions: icon-strip on mobile, full labels on sm+ */}
+          <div className="flex items-center gap-2">
+            {/* Calendar add */}
             <button
               onClick={handleExportCalendar}
               disabled={entries.length === 0}
-              className="flex px-3 py-2 min-h-[44px] text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center gap-2 transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-              title="Add timetable to Google Calendar"
+              className="dp-icon-btn sm:hidden disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Add to Google Calendar"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Add to Calendar</span>
-              <span className="sm:hidden">Add</span>
             </button>
+            <button
+              onClick={handleExportCalendar}
+              disabled={entries.length === 0}
+              className="hidden sm:flex px-3 py-2 min-h-[36px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center gap-2 transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="w-4 h-4" />
+              Add to Calendar
+            </button>
+
+            {/* Calendar clear — icon only always */}
             {entries.some((e) => e.googleEventId) && (
               <button
                 onClick={handleClearAllCalendar}
                 disabled={clearingCalendar}
-                className="flex px-3 py-2 min-h-[44px] text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 items-center gap-1.5 border-l border-border transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Remove all timetable events from Google Calendar"
+                className="dp-icon-btn text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed sm:hidden"
+                title="Remove all from Google Calendar"
               >
                 {clearingCalendar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                <span className="hidden sm:inline">Remove all</span>
               </button>
             )}
-          </div>
-          <button
-            onClick={() => setView(view === "week" ? "list" : "week")}
-            className="hidden md:flex px-4 py-2 min-h-[44px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center transition-colors transition-transform active:scale-[0.99]"
-          >
-            {view === "week" ? "List View" : "Week View"}
-          </button>
-          <button
-            onClick={() => {
-              if (!canAutofill) {
-                if (!canAddClass) showToast("warning", "Enroll in current semester courses to build the shared timetable");
-                else showToast("info", "No missing schedules found to auto-fill");
-                return;
-              }
-              // Pre-select all candidates and open picker
-              setAutofillSelected(new Set(autofillCandidates.map((c) => c.courseId)));
-              setAutofillPickerOpen(true);
-            }}
-            disabled={!canAutofill || autofillMissingMutation.isPending}
-            className="w-full sm:w-auto px-4 py-2 min-h-[44px] rounded-xl border border-primary/25 bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/15 transition-colors transition-transform active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
-          >
-            {autofillMissingMutation.isPending ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Sparkles className="w-4 h-4" />
+            {entries.some((e) => e.googleEventId) && (
+              <button
+                onClick={handleClearAllCalendar}
+                disabled={clearingCalendar}
+                className="hidden sm:flex px-3 py-2 min-h-[36px] border border-border rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 items-center gap-2 transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {clearingCalendar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Remove all
+              </button>
             )}
-            Auto-fill missing ({autofillCandidates.length})
-          </button>
-          <button
-            onClick={() => {
-              if (!canAddClass) {
-                showToast("warning", "Enroll in current semester courses to build the shared timetable");
-                return;
-              }
-              openAdd();
-            }}
-            disabled={!canAddClass}
-            className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add Class
-          </button>
-          <button
-            onClick={() => {
-              if (!canAddTaDuty) {
-                showToast("warning", "Current semester context not available");
-                return;
-              }
-              openAddTADuty();
-            }}
-            disabled={!canAddTaDuty}
-            className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] border-2 border-primary/50 bg-primary/5 text-primary rounded-xl text-sm font-semibold hover:bg-primary/10 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            Add TA Duty
-          </button>
+
+            {/* View toggle */}
+            <button
+              onClick={() => setView(view === "week" ? "list" : "week")}
+              className="dp-icon-btn md:hidden"
+              title={view === "week" ? "List View" : "Week View"}
+            >
+              <Calendar className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setView(view === "week" ? "list" : "week")}
+              className="hidden md:flex px-3 py-2 min-h-[36px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center transition-colors active:scale-[0.99]"
+            >
+              {view === "week" ? "List View" : "Week View"}
+            </button>
+
+            {/* Autofill — icon on mobile, label on sm+ */}
+            <button
+              onClick={() => {
+                if (!canAutofill) {
+                  if (!canAddClass) showToast("warning", "Enroll in current semester courses to build the shared timetable");
+                  else showToast("info", "No missing schedules found to auto-fill");
+                  return;
+                }
+                setAutofillSelected(new Set(autofillCandidates.map((c) => c.courseId)));
+                setAutofillPickerOpen(true);
+              }}
+              disabled={!canAutofill || autofillMissingMutation.isPending}
+              className="dp-icon-btn sm:hidden disabled:opacity-60 disabled:cursor-not-allowed text-primary"
+              title={`Auto-fill missing (${autofillCandidates.length})`}
+            >
+              {autofillMissingMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+            </button>
+            <button
+              onClick={() => {
+                if (!canAutofill) {
+                  if (!canAddClass) showToast("warning", "Enroll in current semester courses to build the shared timetable");
+                  else showToast("info", "No missing schedules found to auto-fill");
+                  return;
+                }
+                setAutofillSelected(new Set(autofillCandidates.map((c) => c.courseId)));
+                setAutofillPickerOpen(true);
+              }}
+              disabled={!canAutofill || autofillMissingMutation.isPending}
+              className="hidden sm:inline-flex px-3 py-2 min-h-[36px] rounded-xl border border-primary/25 bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/15 transition-colors active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed items-center gap-2"
+            >
+              {autofillMissingMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+              Auto-fill ({autofillCandidates.length})
+            </button>
+          </div>
+
+          {/* Primary actions: always full-width on mobile, auto on sm+ */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (!canAddClass) {
+                  showToast("warning", "Enroll in current semester courses to build the shared timetable");
+                  return;
+                }
+                openAdd();
+              }}
+              disabled={!canAddClass}
+              className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add Class
+            </button>
+            <button
+              onClick={() => {
+                if (!canAddTaDuty) {
+                  showToast("warning", "Current semester context not available");
+                  return;
+                }
+                openAddTADuty();
+              }}
+              disabled={!canAddTaDuty}
+              className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] border-2 border-primary/50 bg-primary/5 text-primary rounded-xl text-sm font-semibold hover:bg-primary/10 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add TA Duty
+            </button>
+          </div>
         </div>
       </div>
 
