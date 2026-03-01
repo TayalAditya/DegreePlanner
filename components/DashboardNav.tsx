@@ -179,6 +179,14 @@ export function DashboardNav({ user }: DashboardNavProps) {
             </div>
 
             <div className="border-t border-border px-4 py-4 space-y-3">
+              {/* Theme controls */}
+              <div>
+                <p className="text-[11px] font-semibold text-foreground-secondary uppercase tracking-wider mb-2">
+                  Appearance
+                </p>
+                <ThemeToggle variant="full" />
+              </div>
+
               <div className="flex items-center gap-3">
                 {user.image && (
                   <img
