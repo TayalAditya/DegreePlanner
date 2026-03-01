@@ -271,6 +271,14 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       const category = getCourseCategory(e, icBasketUsed, userBranch);
       categoryCredits[category] += e.course?.credits || 0;
     });
+
+    // DE overflow → FE: excess DE beyond requirement counts as Free Electives
+    const requiredDE = Number(progress?.required?.de || 0);
+    if (requiredDE > 0 && categoryCredits.DE > requiredDE) {
+      const overflow = categoryCredits.DE - requiredDE;
+      categoryCredits.DE -= overflow;
+      categoryCredits.FE = (categoryCredits.FE || 0) + overflow;
+    }
   }
 
   const categoryData = Object.entries(categoryCredits)
