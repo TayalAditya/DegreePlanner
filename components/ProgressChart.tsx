@@ -223,7 +223,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     
     // Branch-specific course patterns (only if no explicit courseType)
-    if (userBranch === "CSE" && code.startsWith("DS")) return "DE";
+    if (userBranch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
     if (userBranch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
 
     return "DC";
