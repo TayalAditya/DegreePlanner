@@ -121,8 +121,8 @@ export class CreditCalculator {
     };
 
     const completed = this.calculateCreditsByType(
-      enrollments.filter((e) => 
-        e.status === EnrollmentStatus.COMPLETED && 
+      enrollments.filter((e) =>
+        e.status === EnrollmentStatus.COMPLETED &&
         (!e.grade || e.grade !== "F") // Exclude failed courses
       ),
       user?.branch || undefined
@@ -132,6 +132,16 @@ export class CreditCalculator {
       enrollments.filter((e) => e.status === EnrollmentStatus.IN_PROGRESS),
       user?.branch || undefined
     );
+
+    // DE overflow → FE: excess DE credits beyond requirement count as Free Electives
+    const completedDeOverflow = Math.max(0, completed.de - deCredits);
+    completed.de -= completedDeOverflow;
+    completed.freeElective += completedDeOverflow;
+
+    const deStillNeeded = Math.max(0, deCredits - completed.de);
+    const inProgressDeOverflow = Math.max(0, inProgress.de - deStillNeeded);
+    inProgress.de -= inProgressDeOverflow;
+    inProgress.freeElective += inProgressDeOverflow;
 
     const remaining: CreditBreakdown = {
       core: Math.max(0, required.core - completed.core),
