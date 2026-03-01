@@ -5,12 +5,14 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🗑️  Deleting IC-010 from database...");
 
-  // Find IC010 courses
+  // Find IC010 courses (including IC-010P variant)
   const ic010Courses = await prisma.course.findMany({
     where: {
       OR: [
         { code: "IC010" },
         { code: "IC-010" },
+        { code: "IC-010P" },
+        { code: "IC010P" },
       ],
     },
   });
