@@ -10,6 +10,7 @@ import {
   Loader2,
   MapPin,
   Plus,
+  Sparkles,
   Trash2,
   X,
 } from "lucide-react";
@@ -251,6 +252,115 @@ type TimetableResponse = {
   entries: TimetableEntry[];
 };
 
+type TimetableAutofillData = {
+  version: string;
+  venues: string[];
+  defaults: {
+    nonIc: Record<string, { slot?: string; classroom?: string }>;
+    ic: Record<string, { slot?: string; classroom?: string }>;
+  };
+  pcLab: Record<string, { kind: "IC" | "NON_IC"; slot: string; venue: string; time: string }>;
+};
+
+function suggestKindAndSlot(
+  courseCode: string,
+  data: TimetableAutofillData
+): { kind: TimetableKind; slot: string; classroom: string; pcLab?: TimetableAutofillData["pcLab"][string] } | null {
+  const nonIcDefault = data.defaults.nonIc?.[courseCode];
+  const icDefault = data.defaults.ic?.[courseCode];
+
+  if (!nonIcDefault && !icDefault) return null;
+
+  const nonIcSlot = nonIcDefault?.slot;
+  const suggestedKind: TimetableKind =
+    typeof nonIcSlot === "string" && nonIcSlot.toLowerCase().includes("ic courses time table")
+      ? "IC"
+      : courseCode.startsWith("IC-")
+        ? "IC"
+        : "NON_IC";
+
+  const slot = (() => {
+    if (suggestedKind === "IC") return icDefault?.slot?.trim() || "";
+    const nonIc = nonIcDefault?.slot?.trim() || "";
+    if (nonIc.toLowerCase().includes("ic courses time table")) {
+      return icDefault?.slot?.trim() || "";
+    }
+    return nonIc;
+  })();
+
+  const classroom = (suggestedKind === "IC" ? icDefault?.classroom : nonIcDefault?.classroom) || "";
+  const pcLab = data.pcLab?.[courseCode];
+  return { kind: suggestedKind, slot, classroom, pcLab };
+}
+
+function buildEntriesFromSlot(opts: {
+  slotRaw: string;
+  kind: TimetableKind;
+  defaultVenue: string;
+  pcLab?: TimetableAutofillData["pcLab"][string];
+}): { entries: Array<Omit<TimetableEntryPayload, "courseId">>; warnings: string[] } {
+  const normalizedSlot = opts.slotRaw.trim();
+  const warnings: string[] = [];
+  const tokens = extractSlotTokens(normalizedSlot);
+
+  if (!normalizedSlot) return { entries: [], warnings };
+
+  const textUpper = normalizedSlot.toUpperCase();
+  if (textUpper.includes("LAB SLOT") && !tokens.some((t) => t.startsWith("L"))) {
+    warnings.push("This slot includes a lab component — add an L1–L5 slot to include the lab.");
+  }
+
+  const pcKind = opts.kind === "IC" ? "IC" : "NON_IC";
+  const pcLabSlots = new Set((opts.pcLab?.slot || "").toUpperCase().match(/L[1-5]/g) || []);
+  const pcLabApplies = opts.pcLab?.kind === pcKind;
+
+  const next: Array<Omit<TimetableEntryPayload, "courseId">> = [];
+
+  for (const token of tokens) {
+    if (/^[A-H]$/.test(token)) {
+      const sessions = opts.kind === "IC" ? IC_SLOTS[token] : NON_IC_SLOTS[token];
+      for (const s of sessions || []) {
+        next.push({
+          dayOfWeek: s.dayOfWeek,
+          startTime: s.startTime,
+          endTime: s.endTime,
+          slot: token,
+          venue: opts.defaultVenue || undefined,
+          classType: "LECTURE",
+        });
+      }
+      continue;
+    }
+
+    if (/^L[1-5]$/.test(token)) {
+      const base = LAB_SLOTS[token] || [];
+      const pcMatches = pcLabApplies && (pcLabSlots.size === 0 || pcLabSlots.has(token));
+      const pcRange = pcMatches ? parseTimeRange12h(opts.pcLab?.time || "") : null;
+      const labVenue = pcMatches ? opts.pcLab?.venue : opts.defaultVenue;
+
+      for (const s of base) {
+        next.push({
+          dayOfWeek: s.dayOfWeek,
+          startTime: pcRange?.startTime || s.startTime,
+          endTime: pcRange?.endTime || s.endTime,
+          slot: token,
+          venue: labVenue || undefined,
+          classType: "LAB",
+        });
+      }
+      continue;
+    }
+  }
+
+  if (pcLabApplies && !tokens.some((t) => t.startsWith("L"))) {
+    warnings.push("PC lab allocation found — add an L1–L5 slot to include the lab timing/venue.");
+  }
+
+  next.sort((a, b) => DAYS.indexOf(a.dayOfWeek) - DAYS.indexOf(b.dayOfWeek) || a.startTime.localeCompare(b.startTime));
+
+  return { entries: next, warnings };
+}
+
 export function TimetableView({ userId }: TimetableViewProps) {
   const [view, setView] = useState<"week" | "list">("list");
   const [modalOpen, setModalOpen] = useState(false);
@@ -277,6 +387,16 @@ export function TimetableView({ userId }: TimetableViewProps) {
       if (!res.ok) throw new Error("Failed to fetch timetable");
       return res.json();
     },
+  });
+
+  const { data: autofillData } = useQuery<TimetableAutofillData>({
+    queryKey: ["timetable-autofill"],
+    queryFn: async () => {
+      const res = await fetch("/api/timetable/autofill");
+      if (!res.ok) throw new Error("Failed to load timetable data");
+      return res.json();
+    },
+    staleTime: 60_000 * 60,
   });
 
   const saveEntryMutation = useMutation({
@@ -344,6 +464,59 @@ export function TimetableView({ userId }: TimetableViewProps) {
     },
   });
 
+  const autofillMissingMutation = useMutation({
+    mutationFn: async (
+      payloads: Array<{
+        courseId: string;
+        courseCode: string;
+        entries: Array<Omit<TimetableEntryPayload, "courseId">>;
+      }>
+    ) => {
+      const failures: Array<{ courseCode: string; error: string }> = [];
+      let createdCourses = 0;
+      let createdClasses = 0;
+
+      for (const p of payloads) {
+        try {
+          const res = await fetch("/api/timetable/bulk", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ courseId: p.courseId, entries: p.entries } satisfies BulkCreatePayload),
+          });
+          const data = await res.json().catch(() => null);
+          if (!res.ok) {
+            const msg = data?.error || "Failed to add classes";
+            // If another user already created this schedule, treat as a soft failure.
+            failures.push({ courseCode: p.courseCode, error: msg });
+            continue;
+          }
+
+          createdCourses += 1;
+          createdClasses += p.entries.length;
+        } catch (e: any) {
+          failures.push({ courseCode: p.courseCode, error: e?.message || "Failed to add classes" });
+        }
+      }
+
+      return { createdCourses, createdClasses, failures };
+    },
+    onSuccess: async (summary) => {
+      await queryClient.invalidateQueries({ queryKey: ["timetable", userId] });
+
+      if (summary.failures.length > 0) {
+        showToast(
+          "warning",
+          `Auto-filled ${summary.createdCourses} courses (${summary.createdClasses} classes). ${summary.failures.length} failed — open modal to add manually.`
+        );
+      } else {
+        showToast("success", `Auto-filled ${summary.createdCourses} courses (${summary.createdClasses} classes).`);
+      }
+    },
+    onError: (error: any) => {
+      showToast("error", error?.message || "Failed to auto-fill timetable");
+    },
+  });
+
   const openAdd = () => {
     setEditingEntry(null);
     setModalOpen(true);
@@ -365,6 +538,44 @@ export function TimetableView({ userId }: TimetableViewProps) {
     deleteEntryMutation.mutate(entry.id);
   };
 
+  const context = timetable?.context ?? null;
+  const courses = useMemo(() => timetable?.courses ?? [], [timetable?.courses]);
+  const entries = useMemo<TimetableEntry[]>(() => timetable?.entries ?? [], [timetable?.entries]);
+  const canAdd = courses.length > 0 && Boolean(context);
+
+  const scheduledCourseIds = useMemo(() => new Set(entries.map((e) => e.courseId)), [entries]);
+
+  const autofillCandidates = useMemo(() => {
+    if (!autofillData) return [];
+    const missing = courses.filter((c) => !scheduledCourseIds.has(c.id));
+
+    const next: Array<{
+      courseId: string;
+      courseCode: string;
+      entries: Array<Omit<TimetableEntryPayload, "courseId">>;
+    }> = [];
+
+    for (const c of missing) {
+      const suggestion = suggestKindAndSlot(c.code, autofillData);
+      if (!suggestion?.slot) continue;
+
+      const result = buildEntriesFromSlot({
+        slotRaw: suggestion.slot,
+        kind: suggestion.kind,
+        defaultVenue: suggestion.classroom,
+        pcLab: suggestion.pcLab,
+      });
+
+      if (result.entries.length === 0) continue;
+
+      next.push({ courseId: c.id, courseCode: c.code, entries: result.entries });
+    }
+
+    return next;
+  }, [autofillData, courses, scheduledCourseIds]);
+
+  const canAutofill = canAdd && autofillCandidates.length > 0;
+
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-4">
@@ -372,11 +583,6 @@ export function TimetableView({ userId }: TimetableViewProps) {
       </div>
     );
   }
-
-  const context = timetable?.context;
-  const courses = timetable?.courses || [];
-  const entries: TimetableEntry[] = timetable?.entries || [];
-  const canAdd = courses.length > 0 && Boolean(context);
 
   return (
     <div className="space-y-6">
@@ -391,12 +597,41 @@ export function TimetableView({ userId }: TimetableViewProps) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
           <button
             onClick={() => setView(view === "week" ? "list" : "week")}
-            className="hidden md:flex px-4 py-2 min-h-[44px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center transition-colors"
+            className="hidden md:flex px-4 py-2 min-h-[44px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center transition-colors transition-transform active:scale-[0.99]"
           >
             {view === "week" ? "List View" : "Week View"}
+          </button>
+          <button
+            onClick={async () => {
+              if (!canAutofill) {
+                if (!canAdd) showToast("warning", "Enroll in current semester courses to build the shared timetable");
+                else showToast("info", "No missing schedules found to auto-fill");
+                return;
+              }
+
+              const totalClasses = autofillCandidates.reduce((sum, c) => sum + c.entries.length, 0);
+              const ok = await confirm({
+                title: "Auto-fill missing schedules?",
+                message: `This will create shared timetable entries for ${autofillCandidates.length} courses (${totalClasses} classes) for the current semester. Anyone enrolled will see them.`,
+                confirmText: "Auto-fill",
+                variant: "info",
+              });
+              if (!ok) return;
+
+              autofillMissingMutation.mutate(autofillCandidates);
+            }}
+            disabled={!canAutofill || autofillMissingMutation.isPending}
+            className="w-full sm:w-auto px-4 py-2 min-h-[44px] rounded-xl border border-primary/25 bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/15 transition-colors transition-transform active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+          >
+            {autofillMissingMutation.isPending ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Sparkles className="w-4 h-4" />
+            )}
+            Auto-fill missing ({autofillCandidates.length})
           </button>
           <button
             onClick={() => {
@@ -649,15 +884,7 @@ function TimetableEntryModal({
 
   const isEditing = Boolean(initial);
 
-  const { data: autofillData } = useQuery<{
-    version: string;
-    venues: string[];
-    defaults: {
-      nonIc: Record<string, { slot?: string; classroom?: string }>;
-      ic: Record<string, { slot?: string; classroom?: string }>;
-    };
-    pcLab: Record<string, { kind: "IC" | "NON_IC"; slot: string; venue: string; time: string }>;
-  }>({
+  const { data: autofillData } = useQuery<TimetableAutofillData>({
     queryKey: ["timetable-autofill"],
     queryFn: async () => {
       const res = await fetch("/api/timetable/autofill");
