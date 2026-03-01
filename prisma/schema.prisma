@@ -47,7 +47,8 @@ model User {
   accounts      Account[]
   sessions      Session[]
   announcements Announcement[]
-  
+  notifications Notification[]
+
   @@index([email])
   @@index([enrollmentId])
   @@index([branch])
@@ -553,4 +554,20 @@ model Announcement {
   updatedAt DateTime @updatedAt
 
   @@index([isActive, createdAt])
+}
+
+// Per-user notifications (e.g. admin replied to your support ticket)
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String   @db.Text
+  isRead    Boolean  @default(false)
+  ticketId  String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
 }

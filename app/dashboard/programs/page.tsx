@@ -177,11 +177,13 @@ export default function ProgramsPage() {
     ? enrollments.filter((e) => e.programId === primaryProgram.program.id)
     : [];
 
-  const completedEnrollments = programEnrollments.filter(
-    (e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F")
+  const visibleEnrollments = programEnrollments.filter(
+    (e) =>
+      e.status === "IN_PROGRESS" ||
+      (e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
   );
 
-  const semesterCourses: Record<number, Enrollment[]> = completedEnrollments.reduce(
+  const semesterCourses: Record<number, Enrollment[]> = visibleEnrollments.reduce(
     (acc: Record<number, Enrollment[]>, e) => {
       const sem = e.semester || 0;
       if (!acc[sem]) acc[sem] = [];
@@ -448,7 +450,7 @@ export default function ProgramsPage() {
                     </div>
                   ) : semesters.length === 0 ? (
                     <p className="text-sm text-foreground-secondary">
-                      No completed courses yet.
+                      No courses yet.
                     </p>
                   ) : (
                     <div className="space-y-3">
@@ -495,11 +497,17 @@ export default function ProgramsPage() {
                                         {e.course?.credits || 0}
                                       </td>
                                       <td className="py-2 whitespace-nowrap">
-                                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
-                                          <span className="font-semibold">
-                                            Completed{e.grade ? ` (${e.grade})` : ""}
+                                        {e.status === "IN_PROGRESS" ? (
+                                          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                            <span className="font-semibold">In Progress</span>
                                           </span>
-                                        </span>
+                                        ) : (
+                                          <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400">
+                                            <span className="font-semibold">
+                                              Completed{e.grade ? ` (${e.grade})` : ""}
+                                            </span>
+                                          </span>
+                                        )}
                                       </td>
                                     </tr>
                                   ))}
