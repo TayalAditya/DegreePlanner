@@ -52,7 +52,7 @@ export default function AdminPage() {
   });
 
   const branches = useMemo(
-    () => ["ALL", ...Array.from(new Set(users.map((u) => u.branch).filter(Boolean))).sort()],
+    () => ["ALL", ...Array.from(new Set(users.map((u) => u.branch).filter((b): b is string => b !== null))).sort()],
     [users]
   );
 
