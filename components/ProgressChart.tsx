@@ -192,11 +192,9 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
 
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length > 0) {
-      // Map branch code: CSE → CS (since database uses CS code)
-      const mappingBranch = userBranch === "CSE" ? "CS" : userBranch;
-      const mapping = (mappingBranch
-        ? mappings.find((m: any) => m.branch === mappingBranch || m.branch === userBranch || m.branch === "COMMON")
-        : undefined) || (userBranch === "GE"
+      const branchAliases = userBranch === "CSE" ? ["CSE", "CS"] : userBranch === "CS" ? ["CS", "CSE"] : [userBranch];
+      const mapping = mappings.find((m: any) => branchAliases.includes(m.branch) || m.branch === "COMMON")
+        || (userBranch === "GE"
           ? mappings.find((m: any) => m.branch?.startsWith("GE"))
           : undefined);
 
