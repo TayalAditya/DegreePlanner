@@ -254,7 +254,8 @@ interface TimetableEntry {
   classType: ClassType;
   instructor?: string | null;
   notes?: string | null;
-  courseId: string;
+  courseId?: string | null;
+  googleEventId?: string | null;
   isApproved: boolean;
   approvedById?: string | null;
   approvedAt?: Date | null;
@@ -294,7 +295,7 @@ interface CourseOption {
 }
 
 type TimetableEntryPayload = {
-  courseId: string;
+  courseId?: string;
   dayOfWeek: DayOfWeek;
   startTime: string;
   endTime: string;
@@ -306,7 +307,7 @@ type TimetableEntryPayload = {
 };
 
 type BulkCreatePayload = {
-  courseId: string;
+  courseId?: string;
   replaceExisting?: boolean;
   entries: Array<Omit<TimetableEntryPayload, "courseId">>;
 };
@@ -1889,7 +1890,7 @@ function TimetableEntryModal({
                   <button
                     type="button"
                     onClick={async () => {
-                      if (!confirm("Delete this event from Google Calendar? It will remain in the app.")) return;
+                      if (!window.confirm("Delete this event from Google Calendar? It will remain in the app.")) return;
                       try {
                         const res = await fetch("/api/calendar/delete", {
                           method: "POST",

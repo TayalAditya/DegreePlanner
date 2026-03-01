@@ -107,7 +107,8 @@ export async function POST(req: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!courseId || !dayOfWeek || !startTime || !endTime) {
+    // courseId is optional for TA duties
+    if (!dayOfWeek || !startTime || !endTime) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -129,41 +130,44 @@ export async function POST(req: NextRequest) {
     const selectedClassType: ClassType =
       classType && Object.values(ClassType).includes(classType) ? classType : ClassType.LECTURE;
 
-    const isEnrolled = await prisma.courseEnrollment.findFirst({
-      where: {
-        userId: session.user.id,
-        courseId,
-        semester: context.semester,
-        year: context.year,
-        term: context.term,
-        status: EnrollmentStatus.IN_PROGRESS,
-      },
-      select: { id: true },
-    });
+    // Only check enrollment if courseId is provided (not a TA duty)
+    if (courseId) {
+      const isEnrolled = await prisma.courseEnrollment.findFirst({
+        where: {
+          userId: session.user.id,
+          courseId,
+          semester: context.semester,
+          year: context.year,
+          term: context.term,
+          status: EnrollmentStatus.IN_PROGRESS,
+        },
+        select: { id: true },
+      });
 
-    if (!isEnrolled) {
-      return NextResponse.json(
-        { error: "You can only edit schedules for courses you are enrolled in" },
-        { status: 403 }
-      );
-    }
+      if (!isEnrolled) {
+        return NextResponse.json(
+          { error: "You can only edit schedules for courses you are enrolled in" },
+          { status: 403 }
+        );
+      }
 
-    const duplicate = await prisma.timetableEntry.findFirst({
-      where: {
-        courseId,
-        semester: context.semester,
-        year: context.year,
-        term: context.term,
-        dayOfWeek,
-        startTime,
-        endTime,
-        classType: selectedClassType,
-      },
-      select: { id: true },
-    });
+      const duplicate = await prisma.timetableEntry.findFirst({
+        where: {
+          courseId,
+          semester: context.semester,
+          year: context.year,
+          term: context.term,
+          dayOfWeek,
+          startTime,
+          endTime,
+          classType: selectedClassType,
+        },
+        select: { id: true },
+      });
 
-    if (duplicate) {
-      return NextResponse.json({ error: "This class is already scheduled" }, { status: 409 });
+      if (duplicate) {
+        return NextResponse.json({ error: "This class is already scheduled" }, { status: 409 });
+      }
     }
 
     // Admins create approved entries, others need approval
