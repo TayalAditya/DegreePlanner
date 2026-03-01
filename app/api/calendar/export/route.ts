@@ -20,6 +20,7 @@ interface TimetableEntry {
   classType: string;
   instructor?: string | null;
   notes?: string | null;
+  googleEventId?: string | null;
   course?: {
     code: string;
     name: string;
@@ -183,6 +184,19 @@ export async function POST(request: NextRequest) {
       };
 
       try {
+        // If this entry already has a Google event, delete it first to avoid duplicates
+        if (entry.googleEventId) {
+          try {
+            await calendar.events.delete({ calendarId: "primary", eventId: entry.googleEventId });
+          } catch {
+            // Ignore — event may have already been deleted manually
+          }
+          await prisma.timetableEntry.update({
+            where: { id: entry.id },
+            data: { googleEventId: null },
+          });
+        }
+
         const response = await calendar.events.insert({
           calendarId: "primary",
           requestBody: event,
