@@ -72,11 +72,6 @@ const ic202pSem4: DefaultCourse[] = [
   { code: "IC202P", name: "Design Practicum", credits: 3, category: "IC", semester: 4 },
 ];
 
-// Internship (IC-010) – done in summer before final year; shows in Sem 8
-const icInternship: DefaultCourse[] = [
-  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 8 },
-];
-
 // ISTP and MTP courses (common for all BTech)
 const istpSem6: DefaultCourse[] = [
   { code: "DP 301P", name: "Interdisciplinary Socio-Technical Practicum", credits: 4, category: "ISTP", semester: 6 },
@@ -108,7 +103,6 @@ const cseSem5: DefaultCourse[] = [
   { code: "CS313", name: "Computer Networks",       credits: 4, category: "DC", semester: 5 },
   { code: "CS312", name: "Operating Systems",       credits: 4, category: "DC", semester: 5 },
   { code: "CS305", name: "Artificial Intelligence", credits: 3, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const cseSem6: DefaultCourse[] = [
   { code: "CS302", name: "Paradigms of Programming", credits: 4, category: "DC", semester: 6 },
@@ -116,7 +110,10 @@ const cseSem6: DefaultCourse[] = [
   ...istpSem6,
 ];
 const cseSem7: DefaultCourse[] = [...mtpSem7];
-const cseSem8: DefaultCourse[] = [...mtpSem8];
+const cseSem8: DefaultCourse[] = [
+  { code: "CS010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ─── DSE  (DC = 33 cr | IC-I: free choice | IC-II: free choice) ──────────────
 const dseSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -137,14 +134,16 @@ const dseSem4: DefaultCourse[] = [
 const dseSem5: DefaultCourse[] = [
   { code: "CS305", name: "Artificial Intelligence",             credits: 3, category: "DC", semester: 5 },
   { code: "DS413", name: "Introduction to Statistical Learning", credits: 4, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const dseSem6: DefaultCourse[] = [
   { code: "DS411", name: "Optimization for Data Science", credits: 4, category: "DC", semester: 6 },
   ...istpSem6,
 ];
 const dseSem7: DefaultCourse[] = [...mtpSem7];
-const dseSem8: DefaultCourse[] = [...mtpSem8];
+const dseSem8: DefaultCourse[] = [
+  { code: "DS010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ─── EE  (DC = 52 cr | both IC baskets: free choice) ─────────────────────────
 const eeSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -171,13 +170,15 @@ const eeSem5: DefaultCourse[] = [
   { code: "EE314", name: "Digital Signal Processing",                             credits: 3, category: "DC", semester: 5 },
   { code: "EE326", name: "Computer Organization & Processor Architecture Design", credits: 4, category: "DC", semester: 5 },
   { code: "EEXXX", name: "Power and Energy Systems",                               credits: 4, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const eeSem6: DefaultCourse[] = [
   ...istpSem6,
 ];
 const eeSem7: DefaultCourse[] = [...mtpSem7];
-const eeSem8: DefaultCourse[] = [...mtpSem8];
+const eeSem8: DefaultCourse[] = [
+  { code: "EE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ─── ME  (DC = 50 cr | IC-I: free choice | IC-II: free choice) ───────────────
 // IC-II for ME: IC241 (Material Science) is DC for ME → exclude it from ICB2 basket
@@ -209,14 +210,16 @@ const meSem5: DefaultCourse[] = [
   { code: "ME305",  name: "Design of Machine Elements", credits: 4, category: "DC", semester: 5 },
   { code: "ME311P", name: "Design Lab 1",               credits: 1, category: "DC", semester: 5 },
   { code: "ME315",  name: "Manufacturing Engineering 2", credits: 3, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const meSem6: DefaultCourse[] = [
   { code: "ME312P", name: "Design Lab 2", credits: 1, category: "DC", semester: 6 },
   ...istpSem6,
 ];
 const meSem7: DefaultCourse[] = [...mtpSem7];
-const meSem8: DefaultCourse[] = [...mtpSem8];
+const meSem8: DefaultCourse[] = [
+  { code: "ME010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ─── CE  (DC = 49 cr | IC-I: free choice | IC-II: free choice) ───────────────
 const ceSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -245,7 +248,6 @@ const ceSem5: DefaultCourse[] = [
   { code: "CE352P", name: "Transportation Engineering Lab",           credits: 1, category: "DC", semester: 5 },
   { code: "CE353P", name: "Civil Engineering Drawing",                credits: 1, category: "DC", semester: 5 },
   { code: "CE402",  name: "Geotechnical Engineering II",              credits: 3, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const ceSem6: DefaultCourse[] = [
   { code: "CE305P", name: "Environmental Engineering Lab",    credits: 1, category: "DC", semester: 6 },
@@ -255,7 +257,10 @@ const ceSem6: DefaultCourse[] = [
   ...istpSem6,
 ];
 const ceSem7: DefaultCourse[] = [...mtpSem7];
-const ceSem8: DefaultCourse[] = [...mtpSem8];
+const ceSem8: DefaultCourse[] = [
+  { code: "CE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ─── BE  (DC = 42 cr | IC-I: free choice | IC-II: free choice) ───────────────
 const beSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -279,13 +284,15 @@ const beSem5: DefaultCourse[] = [
   { code: "BE306", name: "Fundamentals of Genetic Engineering", credits: 4, category: "DC", semester: 5 },
   { code: "BE310", name: "Biomaterials",                       credits: 4, category: "DC", semester: 5 },
   { code: "BEXXX", name: "Reverse Engineering",                credits: 1, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const beSem6: DefaultCourse[] = [
   ...istpSem6,
 ];
 const beSem7: DefaultCourse[] = [...mtpSem7];
-const beSem8: DefaultCourse[] = [...mtpSem8];
+const beSem8: DefaultCourse[] = [
+  { code: "BE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ─── EP  (DC = 37 cr | IC-I: free choice | IC-II: free choice) ───────────────
 const epSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -307,7 +314,6 @@ const epSem5: DefaultCourse[] = [
   { code: "EE311",  name: "Device Electronics for Integrated Circuits", credits: 3, category: "DC", semester: 5 },
   { code: "EP302",  name: "Computational Methods for Engineering",      credits: 3, category: "DC", semester: 5 },
   { code: "EP402P", name: "Engineering Physics Practicum",              credits: 4, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const epSem6: DefaultCourse[] = [
   { code: "EP401P", name: "Engineering of Instrumentation", credits: 4, category: "DC", semester: 6 },
@@ -315,7 +321,10 @@ const epSem6: DefaultCourse[] = [
   ...istpSem6,
 ];
 const epSem7: DefaultCourse[] = [...mtpSem7];
-const epSem8: DefaultCourse[] = [...mtpSem8];
+const epSem8: DefaultCourse[] = [
+  { code: "EP010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ─── MNC  (DC = 51 cr | IC-I: free choice | IC-II: free choice) ──────────────
 const mncSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -338,7 +347,6 @@ const mncSem5: DefaultCourse[] = [
   { code: "MA310",  name: "Matrix Computation and Lab",           credits: 4, category: "DC", semester: 5 },
   { code: "MA311",  name: "Mathematical Modelling",               credits: 3, category: "DC", semester: 5 },
   { code: "MA322",  name: "Applied Graph Theory",                 credits: 4, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const mncSem6: DefaultCourse[] = [
   { code: "MA321",  name: "Numerics of Differential Equation", credits: 4, category: "DC", semester: 6 },
@@ -346,7 +354,10 @@ const mncSem6: DefaultCourse[] = [
   ...istpSem6,
 ];
 const mncSem7: DefaultCourse[] = [...mtpSem7];
-const mncSem8: DefaultCourse[] = [...mtpSem8];
+const mncSem8: DefaultCourse[] = [
+  { code: "MC010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ─── MSE  (DC = 45 cr | IC-I: free choice | IC-II: free choice) ──────────────
 // IC-II for MSE: IC240 is DC (not ICB2 for MSE), so exclude it from the basket options
@@ -373,11 +384,13 @@ const mseSem5: DefaultCourse[] = [
   { code: "MT302", name: "Transport Phenomena",                           credits: 3, category: "DC", semester: 5 },
   { code: "MT303", name: "Computational Materials Science",               credits: 4, category: "DC", semester: 5 },
   { code: "MT304", name: "Mechanical Behaviour of Materials",             credits: 4, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const mseSem6: DefaultCourse[] = [...istpSem6];
 const mseSem7: DefaultCourse[] = [...mtpSem7];
-const mseSem8: DefaultCourse[] = [...mtpSem8];
+const mseSem8: DefaultCourse[] = [
+  { code: "MS010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ─── GE  (DC = 36 cr | IC-I: free choice | IC-II: free choice) ───────────────
 // Sem 1 is identical for all GE sub-branches.
@@ -408,7 +421,6 @@ const geRaiSem5: DefaultCourse[] = [
   { code: "AR503", name: "Mechatronics",                           credits: 3, category: "DC", semester: 5 },
   { code: "AR504", name: "Robot Programming",                      credits: 3, category: "DC", semester: 5 },
   { code: "EE301", name: "Control Systems",                        credits: 3, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const geRaiSem6: DefaultCourse[] = [...istpSem6];
 const geRaiSem7: DefaultCourse[] = [
@@ -416,7 +428,10 @@ const geRaiSem7: DefaultCourse[] = [
   { code: "ME309", name: "Theory of Machines",         credits: 4, category: "DC", semester: 7 },
   ...mtpSem7,
 ];
-const geRaiSem8: DefaultCourse[] = [...mtpSem8];
+const geRaiSem8: DefaultCourse[] = [
+  { code: "GE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ── GE sub-branch: Communication Engineering ──
 const geCeSem3: DefaultCourse[] = [
@@ -433,7 +448,6 @@ const geCeSem4: DefaultCourse[] = [
 const geCeSem5: DefaultCourse[] = [
   { code: "CS313", name: "Computer Networks",                credits: 4, category: "DC", semester: 5 },
   { code: "EE260", name: "Signals and Systems",              credits: 3, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const geCeSem6: DefaultCourse[] = [
   { code: "EE202", name: "Electromagnetic Theory", credits: 3, category: "DC", semester: 6 },
@@ -445,7 +459,10 @@ const geCeSem7: DefaultCourse[] = [
   { code: "EE314", name: "Digital Signal Processing",            credits: 4, category: "DC", semester: 7 },
   ...mtpSem7,
 ];
-const geCeSem8: DefaultCourse[] = [...mtpSem8];
+const geCeSem8: DefaultCourse[] = [
+  { code: "GE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ── GE sub-branch: Mechatronics ──
 const geMechSem3: DefaultCourse[] = [
@@ -462,7 +479,6 @@ const geMechSem5: DefaultCourse[] = [
   { code: "EE260", name: "Signals and Systems",  credits: 3, category: "DC", semester: 5 },
   { code: "EE301", name: "Control Systems",      credits: 3, category: "DC", semester: 5 },
   { code: "ME206", name: "Mechanics of Solids",  credits: 3, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const geMechSem6: DefaultCourse[] = [...istpSem6];
 const geMechSem7: DefaultCourse[] = [
@@ -472,7 +488,10 @@ const geMechSem7: DefaultCourse[] = [
   { code: "ME309", name: "Theory of Machines",                         credits: 4, category: "DC", semester: 7 },
   ...mtpSem7,
 ];
-const geMechSem8: DefaultCourse[] = [...mtpSem8];
+const geMechSem8: DefaultCourse[] = [
+  { code: "GE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ─── MEVLSI  (DC = 54 cr | both IC baskets: free choice) ─────────────────────
 const mevlsiSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
@@ -499,11 +518,13 @@ const mevlsiSem5: DefaultCourse[] = [
   { code: "VL-403", name: "CMOS Digital IC Design",      credits: 4, category: "DC", semester: 5 },
   { code: "VL-404", name: "CMOS Analog IC Design",       credits: 4, category: "DC", semester: 5 },
   { code: "VL-405", name: "Design for Testability",      credits: 4, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const mevlsiSem6: DefaultCourse[] = [...istpSem6];
 const mevlsiSem7: DefaultCourse[] = [...mtpSem7];
-const mevlsiSem8: DefaultCourse[] = [...mtpSem8];
+const mevlsiSem8: DefaultCourse[] = [
+  { code: "VL010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
 
 // ─── BSCS  (B.S. Chemical Sciences | DC = 59 cr) ─────────────────────────────
 // IC-I: forced IC131 | IC-II: forced IC121
@@ -528,7 +549,6 @@ const bscsSem5: DefaultCourse[] = [
   { code: "CY512P", name: "Physical Chemistry Laboratory",                               credits: 3, category: "DC", semester: 5 },
   { code: "CY531",  name: "Organic Reactions and Mechanisms",                             credits: 3, category: "DC", semester: 5 },
   { code: "CY533P", name: "Inorganic Chemistry Laboratory",                              credits: 3, category: "DC", semester: 5 },
-  ...icInternship,
 ];
 const bscsSem6: DefaultCourse[] = [
   { code: "CY511",  name: "Group Theory and Spectroscopy",            credits: 3, category: "DC", semester: 6 },
