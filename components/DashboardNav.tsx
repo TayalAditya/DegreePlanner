@@ -117,8 +117,8 @@ export function DashboardNav({ user }: DashboardNavProps) {
           />
 
           <div className="absolute right-0 top-0 h-full w-80 max-w-[85vw] bg-surface border-l border-border shadow-xl animate-slide-in flex flex-col">
-            <div className="flex items-center justify-between px-4 py-4 border-b border-border">
-              <span className="text-sm font-semibold text-foreground">Menu</span>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface/40 backdrop-blur-sm">
+              <ThemeToggle />
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-2 rounded-lg text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
@@ -126,10 +126,6 @@ export function DashboardNav({ user }: DashboardNavProps) {
               >
                 <X className="w-5 h-5" />
               </button>
-            </div>
-
-            <div className="px-4 py-3 border-b border-border bg-surface/40 backdrop-blur-sm">
-              <ThemeToggle />
             </div>
 
             <LayoutGroup id="dashboard-nav-mobile">
