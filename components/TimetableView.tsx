@@ -731,19 +731,19 @@ export function TimetableView({ userId }: TimetableViewProps) {
       if (!response.ok) {
         const errorMsg = data.error || `Server error ${response.status}`;
         console.error("[Calendar Export] API error:", errorMsg, data);
-        showToast("error", `Google Calendar: ${errorMsg}`);
+        // Open Google Calendar so user can reconnect / manage events directly
+        window.open("https://calendar.google.com", "_blank");
+        showToast("warning", `Calendar sync failed — opening Google Calendar. Re-sign in if needed.`);
         return;
       }
     } catch (error) {
       console.error("[Calendar Export] Network error:", error);
-      showToast("error", "Could not reach calendar API — downloading .ics instead");
+      // Fallback to .ics on network error only
+      const endDate = new Date("2026-05-01");
+      const filename = `timetable-${context?.term || "current"}-${context?.year || "semester"}.ics`;
+      downloadICS(entries, filename, endDate);
+      showToast("warning", "Network error — calendar file downloaded as backup");
     }
-    
-    // Fallback to .ics download
-    const endDate = new Date("2026-05-01");
-    const filename = `timetable-${context?.term || "current"}-${context?.year || "semester"}.ics`;
-    downloadICS(entries, filename, endDate);
-    showToast("success", "Calendar file downloaded");
   };
 
   if (isLoading) {

@@ -36,6 +36,13 @@ const DAY_MAP: Record<DayOfWeek, number> = {
   SATURDAY: 6,
 };
 
+// Format a Date as local ISO datetime string without Z suffix
+// This way, Google Calendar + timeZone:Asia/Kolkata interprets the time as IST (not UTC)
+function toLocalDateTimeString(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
 function getNextOccurrence(dayOfWeek: DayOfWeek, startDate: Date = new Date()): Date {
   const targetDay = DAY_MAP[dayOfWeek];
   const today = new Date(startDate);
@@ -126,11 +133,11 @@ export async function POST(request: NextRequest) {
         location: entry.venue || undefined,
         description,
         start: {
-          dateTime: startDateTime.toISOString(),
+          dateTime: toLocalDateTimeString(startDateTime),
           timeZone: "Asia/Kolkata",
         },
         end: {
-          dateTime: endDateTime.toISOString(),
+          dateTime: toLocalDateTimeString(endDateTime),
           timeZone: "Asia/Kolkata",
         },
         recurrence: [`RRULE:FREQ=WEEKLY;BYDAY=${dayCode};UNTIL=${untilDate}T235959Z`],
