@@ -35,43 +35,68 @@ export async function GET(req: NextRequest) {
       orderBy: [{ course: { code: "asc" } }],
     });
 
-    const courses = currentEnrollments.map((e) => e.course);
+    const availableCourseEnrollments = await prisma.courseEnrollment.findMany({
+      where: {
+        userId: session.user.id,
+        status: { in: [EnrollmentStatus.IN_PROGRESS, EnrollmentStatus.COMPLETED] },
+      },
+      include: {
+        course: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            credits: true,
+          },
+        },
+      },
+      orderBy: [{ updatedAt: "desc" }],
+      distinct: ["courseId"],
+    });
+
+    const courses = availableCourseEnrollments
+      .map((e) => e.course)
+      .sort((a, b) => a.code.localeCompare(b.code));
     const courseIds = currentEnrollments.map((e) => e.courseId);
 
     // Check if user is admin
     const isAdmin = session.user.role === "ADMIN";
 
-    const entries =
-      courseIds.length === 0
-        ? []
-        : await prisma.timetableEntry.findMany({
-            where: {
-              semester: context.semester,
-              year: context.year,
-              term: context.term,
-              courseId: { in: courseIds },
-              // Non-admin users only see approved entries
-              ...(isAdmin ? {} : { isApproved: true }),
-            },
-            include: {
-              course: {
-                select: {
-                  id: true,
-                  code: true,
-                  name: true,
-                  credits: true,
-                },
-              },
-              createdBy: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                },
-              },
-            },
-            orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
-          });
+    const visibilityClauses: Array<Record<string, unknown>> = [
+      { classType: ClassType.TA_DUTY, createdById: session.user.id },
+    ];
+    if (courseIds.length > 0) {
+      visibilityClauses.push({ courseId: { in: courseIds } });
+    }
+
+    const entries = await prisma.timetableEntry.findMany({
+      where: {
+        semester: context.semester,
+        year: context.year,
+        term: context.term,
+        OR: visibilityClauses,
+        // Non-admin users only see approved entries
+        ...(isAdmin ? {} : { isApproved: true }),
+      },
+      include: {
+        course: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            credits: true,
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
+    });
 
     return NextResponse.json({ context, courses, entries });
   } catch (error) {
@@ -130,23 +155,42 @@ export async function POST(req: NextRequest) {
     const selectedClassType: ClassType =
       classType && Object.values(ClassType).includes(classType) ? classType : ClassType.LECTURE;
 
-    // Only check enrollment if courseId is provided (not a TA duty)
+    if (!courseId && selectedClassType !== ClassType.TA_DUTY) {
+      return NextResponse.json(
+        { error: "courseId is required unless classType is TA_DUTY" },
+        { status: 400 }
+      );
+    }
+
+    // Check enrollment permissions when courseId is provided
     if (courseId) {
+      const taDutyCourseCheck = selectedClassType === ClassType.TA_DUTY;
+
       const isEnrolled = await prisma.courseEnrollment.findFirst({
-        where: {
-          userId: session.user.id,
-          courseId,
-          semester: context.semester,
-          year: context.year,
-          term: context.term,
-          status: EnrollmentStatus.IN_PROGRESS,
-        },
+        where: taDutyCourseCheck
+          ? {
+              userId: session.user.id,
+              courseId,
+              status: { in: [EnrollmentStatus.IN_PROGRESS, EnrollmentStatus.COMPLETED] },
+            }
+          : {
+              userId: session.user.id,
+              courseId,
+              semester: context.semester,
+              year: context.year,
+              term: context.term,
+              status: EnrollmentStatus.IN_PROGRESS,
+            },
         select: { id: true },
       });
 
       if (!isEnrolled) {
         return NextResponse.json(
-          { error: "You can only edit schedules for courses you are enrolled in" },
+          {
+            error: taDutyCourseCheck
+              ? "For TA duties, select a course you are currently taking or have completed"
+              : "You can only edit schedules for courses you are enrolled in",
+          },
           { status: 403 }
         );
       }
