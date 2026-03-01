@@ -301,6 +301,9 @@ export async function POST(request: NextRequest) {
       if (user.branch === "BS") candidates.push("BSCS", "CH");
       if (user.branch === "BE") candidates.push("BIO");
       if (user.branch === "BIO") candidates.push("BE");
+      if (user.branch === "GE-MECH") candidates.push("GE");
+      if (user.branch === "GE-COMM") candidates.push("GE");
+      if (user.branch === "GE-ROBO") candidates.push("GE");
       candidates.push("COMMON");
 
       const uniqueCandidates = Array.from(new Set(candidates.filter(Boolean)));
