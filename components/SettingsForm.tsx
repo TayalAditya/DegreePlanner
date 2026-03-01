@@ -22,8 +22,6 @@ export function SettingsForm({ user }: SettingsFormProps) {
     email: user.email || "",
     enrollmentId: user.enrollmentId || "",
     branch: user.branch || "",
-    doingMTP: user.doingMTP ?? true,
-    doingISTP: user.doingISTP ?? false,
   });
 
   const paletteOptions = [
@@ -44,8 +42,6 @@ export function SettingsForm({ user }: SettingsFormProps) {
           email: data.email || "",
           enrollmentId: data.enrollmentId || "",
           branch: data.branch || "",
-          doingMTP: data.doingMTP ?? true,
-          doingISTP: data.doingISTP ?? false,
         });
       } catch {
         // ignore fetch errors, keep session defaults
@@ -237,69 +233,6 @@ export function SettingsForm({ user }: SettingsFormProps) {
                   </ul>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-
-        {/* Project Preferences */}
-        <div className="bg-surface dark:bg-surface rounded-lg border border-border p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Terminal Project Preferences
-          </h3>
-          
-          <div className="space-y-4">
-            <label
-              htmlFor="doingMTP"
-              className="flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-lg border-2 border-border hover:border-primary/50 transition-colors cursor-pointer focus-within:ring-4 focus-within:ring-primary/20"
-            >
-              <input
-                type="checkbox"
-                id="doingMTP"
-                checked={formData.doingMTP}
-                onChange={(e) => setFormData({ ...formData, doingMTP: e.target.checked })}
-                className="mt-1 w-5 h-5 accent-primary bg-surface border-2 border-border rounded focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
-              />
-              <div className="flex-1">
-                <span className="block font-semibold text-foreground hover:text-primary transition-colors">
-                  Major Technical Project (MTP)
-                </span>
-                <p className="text-sm text-foreground-secondary mt-1">
-                  8 credits (MTP-1: 3 credits + MTP-2: 5 credits)
-                </p>
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
-                  ⚠️ If unchecked: +8 credits will be added to Discipline Electives (DE)
-                </p>
-              </div>
-            </label>
-
-            <label
-              htmlFor="doingISTP"
-              className="flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-lg border-2 border-border hover:border-primary/50 transition-colors cursor-pointer focus-within:ring-4 focus-within:ring-primary/20"
-            >
-              <input
-                type="checkbox"
-                id="doingISTP"
-                checked={formData.doingISTP}
-                onChange={(e) => setFormData({ ...formData, doingISTP: e.target.checked })}
-                className="mt-1 w-5 h-5 accent-primary bg-surface border-2 border-border rounded focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-pointer"
-              />
-              <div className="flex-1">
-                <span className="block font-semibold text-foreground hover:text-primary transition-colors">
-                  Interactive Socio-Technical Practicum (ISTP)
-                </span>
-                <p className="text-sm text-foreground-secondary mt-1">
-                  4 credits (6th semester practicum)
-                </p>
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
-                  ⚠️ If unchecked: +4 credits will be added to Free Electives (FE)
-                </p>
-              </div>
-            </label>
-
-            <div className="bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <p className="text-sm text-blue-900 dark:text-blue-100">
-                <strong>Note:</strong> These preferences affect your credit distribution. You can change them anytime before course registration.
-              </p>
             </div>
           </div>
         </div>
