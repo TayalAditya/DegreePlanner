@@ -180,8 +180,10 @@ const eeSem7: DefaultCourse[] = [...mtpSem7];
 const eeSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── ME  (DC = 50 cr | IC-I: free choice | IC-II: free choice) ───────────────
+// IC-II for ME: IC241 (Material Science) is DC for ME → exclude it from ICB2 basket
+const meICB2: DefaultCourse[] = [ICB2_IC121, ICB2_IC240, ICB2_IC253];
 const meSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
-const meSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
+const meSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...meICB2];
 const meSem3: DefaultCourse[] = [
   ...icSem3WithoutIC202P,
   { code: "EE261", name: "Electrical Systems Around Us",        credits: 3, category: "DC", semester: 3 },
@@ -347,8 +349,10 @@ const mncSem7: DefaultCourse[] = [...mtpSem7];
 const mncSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── MSE  (DC = 45 cr | IC-I: free choice | IC-II: free choice) ──────────────
+// IC-II for MSE: IC240 is DC (not ICB2 for MSE), so exclude it from the basket options
+const mseICB2: DefaultCourse[] = [ICB2_IC121, ICB2_IC241, ICB2_IC253];
 const mseSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
-const mseSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
+const mseSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...mseICB2];
 const mseSem3: DefaultCourse[] = [
   ...icSem3,
   { code: "MT201", name: "Physics of Solids",                        credits: 3, category: "DC", semester: 3 },
@@ -376,9 +380,17 @@ const mseSem7: DefaultCourse[] = [...mtpSem7];
 const mseSem8: DefaultCourse[] = [...mtpSem8];
 
 // ─── GE  (DC = 36 cr | IC-I: free choice | IC-II: free choice) ───────────────
-// GE has 3 sub-branches; Sem 1 & 2 are identical for all three.
+// Sem 1 is identical for all GE sub-branches.
+// Sem 2 ICB2 options differ per sub-branch based on which IC courses are DC for that branch:
+//   GE-RAI : IC241 DC (sem3) + IC253 DC (sem4) → only IC121, IC240 eligible as ICB2
+//   GE-CE  : IC253 DC (sem4)                   → only IC121, IC240, IC241 eligible
+//   GE-MECH: no ICB2 conflicts                  → all 4 options
 const geSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
-const geSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
+const geRaiICB2: DefaultCourse[]  = [ICB2_IC121, ICB2_IC240];
+const geCeICB2: DefaultCourse[]   = [ICB2_IC121, ICB2_IC240, ICB2_IC241];
+const geRaiSem2: DefaultCourse[]  = [...icCompSem2, ...icMixedSem2, ...geRaiICB2];
+const geCeSem2: DefaultCourse[]   = [...icCompSem2, ...icMixedSem2, ...geCeICB2];
+const geMechSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
 
 // ── GE sub-branch: Robotics & AI ──
 const geRaiSem3: DefaultCourse[] = [
@@ -582,19 +594,19 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   MSE_4: mseSem4, MSE_5: mseSem5, MSE_6: mseSem6, MSE_7: mseSem7, MSE_8: mseSem8,
 
   // GE – Robotics & AI (default / backward compat)
-  GE_1: geSem1, GE_2: geSem2, GE_3: geRaiSem3,
+  GE_1: geSem1, GE_2: geRaiSem2, GE_3: geRaiSem3,
   GE_4: geRaiSem4, GE_5: geRaiSem5, GE_6: geRaiSem6,
   GE_7: geRaiSem7, GE_8: geRaiSem8,
   // GE – Robotics & AI (explicit key)
-  GERAI_1: geSem1, GERAI_2: geSem2, GERAI_3: geRaiSem3,
+  GERAI_1: geSem1, GERAI_2: geRaiSem2, GERAI_3: geRaiSem3,
   GERAI_4: geRaiSem4, GERAI_5: geRaiSem5, GERAI_6: geRaiSem6,
   GERAI_7: geRaiSem7, GERAI_8: geRaiSem8,
   // GE – Communication Engineering
-  GECE_1: geSem1, GECE_2: geSem2, GECE_3: geCeSem3,
+  GECE_1: geSem1, GECE_2: geCeSem2, GECE_3: geCeSem3,
   GECE_4: geCeSem4, GECE_5: geCeSem5, GECE_6: geCeSem6,
   GECE_7: geCeSem7, GECE_8: geCeSem8,
   // GE – Mechatronics
-  GEMECH_1: geSem1, GEMECH_2: geSem2, GEMECH_3: geMechSem3,
+  GEMECH_1: geSem1, GEMECH_2: geMechSem2, GEMECH_3: geMechSem3,
   GEMECH_4: geMechSem4, GEMECH_5: geMechSem5, GEMECH_6: geMechSem6,
   GEMECH_7: geMechSem7, GEMECH_8: geMechSem8,
 
