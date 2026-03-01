@@ -50,7 +50,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       })
     );
 
-  const [isOnline, setIsOnline] = useState(() => (typeof navigator !== "undefined" ? navigator.onLine : true));
+  // Always start true – reading navigator.onLine in the initialiser causes a
+  // server/client mismatch because navigator is undefined on the server.
+  const [isOnline, setIsOnline] = useState(true);
 
   const handleOnline = useCallback(() => setIsOnline(true), []);
   const handleOffline = useCallback(() => setIsOnline(false), []);
