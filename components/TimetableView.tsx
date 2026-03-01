@@ -28,6 +28,7 @@ interface TimetableViewProps {
 }
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+const WEEK_DAYS = DAYS.slice(0, 5); // Mon–Fri only (no Saturday in week view)
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const minutesToTime = (minutes: number) => `${pad2(Math.floor(minutes / 60))}:${pad2(minutes % 60)}`;
@@ -660,6 +661,22 @@ export function TimetableView({ userId }: TimetableViewProps) {
     deleteEntryMutation.mutate(entry.id);
   };
 
+  const handleDeleteCalendar = async (entry: TimetableEntry) => {
+    if (!entry.googleEventId) return;
+    try {
+      const res = await fetch("/api/calendar/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: entry.googleEventId }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      showToast("success", "Removed from Google Calendar");
+      await queryClient.invalidateQueries({ queryKey: ["timetable", userId] });
+    } catch {
+      showToast("error", "Failed to remove from Google Calendar");
+    }
+  };
+
   const context = timetable?.context ?? null;
   const courses = useMemo(() => timetable?.courses ?? [], [timetable?.courses]);
   const entries = useMemo<TimetableEntry[]>(() => timetable?.entries ?? [], [timetable?.entries]);
@@ -842,7 +859,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
           <button
             onClick={handleExportCalendar}
             disabled={entries.length === 0}
-            className="hidden sm:flex px-4 py-2 min-h-[44px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center gap-2 transition-colors transition-transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex px-4 py-2 min-h-[44px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center gap-2 transition-colors transition-transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Download className="w-4 h-4" />
             Add to Google Calendar
@@ -914,9 +931,9 @@ export function TimetableView({ userId }: TimetableViewProps) {
       </div>
 
       {view === "week" ? (
-        <WeekView timetable={entries} onEdit={openEdit} onDelete={handleDelete} />
+        <WeekView timetable={entries} onEdit={openEdit} onDelete={handleDelete} onDeleteCalendar={handleDeleteCalendar} />
       ) : (
-        <ListView timetable={entries} onEdit={openEdit} onDelete={handleDelete} />
+        <ListView timetable={entries} onEdit={openEdit} onDelete={handleDelete} onDeleteCalendar={handleDeleteCalendar} />
       )}
 
       <AnimatePresence>
@@ -949,51 +966,68 @@ function WeekView({
   timetable,
   onEdit,
   onDelete,
+  onDeleteCalendar,
 }: {
   timetable: TimetableEntry[];
   onEdit: (entry: TimetableEntry) => void;
   onDelete: (entry: TimetableEntry) => void;
+  onDeleteCalendar: (entry: TimetableEntry) => void;
 }) {
-  // Helper to convert time string to minutes
   const timeToMinutes = (timeStr: string) => {
     const [h, m] = timeStr.split(':').map(Number);
     return h * 60 + m;
   };
 
-  // Count how many WEEK_VIEW_TIMES rows this entry covers (rows with time < endTime)
+  // Find the slot index that contains this time (floor to nearest 30-min slot)
+  const findSlotIndex = (time: string) => {
+    const exact = WEEK_VIEW_TIMES.indexOf(time);
+    if (exact >= 0) return exact;
+    const mins = timeToMinutes(time);
+    for (let i = WEEK_VIEW_TIMES.length - 1; i >= 0; i--) {
+      if (timeToMinutes(WEEK_VIEW_TIMES[i]) <= mins) return i;
+    }
+    return 0;
+  };
+
+  // How many 30-min slot rows does this entry span?
   const calculateRowSpan = (startTime: string, endTime: string) => {
-    const startIdx = WEEK_VIEW_TIMES.indexOf(startTime);
-    if (startIdx < 0) return 1;
-    const endMinutes = timeToMinutes(endTime);
+    const startIdx = findSlotIndex(startTime);
+    const endMins = timeToMinutes(endTime);
     let count = 0;
     for (let i = startIdx; i < WEEK_VIEW_TIMES.length; i++) {
-      if (timeToMinutes(WEEK_VIEW_TIMES[i]) < endMinutes) count++;
+      if (timeToMinutes(WEEK_VIEW_TIMES[i]) < endMins) count++;
       else break;
     }
     return Math.max(1, count);
   };
 
-  // Track covered cells (rows after the start row that are spanned over)
+  // Track rows spanned by an entry so we skip rendering them
   const coveredCellsByDay = useMemo(() => {
-    const map: Record<string, Set<number>> = Object.fromEntries(DAYS.map((d) => [d, new Set<number>()]));
-
+    const map: Record<string, Set<number>> = Object.fromEntries(WEEK_DAYS.map((d) => [d, new Set<number>()]));
     for (const entry of timetable) {
-      const startIdx = WEEK_VIEW_TIMES.indexOf(entry.startTime);
-      if (startIdx < 0) continue;
-
+      if (!WEEK_DAYS.includes(entry.dayOfWeek)) continue;
+      const startIdx = findSlotIndex(entry.startTime);
       const rowSpan = calculateRowSpan(entry.startTime, entry.endTime);
       for (let i = 1; i < rowSpan; i++) {
         map[entry.dayOfWeek]?.add(startIdx + i);
       }
     }
-
     return map;
   }, [timetable]);
 
-  // Get entry for a specific day and time
-  const getEntry = (day: string, time: string) => {
-    return timetable.find(e => e.dayOfWeek === day && e.startTime === time);
+  // Get entry that starts within a given slot's 30-min window
+  const getEntry = (day: string, slotIdx: number) => {
+    const slotMins = timeToMinutes(WEEK_VIEW_TIMES[slotIdx]);
+    const nextMins = slotIdx + 1 < WEEK_VIEW_TIMES.length ? timeToMinutes(WEEK_VIEW_TIMES[slotIdx + 1]) : slotMins + 30;
+    return timetable.find(e => {
+      if (e.dayOfWeek !== day) return false;
+      const startMins = timeToMinutes(e.startTime);
+      return startMins >= slotMins && startMins < nextMins;
+    });
   };
+
+  // Each row = 30 min = 48px. Classes ≥ 1.5h span ≥ 3 rows = 144px+
+  const ROW_HEIGHT = "h-12"; // 48px per 30-min slot
 
   return (
     <div className="bg-surface dark:bg-surface rounded-lg border border-border overflow-hidden">
@@ -1004,10 +1038,10 @@ function WeekView({
               <th className="px-3 py-3 text-left text-xs font-medium text-foreground-secondary uppercase tracking-wider w-20 border-r border-border">
                 Time
               </th>
-              {DAYS.map((day) => (
+              {WEEK_DAYS.map((day) => (
                 <th
                   key={day}
-                  className="px-3 py-3 text-left text-xs font-medium text-foreground-secondary uppercase tracking-wider flex-1 border-r border-border last:border-r-0"
+                  className="px-3 py-3 text-left text-xs font-medium text-foreground-secondary uppercase tracking-wider border-r border-border last:border-r-0"
                 >
                   {day.slice(0, 3)}
                 </th>
@@ -1015,72 +1049,93 @@ function WeekView({
             </tr>
           </thead>
           <tbody className="bg-surface divide-y divide-border">
-            {WEEK_VIEW_TIMES.map((time, timeIdx) => {
-              return (
-                <tr key={time} className="divide-x divide-border">
-                  <td className="px-3 py-2 text-xs text-foreground-secondary font-medium w-20 border-r border-border bg-background-secondary/50 dark:bg-background/50">
-                    {time}
-                  </td>
-                  {DAYS.map((day) => {
-                    if (coveredCellsByDay[day]?.has(timeIdx)) {
-                      return null;
-                    }
+            {WEEK_VIEW_TIMES.map((time, timeIdx) => (
+              <tr key={time} className="divide-x divide-border">
+                <td className={`px-3 py-1 text-xs text-foreground-secondary font-medium w-20 border-r border-border bg-background-secondary/50 dark:bg-background/50 ${ROW_HEIGHT} align-middle`}>
+                  {time}
+                </td>
+                {WEEK_DAYS.map((day) => {
+                  if (coveredCellsByDay[day]?.has(timeIdx)) return null;
 
-                    const entry = getEntry(day, time);
-                    
-                    if (!entry) {
-                      return (
-                        <td
-                          key={day}
-                          className="px-2 py-2 text-sm border-r border-border last:border-r-0 hover:bg-background-secondary/30 transition-colors h-10"
-                        />
-                      );
-                    }
+                  const entry = getEntry(day, timeIdx);
 
-                    const rowSpan = calculateRowSpan(entry.startTime, entry.endTime);
-                    const color = getCourseColor(entry.course?.code || "", entry.classType);
-                    
+                  if (!entry) {
                     return (
                       <td
                         key={day}
-                        rowSpan={rowSpan}
-                        className="px-2 py-2 text-sm border-r border-border last:border-r-0 align-top"
-                      >
-                        <div className="relative group h-full">
-                          <button
-                            type="button"
-                            onClick={() => onEdit(entry)}
-                            className={`w-full h-full text-left ${color.bg} border-l-4 ${color.border} rounded p-2 pr-6 ${color.hover} transition-colors flex flex-col justify-center`}
-                          >
-                            <p className={`font-medium ${color.text} text-xs truncate`}>
-                              {formatCourseCode(entry.course?.code || "")}
-                            </p>
-                            <p className={`text-xs ${color.text} opacity-80 mt-0.5`}>
-                              {entry.startTime} - {entry.endTime}
-                            </p>
-                            <div className={`flex items-center gap-1 text-xs ${color.text} mt-1`}>
-                              <MapPin className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate text-xs">
-                                {entry.venue || "TBA"}
-                                {entry.slot ? ` • Slot ${entry.slot}` : ""}
-                              </span>
-                            </div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); onDelete(entry); }}
-                            className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
-                            aria-label="Delete class"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </td>
+                        className={`px-2 text-sm border-r border-border last:border-r-0 hover:bg-background-secondary/30 transition-colors ${ROW_HEIGHT}`}
+                      />
                     );
-                  })}
-                </tr>
-              );
-            })}
+                  }
+
+                  const rowSpan = calculateRowSpan(entry.startTime, entry.endTime);
+                  const durationMins = timeToMinutes(entry.endTime) - timeToMinutes(entry.startTime);
+                  const isLong = durationMins >= 90; // 1.5h+
+                  const color = getCourseColor(entry.course?.code || "", entry.classType);
+
+                  return (
+                    <td
+                      key={day}
+                      rowSpan={rowSpan}
+                      className="px-2 py-1 text-sm border-r border-border last:border-r-0 align-top"
+                      style={{ minHeight: `${rowSpan * 48}px` }}
+                    >
+                      <div className="relative group h-full min-h-full flex flex-col">
+                        <button
+                          type="button"
+                          onClick={() => onEdit(entry)}
+                          className={`flex-1 w-full text-left ${color.bg} border-l-4 ${color.border} rounded p-2 ${entry.googleEventId ? "pr-10" : "pr-6"} ${color.hover} transition-colors flex flex-col ${isLong ? "justify-start gap-1" : "justify-center"}`}
+                        >
+                          <p className={`font-semibold ${color.text} text-xs truncate`}>
+                            {formatCourseCode(entry.course?.code || "")}
+                          </p>
+                          <p className={`text-xs ${color.text} opacity-75`}>
+                            {entry.startTime}–{entry.endTime}
+                          </p>
+                          {isLong && (
+                            <>
+                              <div className={`flex items-center gap-1 text-xs ${color.text} opacity-80`}>
+                                <MapPin className="w-3 h-3 flex-shrink-0" />
+                                <span className="truncate">{entry.venue || "TBA"}{entry.slot ? ` • Slot ${entry.slot}` : ""}</span>
+                              </div>
+                              {entry.instructor && (
+                                <p className={`text-xs ${color.text} opacity-70 truncate`}>{entry.instructor}</p>
+                              )}
+                            </>
+                          )}
+                          {!isLong && entry.venue && (
+                            <div className={`flex items-center gap-1 text-xs ${color.text} opacity-80 mt-0.5`}>
+                              <MapPin className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">{entry.venue}</span>
+                            </div>
+                          )}
+                        </button>
+                        {/* Delete from timetable */}
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); onDelete(entry); }}
+                          className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
+                          aria-label="Delete class"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                        {/* Remove from Google Calendar */}
+                        {entry.googleEventId && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onDeleteCalendar(entry); }}
+                            className="absolute top-1 right-6 w-5 h-5 flex items-center justify-center rounded text-foreground-secondary hover:text-primary hover:bg-primary/10 opacity-0 group-hover:opacity-100 transition-all"
+                            aria-label="Remove from Google Calendar"
+                          >
+                            <Calendar className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -1092,10 +1147,12 @@ function ListView({
   timetable,
   onEdit,
   onDelete,
+  onDeleteCalendar,
 }: {
   timetable: TimetableEntry[];
   onEdit: (entry: TimetableEntry) => void;
   onDelete: (entry: TimetableEntry) => void;
+  onDeleteCalendar: (entry: TimetableEntry) => void;
 }) {
   const groupedByDay = DAYS.map((day) => ({
     day,
@@ -1156,6 +1213,17 @@ function ListView({
                   </div>
                 </button>
                 <div className="flex items-center gap-1 sm:ml-2 flex-shrink-0 self-end sm:self-auto">
+                  {entry.googleEventId && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteCalendar(entry)}
+                      className={`min-w-[44px] min-h-[44px] flex items-center justify-center ${color.text} opacity-60 hover:opacity-100 hover:bg-white/50 dark:hover:bg-black/20 rounded-lg transition-all`}
+                      aria-label="Remove from Google Calendar"
+                      title="Remove from Google Calendar"
+                    >
+                      <Calendar className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onEdit(entry)}
