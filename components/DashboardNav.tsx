@@ -3,11 +3,11 @@
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  LayoutDashboard, 
-  BookOpen, 
-  GraduationCap, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  BookOpen,
+  GraduationCap,
+  BarChart3,
   Settings,
   LogOut,
   Menu,
@@ -18,7 +18,8 @@ import {
   Info,
   Download,
   LifeBuoy,
-  Inbox
+  Inbox,
+  Users
 } from "lucide-react";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
@@ -52,6 +53,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
   ];
 
   const adminNavigation = [
+    { name: "Users", href: "/dashboard/admin", icon: Users },
     { name: "Course Mappings", href: "/dashboard/course-mappings", icon: GitBranch },
     { name: "Inbox", href: "/dashboard/inbox", icon: Inbox },
   ];
