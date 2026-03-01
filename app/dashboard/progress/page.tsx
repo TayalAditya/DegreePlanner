@@ -650,7 +650,7 @@ export default function ProgressPage() {
         )}
       </div>
 
-      {/* Courses by Semester */
+      {/* Courses by Semester */}
       <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
         <h3 className="text-base sm:text-xl font-semibold text-foreground mb-2">
           Courses (Semester-wise)
