@@ -677,6 +677,39 @@ export function TimetableView({ userId }: TimetableViewProps) {
     }
   };
 
+  const [clearingCalendar, setClearingCalendar] = useState(false);
+  const handleClearAllCalendar = async () => {
+    const synced = entries.filter((e) => e.googleEventId);
+    if (synced.length === 0) {
+      showToast("info", "No calendar events to remove");
+      return;
+    }
+    const ok = await confirm({
+      title: "Remove all from Google Calendar?",
+      message: `This will delete all ${synced.length} timetable events from your Google Calendar. You can add them again anytime.`,
+      confirmText: "Remove all",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setClearingCalendar(true);
+    let removed = 0;
+    await Promise.all(
+      synced.map(async (entry) => {
+        try {
+          const res = await fetch("/api/calendar/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ eventId: entry.googleEventId }),
+          });
+          if (res.ok) removed++;
+        } catch {}
+      })
+    );
+    setClearingCalendar(false);
+    showToast(removed > 0 ? "success" : "error", removed > 0 ? `Removed ${removed} events from Google Calendar` : "Failed to remove events");
+    await queryClient.invalidateQueries({ queryKey: ["timetable", userId] });
+  };
+
   const context = timetable?.context ?? null;
   const courses = useMemo(() => timetable?.courses ?? [], [timetable?.courses]);
   const entries = useMemo<TimetableEntry[]>(() => timetable?.entries ?? [], [timetable?.entries]);
@@ -856,14 +889,30 @@ export function TimetableView({ userId }: TimetableViewProps) {
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <button
-            onClick={handleExportCalendar}
-            disabled={entries.length === 0}
-            className="flex px-4 py-2 min-h-[44px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center gap-2 transition-colors transition-transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Download className="w-4 h-4" />
-            Add to Google Calendar
-          </button>
+          {/* Calendar sync controls */}
+          <div className="flex items-center gap-1 rounded-xl border border-border overflow-hidden">
+            <button
+              onClick={handleExportCalendar}
+              disabled={entries.length === 0}
+              className="flex px-3 py-2 min-h-[44px] text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center gap-2 transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Add timetable to Google Calendar"
+            >
+              <Download className="w-4 h-4" />
+              <span className="hidden sm:inline">Add to Calendar</span>
+              <span className="sm:hidden">Add</span>
+            </button>
+            {entries.some((e) => e.googleEventId) && (
+              <button
+                onClick={handleClearAllCalendar}
+                disabled={clearingCalendar}
+                className="flex px-3 py-2 min-h-[44px] text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 items-center gap-1.5 border-l border-border transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Remove all timetable events from Google Calendar"
+              >
+                {clearingCalendar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                <span className="hidden sm:inline">Remove all</span>
+              </button>
+            )}
+          </div>
           <button
             onClick={() => setView(view === "week" ? "list" : "week")}
             className="hidden md:flex px-4 py-2 min-h-[44px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center transition-colors transition-transform active:scale-[0.99]"
