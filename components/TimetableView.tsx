@@ -743,9 +743,12 @@ export function TimetableView({ userId }: TimetableViewProps) {
       if (!response.ok) {
         const errorMsg = data.error || `Server error ${response.status}`;
         console.error("[Calendar Export] API error:", errorMsg, data);
-        // Open Google Calendar so user can reconnect / manage events directly
-        window.open("https://calendar.google.com", "_blank");
-        showToast("warning", `Calendar sync failed — opening Google Calendar. Re-sign in if needed.`);
+        if (response.status === 401 || response.status === 403) {
+          showToast("error", data.error || "Google Calendar auth expired — please sign out and sign in again.");
+        } else {
+          window.open("https://calendar.google.com", "_blank");
+          showToast("warning", `Calendar sync failed — opening Google Calendar. Re-sign in if needed.`);
+        }
         return;
       }
     } catch (error) {
