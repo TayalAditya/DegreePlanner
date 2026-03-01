@@ -94,7 +94,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
               <NotificationBell />
               <button
                 onClick={() => setMobileMenuOpen((v) => !v)}
-                className="inline-flex items-center justify-center p-2 rounded-lg border border-border bg-card text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                className="dp-icon-btn"
                 aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               >
                 {mobileMenuOpen ? (
@@ -197,7 +197,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
               <button
                 onClick={signOutAndClose}
-                className="flex items-center justify-center w-full gap-2 px-3 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                className="dp-btn dp-btn-outline w-full"
               >
                 <LogOut className="w-4 h-4" />
                 Sign Out
@@ -281,7 +281,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
           <button
             onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-            className="flex items-center justify-center w-full gap-2 px-3 py-2.5 rounded-xl border border-border bg-card text-sm font-medium text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            className="dp-btn dp-btn-outline w-full"
           >
             <LogOut className="w-4 h-4" />
             Sign Out

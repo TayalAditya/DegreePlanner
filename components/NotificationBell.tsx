@@ -113,24 +113,24 @@ export function NotificationBell() {
       <button
         onClick={openPanel}
         aria-label="Notifications"
-        className="relative inline-flex items-center justify-center p-2 rounded-lg border border-border bg-card text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+        className="dp-icon-btn relative"
       >
         <Bell className="w-5 h-5" />
         {totalUnread > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+          <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-error text-white text-[10px] font-bold flex items-center justify-center leading-none">
             {totalUnread > 9 ? "9+" : totalUnread}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-surface border border-border rounded-xl shadow-xl z-50 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] dp-card shadow-xl z-50 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <span className="text-sm font-semibold text-foreground">Notifications</span>
             <button
               onClick={() => setOpen(false)}
-              className="p-1 rounded text-foreground-secondary hover:text-foreground transition-colors"
+              className="dp-icon-btn min-h-0 min-w-0 w-8 h-8 border-transparent bg-transparent hover:bg-surface-hover"
             >
               <X className="w-4 h-4" />
             </button>
@@ -149,7 +149,7 @@ export function NotificationBell() {
               <MessageSquare className="w-3.5 h-3.5" />
               Replies
               {unreadNotifications > 0 && (
-                <span className="min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="min-w-[16px] h-4 px-1 rounded-full bg-error text-white text-[9px] font-bold flex items-center justify-center">
                   {unreadNotifications}
                 </span>
               )}
@@ -165,7 +165,7 @@ export function NotificationBell() {
               <Megaphone className="w-3.5 h-3.5" />
               Announcements
               {unreadAnnouncements > 0 && (
-                <span className="min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="min-w-[16px] h-4 px-1 rounded-full bg-error text-white text-[9px] font-bold flex items-center justify-center">
                   {unreadAnnouncements}
                 </span>
               )}
@@ -201,7 +201,7 @@ export function NotificationBell() {
                       <p className="text-sm font-semibold text-foreground leading-snug">
                         {n.title}
                         {!n.isRead && (
-                          <span className="ml-2 inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase bg-red-500 text-white rounded-full leading-none align-middle">
+                          <span className="ml-2 inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase bg-error text-white rounded-full leading-none align-middle">
                             NEW
                           </span>
                         )}
@@ -232,7 +232,7 @@ export function NotificationBell() {
                     <p className="text-sm font-semibold text-foreground leading-snug">
                       {a.title}
                       {isNew && (
-                        <span className="ml-2 inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase bg-red-500 text-white rounded-full leading-none align-middle">
+                        <span className="ml-2 inline-block px-1.5 py-0.5 text-[9px] font-bold uppercase bg-error text-white rounded-full leading-none align-middle">
                           NEW
                         </span>
                       )}

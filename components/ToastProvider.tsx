@@ -74,22 +74,22 @@ function ToastItem({
   onRemove: (id: string) => void;
 }) {
   const icons = {
-    success: <CheckCircle className="w-5 h-5 text-green-500" />,
-    error: <XCircle className="w-5 h-5 text-red-500" />,
-    warning: <AlertCircle className="w-5 h-5 text-yellow-500" />,
-    info: <AlertCircle className="w-5 h-5 text-blue-500" />,
+    success: <CheckCircle className="w-5 h-5 text-success" />,
+    error: <XCircle className="w-5 h-5 text-error" />,
+    warning: <AlertCircle className="w-5 h-5 text-warning" />,
+    info: <AlertCircle className="w-5 h-5 text-info" />,
   };
 
   const bgColors = {
-    success: "bg-green-50 dark:bg-green-900 dark:bg-opacity-20 border-green-200 dark:border-green-800",
-    error: "bg-red-50 dark:bg-red-900 dark:bg-opacity-20 border-red-200 dark:border-red-800",
-    warning: "bg-yellow-50 dark:bg-yellow-900 dark:bg-opacity-20 border-yellow-200 dark:border-yellow-800",
-    info: "bg-blue-50 dark:bg-blue-900 dark:bg-opacity-20 border-blue-200 dark:border-blue-800",
+    success: "bg-success-light/45 border-success/20",
+    error: "bg-error-light/45 border-error/20",
+    warning: "bg-warning-light/45 border-warning/20",
+    info: "bg-info-light/45 border-info/20",
   };
 
   return (
     <div
-      className={`${bgColors[toast.type]} border rounded-lg p-4 shadow-lg animate-slide-in pointer-events-auto backdrop-blur-sm`}
+      className={`${bgColors[toast.type]} border rounded-xl p-4 shadow-lg animate-slide-in pointer-events-auto backdrop-blur-sm`}
       role="alert"
     >
       <div className="flex items-start gap-3">
@@ -97,7 +97,7 @@ function ToastItem({
         <p className="flex-1 text-sm text-foreground">{toast.message}</p>
         <button
           onClick={() => onRemove(toast.id)}
-          className="text-foreground-secondary hover:text-foreground transition-colors"
+          className="dp-icon-btn min-h-0 min-w-0 w-8 h-8 border-transparent bg-transparent hover:bg-surface-hover"
           aria-label="Close notification"
         >
           <X className="w-4 h-4" />

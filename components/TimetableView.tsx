@@ -255,11 +255,34 @@ interface TimetableEntry {
   instructor?: string | null;
   notes?: string | null;
   courseId: string;
+  isApproved: boolean;
+  approvedById?: string | null;
+  approvedAt?: Date | null;
+  createdById?: string | null;
+  updatedById?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
   course?: {
     id: string;
     code: string;
     name: string;
     credits: number;
+  } | null;
+  createdBy?: {
+    id: string;
+    name: string | null;
+    email: string;
+    enrollmentId?: string | null;
+  } | null;
+  updatedBy?: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
+  approvedBy?: {
+    id: string;
+    name: string | null;
+    email: string;
   } | null;
 }
 
