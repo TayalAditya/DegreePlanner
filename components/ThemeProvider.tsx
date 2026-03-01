@@ -17,18 +17,24 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>(() => {
-    if (typeof window === "undefined") return "system";
-    const savedTheme = localStorage.getItem("theme") as ThemeMode | null;
-    if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system") return savedTheme;
-    return "system";
-  });
+  // Always initialise to defaults – reading localStorage here causes a React
+  // hydration mismatch (#418) because the server cannot know the user's
+  // persisted preference.  We sync from localStorage in useEffect instead.
+  const [theme, setThemeState] = useState<ThemeMode>("system");
+  const [palette, setPaletteState] = useState<ThemePalette>("default");
 
-  const [palette, setPaletteState] = useState<ThemePalette>(() => {
-    if (typeof window === "undefined") return "default";
+  // Hydrate from localStorage after the first client-side render so that the
+  // initial server render and the client reconciliation use the same values.
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") as ThemeMode | null;
+    if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system") {
+      setThemeState(savedTheme);
+    }
     const savedPalette = localStorage.getItem("degreePlanner.palette") as ThemePalette | null;
-    return savedPalette && PALETTES.includes(savedPalette) ? savedPalette : "default";
-  });
+    if (savedPalette && PALETTES.includes(savedPalette)) {
+      setPaletteState(savedPalette);
+    }
+  }, []);
 
   const prefersDark = useSyncExternalStore(
     (onStoreChange) => {
