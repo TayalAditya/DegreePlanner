@@ -198,8 +198,9 @@ export async function POST(request: NextRequest) {
           createdEvents.push({ entryId: entry.id, eventId });
         }
       } catch (error: any) {
+        const googleErr = error?.response?.data?.error;
         const errMsg = error?.response?.data?.error_description
-          || error?.response?.data?.error
+          || (typeof googleErr === "string" ? googleErr : googleErr?.message)
           || error?.message
           || error?.errors?.[0]?.message
           || "Unknown error";
