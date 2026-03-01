@@ -75,6 +75,18 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
   return (
     <>
+      {/* Desktop: Top bar with theme controls */}
+      <nav className="hidden lg:flex lg:fixed lg:top-0 lg:left-0 lg:right-0 lg:z-40 bg-surface/80 border-b border-border no-print backdrop-blur-sm h-16 px-6 items-center justify-between">
+        <div className="flex items-center gap-4">
+          <ThemeToggle variant="mode" />
+          <div className="text-foreground-secondary/30 text-lg">|</div>
+          <div className="w-96">
+            <ThemeToggle variant="palette" className="bg-transparent border-0 p-0 shadow-none" />
+          </div>
+        </div>
+        <NotificationBell />
+      </nav>
+
       {/* Mobile: Top bar */}
       <nav className="lg:hidden bg-surface/80 border-b border-border no-print sticky top-0 z-50 backdrop-blur-sm">
         <div className="px-4 sm:px-6">
@@ -208,8 +220,8 @@ export function DashboardNav({ user }: DashboardNavProps) {
       )}
 
       {/* Desktop: Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/80 border-l border-border no-print sticky top-0 h-screen backdrop-blur-sm">
-        <div className="h-16 flex items-center justify-between px-4 border-b border-border">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/80 border-l border-border no-print sticky top-16 h-[calc(100vh-4rem)] backdrop-blur-sm">
+        <div className="h-16 flex items-center px-4 border-b border-border">
           <Link
             href="/dashboard"
             className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
@@ -219,17 +231,6 @@ export function DashboardNav({ user }: DashboardNavProps) {
               Degree Planner
             </span>
           </Link>
-          <div className="flex items-center gap-2">
-            <ThemeToggle variant="mode" />
-            <NotificationBell />
-          </div>
-        </div>
-
-        <div className="px-4 py-3 border-b border-border bg-surface/40 backdrop-blur-sm">
-          <p className="text-[11px] font-semibold text-foreground-secondary uppercase tracking-wider px-1 mb-2">
-            Palette
-          </p>
-          <ThemeToggle variant="palette" className="bg-transparent border-0 p-0 shadow-none" />
         </div>
 
         <LayoutGroup id="dashboard-nav-desktop">
