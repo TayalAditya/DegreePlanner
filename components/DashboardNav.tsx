@@ -78,10 +78,10 @@ export function DashboardNav({ user }: DashboardNavProps) {
       {/* Desktop & Mobile: Top Navbar */}
       <nav className="bg-surface/80 border-b border-border no-print sticky top-0 z-50 backdrop-blur-sm h-16">
         <div className="flex h-full items-center justify-between px-4 sm:px-6">
-          {/* Left: Logo (mobile only) */}
+          {/* Left: Logo */}
           <Link
             href="/dashboard"
-            className="lg:hidden flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
           >
             <GraduationCap className="w-7 h-7 text-primary" />
             <span className="ml-2 text-lg font-bold text-foreground">
@@ -89,7 +89,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             </span>
           </Link>
 
-          <div className="hidden lg:block flex-1" />
+          <div className="flex-1" />
 
           {/* Right: Notification & Menu Toggle */}
           <div className="flex items-center space-x-2">
@@ -207,18 +207,6 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
       {/* Desktop: Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/80 border-r border-border no-print fixed top-16 left-0 h-[calc(100vh-4rem)] backdrop-blur-sm overflow-y-auto z-40">
-        <div className="h-16 flex items-center px-4 border-b border-border">
-          <Link
-            href="/dashboard"
-            className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-          >
-            <GraduationCap className="w-7 h-7 text-primary" />
-            <span className="ml-2 text-lg font-bold text-foreground">
-              Degree Planner
-            </span>
-          </Link>
-        </div>
-
         <LayoutGroup id="dashboard-nav-desktop">
           <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-hide">
             <div className="px-1">
