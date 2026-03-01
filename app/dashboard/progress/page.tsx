@@ -179,9 +179,9 @@ export default function ProgressPage() {
     }
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
-      const mappingBranch = user.branch === "CSE" ? "CS" : user.branch;
+      const branchAliases = user.branch === "CSE" ? ["CSE", "CS"] : user.branch === "CS" ? ["CS", "CSE"] : [user.branch];
       const mapping = enrollment.course.branchMappings.find(
-        (m) => m.branch === mappingBranch || m.branch === "COMMON"
+        (m) => branchAliases.includes(m.branch) || m.branch === "COMMON"
       ) || (user.branch === "GE"
         ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
         : undefined);
