@@ -30,6 +30,32 @@ export const authOptions: NextAuthOptions = {
 
       console.log("🔐 signIn callback - email:", user.email);
 
+      // Always persist the latest OAuth tokens to the Account row.
+      // linkAccount() is only called on first login; on re-login the adapter
+      // skips it (unique constraint), so refresh_token would stay stale/null.
+      if (account?.provider === "google") {
+        try {
+          await prisma.account.update({
+            where: {
+              provider_providerAccountId: {
+                provider: account.provider,
+                providerAccountId: account.providerAccountId,
+              },
+            },
+            data: {
+              access_token: account.access_token,
+              ...(account.refresh_token ? { refresh_token: account.refresh_token } : {}),
+              expires_at: account.expires_at,
+              id_token: account.id_token ?? undefined,
+              scope: account.scope ?? undefined,
+            },
+          });
+          console.log("✅ Account tokens refreshed in DB");
+        } catch {
+          // Account row doesn't exist yet (first login) — linkAccount will create it
+        }
+      }
+
       // Check if user is approved by email (direct match)
       let approvedUser = await prisma.approvedUser.findUnique({
         where: { email: user.email },
