@@ -106,14 +106,18 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   const secondaryPrograms = programs.filter((p) => !p.isPrimary);
 
   const programEnrollments = primaryProgram?.program?.id
-    ? enrollments.filter((e) => e.programId === primaryProgram.program.id)
-    : [];
+    ? enrollments.filter(
+        (e) => e.programId === primaryProgram.program.id || e.programId == null
+      )
+    : enrollments;
 
-  const completedEnrollments = programEnrollments.filter(
-    (e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F")
+  const visibleEnrollments = programEnrollments.filter(
+    (e) =>
+      e.status === "IN_PROGRESS" ||
+      (e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
   );
 
-  const semesterCourses: Record<number, Enrollment[]> = completedEnrollments.reduce(
+  const semesterCourses: Record<number, Enrollment[]> = visibleEnrollments.reduce(
     (acc: Record<number, Enrollment[]>, e) => {
       const sem = e.semester || 0;
       if (!acc[sem]) acc[sem] = [];
@@ -277,7 +281,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                       </p>
 
                       {semesters.length === 0 ? (
-                        <p className="text-sm text-foreground-secondary">No completed courses yet.</p>
+                        <p className="text-sm text-foreground-secondary">No courses yet.</p>
                       ) : (
                         <div className="space-y-2">
                           {semesters.map((sem) => {
@@ -328,9 +332,15 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                             {e.course?.credits || 0}
                                           </td>
                                           <td className="py-2">
-                                            <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-semibold whitespace-nowrap">
-                                              Completed{e.grade ? ` (${e.grade})` : ""}
-                                            </span>
+                                            {e.status === "IN_PROGRESS" ? (
+                                              <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold whitespace-nowrap">
+                                                In Progress
+                                              </span>
+                                            ) : (
+                                              <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-semibold whitespace-nowrap">
+                                                Completed{e.grade ? ` (${e.grade})` : ""}
+                                              </span>
+                                            )}
                                           </td>
                                         </tr>
                                       ))}
