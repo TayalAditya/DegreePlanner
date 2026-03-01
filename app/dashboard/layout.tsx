@@ -36,9 +36,12 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background-secondary to-background">
+      <DashboardNav user={session.user} />
       <div className="flex flex-col lg:flex-row min-h-screen">
-        <DashboardNav user={session.user} />
-        <div className="flex-1 min-w-0 flex flex-col lg:order-first">
+        <div className="hidden lg:block fixed top-16 left-0 w-64 xl:w-72 border-r border-border bg-surface/80 backdrop-blur-sm" style={{ height: "calc(100vh - 4rem)" }}>
+          {/* Sidebar content handled by DashboardNav */}
+        </div>
+        <div className="flex-1 min-w-0 flex flex-col lg:ml-64 xl:ml-72 lg:mt-16 lg:order-first">
           <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
             <RouteTransition>{children}</RouteTransition>
           </main>
