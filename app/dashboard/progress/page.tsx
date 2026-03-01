@@ -181,6 +181,9 @@ export default function ProgressPage() {
       return "FE";
     }
 
+    // HS-xxx courses always go to HSS — never let branch mapping override
+    if (normalizedCode.startsWith("HS")) return "HSS";
+
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
       const branchAliases = user.branch === "CSE" ? ["CSE", "CS"] : user.branch === "CS" ? ["CS", "CSE"] : [user.branch];
       const mapping = enrollment.course.branchMappings.find(

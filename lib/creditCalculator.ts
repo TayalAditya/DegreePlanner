@@ -416,6 +416,12 @@ export class CreditCalculator {
         return;
       }
 
+      // HS-xxx courses always go to HSS (cap logic), never let branch mapping override
+      if (normalizedCode.startsWith("HS")) {
+        addHssCredits(credits);
+        return;
+      }
+
       const branchAliases = branch === "CSE" ? ["CSE", "CS"] : branch === "CS" ? ["CS", "CSE"] : [branch];
       const mappedCategory = enrollment.course.branchMappings
         ? (enrollment.course.branchMappings.find(

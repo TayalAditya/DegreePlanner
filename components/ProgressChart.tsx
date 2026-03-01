@@ -190,6 +190,9 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       return "FE";
     }
 
+    // HS-xxx courses always go to HSS — never let branch mapping override
+    if (normalizedCode.startsWith("HS")) return "HSS";
+
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length > 0) {
       const branchAliases = userBranch === "CSE" ? ["CSE", "CS"] : userBranch === "CS" ? ["CS", "CSE"] : [userBranch];
