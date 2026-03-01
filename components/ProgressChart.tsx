@@ -197,7 +197,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     if (mappings.length > 0) {
       const branchAliases = userBranch === "CSE" ? ["CSE", "CS"] : userBranch === "CS" ? ["CS", "CSE"] : [userBranch];
       const mapping = mappings.find((m: any) => branchAliases.includes(m.branch) || m.branch === "COMMON")
-        || (userBranch === "GE"
+        || (userBranch?.startsWith("GE")
           ? mappings.find((m: any) => m.branch?.startsWith("GE"))
           : undefined);
 
@@ -229,7 +229,8 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     if (userBranch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
     if (userBranch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
 
-    return "DC";
+    // No branch mapping found → parent branch course → counts as DE
+    return "DE";
   };
 
   const completedCodes = useMemo(() => {

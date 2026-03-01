@@ -525,11 +525,10 @@ export class CreditCalculator {
         return;
       }
 
-      // Fall back to courseType
+      // Fall back to courseType.
+      // CourseType.CORE means DC for some branch — but since no branchMapping matched
+      // the student's branch, this is a "parent branch" course → counts as DE.
       switch (enrollment.courseType) {
-        case CourseType.CORE:
-          breakdown.core += credits;
-          break;
         case CourseType.DE:
           breakdown.de += credits;
           break;
@@ -546,7 +545,7 @@ export class CreditCalculator {
           breakdown.istp += credits;
           break;
         default:
-          breakdown.core += credits; // Default to core (DC)
+          breakdown.de += credits; // CORE or unknown → parent branch course → DE
       }
     });
 
