@@ -206,7 +206,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
       )}
 
       {/* Desktop: Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/80 border-l border-border no-print sticky top-16 h-[calc(100vh-4rem)] backdrop-blur-sm">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/80 border-r border-border no-print fixed top-16 left-0 h-[calc(100vh-4rem)] backdrop-blur-sm overflow-y-auto z-40">
         <div className="h-16 flex items-center px-4 border-b border-border">
           <Link
             href="/dashboard"

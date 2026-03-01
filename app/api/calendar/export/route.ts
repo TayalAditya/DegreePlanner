@@ -87,12 +87,14 @@ export async function POST(request: NextRequest) {
     oauth2Client.setCredentials({
       access_token: account.access_token,
       refresh_token: account.refresh_token,
+      expiry_date: account.expires_at ? account.expires_at * 1000 : undefined,
     });
 
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
     const endDate = new Date("2026-05-01");
     const createdEvents: { entryId: string; eventId: string }[] = [];
+    const failedEvents: { entryId: string; error: string }[] = [];
 
     // Create events
     for (const entry of entries as TimetableEntry[]) {
@@ -150,15 +152,18 @@ export async function POST(request: NextRequest) {
           });
           createdEvents.push({ entryId: entry.id, eventId });
         }
-      } catch (error) {
-        console.error("Error creating event:", error);
+      } catch (error: any) {
+        const errMsg = error?.message || error?.errors?.[0]?.message || "Unknown error";
+        console.error("[Calendar] Failed to create event for entry", entry.id, ":", errMsg);
+        failedEvents.push({ entryId: entry.id, error: errMsg });
       }
     }
 
     return NextResponse.json({
-      success: true,
-      message: `${createdEvents.length} events added to Google Calendar`,
+      success: createdEvents.length > 0,
+      message: `${createdEvents.length} events added to Google Calendar${failedEvents.length > 0 ? `, ${failedEvents.length} failed` : ""}`,
       events: createdEvents,
+      failures: failedEvents,
     });
   } catch (error: any) {
     console.error("Calendar export error:", error);

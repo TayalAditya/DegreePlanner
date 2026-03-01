@@ -214,8 +214,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Admins create approved entries, others need approval
+    // Admins always approved; TA duties are personal (no approval needed); slot-based entries match official schedule (auto-approve)
     const isAdmin = session.user.role === "ADMIN";
+    const slotValue = typeof slot === "string" ? slot.trim() || undefined : undefined;
+    const autoApprove = isAdmin || selectedClassType === ClassType.TA_DUTY || Boolean(slotValue);
 
     const entry = await prisma.timetableEntry.create({
       data: {
@@ -226,7 +228,7 @@ export async function POST(req: NextRequest) {
         dayOfWeek,
         startTime,
         endTime,
-        slot: typeof slot === "string" ? slot.trim() || undefined : undefined,
+        slot: slotValue,
         venue,
         roomNumber,
         building,
@@ -235,8 +237,8 @@ export async function POST(req: NextRequest) {
         notes,
         createdById: session.user.id,
         updatedById: session.user.id,
-        isApproved: isAdmin,
-        ...(isAdmin && { approvedById: session.user.id, approvedAt: new Date() }),
+        isApproved: autoApprove,
+        ...(autoApprove && { approvedById: session.user.id, approvedAt: new Date() }),
       },
       include: {
         course: {

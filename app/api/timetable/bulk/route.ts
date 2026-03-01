@@ -159,6 +159,9 @@ export async function POST(req: NextRequest) {
           throw new Error("DUPLICATE_EXISTS");
         }
 
+        const isAdmin = session.user.role === "ADMIN";
+        const autoApprove = isAdmin || e.classType === ClassType.TA_DUTY || Boolean(e.slot);
+
         const entry = await tx.timetableEntry.create({
           data: {
             courseId: courseId || undefined,
@@ -175,6 +178,7 @@ export async function POST(req: NextRequest) {
             notes: e.notes,
             createdById: session.user.id,
             updatedById: session.user.id,
+            isApproved: autoApprove,
           },
           include: {
             course: {
