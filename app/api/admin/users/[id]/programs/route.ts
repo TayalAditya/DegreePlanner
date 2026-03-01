@@ -6,7 +6,7 @@ import { creditCalculator } from "@/lib/creditCalculator";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
 
@@ -14,7 +14,7 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const userId = params.id;
+  const { id: userId } = await params;
 
   try {
     const [programs, enrollments, user] = await Promise.all([
