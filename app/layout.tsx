@@ -11,6 +11,13 @@ export const metadata: Metadata = {
   title: "Degree Planner - Plan Your Academic Journey",
   description: "Comprehensive degree planning tool with course tracking, credit calculation, and progress visualization",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    shortcut: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
