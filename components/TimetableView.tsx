@@ -13,10 +13,15 @@ import {
   Sparkles,
   Trash2,
   X,
+  Download,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 import { useConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./ToastProvider";
 import { formatCourseCode } from "@/lib/utils";
+import { downloadICS } from "@/lib/icsGenerator";
 
 interface TimetableViewProps {
   userId: string;
@@ -27,15 +32,29 @@ const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const minutesToTime = (minutes: number) => `${pad2(Math.floor(minutes / 60))}:${pad2(minutes % 60)}`;
 
-const TIME_OPTIONS = Array.from({ length: (19 - 8) * 2 + 1 }, (_, i) => minutesToTime(8 * 60 + i * 30));
+// Generate time options: :00, :20, :30, :50 for each hour from 8am to 8pm
+const TIME_OPTIONS: string[] = [];
+for (let hour = 8; hour <= 20; hour++) {
+  TIME_OPTIONS.push(`${pad2(hour)}:00`);
+  if (hour < 20) {
+    TIME_OPTIONS.push(`${pad2(hour)}:20`);
+    TIME_OPTIONS.push(`${pad2(hour)}:30`);
+    TIME_OPTIONS.push(`${pad2(hour)}:50`);
+  }
+}
 const START_TIMES = TIME_OPTIONS.slice(0, -1);
 const END_TIMES = TIME_OPTIONS.slice(1);
 const DEFAULT_START_TIME = START_TIMES.includes("10:00") ? "10:00" : START_TIMES[0];
-const DEFAULT_END_TIME = END_TIMES.includes("11:00") ? "11:00" : END_TIMES[0];
+// Default to 50 minutes duration
+const DEFAULT_END_TIME = START_TIMES.includes("10:00") && END_TIMES.includes("10:50") ? "10:50" : (END_TIMES.find(t => {
+  const [sh, sm] = DEFAULT_START_TIME.split(':').map(Number);
+  const [eh, em] = t.split(':').map(Number);
+  return (eh * 60 + em) - (sh * 60 + sm) === 50;
+}) || END_TIMES[0]);
 
 type DayOfWeek = (typeof DAYS)[number];
 type Term = "FALL" | "SPRING" | "SUMMER";
-type ClassType = "LECTURE" | "LAB" | "TUTORIAL" | "SEMINAR" | "WORKSHOP";
+type ClassType = "LECTURE" | "LAB" | "TUTORIAL" | "SEMINAR" | "WORKSHOP" | "TA_DUTY";
 type TimetableKind = "NON_IC" | "IC";
 
 type SlotSession = {
@@ -147,6 +166,28 @@ const makeId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
+const COURSE_COLORS = [
+  { bg: "bg-blue-100 dark:bg-blue-900/30", border: "border-blue-500", text: "text-blue-700 dark:text-blue-300", hover: "hover:bg-blue-150 dark:hover:bg-blue-900/40" },
+  { bg: "bg-green-100 dark:bg-green-900/30", border: "border-green-500", text: "text-green-700 dark:text-green-300", hover: "hover:bg-green-150 dark:hover:bg-green-900/40" },
+  { bg: "bg-purple-100 dark:bg-purple-900/30", border: "border-purple-500", text: "text-purple-700 dark:text-purple-300", hover: "hover:bg-purple-150 dark:hover:bg-purple-900/40" },
+  { bg: "bg-orange-100 dark:bg-orange-900/30", border: "border-orange-500", text: "text-orange-700 dark:text-orange-300", hover: "hover:bg-orange-150 dark:hover:bg-orange-900/40" },
+  { bg: "bg-pink-100 dark:bg-pink-900/30", border: "border-pink-500", text: "text-pink-700 dark:text-pink-300", hover: "hover:bg-pink-150 dark:hover:bg-pink-900/40" },
+  { bg: "bg-teal-100 dark:bg-teal-900/30", border: "border-teal-500", text: "text-teal-700 dark:text-teal-300", hover: "hover:bg-teal-150 dark:hover:bg-teal-900/40" },
+  { bg: "bg-indigo-100 dark:bg-indigo-900/30", border: "border-indigo-500", text: "text-indigo-700 dark:text-indigo-300", hover: "hover:bg-indigo-150 dark:hover:bg-indigo-900/40" },
+  { bg: "bg-red-100 dark:bg-red-900/30", border: "border-red-500", text: "text-red-700 dark:text-red-300", hover: "hover:bg-red-150 dark:hover:bg-red-900/40" },
+  { bg: "bg-yellow-100 dark:bg-yellow-900/30", border: "border-yellow-500", text: "text-yellow-700 dark:text-yellow-300", hover: "hover:bg-yellow-150 dark:hover:bg-yellow-900/40" },
+  { bg: "bg-cyan-100 dark:bg-cyan-900/30", border: "border-cyan-500", text: "text-cyan-700 dark:text-cyan-300", hover: "hover:bg-cyan-150 dark:hover:bg-cyan-900/40" },
+];
+
+function getCourseColor(courseCode: string, classType?: string): typeof COURSE_COLORS[0] {
+  // Special color for TA duties
+  if (classType === "TA_DUTY") {
+    return { bg: "bg-amber-100 dark:bg-amber-900/30", border: "border-amber-600", text: "text-amber-800 dark:text-amber-200", hover: "hover:bg-amber-150 dark:hover:bg-amber-900/40" };
+  }
+  const hash = courseCode.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  return COURSE_COLORS[hash % COURSE_COLORS.length];
+}
+
 function parseTimeRange12h(range: string): { startTime: string; endTime: string } | null {
   const normalized = range.replace(/\s+/g, " ").trim();
   const m = normalized.match(/^(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
@@ -195,6 +236,7 @@ const CLASS_TYPE_LABEL: Record<ClassType, string> = {
   TUTORIAL: "Tutorial",
   SEMINAR: "Seminar",
   WORKSHOP: "Workshop",
+  TA_DUTY: "TA Duty",
 };
 
 interface TimetableEntry {
@@ -399,6 +441,43 @@ export function TimetableView({ userId }: TimetableViewProps) {
     staleTime: 60_000 * 60,
   });
 
+  // Fetch pending entries for admin
+  const { data: pendingData } = useQuery<{ entries: TimetableEntry[] }>({
+    queryKey: ["timetable-pending"],
+    queryFn: async () => {
+      const res = await fetch("/api/timetable/admin");
+      if (!res.ok) {
+        if (res.status === 403) return { entries: [] }; // Not admin
+        throw new Error("Failed to fetch pending entries");
+      }
+      return res.json();
+    },
+    enabled: timetable?.context !== null,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async ({ entryId, action }: { entryId: string; action: "approve" | "reject" }) => {
+      const res = await fetch("/api/timetable/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entryId, action }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to process approval");
+      }
+      return res.json();
+    },
+    onSuccess: async (_, { action }) => {
+      await queryClient.invalidateQueries({ queryKey: ["timetable-pending"] });
+      await queryClient.invalidateQueries({ queryKey: ["timetable", userId] });
+      showToast("success", action === "approve" ? "Entry approved" : "Entry rejected");
+    },
+    onError: (error: any) => {
+      showToast("error", error?.message || "Failed to process approval");
+    },
+  });
+
   const saveEntryMutation = useMutation({
     mutationFn: async (args: { id?: string; payload: TimetableEntryPayload }) => {
       const { id, payload } = args;
@@ -522,6 +601,11 @@ export function TimetableView({ userId }: TimetableViewProps) {
     setModalOpen(true);
   };
 
+  const openAddTADuty = () => {
+    setEditingEntry(null);
+    setModalOpen(true);
+  };
+
   const openEdit = (entry: TimetableEntry) => {
     setEditingEntry(entry);
     setModalOpen(true);
@@ -576,6 +660,38 @@ export function TimetableView({ userId }: TimetableViewProps) {
 
   const canAutofill = canAdd && autofillCandidates.length > 0;
 
+  const handleExportCalendar = async () => {
+    if (entries.length === 0) {
+      showToast("warning", "No classes to export");
+      return;
+    }
+    
+    // Try to add directly to Google Calendar via API
+    try {
+      const response = await fetch("/api/calendar/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entries }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          showToast("success", "Events added to Google Calendar");
+          return;
+        }
+      }
+    } catch (error) {
+      console.log("Google Calendar API not available, falling back to .ics download");
+    }
+    
+    // Fallback to .ics download
+    const endDate = new Date("2026-05-01");
+    const filename = `timetable-${context?.term || "current"}-${context?.year || "semester"}.ics`;
+    downloadICS(entries, filename, endDate);
+    showToast("success", "Calendar file downloaded");
+  };
+
   if (isLoading) {
     return (
       <div className="animate-pulse space-y-4">
@@ -586,6 +702,62 @@ export function TimetableView({ userId }: TimetableViewProps) {
 
   return (
     <div className="space-y-6">
+      {/* Admin Pending Approvals */}
+      {pendingData && pendingData.entries.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+              Pending Approvals ({pendingData.entries.length})
+            </h3>
+          </div>
+          <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
+            Review and approve timetable changes submitted by students
+          </p>
+          <div className="space-y-2">
+            {pendingData.entries.map((entry) => (
+              <div
+                key={entry.id}
+                className="bg-white dark:bg-surface rounded-lg border border-amber-200 dark:border-amber-800 p-3 flex items-start justify-between gap-3"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">
+                    {formatCourseCode(entry.course?.code || "")} - {entry.classType}
+                  </p>
+                  <p className="text-xs text-foreground-secondary mt-0.5">
+                    {entry.dayOfWeek.charAt(0) + entry.dayOfWeek.slice(1).toLowerCase()} · {entry.startTime} - {entry.endTime}
+                    {entry.venue && ` · ${entry.venue}`}
+                  </p>
+                  <p className="text-xs text-foreground-muted mt-1">
+                    Created by: {entry.createdBy?.name || entry.createdBy?.email || "Unknown"} ({entry.createdBy?.enrollmentId || "N/A"})
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => approveMutation.mutate({ entryId: entry.id, action: "approve" })}
+                    disabled={approveMutation.isPending}
+                    className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors disabled:opacity-50"
+                    aria-label="Approve"
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => approveMutation.mutate({ entryId: entry.id, action: "reject" })}
+                    disabled={approveMutation.isPending}
+                    className="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                    aria-label="Reject"
+                  >
+                    <XCircle className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Controls */}
       <div className="flex flex-col sm:flex-row justify-between gap-3">
         <div className="min-w-0">
@@ -598,6 +770,14 @@ export function TimetableView({ userId }: TimetableViewProps) {
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <button
+            onClick={handleExportCalendar}
+            disabled={entries.length === 0}
+            className="hidden sm:flex px-4 py-2 min-h-[44px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center gap-2 transition-colors transition-transform active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Download className="w-4 h-4" />
+            Add to Google Calendar
+          </button>
           <button
             onClick={() => setView(view === "week" ? "list" : "week")}
             className="hidden md:flex px-4 py-2 min-h-[44px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center transition-colors transition-transform active:scale-[0.99]"
@@ -646,6 +826,20 @@ export function TimetableView({ userId }: TimetableViewProps) {
           >
             <Plus className="w-4 h-4" />
             Add Class
+          </button>
+          <button
+            onClick={() => {
+              if (!canAdd) {
+                showToast("warning", "Enroll in current semester courses first");
+                return;
+              }
+              openAddTADuty();
+            }}
+            disabled={!canAdd}
+            className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] border-2 border-primary/50 bg-primary/5 text-primary rounded-xl text-sm font-semibold hover:bg-primary/10 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add TA Duty
           </button>
         </div>
       </div>
@@ -727,17 +921,19 @@ function WeekView({
                       key={day}
                       className="px-2 py-2 text-sm border-l border-border"
                     >
-                      {entry && (
+                      {entry && (() => {
+                        const color = getCourseColor(entry.course?.code || "", entry.classType);
+                        return (
                         <div className="relative group">
                           <button
                             type="button"
                             onClick={() => onEdit(entry)}
-                            className="w-full text-left bg-primary/10 dark:bg-primary/20 border-l-4 border-primary rounded p-2 pr-6 hover:bg-primary/15 dark:hover:bg-primary/25 transition-colors"
+                            className={`w-full text-left ${color.bg} border-l-4 ${color.border} rounded p-2 pr-6 ${color.hover} transition-colors`}
                           >
-                            <p className="font-medium text-foreground text-xs truncate">
+                            <p className={`font-medium ${color.text} text-xs truncate`}>
                               {formatCourseCode(entry.course?.code || "")}
                             </p>
-                            <div className="flex items-center gap-1 text-xs text-foreground-secondary mt-1">
+                            <div className={`flex items-center gap-1 text-xs ${color.text} mt-1`}>
                               <MapPin className="w-3 h-3" />
                               <span className="truncate">
                                 {entry.venue || "TBA"}
@@ -754,7 +950,8 @@ function WeekView({
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
-                      )}
+                        );
+                      })()}
                     </td>
                   );
                 })}
@@ -799,21 +996,23 @@ function ListView({
         <div key={day} className="bg-surface dark:bg-surface rounded-lg border border-border p-4 sm:p-6">
           <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 capitalize">{day.charAt(0) + day.slice(1).toLowerCase()}</h3>
           <div className="space-y-2 sm:space-y-3">
-            {classes.map((entry) => (
+            {classes.map((entry) => {
+              const color = getCourseColor(entry.course?.code || "", entry.classType);
+              return (
               <div
                 key={entry.id}
-                className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-3 sm:p-4 bg-background-secondary dark:bg-background rounded-lg border border-border/60 hover:border-border transition-colors"
+                className={`flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 p-3 sm:p-4 ${color.bg} rounded-lg border-l-4 ${color.border} hover:opacity-90 transition-all`}
               >
                 <button
                   type="button"
                   onClick={() => onEdit(entry)}
                   className="flex-1 min-w-0 text-left group"
                 >
-                  <h4 className="font-medium text-foreground text-sm sm:text-base truncate group-hover:text-primary transition-colors">
+                  <h4 className={`font-medium ${color.text} text-sm sm:text-base truncate`}>
                     {entry.course?.name}
                   </h4>
-                  <p className="text-xs sm:text-sm text-foreground-secondary mt-0.5">{formatCourseCode(entry.course?.code || "")}</p>
-                  <div className="flex flex-wrap gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-foreground-secondary">
+                  <p className={`text-xs sm:text-sm ${color.text} mt-0.5 opacity-80`}>{formatCourseCode(entry.course?.code || "")}</p>
+                  <div className={`flex flex-wrap gap-2 sm:gap-4 mt-2 text-xs sm:text-sm ${color.text} opacity-90`}>
                     <div className="flex items-center gap-1">
                       <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                       {entry.startTime} - {entry.endTime}
@@ -823,11 +1022,11 @@ function ListView({
                       {entry.venue || "TBA"}
                     </div>
                     {entry.slot && (
-                      <span className="px-2 py-0.5 bg-background-secondary dark:bg-background border border-border/60 text-foreground-secondary rounded text-xs">
+                      <span className={`px-2 py-0.5 bg-white/50 dark:bg-black/20 border ${color.border} ${color.text} rounded text-xs`}>
                         Slot {entry.slot}
                       </span>
                     )}
-                    <span className="px-2 py-0.5 bg-primary/10 dark:bg-primary/20 text-primary rounded text-xs">
+                    <span className={`px-2 py-0.5 border ${color.border} ${color.text} rounded text-xs font-medium`}>
                       {CLASS_TYPE_LABEL[entry.classType] || entry.classType}
                     </span>
                   </div>
@@ -836,7 +1035,7 @@ function ListView({
                   <button
                     type="button"
                     onClick={() => onEdit(entry)}
-                    className="min-w-[44px] min-h-[44px] flex items-center justify-center text-foreground-secondary hover:text-foreground hover:bg-surface-hover rounded-lg transition-colors"
+                    className={`min-w-[44px] min-h-[44px] flex items-center justify-center ${color.text} hover:bg-white/50 dark:hover:bg-black/20 rounded-lg transition-colors`}
                     aria-label="Edit class"
                   >
                     <Edit className="w-4 h-4" />
@@ -851,7 +1050,8 @@ function ListView({
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
@@ -1207,7 +1407,7 @@ function TimetableEntryModal({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
         transition={{ duration: 0.18, ease: "easeOut" }}
-        className="relative w-full sm:max-w-xl bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden"
+        className="relative w-full sm:max-w-xl max-h-[80vh] bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col"
       >
             <div className="p-4 sm:p-6 border-b border-border flex items-start justify-between gap-4">
               <div className="min-w-0">
@@ -1233,7 +1433,7 @@ function TimetableEntryModal({
               ))}
             </datalist>
 
-            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5">
+            <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5 overflow-y-auto flex-1">
               {/* Course picker */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Course</label>

@@ -46,16 +46,16 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
 
   const variantStyles = {
     danger: {
-      button: "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800",
-      icon: "text-red-600 dark:text-red-400",
+      button: "dp-btn-danger",
+      icon: "bg-error",
     },
     warning: {
-      button: "bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-800",
-      icon: "text-yellow-600 dark:text-yellow-400",
+      button: "dp-btn-warning",
+      icon: "bg-warning",
     },
     info: {
-      button: "bg-primary hover:bg-primary-hover",
-      icon: "text-primary",
+      button: "dp-btn-primary",
+      icon: "bg-primary",
     },
   };
 
@@ -66,16 +66,22 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
     <ConfirmDialogContext.Provider value={{ confirm }}>
       {children}
       {isOpen && options && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-surface dark:bg-surface rounded-lg shadow-xl max-w-md w-full animate-scale-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="dp-card shadow-xl max-w-md w-full animate-scale-in">
             <div className="p-6">
               <div className="flex items-start justify-between mb-4">
-                <h3 className="text-lg font-semibold text-foreground">
-                  {options.title}
-                </h3>
+                <div className="flex items-start gap-3">
+                  <span
+                    className={`mt-2 h-2.5 w-2.5 rounded-full ${styles.icon}`}
+                    aria-hidden="true"
+                  />
+                  <h3 className="text-lg font-semibold text-foreground">
+                    {options.title}
+                  </h3>
+                </div>
                 <button
                   onClick={handleCancel}
-                  className="text-foreground-secondary hover:text-foreground"
+                  className="dp-icon-btn min-h-0 min-w-0 w-9 h-9 border-transparent bg-transparent hover:bg-surface-hover"
                   aria-label="Close dialog"
                 >
                   <X className="w-5 h-5" />
@@ -85,13 +91,13 @@ export function ConfirmDialogProvider({ children }: { children: ReactNode }) {
               <div className="flex items-center justify-end gap-3">
                 <button
                   onClick={handleCancel}
-                  className="px-4 py-2 border border-border rounded-md text-foreground-secondary hover:bg-background-secondary transition-colors"
+                  className="dp-btn dp-btn-outline"
                 >
                   {options.cancelText || "Cancel"}
                 </button>
                 <button
                   onClick={handleConfirm}
-                  className={`px-4 py-2 text-white rounded-md transition-colors ${styles.button}`}
+                  className={`dp-btn ${styles.button}`}
                 >
                   {options.confirmText || "Confirm"}
                 </button>

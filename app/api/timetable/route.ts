@@ -38,6 +38,9 @@ export async function GET(req: NextRequest) {
     const courses = currentEnrollments.map((e) => e.course);
     const courseIds = currentEnrollments.map((e) => e.courseId);
 
+    // Check if user is admin
+    const isAdmin = session.user.role === "ADMIN";
+
     const entries =
       courseIds.length === 0
         ? []
@@ -47,6 +50,8 @@ export async function GET(req: NextRequest) {
               year: context.year,
               term: context.term,
               courseId: { in: courseIds },
+              // Non-admin users only see approved entries
+              ...(isAdmin ? {} : { isApproved: true }),
             },
             include: {
               course: {
@@ -55,6 +60,13 @@ export async function GET(req: NextRequest) {
                   code: true,
                   name: true,
                   credits: true,
+                },
+              },
+              createdBy: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
                 },
               },
             },
@@ -154,6 +166,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "This class is already scheduled" }, { status: 409 });
     }
 
+    // Admins create approved entries, others need approval
+    const isAdmin = session.user.role === "ADMIN";
+
     const entry = await prisma.timetableEntry.create({
       data: {
         courseId,
@@ -172,6 +187,8 @@ export async function POST(req: NextRequest) {
         notes,
         createdById: session.user.id,
         updatedById: session.user.id,
+        isApproved: isAdmin,
+        ...(isAdmin && { approvedById: session.user.id, approvedAt: new Date() }),
       },
       include: {
         course: {
