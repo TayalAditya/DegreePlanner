@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle, ChevronDown, Clock, Target } from "lucide-react";
+import { ProgressChart } from "@/components/ProgressChart";
 import { formatCourseCode } from "@/lib/utils";
 
 interface Enrollment {
@@ -138,6 +139,8 @@ export default function ProgressPage() {
   const [programCredits, setProgramCredits] = useState<ProgramCredits>({});
   const [loading, setLoading] = useState(true);
   const [includeCurrentSemesterCredits, setIncludeCurrentSemesterCredits] = useState(false);
+  const [primaryProgramId, setPrimaryProgramId] = useState<string | null>(null);
+  const [progressApiData, setProgressApiData] = useState<any>(null);
 
   type CourseCategory = keyof typeof categoryLabels;
   type ICBasketUsed = { ic1: boolean; ic2: boolean };
@@ -292,6 +295,9 @@ export default function ProgressPage() {
             feCredits: primary.program.feCredits,
             mtpIstpCredits: primary.program.mtpIstpCredits,
           });
+          if (primary.program.id) {
+            setPrimaryProgramId(primary.program.id);
+          }
         }
       }
       if (userRes.ok) {
@@ -304,6 +310,14 @@ export default function ProgressPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!primaryProgramId) return;
+    fetch(`/api/progress?programId=${encodeURIComponent(primaryProgramId)}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setProgressApiData(data); })
+      .catch(() => {});
+  }, [primaryProgramId]);
 
   const calculateProgress = (): ProgressData => {
     const completedEnrollments = enrollments.filter(
@@ -633,6 +647,16 @@ export default function ProgressPage() {
           </div>
         )}
       </div>
+
+      {/* Progress Chart – pie + remaining breakdown with course lists */}
+      {primaryProgramId && (
+        <ProgressChart
+          progress={progressApiData}
+          isLoading={!progressApiData}
+          enrollments={enrollments as any}
+          userBranch={user?.branch}
+        />
+      )}
 
       {/* Courses by Semester */}
       <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
