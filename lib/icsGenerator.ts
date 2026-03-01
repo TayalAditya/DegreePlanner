@@ -2,18 +2,15 @@
  * Generate ICS (iCalendar) file content for timetable entries
  */
 
-import { DayOfWeek, Term, ClassType } from "@prisma/client";
+import { DayOfWeek } from "@prisma/client";
 
 interface TimetableEntry {
   id: string;
-  semester: number;
-  year: number;
-  term: Term;
-  dayOfWeek: DayOfWeek;
+  dayOfWeek: DayOfWeek | string;
   startTime: string;
   endTime: string;
   venue?: string | null;
-  classType: ClassType;
+  classType: string;
   instructor?: string | null;
   notes?: string | null;
   course?: {
@@ -23,7 +20,7 @@ interface TimetableEntry {
 }
 
 // Map day names to iCalendar day codes (0 = Sunday)
-const DAY_MAP: Record<DayOfWeek, string> = {
+const DAY_MAP: Record<string, string> = {
   SUNDAY: "SU",
   MONDAY: "MO",
   TUESDAY: "TU",
@@ -43,8 +40,10 @@ function formatICSDate(date: Date): string {
   return `${year}${month}${day}T${hours}${minutes}${seconds}`;
 }
 
-function getNextOccurrence(dayOfWeek: DayOfWeek, startDate: Date = new Date()): Date {
-  const dayIndex = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"].indexOf(dayOfWeek);
+function getNextOccurrence(dayOfWeek: DayOfWeek | string, startDate: Date = new Date()): Date {
+  const dayIndex = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"].indexOf(
+    typeof dayOfWeek === 'string' ? dayOfWeek : dayOfWeek
+  );
   const today = new Date(startDate);
   const currentDay = today.getDay();
   
@@ -114,8 +113,9 @@ export function generateICS(entries: TimetableEntry[], endDate: Date = new Date(
     lines.push(`DTSTAMP:${formatICSDate(new Date())}`);
     lines.push(`DTSTART;TZID=Asia/Kolkata:${formatICSDate(startDateTime)}`);
     lines.push(`DTEND;TZID=Asia/Kolkata:${formatICSDate(endDateTime)}`);
-    lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${DAY_MAP[entry.dayOfWeek]};UNTIL=${untilStr}`);
-    lines.push(`SUMMARY:${escapeICSText(courseCode)} - ${escapeICSText(entry.classType)}`);
+    const dayCode = DAY_MAP[String(entry.dayOfWeek)] || "MO";
+    lines.push(`RRULE:FREQ=WEEKLY;BYDAY=${dayCode};UNTIL=${untilStr}`);
+    lines.push(`SUMMARY:${escapeICSText(courseCode)} - ${escapeICSText(String(entry.classType))}`);
     
     // Build description
     const descParts: string[] = [];
