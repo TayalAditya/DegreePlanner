@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const pendingEntries = await prisma.timetableEntry.findMany({
       where: {
         isApproved: false,
-      },
+      } as any,
       include: {
         course: {
           select: {
@@ -44,7 +44,7 @@ export async function GET(req: NextRequest) {
             email: true,
           },
         },
-      },
+      } as any,
       orderBy: [
         { createdAt: "desc" },
       ],
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
           isApproved: true,
           approvedById: session.user.id,
           approvedAt: new Date(),
-        },
+        } as any,
         include: {
           course: {
             select: {
