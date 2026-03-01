@@ -145,7 +145,7 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
   GE: {
     code: 'GE',
     name: 'General Engineering',
-    fullName: 'B.Tech in General Engineering',
+    fullName: 'B.Tech in General Engineering (Without Specialization)',
     type: 'BTech',
     totalCredits: 160,
     icCredits: 60,
@@ -154,7 +154,52 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     feCredits: 22,
     mtpIstpCredits: 12,
     minCreditsForMTP: 90,
-    minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
+    minSemesterForMTP: 7,
+  },
+
+  'GE-MECH': {
+    code: 'GE-MECH',
+    name: 'General Engineering (Mechatronics)',
+    fullName: 'B.Tech in General Engineering – Mechatronics Specialization',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 36,
+    deCredits: 30,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 7,
+  },
+
+  'GE-COMM': {
+    code: 'GE-COMM',
+    name: 'General Engineering (Communication Technology)',
+    fullName: 'B.Tech in General Engineering – Communication Technology Specialization',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 36,
+    deCredits: 30,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 7,
+  },
+
+  'GE-ROBO': {
+    code: 'GE-ROBO',
+    name: 'General Engineering (AI & Robotics)',
+    fullName: 'B.Tech in General Engineering – AI & Robotics Specialization',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 36,
+    deCredits: 30,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 7,
   },
 
   ME: {
