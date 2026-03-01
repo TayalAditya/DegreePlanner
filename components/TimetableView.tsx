@@ -728,6 +728,18 @@ export function TimetableView({ userId }: TimetableViewProps) {
         return;
       }
 
+      if (response.ok && !data.success) {
+        // All events failed (200 but no events created)
+        const firstErr = data.failures?.[0]?.error || "Unknown error";
+        console.error("[Calendar Export] All events failed. First error:", firstErr, data.failures);
+        if (data.needs_reauth || /insufficient|scope|unauthorized|invalid_grant|token/i.test(firstErr)) {
+          showToast("error", "Google Calendar: No permission — please Sign Out and Sign In again to grant calendar access.");
+        } else {
+          showToast("error", `Calendar sync failed: ${firstErr}`);
+        }
+        return;
+      }
+
       if (!response.ok) {
         const errorMsg = data.error || `Server error ${response.status}`;
         console.error("[Calendar Export] API error:", errorMsg, data);
