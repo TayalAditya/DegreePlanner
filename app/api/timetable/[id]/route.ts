@@ -39,8 +39,13 @@ export async function GET(
       return NextResponse.json({ error: "This entry is not in your current semester" }, { status: 409 });
     }
 
-    // TA duties don't require enrollment check
-    if (entry.courseId) {
+    const isAdmin = session.user.role === "ADMIN";
+    const isOwnTaDuty =
+      entry.classType === ClassType.TA_DUTY &&
+      (isAdmin || entry.createdById === session.user.id);
+
+    // TA duties can be accessed by creator/admin without current enrollment check
+    if (!isOwnTaDuty && entry.courseId) {
       const isEnrolled = await prisma.courseEnrollment.findFirst({
         where: {
           userId: session.user.id,
@@ -93,8 +98,13 @@ export async function PATCH(
       return NextResponse.json({ error: "This entry is not in your current semester" }, { status: 409 });
     }
 
-    // TA duties don't require enrollment check
-    if (existing.courseId) {
+    const isAdmin = session.user.role === "ADMIN";
+    const isOwnTaDuty =
+      existing.classType === ClassType.TA_DUTY &&
+      (isAdmin || existing.createdById === session.user.id);
+
+    // TA duties can be edited by creator/admin without current enrollment check
+    if (!isOwnTaDuty && existing.courseId) {
       const isEnrolled = await prisma.courseEnrollment.findFirst({
         where: {
           userId: session.user.id,
@@ -160,7 +170,6 @@ export async function PATCH(
     }
 
     // If non-admin is editing, reset approval status
-    const isAdmin = session.user.role === "ADMIN";
     if (!isAdmin) {
       data.isApproved = false;
       data.approvedById = null;
@@ -219,8 +228,13 @@ export async function DELETE(
       return NextResponse.json({ error: "This entry is not in your current semester" }, { status: 409 });
     }
 
-    // TA duties don't require enrollment check
-    if (entry.courseId) {
+    const isAdmin = session.user.role === "ADMIN";
+    const isOwnTaDuty =
+      entry.classType === ClassType.TA_DUTY &&
+      (isAdmin || entry.createdById === session.user.id);
+
+    // TA duties can be deleted by creator/admin without current enrollment check
+    if (!isOwnTaDuty && entry.courseId) {
       const isEnrolled = await prisma.courseEnrollment.findFirst({
         where: {
           userId: session.user.id,

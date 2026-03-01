@@ -66,9 +66,6 @@ export async function POST(req: NextRequest) {
     const replaceExisting: boolean = Boolean(body?.replaceExisting);
     const entries: any[] = Array.isArray(body?.entries) ? body.entries : [];
 
-    if (!courseId) {
-      return NextResponse.json({ error: "Missing courseId" }, { status: 400 });
-    }
     if (entries.length === 0) {
       return NextResponse.json({ error: "No entries provided" }, { status: 400 });
     }
@@ -76,30 +73,47 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Too many entries" }, { status: 400 });
     }
 
-    const isEnrolled = await prisma.courseEnrollment.findFirst({
-      where: {
-        userId: session.user.id,
-        courseId,
-        semester: context.semester,
-        year: context.year,
-        term: context.term,
-        status: EnrollmentStatus.IN_PROGRESS,
-      },
-      select: { id: true },
-    });
-
-    if (!isEnrolled) {
-      return NextResponse.json(
-        { error: "You can only edit schedules for courses you are enrolled in" },
-        { status: 403 }
-      );
-    }
-
     const normalized: BulkEntryInput[] = [];
     for (const e of entries) {
       const res = validateEntry(e);
       if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
       normalized.push(res.value);
+    }
+
+    const allTaDuty = normalized.every((e) => e.classType === ClassType.TA_DUTY);
+    if (!courseId && !allTaDuty) {
+      return NextResponse.json({ error: "courseId is required unless all entries are TA_DUTY" }, { status: 400 });
+    }
+
+    if (courseId) {
+      const isEnrolled = await prisma.courseEnrollment.findFirst({
+        where: allTaDuty
+          ? {
+              userId: session.user.id,
+              courseId,
+              status: { in: [EnrollmentStatus.IN_PROGRESS, EnrollmentStatus.COMPLETED] },
+            }
+          : {
+              userId: session.user.id,
+              courseId,
+              semester: context.semester,
+              year: context.year,
+              term: context.term,
+              status: EnrollmentStatus.IN_PROGRESS,
+            },
+        select: { id: true },
+      });
+
+      if (!isEnrolled) {
+        return NextResponse.json(
+          {
+            error: allTaDuty
+              ? "For TA duties, select a course you are currently taking or have completed"
+              : "You can only edit schedules for courses you are enrolled in",
+          },
+          { status: 403 }
+        );
+      }
     }
 
     // Basic dedupe within payload
@@ -113,7 +127,7 @@ export async function POST(req: NextRequest) {
     }
 
     const created = await prisma.$transaction(async (tx) => {
-      if (replaceExisting) {
+      if (replaceExisting && courseId) {
         await tx.timetableEntry.deleteMany({
           where: {
             courseId,
@@ -136,6 +150,7 @@ export async function POST(req: NextRequest) {
             startTime: e.startTime,
             endTime: e.endTime,
             classType: e.classType,
+            ...(courseId ? {} : { createdById: session.user.id }),
           },
           select: { id: true },
         });
@@ -146,7 +161,7 @@ export async function POST(req: NextRequest) {
 
         const entry = await tx.timetableEntry.create({
           data: {
-            courseId,
+            courseId: courseId || undefined,
             semester: context.semester,
             year: context.year,
             term: context.term,

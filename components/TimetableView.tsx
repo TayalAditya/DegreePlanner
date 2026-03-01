@@ -431,6 +431,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
   const [view, setView] = useState<"week" | "list">("list");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
+  const [addingTaDuty, setAddingTaDuty] = useState(false);
 
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -561,6 +562,9 @@ export function TimetableView({ userId }: TimetableViewProps) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["timetable", userId] });
       showToast("success", "Class deleted");
+      setModalOpen(false);
+      setEditingEntry(null);
+      setAddingTaDuty(false);
     },
     onError: (error: any) => {
       showToast("error", error?.message || "Failed to delete class");
@@ -621,16 +625,19 @@ export function TimetableView({ userId }: TimetableViewProps) {
   });
 
   const openAdd = () => {
+    setAddingTaDuty(false);
     setEditingEntry(null);
     setModalOpen(true);
   };
 
   const openAddTADuty = () => {
+    setAddingTaDuty(true);
     setEditingEntry(null);
     setModalOpen(true);
   };
 
   const openEdit = (entry: TimetableEntry) => {
+    setAddingTaDuty(false);
     setEditingEntry(entry);
     setModalOpen(true);
   };
@@ -649,7 +656,8 @@ export function TimetableView({ userId }: TimetableViewProps) {
   const context = timetable?.context ?? null;
   const courses = useMemo(() => timetable?.courses ?? [], [timetable?.courses]);
   const entries = useMemo<TimetableEntry[]>(() => timetable?.entries ?? [], [timetable?.entries]);
-  const canAdd = courses.length > 0 && Boolean(context);
+  const canAddClass = courses.length > 0 && Boolean(context);
+  const canAddTaDuty = Boolean(context);
 
   const scheduledCourseIds = useMemo(() => new Set(entries.map((e) => e.courseId)), [entries]);
 
@@ -682,7 +690,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
     return next;
   }, [autofillData, courses, scheduledCourseIds]);
 
-  const canAutofill = canAdd && autofillCandidates.length > 0;
+  const canAutofill = canAddClass && autofillCandidates.length > 0;
 
   const handleExportCalendar = async () => {
     if (entries.length === 0) {
@@ -811,7 +819,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
           <button
             onClick={async () => {
               if (!canAutofill) {
-                if (!canAdd) showToast("warning", "Enroll in current semester courses to build the shared timetable");
+                if (!canAddClass) showToast("warning", "Enroll in current semester courses to build the shared timetable");
                 else showToast("info", "No missing schedules found to auto-fill");
                 return;
               }
@@ -839,13 +847,13 @@ export function TimetableView({ userId }: TimetableViewProps) {
           </button>
           <button
             onClick={() => {
-              if (!canAdd) {
+              if (!canAddClass) {
                 showToast("warning", "Enroll in current semester courses to build the shared timetable");
                 return;
               }
               openAdd();
             }}
-            disabled={!canAdd}
+            disabled={!canAddClass}
             className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -853,13 +861,13 @@ export function TimetableView({ userId }: TimetableViewProps) {
           </button>
           <button
             onClick={() => {
-              if (!canAdd) {
-                showToast("warning", "Enroll in current semester courses first");
+              if (!canAddTaDuty) {
+                showToast("warning", "Current semester context not available");
                 return;
               }
               openAddTADuty();
             }}
-            disabled={!canAdd}
+            disabled={!canAddTaDuty}
             className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] border-2 border-primary/50 bg-primary/5 text-primary rounded-xl text-sm font-semibold hover:bg-primary/10 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -886,9 +894,13 @@ export function TimetableView({ userId }: TimetableViewProps) {
             onClose={() => {
               setModalOpen(false);
               setEditingEntry(null);
+              setAddingTaDuty(false);
             }}
             onSave={(payload) => saveEntryMutation.mutate({ id: editingEntry?.id, payload })}
             onSaveBulk={(payload) => bulkCreateMutation.mutate(payload)}
+            onDeleteEntry={handleDelete}
+            deleting={deleteEntryMutation.isPending}
+            defaultClassType={addingTaDuty ? "TA_DUTY" : undefined}
           />
         )}
       </AnimatePresence>
@@ -920,19 +932,21 @@ function WeekView({
     return Math.max(1, Math.ceil(durationMin / 10));
   };
 
-  // Track which cells have already been rendered (to skip duplicate entries)
-  const renderedCells = useMemo(() => {
-    const set = new Set<string>();
+  // Track covered cells for each day (excluding start row, which renders the entry)
+  const coveredCellsByDay = useMemo(() => {
+    const map: Record<string, Set<number>> = Object.fromEntries(DAYS.map((d) => [d, new Set<number>()]));
+
     for (const entry of timetable) {
+      const startIdx = START_TIMES.indexOf(entry.startTime);
+      if (startIdx < 0) continue;
+
       const rowSpan = calculateRowSpan(entry.startTime, entry.endTime);
-      for (let i = 0; i < rowSpan; i++) {
-        const timeIdx = START_TIMES.indexOf(entry.startTime) + i;
-        if (timeIdx >= 0 && timeIdx < START_TIMES.length) {
-          set.add(`${entry.dayOfWeek}-${timeIdx}`);
-        }
+      for (let i = 1; i < rowSpan; i++) {
+        map[entry.dayOfWeek]?.add(startIdx + i);
       }
     }
-    return set;
+
+    return map;
   }, [timetable]);
 
   // Get entry for a specific day and time
@@ -961,15 +975,16 @@ function WeekView({
           </thead>
           <tbody className="bg-surface divide-y divide-border">
             {START_TIMES.map((time, timeIdx) => {
-              const isSkipped = Array.from(renderedCells).some(key => key.endsWith(`-${timeIdx}`) && !key.endsWith(`${time.split(':')[0]}:${time.split(':')[1]}`));
-              if (isSkipped) return null;
-
               return (
                 <tr key={time} className="divide-x divide-border">
                   <td className="px-3 py-2 text-xs text-foreground-secondary font-medium w-20 border-r border-border bg-background-secondary/50 dark:bg-background/50">
                     {time}
                   </td>
                   {DAYS.map((day) => {
+                    if (coveredCellsByDay[day]?.has(timeIdx)) {
+                      return null;
+                    }
+
                     const entry = getEntry(day, time);
                     
                     if (!entry) {
@@ -1136,6 +1151,9 @@ function TimetableEntryModal({
   onClose,
   onSave,
   onSaveBulk,
+  onDeleteEntry,
+  deleting,
+  defaultClassType,
 }: {
   initial: TimetableEntry | null;
   context: TimetableResponse["context"] | null;
@@ -1145,6 +1163,9 @@ function TimetableEntryModal({
   onClose: () => void;
   onSave: (payload: TimetableEntryPayload) => void;
   onSaveBulk: (payload: BulkCreatePayload) => void;
+  onDeleteEntry: (entry: TimetableEntry) => void;
+  deleting: boolean;
+  defaultClassType?: ClassType;
 }) {
   const reducedMotion = useReducedMotion();
   const { showToast } = useToast();
@@ -1181,7 +1202,8 @@ function TimetableEntryModal({
   const [endTime, setEndTime] = useState(safeInitialEndTime);
   const [slot, setSlot] = useState(initial?.slot ?? "");
   const [venue, setVenue] = useState(initial?.venue ?? "");
-  const [classType, setClassType] = useState<ClassType>(initial?.classType ?? "LECTURE");
+  const defaultDraftClassType: ClassType = defaultClassType ?? initial?.classType ?? "LECTURE";
+  const [classType, setClassType] = useState<ClassType>(defaultDraftClassType);
 
   // Shared fields
   const [instructor, setInstructor] = useState(initial?.instructor ?? "");
@@ -1267,7 +1289,7 @@ function TimetableEntryModal({
         endTime: DEFAULT_END_TIME,
         slot: normalizedSlot || undefined,
         venue: defaultVenue || undefined,
-        classType: "LECTURE",
+        classType: defaultDraftClassType,
       });
       return { drafts: next, warnings };
     }
@@ -1283,7 +1305,7 @@ function TimetableEntryModal({
             endTime: s.endTime,
             slot: token,
             venue: defaultVenue || undefined,
-            classType: "LECTURE",
+            classType: defaultDraftClassType,
           });
         }
         continue;
@@ -1354,7 +1376,7 @@ function TimetableEntryModal({
           endTime: DEFAULT_END_TIME,
           slot: effectiveSlotInput.trim() || undefined,
           venue: suggestedVenueFor(effectiveKind) || undefined,
-          classType: "LECTURE",
+          classType: defaultDraftClassType,
         },
       ];
     });
@@ -1886,6 +1908,16 @@ function TimetableEntryModal({
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                {initial && (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteEntry(initial)}
+                    disabled={deleting}
+                    className="px-4 py-2.5 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {deleting ? "Deleting..." : "Delete class"}
+                  </button>
+                )}
                 {initial?.googleEventId && (
                   <button
                     type="button"

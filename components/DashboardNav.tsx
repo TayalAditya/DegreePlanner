@@ -89,15 +89,13 @@ export function DashboardNav({ user }: DashboardNavProps) {
             </span>
           </Link>
 
-          {/* Center: Theme controls (desktop only) */}
-          <div className="hidden lg:flex items-center gap-4 flex-1 px-4 justify-center">
-            <ThemeToggle variant="mode" />
-            <div className="text-foreground-secondary/30 text-lg">|</div>
-            <ThemeToggle variant="palette" className="bg-transparent border-0 p-0 shadow-none" />
-          </div>
+          <div className="hidden lg:block flex-1" />
 
           {/* Right: Notification & Menu Toggle */}
           <div className="flex items-center space-x-2">
+            <div className="hidden lg:block">
+              <ThemeToggle variant="mode" />
+            </div>
             <NotificationBell />
             {/* Mobile: Menu toggle */}
             <button
@@ -222,7 +220,15 @@ export function DashboardNav({ user }: DashboardNavProps) {
         </div>
 
         <LayoutGroup id="dashboard-nav-desktop">
-          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1 scrollbar-hide">
+          <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-hide">
+            <div className="px-1">
+              <p className="text-[11px] font-semibold text-foreground-secondary uppercase tracking-wider px-2 mb-2">
+                Palette
+              </p>
+              <ThemeToggle variant="palette" className="bg-transparent border-0 p-0 shadow-none" />
+            </div>
+
+            <div className="space-y-1">
             {allNavigation.map((item) => {
               const Icon = item.icon;
               const isActive = isActiveRoute(item.href);
@@ -250,6 +256,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
                 </Link>
               );
             })}
+            </div>
           </div>
         </LayoutGroup>
 
