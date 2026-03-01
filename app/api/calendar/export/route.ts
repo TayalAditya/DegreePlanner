@@ -160,17 +160,26 @@ export async function POST(request: NextRequest) {
           createdEvents.push({ entryId: entry.id, eventId });
         }
       } catch (error: any) {
-        const errMsg = error?.message || error?.errors?.[0]?.message || "Unknown error";
-        console.error("[Calendar] Failed to create event for entry", entry.id, ":", errMsg);
+        const errMsg = error?.response?.data?.error_description
+          || error?.response?.data?.error
+          || error?.message
+          || error?.errors?.[0]?.message
+          || "Unknown error";
+        console.error("[Calendar] Failed entry", entry.id, "- status:", error?.response?.status, "error:", errMsg);
         failedEvents.push({ entryId: entry.id, error: errMsg });
       }
     }
+
+    const firstErrMsg = failedEvents[0]?.error || "";
+    const needsReauth = createdEvents.length === 0 && failedEvents.length > 0 &&
+      /insufficient|scope|unauthorized|invalid_grant|token|forbidden|401|403/i.test(firstErrMsg);
 
     return NextResponse.json({
       success: createdEvents.length > 0,
       message: `${createdEvents.length} events added to Google Calendar${failedEvents.length > 0 ? `, ${failedEvents.length} failed` : ""}`,
       events: createdEvents,
       failures: failedEvents,
+      needs_reauth: needsReauth,
     });
   } catch (error: any) {
     console.error("Calendar export error:", error);
