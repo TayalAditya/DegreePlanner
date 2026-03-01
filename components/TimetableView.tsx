@@ -35,6 +35,158 @@ const DEFAULT_END_TIME = END_TIMES.includes("11:00") ? "11:00" : END_TIMES[0];
 type DayOfWeek = (typeof DAYS)[number];
 type Term = "FALL" | "SPRING" | "SUMMER";
 type ClassType = "LECTURE" | "LAB" | "TUTORIAL" | "SEMINAR" | "WORKSHOP";
+type TimetableKind = "NON_IC" | "IC";
+
+type SlotSession = {
+  dayOfWeek: DayOfWeek;
+  startTime: string;
+  endTime: string;
+};
+
+type MeetingDraft = {
+  id: string;
+  dayOfWeek: DayOfWeek;
+  startTime: string;
+  endTime: string;
+  slot?: string;
+  venue?: string;
+  classType: ClassType;
+};
+
+const NON_IC_SLOTS: Record<string, SlotSession[]> = {
+  A: [
+    { dayOfWeek: "MONDAY", startTime: "08:00", endTime: "08:50" },
+    { dayOfWeek: "TUESDAY", startTime: "11:00", endTime: "11:50" },
+    { dayOfWeek: "THURSDAY", startTime: "09:00", endTime: "09:50" },
+  ],
+  B: [
+    { dayOfWeek: "MONDAY", startTime: "09:00", endTime: "09:50" },
+    { dayOfWeek: "TUESDAY", startTime: "12:00", endTime: "12:50" },
+    { dayOfWeek: "THURSDAY", startTime: "10:00", endTime: "10:50" },
+  ],
+  C: [
+    { dayOfWeek: "MONDAY", startTime: "10:00", endTime: "10:50" },
+    { dayOfWeek: "WEDNESDAY", startTime: "08:00", endTime: "08:50" },
+    { dayOfWeek: "THURSDAY", startTime: "11:00", endTime: "11:50" },
+  ],
+  D: [
+    { dayOfWeek: "MONDAY", startTime: "11:00", endTime: "11:50" },
+    { dayOfWeek: "WEDNESDAY", startTime: "09:00", endTime: "09:50" },
+    { dayOfWeek: "THURSDAY", startTime: "12:00", endTime: "12:50" },
+  ],
+  E: [
+    { dayOfWeek: "MONDAY", startTime: "12:00", endTime: "12:50" },
+    { dayOfWeek: "WEDNESDAY", startTime: "11:00", endTime: "11:50" },
+    { dayOfWeek: "FRIDAY", startTime: "09:00", endTime: "09:50" },
+  ],
+  F: [
+    { dayOfWeek: "TUESDAY", startTime: "08:00", endTime: "08:50" },
+    { dayOfWeek: "WEDNESDAY", startTime: "10:00", endTime: "10:50" },
+    { dayOfWeek: "FRIDAY", startTime: "11:00", endTime: "11:50" },
+  ],
+  G: [
+    { dayOfWeek: "TUESDAY", startTime: "09:00", endTime: "09:50" },
+    { dayOfWeek: "THURSDAY", startTime: "08:00", endTime: "08:50" },
+    { dayOfWeek: "FRIDAY", startTime: "10:00", endTime: "10:50" },
+  ],
+  H: [
+    { dayOfWeek: "TUESDAY", startTime: "10:00", endTime: "10:50" },
+    { dayOfWeek: "WEDNESDAY", startTime: "12:00", endTime: "12:50" },
+    { dayOfWeek: "FRIDAY", startTime: "08:00", endTime: "08:50" },
+  ],
+};
+
+const IC_SLOTS: Record<string, SlotSession[]> = {
+  A: [
+    { dayOfWeek: "MONDAY", startTime: "09:00", endTime: "09:50" },
+    { dayOfWeek: "WEDNESDAY", startTime: "09:00", endTime: "09:50" },
+    { dayOfWeek: "FRIDAY", startTime: "09:00", endTime: "09:50" },
+  ],
+  B: [
+    { dayOfWeek: "MONDAY", startTime: "11:00", endTime: "11:50" },
+    { dayOfWeek: "WEDNESDAY", startTime: "11:00", endTime: "11:50" },
+    { dayOfWeek: "FRIDAY", startTime: "11:00", endTime: "11:50" },
+  ],
+  C: [
+    { dayOfWeek: "TUESDAY", startTime: "10:00", endTime: "10:50" },
+    { dayOfWeek: "THURSDAY", startTime: "10:00", endTime: "10:50" },
+  ],
+  D: [
+    { dayOfWeek: "MONDAY", startTime: "10:00", endTime: "10:50" },
+    { dayOfWeek: "TUESDAY", startTime: "09:00", endTime: "09:50" },
+    { dayOfWeek: "WEDNESDAY", startTime: "10:00", endTime: "10:50" },
+    { dayOfWeek: "FRIDAY", startTime: "10:00", endTime: "10:50" },
+  ],
+  E: [
+    { dayOfWeek: "TUESDAY", startTime: "11:00", endTime: "11:50" },
+    { dayOfWeek: "THURSDAY", startTime: "11:00", endTime: "11:50" },
+  ],
+  F: [
+    { dayOfWeek: "MONDAY", startTime: "12:00", endTime: "12:50" },
+    { dayOfWeek: "WEDNESDAY", startTime: "12:00", endTime: "12:50" },
+    { dayOfWeek: "FRIDAY", startTime: "12:00", endTime: "12:50" },
+  ],
+  G: [
+    { dayOfWeek: "TUESDAY", startTime: "12:00", endTime: "12:50" },
+    { dayOfWeek: "THURSDAY", startTime: "12:00", endTime: "12:50" },
+  ],
+  H: [{ dayOfWeek: "THURSDAY", startTime: "09:00", endTime: "09:50" }],
+};
+
+const LAB_SLOTS: Record<string, SlotSession[]> = {
+  L1: [{ dayOfWeek: "MONDAY", startTime: "14:00", endTime: "17:00" }],
+  L2: [{ dayOfWeek: "TUESDAY", startTime: "14:00", endTime: "17:00" }],
+  L3: [{ dayOfWeek: "WEDNESDAY", startTime: "14:00", endTime: "17:00" }],
+  L4: [{ dayOfWeek: "THURSDAY", startTime: "14:00", endTime: "17:00" }],
+  L5: [{ dayOfWeek: "FRIDAY", startTime: "14:00", endTime: "17:00" }],
+};
+
+const makeId = () => {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+function parseTimeRange12h(range: string): { startTime: string; endTime: string } | null {
+  const normalized = range.replace(/\s+/g, " ").trim();
+  const m = normalized.match(/^(\d{1,2})(?::(\d{2}))?\s*-\s*(\d{1,2})(?::(\d{2}))?\s*(AM|PM)$/i);
+  if (!m) return null;
+
+  const sh = Number(m[1]);
+  const sm = Number(m[2] || "0");
+  const eh = Number(m[3]);
+  const em = Number(m[4] || "0");
+  const period = m[5].toUpperCase() as "AM" | "PM";
+
+  const to24 = (h: number) => {
+    const base = period === "PM" ? (h % 12) + 12 : h % 12;
+    return base;
+  };
+
+  const startH = to24(sh);
+  const endH = to24(eh);
+  const startTime = `${pad2(startH)}:${pad2(sm)}`;
+  const endTime = `${pad2(endH)}:${pad2(em)}`;
+  return { startTime, endTime };
+}
+
+function extractSlotTokens(slotRaw: string): string[] {
+  const text = slotRaw.toUpperCase();
+  const tokens: string[] = [];
+
+  for (const match of text.matchAll(/\b(L[1-5]|[A-H])\b/g)) {
+    tokens.push(match[1]);
+  }
+
+  // De-dupe while keeping order.
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const t of tokens) {
+    if (seen.has(t)) continue;
+    seen.add(t);
+    unique.push(t);
+  }
+  return unique;
+}
 
 const CLASS_TYPE_LABEL: Record<ClassType, string> = {
   LECTURE: "Lecture",
@@ -85,6 +237,12 @@ type TimetableEntryPayload = {
   classType?: ClassType;
   instructor?: string;
   notes?: string;
+};
+
+type BulkCreatePayload = {
+  courseId: string;
+  replaceExisting?: boolean;
+  entries: Array<Omit<TimetableEntryPayload, "courseId">>;
 };
 
 type TimetableResponse = {
@@ -138,6 +296,30 @@ export function TimetableView({ userId }: TimetableViewProps) {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["timetable", userId] });
       showToast("success", editingEntry ? "Class updated" : "Class added");
+      setModalOpen(false);
+      setEditingEntry(null);
+    },
+    onError: (error: any) => {
+      showToast("error", error?.message || "Something went wrong");
+    },
+  });
+
+  const bulkCreateMutation = useMutation({
+    mutationFn: async (payload: BulkCreatePayload) => {
+      const res = await fetch("/api/timetable/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to add classes");
+      }
+      return data as { entries: TimetableEntry[] };
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["timetable", userId] });
+      showToast("success", "Classes added");
       setModalOpen(false);
       setEditingEntry(null);
     },
@@ -246,12 +428,14 @@ export function TimetableView({ userId }: TimetableViewProps) {
             initial={editingEntry}
             context={context || null}
             courses={courses}
-            saving={saveEntryMutation.isPending}
+            existingEntries={entries}
+            saving={saveEntryMutation.isPending || bulkCreateMutation.isPending}
             onClose={() => {
               setModalOpen(false);
               setEditingEntry(null);
             }}
             onSave={(payload) => saveEntryMutation.mutate({ id: editingEntry?.id, payload })}
+            onSaveBulk={(payload) => bulkCreateMutation.mutate(payload)}
           />
         )}
       </AnimatePresence>
@@ -444,19 +628,47 @@ function TimetableEntryModal({
   initial,
   context,
   courses,
+  existingEntries,
   saving,
   onClose,
   onSave,
+  onSaveBulk,
 }: {
   initial: TimetableEntry | null;
   context: TimetableResponse["context"] | null;
   courses: CourseOption[];
+  existingEntries: TimetableEntry[];
   saving: boolean;
   onClose: () => void;
   onSave: (payload: TimetableEntryPayload) => void;
+  onSaveBulk: (payload: BulkCreatePayload) => void;
 }) {
   const reducedMotion = useReducedMotion();
   const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
+
+  const isEditing = Boolean(initial);
+
+  const { data: autofillData } = useQuery<{
+    version: string;
+    venues: string[];
+    defaults: {
+      nonIc: Record<string, { slot?: string; classroom?: string }>;
+      ic: Record<string, { slot?: string; classroom?: string }>;
+    };
+    pcLab: Record<string, { kind: "IC" | "NON_IC"; slot: string; venue: string; time: string }>;
+  }>({
+    queryKey: ["timetable-autofill"],
+    queryFn: async () => {
+      const res = await fetch("/api/timetable/autofill");
+      if (!res.ok) throw new Error("Failed to load timetable data");
+      return res.json();
+    },
+    staleTime: 60_000 * 60,
+  });
+
+  const venueOptions = autofillData?.venues ?? [];
+  const venueListId = "timetable-venue-options";
 
   const initialCourseId = initial?.courseId ?? courses[0]?.id ?? "";
   const initialStartTime = initial?.startTime ?? DEFAULT_START_TIME;
@@ -467,18 +679,191 @@ function TimetableEntryModal({
       : END_TIMES.find((t) => t > initialStartTime) || DEFAULT_END_TIME;
 
   const [courseId, setCourseId] = useState<string>(initialCourseId);
+
+  // Edit mode (single class)
   const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek>(initial?.dayOfWeek ?? "MONDAY");
   const [startTime, setStartTime] = useState(initialStartTime);
   const [endTime, setEndTime] = useState(safeInitialEndTime);
   const [slot, setSlot] = useState(initial?.slot ?? "");
   const [venue, setVenue] = useState(initial?.venue ?? "");
   const [classType, setClassType] = useState<ClassType>(initial?.classType ?? "LECTURE");
+
+  // Shared fields
   const [instructor, setInstructor] = useState(initial?.instructor ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
 
-  const selectedCourse = useMemo(() => {
-    return courses.find((c) => c.id === courseId) || null;
-  }, [courses, courseId]);
+  // Add mode (bulk)
+  const [timetableKind, setTimetableKind] = useState<TimetableKind>("NON_IC");
+  const [kindTouched, setKindTouched] = useState(false);
+  const [slotInput, setSlotInput] = useState("");
+  const [slotTouched, setSlotTouched] = useState(false);
+  const initialExistingCount = initialCourseId
+    ? existingEntries.filter((e) => e.courseId === initialCourseId).length
+    : 0;
+  const [replaceExisting, setReplaceExisting] = useState(initialExistingCount > 0);
+  const [drafts, setDrafts] = useState<MeetingDraft[]>([]);
+  const [draftsTouched, setDraftsTouched] = useState(false);
+
+  const selectedCourse = useMemo(() => courses.find((c) => c.id === courseId) || null, [courses, courseId]);
+  const courseCode = selectedCourse?.code ?? initial?.course?.code ?? "";
+
+  const nonIcDefault = courseCode ? autofillData?.defaults?.nonIc?.[courseCode] : undefined;
+  const icDefault = courseCode ? autofillData?.defaults?.ic?.[courseCode] : undefined;
+  const pcLab = courseCode ? autofillData?.pcLab?.[courseCode] : undefined;
+
+  const existingCount = useMemo(() => {
+    if (!courseId) return 0;
+    return existingEntries.filter((e) => e.courseId === courseId).length;
+  }, [existingEntries, courseId]);
+
+  const suggestedKind: TimetableKind = useMemo(() => {
+    const nonIcSlot = nonIcDefault?.slot;
+    if (typeof nonIcSlot === "string" && nonIcSlot.toLowerCase().includes("ic courses time table")) {
+      return "IC";
+    }
+    if (courseCode.startsWith("IC-")) return "IC";
+    return "NON_IC";
+  }, [courseCode, nonIcDefault?.slot]);
+
+  const effectiveKind: TimetableKind = kindTouched ? timetableKind : suggestedKind;
+
+  const suggestedSlotFor = (kind: TimetableKind): string => {
+    if (kind === "IC") return icDefault?.slot?.trim() || "";
+    const nonIcSlot = nonIcDefault?.slot?.trim() || "";
+    if (nonIcSlot.toLowerCase().includes("ic courses time table")) {
+      return icDefault?.slot?.trim() || "";
+    }
+    return nonIcSlot;
+  };
+
+  const suggestedVenueFor = (kind: TimetableKind): string => {
+    return (kind === "IC" ? icDefault?.classroom : nonIcDefault?.classroom) || "";
+  };
+
+  const effectiveSlotInput = slotTouched ? slotInput : suggestedSlotFor(effectiveKind);
+
+  const buildDrafts = (slotRaw: string, kind: TimetableKind) => {
+    const normalizedSlot = slotRaw.trim();
+    const warnings: string[] = [];
+
+    const defaultVenue = suggestedVenueFor(kind);
+    const tokens = extractSlotTokens(normalizedSlot);
+
+    if (!normalizedSlot) {
+      return { drafts: [] as MeetingDraft[], warnings };
+    }
+
+    const textUpper = normalizedSlot.toUpperCase();
+    if (textUpper.includes("LAB SLOT") && !tokens.some((t) => t.startsWith("L"))) {
+      warnings.push("This slot includes a lab component — add an L1–L5 slot to include the lab.");
+    }
+
+    const pcKind = kind === "IC" ? "IC" : "NON_IC";
+    const pcLabSlots = new Set((pcLab?.slot || "").toUpperCase().match(/L[1-5]/g) || []);
+    const pcLabApplies = pcLab?.kind === pcKind;
+
+    const next: MeetingDraft[] = [];
+    if (tokens.length === 0) {
+      warnings.push("Slot not recognized — add timings manually.");
+      next.push({
+        id: `manual|${normalizedSlot.toUpperCase()}`,
+        dayOfWeek: "MONDAY",
+        startTime: DEFAULT_START_TIME,
+        endTime: DEFAULT_END_TIME,
+        slot: normalizedSlot || undefined,
+        venue: defaultVenue || undefined,
+        classType: "LECTURE",
+      });
+      return { drafts: next, warnings };
+    }
+
+    for (const token of tokens) {
+      if (/^[A-H]$/.test(token)) {
+        const sessions = kind === "IC" ? IC_SLOTS[token] : NON_IC_SLOTS[token];
+        for (const s of sessions || []) {
+          next.push({
+            id: `slot|${token}|${s.dayOfWeek}|${s.startTime}|${s.endTime}|LECTURE`,
+            dayOfWeek: s.dayOfWeek,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            slot: token,
+            venue: defaultVenue || undefined,
+            classType: "LECTURE",
+          });
+        }
+        continue;
+      }
+
+      if (/^L[1-5]$/.test(token)) {
+        const base = LAB_SLOTS[token] || [];
+        const pcMatches = pcLabApplies && (pcLabSlots.size === 0 || pcLabSlots.has(token));
+        const pcRange = pcMatches ? parseTimeRange12h(pcLab?.time || "") : null;
+        const labVenue = pcMatches ? pcLab?.venue : defaultVenue;
+
+        for (const s of base) {
+          const start = pcRange?.startTime || s.startTime;
+          const end = pcRange?.endTime || s.endTime;
+          next.push({
+            id: `slot|${token}|${s.dayOfWeek}|${start}|${end}|LAB`,
+            dayOfWeek: s.dayOfWeek,
+            startTime: start,
+            endTime: end,
+            slot: token,
+            venue: labVenue || undefined,
+            classType: "LAB",
+          });
+        }
+        continue;
+      }
+    }
+
+    if (pcLabApplies && !tokens.some((t) => t.startsWith("L"))) {
+      warnings.push("PC lab allocation found — add an L1–L5 slot to include the lab timing/venue.");
+    }
+
+    const dayOrder = (d: DayOfWeek) => DAYS.indexOf(d);
+    next.sort((a, b) => dayOrder(a.dayOfWeek) - dayOrder(b.dayOfWeek) || a.startTime.localeCompare(b.startTime));
+
+    return { drafts: next, warnings };
+  };
+
+  const slotResult = buildDrafts(effectiveSlotInput, effectiveKind);
+  const activeDrafts = draftsTouched ? drafts : slotResult.drafts;
+
+  const updateDraft = (id: string, patch: Partial<MeetingDraft>) => {
+    setDraftsTouched(true);
+    setDrafts((prev) => {
+      const base = draftsTouched ? prev : slotResult.drafts;
+      return base.map((d) => (d.id === id ? { ...d, ...patch } : d));
+    });
+  };
+
+  const removeDraft = (id: string) => {
+    setDraftsTouched(true);
+    setDrafts((prev) => {
+      const base = draftsTouched ? prev : slotResult.drafts;
+      return base.filter((d) => d.id !== id);
+    });
+  };
+
+  const addBlankDraft = () => {
+    setDraftsTouched(true);
+    setDrafts((prev) => {
+      const base = draftsTouched ? prev : slotResult.drafts;
+      return [
+        ...base,
+        {
+          id: makeId(),
+          dayOfWeek: "MONDAY",
+          startTime: DEFAULT_START_TIME,
+          endTime: DEFAULT_END_TIME,
+          slot: effectiveSlotInput.trim() || undefined,
+          venue: suggestedVenueFor(effectiveKind) || undefined,
+          classType: "LECTURE",
+        },
+      ];
+    });
+  };
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -488,42 +873,87 @@ function TimetableEntryModal({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
-  const endOptions = useMemo(() => {
-    return END_TIMES.filter((t) => t > startTime);
-  }, [startTime]);
+  // (No effects to "sync" derived defaults into state: this keeps the UI responsive and avoids cascading renders.)
 
-  const title = initial ? "Edit class" : "Add class";
+  const endOptions = useMemo(() => END_TIMES.filter((t) => t > startTime), [startTime]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const title = initial ? "Edit class" : "Add classes";
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!courseId) {
       showToast("warning", "Select a course first");
       return;
     }
-    if (!selectedCourse && !initial) {
-      showToast("warning", "Please select a valid course");
-      return;
-    }
-    if (!dayOfWeek || !startTime || !endTime) {
-      showToast("warning", "Please fill the required fields");
-      return;
-    }
-    if (endTime <= startTime) {
-      showToast("warning", "End time must be after start time");
+
+    if (isEditing) {
+      if (!dayOfWeek || !startTime || !endTime) {
+        showToast("warning", "Please fill the required fields");
+        return;
+      }
+      if (endTime <= startTime) {
+        showToast("warning", "End time must be after start time");
+        return;
+      }
+
+      onSave({
+        courseId,
+        dayOfWeek,
+        startTime,
+        endTime,
+        slot: slot.trim() || undefined,
+        venue: venue.trim() || undefined,
+        classType,
+        instructor: instructor.trim() || undefined,
+        notes: notes.trim() || undefined,
+      });
       return;
     }
 
-    onSave({
+    if (!selectedCourse) {
+      showToast("warning", "Please select a valid course");
+      return;
+    }
+    if (activeDrafts.length === 0) {
+      showToast("warning", "Add at least one class timing");
+      return;
+    }
+
+    for (const d of activeDrafts) {
+      if (!d.dayOfWeek || !d.startTime || !d.endTime) {
+        showToast("warning", "Please fill the required fields");
+        return;
+      }
+      if (d.endTime <= d.startTime) {
+        showToast("warning", "End time must be after start time");
+        return;
+      }
+    }
+
+    if (replaceExisting && existingCount > 0) {
+      const ok = await confirm({
+        title: "Replace existing schedule?",
+        message: "This will replace the shared timetable for this course in the current semester for everyone enrolled in it.",
+        confirmText: "Replace",
+        variant: "danger",
+      });
+      if (!ok) return;
+    }
+
+    onSaveBulk({
       courseId,
-      dayOfWeek,
-      startTime,
-      endTime,
-      slot: slot.trim() || undefined,
-      venue: venue.trim() || undefined,
-      classType,
-      instructor: instructor.trim() || undefined,
-      notes: notes.trim() || undefined,
+      replaceExisting,
+      entries: activeDrafts.map((d) => ({
+        dayOfWeek: d.dayOfWeek,
+        startTime: d.startTime,
+        endTime: d.endTime,
+        slot: d.slot,
+        venue: d.venue,
+        classType: d.classType,
+        instructor: instructor.trim() || undefined,
+        notes: notes.trim() || undefined,
+      })),
     });
   };
 
@@ -556,8 +986,8 @@ function TimetableEntryModal({
               <div className="min-w-0">
                 <h2 className="text-lg sm:text-xl font-semibold text-foreground">{title}</h2>
                 <p className="text-xs sm:text-sm text-foreground-secondary mt-1">
-                  {context ? `Semester ${context.semester} • ${context.term} ${context.year}` : "Current semester"} •{" "}
-                  {initial ? "Update details" : "Create a new entry"}
+                  {context ? `Semester ${context.semester} · ${context.term} ${context.year}` : "Current semester"} ·{" "}
+                  {initial ? "Update details" : "Generate from slots"}
                 </p>
               </div>
               <button
@@ -569,6 +999,12 @@ function TimetableEntryModal({
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            <datalist id={venueListId}>
+              {venueOptions.map((v) => (
+                <option key={v} value={v} />
+              ))}
+            </datalist>
 
             <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5">
               {/* Course picker */}
@@ -587,10 +1023,20 @@ function TimetableEntryModal({
                 ) : (
                   <select
                     value={courseId}
-                    onChange={(e) => setCourseId(e.target.value)}
-                    className="w-full px-3 py-3 min-h-[44px] rounded-xl border border-border bg-surface text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
-                    disabled={courses.length === 0}
-                  >
+                      onChange={(e) => {
+                      const nextCourseId = e.target.value;
+                      setCourseId(nextCourseId);
+                      setKindTouched(false);
+                      setTimetableKind("NON_IC");
+                      setSlotTouched(false);
+                      setSlotInput("");
+                      setDraftsTouched(false);
+                      setDrafts([]);
+                      setReplaceExisting(existingEntries.filter((en) => en.courseId === nextCourseId).length > 0);
+                      }}
+                      className="w-full px-3 py-3 min-h-[44px] rounded-xl border border-border bg-surface text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
+                      disabled={courses.length === 0}
+                    >
                     {courses.length === 0 ? (
                       <option value="">No courses enrolled</option>
                     ) : (
@@ -609,97 +1055,316 @@ function TimetableEntryModal({
                 )}
               </div>
 
-              {/* Schedule */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Day</label>
-                  <select
-                    value={dayOfWeek}
-                    onChange={(e) => setDayOfWeek(e.target.value as DayOfWeek)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
-                  >
-                    {DAYS.map((day) => (
-                      <option key={day} value={day}>
-                        {day.charAt(0) + day.slice(1).toLowerCase()}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {isEditing ? (
+                <>
+                  {/* Schedule (single) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Day</label>
+                      <select
+                        value={dayOfWeek}
+                        onChange={(e) => setDayOfWeek(e.target.value as DayOfWeek)}
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                      >
+                        {DAYS.map((day) => (
+                          <option key={day} value={day}>
+                            {day.charAt(0) + day.slice(1).toLowerCase()}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Start</label>
-                  <select
-                    value={startTime}
-                    onChange={(e) => {
-                      const nextStartTime = e.target.value;
-                      setStartTime(nextStartTime);
-                      if (endTime <= nextStartTime) {
-                        const nextEndTime = END_TIMES.find((t) => t > nextStartTime);
-                        if (nextEndTime) setEndTime(nextEndTime);
-                      }
-                    }}
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
-                  >
-                    {START_TIMES.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Start</label>
+                      <select
+                        value={startTime}
+                        onChange={(e) => {
+                          const nextStartTime = e.target.value;
+                          setStartTime(nextStartTime);
+                          if (endTime <= nextStartTime) {
+                            const nextEndTime = END_TIMES.find((t) => t > nextStartTime);
+                            if (nextEndTime) setEndTime(nextEndTime);
+                          }
+                        }}
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                      >
+                        {START_TIMES.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">End</label>
-                  <select
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
-                  >
-                    {endOptions.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">End</label>
+                      <select
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                      >
+                        {endOptions.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Slot (optional)</label>
-                  <input
-                    value={slot}
-                    onChange={(e) => setSlot(e.target.value)}
-                    placeholder="e.g., A1"
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
-                  />
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Slot (optional)</label>
+                      <input
+                        value={slot}
+                        onChange={(e) => setSlot(e.target.value)}
+                        placeholder="e.g., A"
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                      />
+                    </div>
+                  </div>
 
-              {/* Details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Venue (optional)</label>
-                  <input
-                    value={venue}
-                    onChange={(e) => setVenue(e.target.value)}
-                    placeholder="e.g., LHC-101"
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
-                  />
+                  {/* Details */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Venue (optional)</label>
+                      <input
+                        list={venueListId}
+                        value={venue}
+                        onChange={(e) => setVenue(e.target.value)}
+                        placeholder="Pick a classroom"
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Class Type</label>
+                      <select
+                        value={classType}
+                        onChange={(e) => setClassType(e.target.value as ClassType)}
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                      >
+                        {Object.entries(CLASS_TYPE_LABEL).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="rounded-xl border border-border bg-background-secondary p-4 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className="flex items-center gap-3 p-3 rounded-xl border border-border bg-surface cursor-pointer hover:bg-surface-hover transition-colors">
+                      <input
+                        type="radio"
+                        name="tt-kind"
+                        checked={effectiveKind === "NON_IC"}
+                        onChange={() => {
+                          const nextKind: TimetableKind = "NON_IC";
+                          setKindTouched(true);
+                          setTimetableKind(nextKind);
+                          setDraftsTouched(false);
+                          setDrafts([]);
+                        }}
+                        className="w-4 h-4 accent-primary"
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Non-IC</p>
+                        <p className="text-xs text-foreground-secondary">Main timetable</p>
+                      </div>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-3 rounded-xl border border-border bg-surface cursor-pointer hover:bg-surface-hover transition-colors">
+                      <input
+                        type="radio"
+                        name="tt-kind"
+                        checked={effectiveKind === "IC"}
+                        onChange={() => {
+                          const nextKind: TimetableKind = "IC";
+                          setKindTouched(true);
+                          setTimetableKind(nextKind);
+                          setDraftsTouched(false);
+                          setDrafts([]);
+                        }}
+                        className="w-4 h-4 accent-primary"
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-foreground">IC</p>
+                        <p className="text-xs text-foreground-secondary">IC timetable</p>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-end">
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">Slot</label>
+                      <input
+                        value={effectiveSlotInput}
+                        onChange={(e) => {
+                          setSlotTouched(true);
+                          setSlotInput(e.target.value);
+                        }}
+                        placeholder="e.g., B, A + L4, L2, FS"
+                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                      />
+                      <p className="text-[11px] text-foreground-secondary mt-2">
+                        A–H auto-fills lecture timings. L1–L5 auto-fills labs. FS/NS can be entered manually.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraftsTouched(true);
+                        setDrafts(slotResult.drafts);
+                      }}
+                      className="px-4 py-2.5 min-h-[44px] rounded-xl bg-primary text-white font-semibold hover:bg-primary-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                      disabled={!effectiveSlotInput.trim()}
+                    >
+                      Auto-fill
+                    </button>
+                  </div>
+
+                  {slotResult.warnings.length > 0 && (
+                    <div className="rounded-xl border border-border bg-surface p-3">
+                      <p className="text-xs font-semibold text-foreground mb-1">Heads up</p>
+                      <ul className="text-xs text-foreground-secondary list-disc pl-4 space-y-1">
+                        {slotResult.warnings.map((w) => (
+                          <li key={w}>{w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-foreground">Classes ({activeDrafts.length})</p>
+                    <button
+                      type="button"
+                      onClick={addBlankDraft}
+                      className="px-3 py-2 rounded-lg border border-border bg-surface hover:bg-surface-hover text-sm font-medium transition-colors inline-flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add meeting
+                    </button>
+                  </div>
+
+                  {activeDrafts.length === 0 ? (
+                    <div className="p-4 rounded-xl border border-border bg-surface text-sm text-foreground-secondary">
+                      Enter a slot and click Auto-fill.
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {activeDrafts.map((d) => {
+                        const rowEndOptions = END_TIMES.filter((t) => t > d.startTime);
+                        return (
+                          <div key={d.id} className="rounded-xl border border-border bg-surface p-3">
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {d.slot && (
+                                  <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                                    {d.slot}
+                                  </span>
+                                )}
+                                <span className="px-2 py-0.5 rounded-full bg-background-secondary border border-border/60 text-xs text-foreground-secondary">
+                                  {CLASS_TYPE_LABEL[d.classType]}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeDraft(d.id)}
+                                className="min-w-[36px] min-h-[36px] inline-flex items-center justify-center rounded-lg text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors"
+                                aria-label="Remove meeting"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <div className="mt-3 grid grid-cols-1 sm:grid-cols-4 gap-2">
+                              <select
+                                value={d.dayOfWeek}
+                                onChange={(e) => updateDraft(d.id, { dayOfWeek: e.target.value as DayOfWeek })}
+                                className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                              >
+                                {DAYS.map((day) => (
+                                  <option key={day} value={day}>
+                                    {day.charAt(0) + day.slice(1).toLowerCase()}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <select
+                                value={d.startTime}
+                                onChange={(e) => {
+                                  const nextStart = e.target.value;
+                                  const nextEnd = d.endTime <= nextStart ? (END_TIMES.find((t) => t > nextStart) || d.endTime) : d.endTime;
+                                  updateDraft(d.id, { startTime: nextStart, endTime: nextEnd });
+                                }}
+                                className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                              >
+                                {START_TIMES.map((t) => (
+                                  <option key={t} value={t}>
+                                    {t}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <select
+                                value={d.endTime}
+                                onChange={(e) => updateDraft(d.id, { endTime: e.target.value })}
+                                className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                              >
+                                {rowEndOptions.map((t) => (
+                                  <option key={t} value={t}>
+                                    {t}
+                                  </option>
+                                ))}
+                              </select>
+
+                              <input
+                                list={venueListId}
+                                value={d.venue || ""}
+                                onChange={(e) => updateDraft(d.id, { venue: e.target.value })}
+                                placeholder="Venue"
+                                className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                              />
+                            </div>
+
+                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <select
+                                value={d.classType}
+                                onChange={(e) => updateDraft(d.id, { classType: e.target.value as ClassType })}
+                                className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                              >
+                                {Object.entries(CLASS_TYPE_LABEL).map(([value, label]) => (
+                                  <option key={value} value={value}>
+                                    {label}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="text-xs text-foreground-secondary flex items-center">
+                                {d.venue ? "" : "Select a venue"}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <label className="flex items-start gap-3 p-3 rounded-xl border border-border bg-surface">
+                    <input
+                      type="checkbox"
+                      checked={replaceExisting}
+                      onChange={(e) => setReplaceExisting(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 accent-primary"
+                    />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground">Replace existing course schedule</p>
+                      <p className="text-xs text-foreground-secondary mt-0.5">
+                        {existingCount > 0 ? `${existingCount} existing classes found.` : "No existing classes found."} Updates are shared.
+                      </p>
+                    </div>
+                  </label>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">Class Type</label>
-                  <select
-                    value={classType}
-                    onChange={(e) => setClassType(e.target.value as ClassType)}
-                    className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
-                  >
-                    {Object.entries(CLASS_TYPE_LABEL).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -732,11 +1397,11 @@ function TimetableEntryModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
+                  disabled={saving || (!isEditing && drafts.length === 0)}
                   className="w-full sm:flex-1 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {initial ? "Save changes" : "Add class"}
+                  {initial ? "Save changes" : `Add classes (${drafts.length})`}
                 </button>
               </div>
 

@@ -151,6 +151,51 @@ const courses = [
     offeredInSpring: true,
     offeredInSummer: false,
   },
+  {
+    code: "HS-357",
+    name: "French Language and Culture",
+    credits: 3,
+    department: "Humanities",
+    level: 300,
+    description: "French language skills and cultural context",
+    offeredInFall: true,
+    offeredInSpring: true,
+    offeredInSummer: false,
+  },
+  {
+    code: "HS-308",
+    name: "European Literature",
+    credits: 3,
+    department: "Humanities",
+    level: 300,
+    description: "Survey of European literary traditions",
+    offeredInFall: true,
+    offeredInSpring: true,
+    offeredInSummer: false,
+  },
+  // Jan–May 2024 specific offerings (2-credit versions, B23 batch Semester 2)
+  {
+    code: "HS-357-S24",
+    name: "French Language and Culture",
+    credits: 2,
+    department: "Humanities",
+    level: 300,
+    description: "Offered only in the Jan–May 2024 term (B23 batch, Semester 2). Standard offering is 3 credits.",
+    offeredInFall: false,
+    offeredInSpring: true,
+    offeredInSummer: false,
+  },
+  {
+    code: "HS-308-S24",
+    name: "European Literature",
+    credits: 2,
+    department: "Humanities",
+    level: 300,
+    description: "Offered only in the Jan–May 2024 term (B23 batch, Semester 2). Standard offering is 3 credits.",
+    offeredInFall: false,
+    offeredInSpring: true,
+    offeredInSummer: false,
+  },
 ];
 
 async function seedCourses() {
@@ -159,20 +204,12 @@ async function seedCourses() {
 
   try {
     for (const course of courses) {
-      const existingCourse = await prisma.course.findUnique({
+      const result = await prisma.course.upsert({
         where: { code: course.code },
+        update: { name: course.name, credits: course.credits },
+        create: course,
       });
-
-      if (existingCourse) {
-        console.log(`✓ Course already exists: ${course.code}`);
-      } else {
-        const created = await prisma.course.create({
-          data: course,
-        });
-        console.log(
-          `✓ Created: ${created.code} - ${created.name} (${created.credits} credits)`
-        );
-      }
+      console.log(`✓ Upserted: ${result.code} - ${result.name} (${result.credits} credits)`);
     }
 
     console.log("\n✅ Course seeding completed successfully!");

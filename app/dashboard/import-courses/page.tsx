@@ -167,7 +167,7 @@ export default function ImportCoursesPage() {
         const isMTP = MTP_CODES.some(code => normalize(code) === normalizedCode);
         return {
           ...course,
-          selected: (course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code)) || isISTP || isMTP,
+          selected: (course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code) && !course.optional) || isISTP || isMTP,
         };
       });
     setCourses(coursesWithSelection);
@@ -724,6 +724,16 @@ export default function ImportCoursesPage() {
                               <span className="text-xs text-foreground-secondary">
                                 {course.credits} credits
                               </span>
+                              {course.tag && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 font-medium">
+                                  {course.tag}
+                                </span>
+                              )}
+                              {course.optional && (
+                                <span className="text-[10px] text-foreground-secondary italic">
+                                  optional — tick if you took this
+                                </span>
+                              )}
                             </div>
                           </div>
                           {course.selected && (

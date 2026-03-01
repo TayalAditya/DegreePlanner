@@ -37,6 +37,7 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen bg-gradient-to-b from-background-secondary to-background">
       <div className="flex flex-col lg:flex-row min-h-screen">
+        <DashboardNav user={session.user} />
         <div className="flex-1 min-w-0 flex flex-col lg:order-first">
           <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
             <RouteTransition>{children}</RouteTransition>
@@ -50,7 +51,6 @@ export default async function DashboardLayout({
             </div>
           </footer>
         </div>
-        <DashboardNav user={session.user} />
       </div>
       <ScrollToTop />
     </div>

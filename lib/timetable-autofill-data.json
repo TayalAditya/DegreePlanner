@@ -1,0 +1,2091 @@
+{
+  "version": "2025-2026-even",
+  "generatedAt": "2026-03-01T10:26:23.834Z",
+  "sourcePdfs": {
+    "nonIc": "docs/Timetable_all_Courses_2026.pdf",
+    "ic": "docs/Timetable_of_IC_Course_2026.pdf",
+    "pcLab": "docs/PC_Lab_Allocation_2026.pdf"
+  },
+  "venues": [
+    "A1-3",
+    "A1-NKN",
+    "A10 + A11 PC Labs",
+    "A10 PC Lab",
+    "A10-1A",
+    "A10-1B",
+    "A10-2A",
+    "A10-2B",
+    "A10-3A",
+    "A10-3B",
+    "A11 PC Lab",
+    "A11-1A",
+    "A11-1B",
+    "A13-1A",
+    "A13-2A",
+    "A13-2B",
+    "A13-2C",
+    "A13-2D",
+    "A13-3A",
+    "A14-SHSS Classroom",
+    "A17-1A",
+    "A17-1B",
+    "A17-1C",
+    "A17-1D",
+    "A17-1E",
+    "A17-2A",
+    "A17-2B",
+    "A17-2C",
+    "A17-2D",
+    "A17-2E",
+    "A18-1",
+    "A18-2",
+    "A5 PC Lab 1",
+    "A5-1",
+    "A5-2",
+    "A5-3",
+    "A5-4",
+    "Auditorium",
+    "CL-1",
+    "CL-2",
+    "CL-3",
+    "CL-4",
+    "Physics Teaching laboratory, A11",
+    "SC-NKN"
+  ],
+  "defaults": {
+    "nonIc": {
+      "AR-508": {
+        "code": "AR-508",
+        "name": "Marine Robotics",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A10-2B",
+        "campus": "North Campus"
+      },
+      "AR-513": {
+        "code": "AR-513",
+        "name": "Unmanned Aerial Systems",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "CL-3",
+        "campus": "South Campus"
+      },
+      "AR-523": {
+        "code": "AR-523",
+        "name": "Robot Manipulators",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "A17-2E",
+        "campus": "North Campus"
+      },
+      "AR-524": {
+        "code": "AR-524",
+        "name": "Robot Simulators",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A13-2D",
+        "campus": "North Campus"
+      },
+      "AR-525": {
+        "code": "AR-525",
+        "name": "Reinforcement Learning for Robotics",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "CL-1",
+        "campus": "South Campus"
+      },
+      "AR-526": {
+        "code": "AR-526",
+        "name": "Multimodal Learning",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "CL-1",
+        "campus": "South Campus"
+      },
+      "BE-010": {
+        "code": "BE-010",
+        "name": "Internship",
+        "credit": 2,
+        "slot": "NS"
+      },
+      "BE-101P": {
+        "code": "BE-101P",
+        "name": "Reverse Engineering for Bioengineers",
+        "credit": 1,
+        "slot": "FS"
+      },
+      "BE-203": {
+        "code": "BE-203",
+        "name": "Enzymology and Bioprocessing",
+        "credit": 4,
+        "slot": "D",
+        "classroom": "A10-3A",
+        "campus": "North Campus"
+      },
+      "BE-301": {
+        "code": "BE-301",
+        "name": "Biomechanics",
+        "credit": 4,
+        "slot": "B",
+        "classroom": "A13-2B",
+        "campus": "North Campus"
+      },
+      "BE-304": {
+        "code": "BE-304",
+        "name": "Bioinformatics",
+        "credit": 4,
+        "slot": "C",
+        "classroom": "A10-3B",
+        "campus": "North Campus"
+      },
+      "BE-396": {
+        "code": "BE-396",
+        "name": "Semester Internship",
+        "credit": 6,
+        "slot": "NS"
+      },
+      "BE-499P": {
+        "code": "BE-499P",
+        "name": "Major Technical Project-2",
+        "credit": 5,
+        "slot": "NS"
+      },
+      "BE-507": {
+        "code": "BE-507",
+        "name": "Tissue Engineering",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A5-3",
+        "campus": "South Campus"
+      },
+      "BY-504": {
+        "code": "BY-504",
+        "name": "Metabolic Systems Biology",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "CL-3",
+        "campus": "South Campus"
+      },
+      "BY-514": {
+        "code": "BY-514",
+        "name": "Analytical Biotechniques",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "A5-1",
+        "campus": "South Campus"
+      },
+      "BY-517": {
+        "code": "BY-517",
+        "name": "Introduction to Proteomics",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "A17-2C",
+        "campus": "North Campus"
+      },
+      "BY-527": {
+        "code": "BY-527",
+        "name": "Gene silencing and genome editing: principles and applications",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "CL-3",
+        "campus": "South Campus"
+      },
+      "BY-528": {
+        "code": "BY-528",
+        "name": "Sensory Biology",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "CL-1",
+        "campus": "South Campus"
+      },
+      "BY-531": {
+        "code": "BY-531",
+        "name": "Quantitative Biology and Data Analytics",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "A1-NKN",
+        "campus": "South Campus"
+      },
+      "BY-532": {
+        "code": "BY-532",
+        "name": "Immunotechnology",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "CL-3",
+        "campus": "South Campus"
+      },
+      "BY-534": {
+        "code": "BY-534",
+        "name": "Functional Neuroimaging and Data Analysis",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A5-4",
+        "campus": "South Campus"
+      },
+      "BY-535P": {
+        "code": "BY-535P",
+        "name": "Analytical Biotechniques Lab",
+        "credit": 1,
+        "slot": "L4"
+      },
+      "BY-536P": {
+        "code": "BY-536P",
+        "name": "Immunotechnology Lab",
+        "credit": 1,
+        "slot": "L5"
+      },
+      "BY-699P": {
+        "code": "BY-699P",
+        "name": "Post Graduate Project-2",
+        "credit": 17,
+        "slot": "NS"
+      },
+      "CE-010": {
+        "code": "CE-010",
+        "name": "Internship",
+        "credit": 2,
+        "slot": "NS"
+      },
+      "CE-201": {
+        "code": "CE-201",
+        "name": "Surveying: Traditional and Digital",
+        "credit": 4,
+        "slot": "E",
+        "classroom": "A13-2C",
+        "campus": "North Campus"
+      },
+      "CE-202": {
+        "code": "CE-202",
+        "name": "Introduction to Civil Engineering",
+        "credit": 1,
+        "slot": "Please refer to the 'IC Courses Time Table' Tab for its time table"
+      },
+      "CE-251": {
+        "code": "CE-251",
+        "name": "Hydraulics Engineering",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "A13-2A",
+        "campus": "North Campus"
+      },
+      "CE-311": {
+        "code": "CE-311",
+        "name": "Geotechnical Engineering-I",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A13-2C",
+        "campus": "North Campus"
+      },
+      "CE-311P": {
+        "code": "CE-311P",
+        "name": "Geotechnical Engineering Laboratory",
+        "credit": 1,
+        "slot": "L1"
+      },
+      "CE-356": {
+        "code": "CE-356",
+        "name": "Reverse Engineering",
+        "credit": 1,
+        "slot": "H",
+        "classroom": "A13-2C",
+        "campus": "North Campus"
+      },
+      "CE-401": {
+        "code": "CE-401",
+        "name": "Design of Steel Structures",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "A13-2C",
+        "campus": "North Campus"
+      },
+      "CE-403": {
+        "code": "CE-403",
+        "name": "Wastewater Engineering",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A10-3B",
+        "campus": "North Campus"
+      },
+      "CE-404": {
+        "code": "CE-404",
+        "name": "Analysis of Structures",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A10-3A",
+        "campus": "North Campus"
+      },
+      "CE-452": {
+        "code": "CE-452",
+        "name": "Open Channel Flow",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "A10-2A",
+        "campus": "North Campus"
+      },
+      "CE-499P": {
+        "code": "CE-499P",
+        "name": "Major Technical Project-2",
+        "credit": 5,
+        "slot": "NS"
+      },
+      "CE-509": {
+        "code": "CE-509",
+        "name": "Bridge Engineering",
+        "credit": 3,
+        "slot": "FS3"
+      },
+      "CE-515": {
+        "code": "CE-515",
+        "name": "Environmental Impact Assessment",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "CL-2",
+        "campus": "South Campus"
+      },
+      "CE-518": {
+        "code": "CE-518",
+        "name": "Structural Reliability and Risk Assessment",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "A10-2B",
+        "campus": "North Campus"
+      },
+      "CE-523": {
+        "code": "CE-523",
+        "name": "Building Science",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A13-2C",
+        "campus": "North campus"
+      },
+      "CE-526": {
+        "code": "CE-526",
+        "name": "Critical Zone Science",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A10-1B",
+        "campus": "North campus"
+      },
+      "CE-560": {
+        "code": "CE-560",
+        "name": "Soil Dynamics",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A10-3A",
+        "campus": "North Campus"
+      },
+      "CE-561": {
+        "code": "CE-561",
+        "name": "The Science of Climate Change",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "SC-NKN",
+        "campus": "South Campus"
+      },
+      "CE-563": {
+        "code": "CE-563",
+        "name": "Finite Element Methods in Engineering",
+        "credit": 4,
+        "slot": "A + L4",
+        "classroom": "A10-3A",
+        "campus": "North Campus"
+      },
+      "CE-564": {
+        "code": "CE-564",
+        "name": "Fundamentals of Fracture Mechanics",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "CE-567": {
+        "code": "CE-567",
+        "name": "Highway Safety and Modeling",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A10-3A",
+        "campus": "North Campus"
+      },
+      "CE-568P": {
+        "code": "CE-568P",
+        "name": "Experimental Structural Dynamics",
+        "credit": 1,
+        "slot": "L2"
+      },
+      "CE-586P": {
+        "code": "CE-586P",
+        "name": "Mini Project",
+        "credit": 3,
+        "slot": "NS"
+      },
+      "CE-610": {
+        "code": "CE-610",
+        "name": "Analysis and Design for Earthquake Resistant Structures",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A10-2B",
+        "campus": "North Campus"
+      },
+      "CE-611": {
+        "code": "CE-611",
+        "name": "Structural Health Monitoring",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "A13-2D",
+        "campus": "North Campus"
+      },
+      "CE-691P": {
+        "code": "CE-691P",
+        "name": "Post Graduate Project-2",
+        "credit": 15,
+        "slot": "NS"
+      },
+      "CS-010": {
+        "code": "CS-010",
+        "name": "Internship",
+        "credit": 2,
+        "slot": "NS"
+      },
+      "CS-302": {
+        "code": "CS-302",
+        "name": "Paradigms of Programming",
+        "credit": 4,
+        "slot": "D",
+        "classroom": "A17-2A",
+        "campus": "North Campus"
+      },
+      "CS-303": {
+        "code": "CS-303",
+        "name": "Software Engineering",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "A17-1A",
+        "campus": "North Campus"
+      },
+      "CS-304": {
+        "code": "CS-304",
+        "name": "Formal Languages and Automata Theory",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "A17-2E",
+        "campus": "North Campus"
+      },
+      "CS-309": {
+        "code": "CS-309",
+        "name": "Information and Database Systems",
+        "credit": 4,
+        "slot": "G",
+        "classroom": "A17-2A",
+        "campus": "North Campus"
+      },
+      "CS-399": {
+        "code": "CS-399",
+        "name": "Semester Internship",
+        "credit": 9,
+        "slot": "NS"
+      },
+      "CS-525": {
+        "code": "CS-525",
+        "name": "Computational Foundations of Cryptography",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "CS-549": {
+        "code": "CS-549",
+        "name": "Performance Analysis of Computer Networks",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A1-NKN",
+        "campus": "South Campus"
+      },
+      "CS-570": {
+        "code": "CS-570",
+        "name": "Algorithms for Curves and Surface",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "A17-1B",
+        "campus": "North Campus"
+      },
+      "CS-622P": {
+        "code": "CS-622P",
+        "name": "Post Graduate Project - 2",
+        "credit": 14,
+        "slot": "NS"
+      },
+      "CS-671": {
+        "code": "CS-671",
+        "name": "Deep Learning and Applications",
+        "credit": 4,
+        "slot": "FS",
+        "classroom": "A18-1",
+        "campus": "North Campus"
+      },
+      "CS-673": {
+        "code": "CS-673",
+        "name": "Advanced Computer Vision",
+        "credit": 4,
+        "slot": "D",
+        "classroom": "A17-2E",
+        "campus": "North Campus"
+      },
+      "CS-683": {
+        "code": "CS-683",
+        "name": "Generative AI",
+        "credit": 4,
+        "slot": "H",
+        "classroom": "CL-2",
+        "campus": "South Campus"
+      },
+      "CS-686": {
+        "code": "CS-686",
+        "name": "Large Language Models: Core Concepts to Custom Applications",
+        "credit": 4,
+        "slot": "C",
+        "classroom": "A1-NKN",
+        "campus": "South Campus"
+      },
+      "CY-002": {
+        "code": "CY-002",
+        "name": "Preparatory Chemistry II",
+        "credit": 4,
+        "slot": "Preparatory Course",
+        "classroom": "A5-2"
+      },
+      "CY-200": {
+        "code": "CY-200",
+        "name": "Foundations and applications of Chemistry",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "A17-2D",
+        "campus": "North Campus"
+      },
+      "CY-304": {
+        "code": "CY-304",
+        "name": "Fundamental Analytical Chemistry",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A5-2",
+        "campus": "South Campus"
+      },
+      "CY-401": {
+        "code": "CY-401",
+        "name": "Introduction to Quantum Chemistry & Molecular Spectroscopy",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "A5-1",
+        "campus": "South Campus"
+      },
+      "CY-404": {
+        "code": "CY-404",
+        "name": "Fundamentals of Soft Matter Science and Applications",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A5-2",
+        "campus": "South Campus"
+      },
+      "CY-504": {
+        "code": "CY-504",
+        "name": "Heterocyclic Chemistry",
+        "credit": 2,
+        "slot": "C",
+        "classroom": "SC-NKN",
+        "campus": "South Campus"
+      },
+      "CY-511": {
+        "code": "CY-511",
+        "name": "Group Theory and Spectroscopy",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A5-1",
+        "campus": "South Campus"
+      },
+      "CY-513": {
+        "code": "CY-513",
+        "name": "Reaction Dynamics, Kinetics and Catalysis",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A1-NKN",
+        "campus": "South Campus"
+      },
+      "CY-532": {
+        "code": "CY-532",
+        "name": "Photochemistry and Pericyclic Reactions",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "CL-4",
+        "campus": "South Campus"
+      },
+      "CY-534": {
+        "code": "CY-534",
+        "name": "Chemistry of Transition Elements",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "CL-4",
+        "campus": "South Campus"
+      },
+      "CY-547": {
+        "code": "CY-547",
+        "name": "Chemical Crystallography",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "A5-1",
+        "campus": "South Campus"
+      },
+      "CY-552": {
+        "code": "CY-552",
+        "name": "Hydrogen Generation and Storage",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "CL-3",
+        "campus": "South Campus"
+      },
+      "CY-554": {
+        "code": "CY-554",
+        "name": "Science and Technology of Nanomterials",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A5-1",
+        "campus": "South Campus"
+      },
+      "CY-555": {
+        "code": "CY-555",
+        "name": "Introduction to Polymer Science & Technology",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "A5-1",
+        "campus": "South Campus"
+      },
+      "CY-556": {
+        "code": "CY-556",
+        "name": "Organic Spectroscopy",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "CL-4",
+        "campus": "South Campus"
+      },
+      "CY-600": {
+        "code": "CY-600",
+        "name": "Research Methodology for Chemistry",
+        "credit": 1,
+        "slot": "FS"
+      },
+      "CY-644": {
+        "code": "CY-644",
+        "name": "Bioinorganic chemistry",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "A10-3A",
+        "campus": "North Campus"
+      },
+      "DP-301P": {
+        "code": "DP-301P",
+        "name": "Interactive Socio-Technical Practicum",
+        "credit": 4,
+        "slot": "NS"
+      },
+      "DP-402P": {
+        "code": "DP-402P",
+        "name": "Major Technical Project",
+        "credit": 5,
+        "slot": "NS"
+      },
+      "DP-404P": {
+        "code": "DP-404P",
+        "name": "Research Literature Presentation - II",
+        "credit": 1,
+        "slot": "NS"
+      },
+      "DS-010": {
+        "code": "DS-010",
+        "name": "Internship",
+        "credit": 2,
+        "slot": "NS"
+      },
+      "DS-302": {
+        "code": "DS-302",
+        "name": "Computing systems for data processing",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A17-2B",
+        "campus": "North Campus"
+      },
+      "DS-313": {
+        "code": "DS-313",
+        "name": "Statistical Foundations for Data Science",
+        "credit": 4,
+        "slot": "E",
+        "classroom": "A17-1B",
+        "campus": "North Campus"
+      },
+      "DS-399": {
+        "code": "DS-399",
+        "name": "Semester Internship",
+        "credit": 9,
+        "slot": "NS"
+      },
+      "DS-411": {
+        "code": "DS-411",
+        "name": "Optimization for Data Science",
+        "credit": 4,
+        "slot": "F",
+        "classroom": "A17-2A",
+        "campus": "North Campus"
+      },
+      "DS-412": {
+        "code": "DS-412",
+        "name": "Matrix Computations for Data Science",
+        "credit": 4,
+        "slot": "C",
+        "classroom": "A17-2B",
+        "campus": "North Campus"
+      },
+      "EE-010": {
+        "code": "EE-010",
+        "name": "Internship",
+        "credit": 2,
+        "slot": "NS"
+      },
+      "EE-201": {
+        "code": "EE-201",
+        "name": "Electromechanics",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A17-2B",
+        "campus": "North Campus"
+      },
+      "EE-201P": {
+        "code": "EE-201P",
+        "name": "Electromechanics Lab",
+        "credit": 1,
+        "slot": "L3"
+      },
+      "EE-202": {
+        "code": "EE-202",
+        "name": "Electromagnetics & Wave Propagation",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "EE-211": {
+        "code": "EE-211",
+        "name": "Analog Circuit Design",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "A17-2A",
+        "campus": "North Campus"
+      },
+      "EE-223P": {
+        "code": "EE-223P",
+        "name": "Reverse Engineering",
+        "credit": 1,
+        "slot": "L2"
+      },
+      "EE-309": {
+        "code": "EE-309",
+        "name": "Power Electronics",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A17-2C",
+        "campus": "North Campus"
+      },
+      "EE-309P": {
+        "code": "EE-309P",
+        "name": "Power Electronics Lab",
+        "credit": 1,
+        "slot": "L1"
+      },
+      "EE-316": {
+        "code": "EE-316",
+        "name": "Communication Systems",
+        "credit": 4,
+        "slot": "B",
+        "classroom": "A17-1B",
+        "campus": "North Campus"
+      },
+      "EE-399": {
+        "code": "EE-399",
+        "name": "Semester Internship",
+        "credit": 9,
+        "slot": "NS"
+      },
+      "EE-500": {
+        "code": "EE-500",
+        "name": "Network Control System",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "A5-2",
+        "campus": "South Campus"
+      },
+      "EE-515": {
+        "code": "EE-515",
+        "name": "Nonlinear Stability and Control",
+        "credit": 4,
+        "slot": "A",
+        "classroom": "CL-1",
+        "campus": "South Campus"
+      },
+      "EE-516": {
+        "code": "EE-516",
+        "name": "Biomedical Systems",
+        "credit": 4,
+        "slot": "A",
+        "classroom": "A10-2B",
+        "campus": "North Campus"
+      },
+      "EE-523": {
+        "code": "EE-523",
+        "name": "Digital VLSI Architecture Design",
+        "credit": 4,
+        "slot": "B",
+        "classroom": "A17-1E",
+        "campus": "North Campus"
+      },
+      "EE-529": {
+        "code": "EE-529",
+        "name": "Embedded Systems",
+        "credit": 4,
+        "slot": "C",
+        "classroom": "A17-1E",
+        "campus": "North Campus"
+      },
+      "EE-530": {
+        "code": "EE-530",
+        "name": "Applied Optimization",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "CL-2",
+        "campus": "South Campus"
+      },
+      "EE-533": {
+        "code": "EE-533",
+        "name": "Acess Network",
+        "credit": 4,
+        "slot": "D",
+        "classroom": "A17-1C",
+        "campus": "North Campus"
+      },
+      "EE-538": {
+        "code": "EE-538",
+        "name": "Data-driven Control",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A13-2D",
+        "campus": "North Campus"
+      },
+      "EE-556": {
+        "code": "EE-556",
+        "name": "Nuclear Reactor Control",
+        "credit": 1,
+        "slot": "NS"
+      },
+      "EE-574": {
+        "code": "EE-574",
+        "name": "Biomedical Signal & Image Analysis",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A17-1B",
+        "campus": "North Campus"
+      },
+      "EE-581": {
+        "code": "EE-581",
+        "name": "Foundations of Intelligent Communication Systems-II",
+        "credit": 4,
+        "slot": "C",
+        "classroom": "A17-1C",
+        "campus": "North Campus"
+      },
+      "EE-582": {
+        "code": "EE-582",
+        "name": "Nonlinear Analysis and Control of Power Electronic Converters",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A1-NKN",
+        "campus": "South Campus"
+      },
+      "EE-583": {
+        "code": "EE-583",
+        "name": "Smart Grids",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "SC-NKN",
+        "campus": "South Campus"
+      },
+      "EE-593": {
+        "code": "EE-593",
+        "name": "Low Power VLSI Circuits",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A17-2C",
+        "campus": "North Campus"
+      },
+      "EE-604": {
+        "code": "EE-604",
+        "name": "Advanced Electric Drives",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A5-2",
+        "campus": "South Campus"
+      },
+      "EE-604P": {
+        "code": "EE-604P",
+        "name": "Practicum on Advanced Electric Drives",
+        "credit": 1,
+        "slot": "L2"
+      },
+      "EE-607": {
+        "code": "EE-607",
+        "name": "Optical Communication Systems",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A17-1C",
+        "campus": "North Campus"
+      },
+      "EE-608": {
+        "code": "EE-608",
+        "name": "Digital Image Processing",
+        "credit": 4,
+        "slot": "E",
+        "classroom": "SC-NKN",
+        "campus": "South Campus"
+      },
+      "EE-611": {
+        "code": "EE-611",
+        "name": "VLSI Technology",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A1-NKN",
+        "campus": "South Campus"
+      },
+      "EE-611P": {
+        "code": "EE-611P",
+        "name": "VLSI Fabrication Practicum",
+        "credit": 2,
+        "slot": "L4"
+      },
+      "EE-618": {
+        "code": "EE-618",
+        "name": "Industrial process control",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "CL-4",
+        "campus": "South Campus"
+      },
+      "EE-619": {
+        "code": "EE-619",
+        "name": "Mixed Signal VLSI Design",
+        "credit": 4,
+        "slot": "F",
+        "classroom": "A17-1E",
+        "campus": "North Campus"
+      },
+      "EE-623P": {
+        "code": "EE-623P",
+        "name": "Practicum on Digital Control of Power Electronics and Drives",
+        "credit": 3,
+        "slot": "F + L4",
+        "classroom": "A5-4",
+        "campus": "South Campus"
+      },
+      "EE-625P": {
+        "code": "EE-625P",
+        "name": "Post Graduate Project-2",
+        "credit": 16,
+        "slot": "FS"
+      },
+      "EE-651P": {
+        "code": "EE-651P",
+        "name": "Post Graduate Project 2",
+        "credit": 17,
+        "slot": "NS"
+      },
+      "EN-511": {
+        "code": "EN-511",
+        "name": "Computational Methods in Material Science",
+        "credit": 4,
+        "slot": "H",
+        "classroom": "A5-4",
+        "campus": "South Campus"
+      },
+      "EP-010": {
+        "code": "EP-010",
+        "name": "Internship",
+        "credit": 2,
+        "slot": "NS"
+      },
+      "EP-201": {
+        "code": "EP-201",
+        "name": "Reverse Engineering",
+        "credit": 1,
+        "slot": "C",
+        "classroom": "A5-4",
+        "campus": "South Campus"
+      },
+      "EP-396": {
+        "code": "EP-396",
+        "name": "Semester Internship",
+        "credit": 6,
+        "slot": "NS"
+      },
+      "EP-401P": {
+        "code": "EP-401P",
+        "name": "Engineering of Instrumentation",
+        "credit": 4,
+        "slot": "L5"
+      },
+      "EP-403": {
+        "code": "EP-403",
+        "name": "Physics of Atoms and Molecules",
+        "credit": 3,
+        "slot": "NS",
+        "classroom": "A17-2D",
+        "campus": "North Campus"
+      },
+      "EP-502": {
+        "code": "EP-502",
+        "name": "Informatics for Material Design",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "GE-502": {
+        "code": "GE-502",
+        "name": "Consciousness and professional ethics",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "HS-002": {
+        "code": "HS-002",
+        "name": "Preparatory English",
+        "credit": 3,
+        "slot": "Preparatory Course"
+      },
+      "HS-109": {
+        "code": "HS-109",
+        "name": "Advanced English for Engineers",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "A11-1A",
+        "campus": "North Campus"
+      },
+      "HS-112": {
+        "code": "HS-112",
+        "name": "Japanese Language Class I",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A13-2A",
+        "campus": "North Campus"
+      },
+      "HS-151": {
+        "code": "HS-151",
+        "name": "Introduction to English Literature",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A14-SHSS Classroom",
+        "campus": "North Campus"
+      },
+      "HS-204": {
+        "code": "HS-204",
+        "name": "Introduction to Political Sciences",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A13-3A",
+        "campus": "North Campus"
+      },
+      "HS-213": {
+        "code": "HS-213",
+        "name": "Japanese Language Class II",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A14-SHSS Classroom",
+        "campus": "North Campus"
+      },
+      "HS-255": {
+        "code": "HS-255",
+        "name": "India since Independence",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A13-3A",
+        "campus": "North Campus"
+      },
+      "HS-302": {
+        "code": "HS-302",
+        "name": "Introduction to Drama in English",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A13-2B",
+        "campus": "North Campus"
+      },
+      "HS-304": {
+        "code": "HS-304",
+        "name": "Organizational Management",
+        "credit": 3,
+        "slot": "NS"
+      },
+      "HS-307": {
+        "code": "HS-307",
+        "name": "Macroeconomics I",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A13-2A",
+        "campus": "North Campus"
+      },
+      "HS-310": {
+        "code": "HS-310",
+        "name": "Japanese Language Class III",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A10-2B",
+        "campus": "North Campus"
+      },
+      "HS-358": {
+        "code": "HS-358",
+        "name": "Science Writing",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A14-SHSS Classroom",
+        "campus": "North Campus"
+      },
+      "HS-405": {
+        "code": "HS-405",
+        "name": "Japanese Language Class IV",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A13-2D",
+        "campus": "North Campus"
+      },
+      "HS-504": {
+        "code": "HS-504",
+        "name": "Personal Finance and Portfolio Management",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "CL-2",
+        "campus": "South Campus"
+      },
+      "HS-511": {
+        "code": "HS-511",
+        "name": "Translation Theory",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "A10-3B",
+        "campus": "North Campus"
+      },
+      "HS-530": {
+        "code": "HS-530",
+        "name": "Planning, Welfare and Development",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A5-3",
+        "campus": "South Campus"
+      },
+      "HS-533": {
+        "code": "HS-533",
+        "name": "Urban Development",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "CL-3",
+        "campus": "South Campus"
+      },
+      "HS-537": {
+        "code": "HS-537",
+        "name": "Post-Reform India: Polity, Society and Economy",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "A5-2",
+        "campus": "South Campus"
+      },
+      "HS-538": {
+        "code": "HS-538",
+        "name": "Development Economics",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "SC-NKN",
+        "campus": "South Campus"
+      },
+      "HS-541": {
+        "code": "HS-541",
+        "name": "Technical Communication",
+        "credit": 1,
+        "slot": "A",
+        "classroom": "A5-2",
+        "campus": "South Campus"
+      },
+      "HS-542": {
+        "code": "HS-542",
+        "name": "Ethnicity, State, and Nationalism in India",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A5-3",
+        "campus": "South Campus"
+      },
+      "HS-548": {
+        "code": "HS-548",
+        "name": "Science and Society",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "CL-4",
+        "campus": "South Campus"
+      },
+      "HS-550": {
+        "code": "HS-550",
+        "name": "Statistical Methods",
+        "credit": 4,
+        "slot": "D + L3",
+        "classroom": "A5-3",
+        "campus": "South Campus"
+      },
+      "HS-554P": {
+        "code": "HS-554P",
+        "name": "Post Graduate Project",
+        "credit": 22,
+        "slot": "NS"
+      },
+      "HS-591": {
+        "code": "HS-591",
+        "name": "Special Topics in Seemingly Unrelated Regression Equations",
+        "credit": 1,
+        "slot": "FS"
+      },
+      "HS-601": {
+        "code": "HS-601",
+        "name": "Literary Methods: Theory and Interpretation",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "CL-1",
+        "campus": "South Campus"
+      },
+      "HS-611": {
+        "code": "HS-611",
+        "name": "Research Writing",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "CL-4",
+        "campus": "South Campus"
+      },
+      "HS-621": {
+        "code": "HS-621",
+        "name": "Advance Qualitative Research Methods",
+        "credit": 4,
+        "slot": "B",
+        "classroom": "A10-2A",
+        "campus": "North Campus"
+      },
+      "IK-503": {
+        "code": "IK-503",
+        "name": "Cognitive Psychology and the Indian Thought System",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "CL-2",
+        "campus": "South Campus"
+      },
+      "IK-505": {
+        "code": "IK-505",
+        "name": "Bhagwat Samkhya",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "IK-506": {
+        "code": "IK-506",
+        "name": "Research methods and statistics for contemplative science",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A17-1E",
+        "campus": "North Campus"
+      },
+      "IK-509": {
+        "code": "IK-509",
+        "name": "Research Methodology",
+        "credit": 1,
+        "slot": "NS"
+      },
+      "IK-515": {
+        "code": "IK-515",
+        "name": "Music and Cognition",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "SC-NKN",
+        "campus": "South Campus"
+      },
+      "IK-516": {
+        "code": "IK-516",
+        "name": "Electromagnetic properties of Biomaterials",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A17-2C",
+        "campus": "North Campus"
+      },
+      "IK-518": {
+        "code": "IK-518",
+        "name": "Ancient Indian Materials and Chemistry",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "IK-519": {
+        "code": "IK-519",
+        "name": "Introduction to Indian Classical Music",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A17-2D",
+        "campus": "North Campus"
+      },
+      "IK-540": {
+        "code": "IK-540",
+        "name": "Bhagavad-Gītā Part II",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "A5-2",
+        "campus": "South Campus"
+      },
+      "IK-541": {
+        "code": "IK-541",
+        "name": "Upanishads and Vedanta Studies",
+        "credit": 3,
+        "slot": "FS1"
+      },
+      "IK-552": {
+        "code": "IK-552",
+        "name": "Selected Topics in Rāmāyaṇa",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "IK-555": {
+        "code": "IK-555",
+        "name": "Selected Topics in Mahabharata",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "IK-593": {
+        "code": "IK-593",
+        "name": "Selected topics in Indian Astronomy and Mathematics",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "MA-002": {
+        "code": "MA-002",
+        "name": "Praparatory Course",
+        "credit": 4,
+        "slot": "Preparatory Course"
+      },
+      "MA-220": {
+        "code": "MA-220",
+        "name": "Partial Differential Equations",
+        "credit": 4,
+        "slot": "B",
+        "classroom": "A13-2A",
+        "campus": "North Campus"
+      },
+      "MA-221": {
+        "code": "MA-221",
+        "name": "Numerical Analysis",
+        "credit": 4,
+        "slot": "C",
+        "classroom": "A13-2B",
+        "campus": "North Campus"
+      },
+      "MA-222": {
+        "code": "MA-222",
+        "name": "Applied Mathematical Programming",
+        "credit": 4,
+        "slot": "E",
+        "classroom": "A13-2B",
+        "campus": "North Campus"
+      },
+      "MA-321": {
+        "code": "MA-321",
+        "name": "Numerics of Differential Equations",
+        "credit": 4,
+        "slot": "F",
+        "classroom": "A13-2C",
+        "campus": "North Campus"
+      },
+      "MA-323": {
+        "code": "MA-323",
+        "name": "Applied Databases Practicum",
+        "credit": 2,
+        "slot": "L3"
+      },
+      "MA-521": {
+        "code": "MA-521",
+        "name": "Functional Analysis",
+        "credit": 4,
+        "slot": "A",
+        "classroom": "A1-3",
+        "campus": "South Campus"
+      },
+      "MA-522": {
+        "code": "MA-522",
+        "name": "Partial Differential Equations",
+        "credit": 4,
+        "slot": "B",
+        "classroom": "A1-3",
+        "campus": "South Campus"
+      },
+      "MA-523": {
+        "code": "MA-523",
+        "name": "Numerical Analysis",
+        "credit": 4,
+        "slot": "C",
+        "classroom": "A1-3",
+        "campus": "South Campus"
+      },
+      "MA-524": {
+        "code": "MA-524",
+        "name": "Probability and Statistics",
+        "credit": 4,
+        "slot": "E",
+        "classroom": "A1-3",
+        "campus": "South Campus"
+      },
+      "MA-528": {
+        "code": "MA-528",
+        "name": "Measure Theory and Integration",
+        "credit": 4,
+        "slot": "F",
+        "classroom": "A1-NKN",
+        "campus": "South Campus"
+      },
+      "MA-546": {
+        "code": "MA-546",
+        "name": "Introduction to Quantitative Finance",
+        "credit": 4,
+        "slot": "FS"
+      },
+      "MA-552": {
+        "code": "MA-552",
+        "name": "Number Theory",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A1-3",
+        "campus": "South Campus"
+      },
+      "MA-561": {
+        "code": "MA-561",
+        "name": "Fluidics and Microfluidics",
+        "credit": 4,
+        "slot": "H",
+        "classroom": "A1-3",
+        "campus": "South Campus"
+      },
+      "MA-570": {
+        "code": "MA-570",
+        "name": "Data-driven Dynamical Systems",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A17-1D",
+        "campus": "North Campus"
+      },
+      "MA-572": {
+        "code": "MA-572",
+        "name": "Applied Multivariate Statistical Analysis",
+        "credit": 4,
+        "slot": "F",
+        "classroom": "A1-3",
+        "campus": "South Campus"
+      },
+      "MA-604": {
+        "code": "MA-604",
+        "name": "Introduction to Game Theory",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A1-3",
+        "campus": "South Campus"
+      },
+      "MB-306": {
+        "code": "MB-306",
+        "name": "Introduction to organisational structure",
+        "credit": 3,
+        "slot": "NS"
+      },
+      "MB-307": {
+        "code": "MB-307",
+        "name": "Cost and Financial Accounting",
+        "credit": 3,
+        "slot": "NS"
+      },
+      "MB-391": {
+        "code": "MB-391",
+        "name": "Management Workshop III",
+        "credit": 1,
+        "slot": "NS"
+      },
+      "ME-010": {
+        "code": "ME-010",
+        "name": "Internship",
+        "credit": 0,
+        "slot": "NS"
+      },
+      "ME-100": {
+        "code": "ME-100",
+        "name": "Reverse Engineering",
+        "credit": 1,
+        "slot": "L2"
+      },
+      "ME-205": {
+        "code": "ME-205",
+        "name": "Machine Drawing",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "A13-1A",
+        "campus": "North Campus"
+      },
+      "ME-215": {
+        "code": "ME-215",
+        "name": "Manufacturing Engineering -1",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "A13-1A",
+        "campus": "North Campus"
+      },
+      "ME-303": {
+        "code": "ME-303",
+        "name": "Heat Transfer",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A13-1A",
+        "campus": "North Campus"
+      },
+      "ME-307": {
+        "code": "ME-307",
+        "name": "Energy Conversion Devices",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A13-1A",
+        "campus": "North Campus"
+      },
+      "ME-353": {
+        "code": "ME-353",
+        "name": "Electronic Materials and Their Applications",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A10-1A",
+        "campus": "North Campus"
+      },
+      "ME-396": {
+        "code": "ME-396",
+        "name": "Semester Internship",
+        "credit": 6,
+        "slot": "NS"
+      },
+      "ME-399": {
+        "code": "ME-399",
+        "name": "Semester Internship",
+        "credit": 9,
+        "slot": "NS"
+      },
+      "ME-504": {
+        "code": "ME-504",
+        "name": "Numerical Methods for Engineering Computation",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A5-2",
+        "campus": "South Campus"
+      },
+      "ME-509": {
+        "code": "ME-509",
+        "name": "Nanomanufacturing",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A17-2E",
+        "campus": "North campus"
+      },
+      "ME-510": {
+        "code": "ME-510",
+        "name": "Advanced Manufacturing Processes",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A5-4",
+        "campus": "South Campus"
+      },
+      "ME-520": {
+        "code": "ME-520",
+        "name": "Microwave based Manufacturing Processes",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "ME-522": {
+        "code": "ME-522",
+        "name": "High-Performance Scientific Computing",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "A11 PC Lab",
+        "campus": "North Campus"
+      },
+      "ME-524": {
+        "code": "ME-524",
+        "name": "Additive Manufacturing",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "ME-528": {
+        "code": "ME-528",
+        "name": "Thermal Managment of Electronics",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "CL-3",
+        "campus": "South Campus"
+      },
+      "ME-617": {
+        "code": "ME-617",
+        "name": "Mechanics of Composite Materials",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "CL-3",
+        "campus": "South Campus"
+      },
+      "ME-622": {
+        "code": "ME-622",
+        "name": "Biomechanics of Musculoskeletal System",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A10-3B",
+        "campus": "North Campus"
+      },
+      "ME-625": {
+        "code": "ME-625",
+        "name": "Introduction to Turbulence and Its Modelling",
+        "credit": 3,
+        "slot": "C",
+        "classroom": "A5-3",
+        "campus": "South Campus"
+      },
+      "ME-630": {
+        "code": "ME-630",
+        "name": "Machine learning for engineers",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "A5-3",
+        "campus": "South Campus"
+      },
+      "ME-635": {
+        "code": "ME-635",
+        "name": "Manufacturing for energy Systems",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "MT-204": {
+        "code": "MT-204",
+        "name": "Thermodynamics and Kinetics of Materials",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A10-3B",
+        "campus": "North Campus"
+      },
+      "MT-205": {
+        "code": "MT-205",
+        "name": "Functional Properties of Materials",
+        "credit": 4,
+        "slot": "A",
+        "classroom": "A13-2D",
+        "campus": "North Campus"
+      },
+      "MT-206": {
+        "code": "MT-206",
+        "name": "Extraction and Materials Processing",
+        "credit": 4,
+        "slot": "C",
+        "classroom": "A10-3A",
+        "campus": "North Campus"
+      },
+      "MT-501": {
+        "code": "MT-501",
+        "name": "Energy Conversion and Storage Technologies",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "A10-2A",
+        "campus": "North Campus"
+      },
+      "MT-504": {
+        "code": "MT-504",
+        "name": "Powder metallurgical processing of Materials",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A17-1D",
+        "campus": "North Campus"
+      },
+      "MT-506": {
+        "code": "MT-506",
+        "name": "Biomaterials",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "A10-2B",
+        "campus": "North Campus"
+      },
+      "MT-507": {
+        "code": "MT-507",
+        "name": "Modelling and Simulations in Material Science",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "A10-3A",
+        "campus": "North Campus"
+      },
+      "PH-002": {
+        "code": "PH-002",
+        "name": "Preparatory Physics II",
+        "credit": 4,
+        "slot": "Preparatory Course"
+      },
+      "PH-302": {
+        "code": "PH-302",
+        "name": "Introduction to Statistical Mechanics",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A10-1A",
+        "campus": "North Campus"
+      },
+      "PH-501": {
+        "code": "PH-501",
+        "name": "Solid State Physics",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A17-1E",
+        "campus": "North Campus"
+      },
+      "PH-502": {
+        "code": "PH-502",
+        "name": "Photonics",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "A13-2C",
+        "campus": "North Campus"
+      },
+      "PH-519P": {
+        "code": "PH-519P",
+        "name": "Post Graduate Project II",
+        "credit": 8,
+        "slot": "NS"
+      },
+      "PH-521": {
+        "code": "PH-521",
+        "name": "Electromagnetic Theory",
+        "credit": 4,
+        "slot": "A",
+        "classroom": "A5-3",
+        "campus": "South Campus"
+      },
+      "PH-522": {
+        "code": "PH-522",
+        "name": "Statistical Mechanics",
+        "credit": 4,
+        "slot": "B",
+        "classroom": "CL-4",
+        "campus": "South Campus"
+      },
+      "PH-523": {
+        "code": "PH-523",
+        "name": "Condensed Matter Physics",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "CL-1",
+        "campus": "South Campus"
+      },
+      "PH-524": {
+        "code": "PH-524",
+        "name": "Atomic and Molecular Physics",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A5-1",
+        "campus": "South Campus"
+      },
+      "PH-526": {
+        "code": "PH-526",
+        "name": "Research Project III",
+        "credit": 3,
+        "slot": "NS"
+      },
+      "PH-527": {
+        "code": "PH-527",
+        "name": "Research Project-IV",
+        "credit": 3,
+        "slot": "NS"
+      },
+      "PH-550": {
+        "code": "PH-550",
+        "name": "Introduction to Quantum Optics",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "SC-NKN",
+        "campus": "South Campus"
+      },
+      "PH-604": {
+        "code": "PH-604",
+        "name": "Optical Properties of Solids",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A5-4",
+        "campus": "South Campus"
+      },
+      "PH-606": {
+        "code": "PH-606",
+        "name": "Quantum Field Theory",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "CL-1",
+        "campus": "South Campus"
+      },
+      "PH-611P": {
+        "code": "PH-611P",
+        "name": "Experimental Research Techniques",
+        "credit": 4,
+        "slot": "L2"
+      },
+      "PH-612": {
+        "code": "PH-612",
+        "name": "Nuclear and Particle Physics",
+        "credit": 3,
+        "slot": "B",
+        "classroom": "A13-2D",
+        "campus": "North Campus"
+      },
+      "PH-621": {
+        "code": "PH-621",
+        "name": "Computational Methods for Physicists",
+        "credit": 4,
+        "slot": "C",
+        "classroom": "CL-1",
+        "campus": "South Campus"
+      },
+      "PH-622": {
+        "code": "PH-622",
+        "name": "Mini Thesis II",
+        "credit": 8,
+        "slot": "NS"
+      },
+      "QT-406": {
+        "code": "QT-406",
+        "name": "Introduction to Quantum communication",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "QT-407": {
+        "code": "QT-407",
+        "name": "Introduction to Quantum Sensing",
+        "credit": 3,
+        "slot": "FS"
+      },
+      "SC-600": {
+        "code": "SC-600",
+        "name": "Research Methodology",
+        "credit": 1,
+        "slot": "FS"
+      },
+      "VL-300": {
+        "code": "VL-300",
+        "name": "Reverse Engineering - E-waste management",
+        "credit": 1,
+        "slot": "L3"
+      },
+      "VL-311": {
+        "code": "VL-311",
+        "name": "CMOS processing and practicum",
+        "credit": 4,
+        "slot": "D",
+        "classroom": "A17-2D",
+        "campus": "North Campus"
+      },
+      "VL-312": {
+        "code": "VL-312",
+        "name": "Electronics system packaging",
+        "credit": 3,
+        "slot": "E",
+        "classroom": "A10-2A",
+        "campus": "North Campus"
+      },
+      "VL-326": {
+        "code": "VL-326",
+        "name": "Computer Orginization",
+        "credit": 4,
+        "slot": "F",
+        "classroom": "A17-1C",
+        "campus": "North Campus"
+      }
+    },
+    "ic": {
+      "IC-240": {
+        "code": "IC-240",
+        "name": "Mechanics of Rigid Bodies",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "A18-2",
+        "campus": "North Campus"
+      },
+      "IC-241": {
+        "code": "IC-241",
+        "name": "Materials Science for Engineers",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "A11-1A",
+        "campus": "North Campus"
+      },
+      "IC-253": {
+        "code": "IC-253",
+        "name": "Programming and Data Structures",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "A18-1",
+        "campus": "North Campus"
+      },
+      "IC-252": {
+        "code": "IC-252",
+        "name": "Probability and Statistics",
+        "credit": 4,
+        "slot": "B + Lab slot",
+        "classroom": "Auditorium",
+        "campus": "North Campus"
+      },
+      "IC-121": {
+        "code": "IC-121",
+        "name": "Mechanics of Particles And Waves",
+        "credit": 3,
+        "slot": "A",
+        "classroom": "A11-1B",
+        "campus": "North Campus"
+      },
+      "IC-113": {
+        "code": "IC-113",
+        "name": "Complex and Vector Calculus",
+        "credit": 2,
+        "slot": "C",
+        "classroom": "Auditorium",
+        "campus": "North Campus"
+      },
+      "IC-115": {
+        "code": "IC-115",
+        "name": "Ode and Integral Transform",
+        "credit": 2,
+        "slot": "E",
+        "classroom": "Auditorium",
+        "campus": "North Campus"
+      },
+      "IC-102P": {
+        "code": "IC-102P",
+        "name": "Foundations of Design Practicum",
+        "credit": 4,
+        "slot": "F + Lab slot",
+        "classroom": "Auditorium",
+        "campus": "North Campus"
+      },
+      "IC-140": {
+        "code": "IC-140",
+        "name": "Graphics for Design",
+        "credit": 4,
+        "slot": "G + Lab slot",
+        "classroom": "Auditorium",
+        "campus": "North Campus"
+      },
+      "IC-161": {
+        "code": "IC-161",
+        "name": "Applied Electronics",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "Auditorium",
+        "campus": "North Campus"
+      },
+      "CE-202": {
+        "code": "CE-202",
+        "name": "Introduction to Civil Engineering",
+        "credit": 1,
+        "slot": "H",
+        "classroom": "A11-1B",
+        "campus": "North Campus"
+      },
+      "IC-010": {
+        "code": "IC-010",
+        "name": "Internship",
+        "credit": 2,
+        "slot": "NS"
+      },
+      "IC-161P": {
+        "code": "IC-161P",
+        "name": "Applied Electronics Lab",
+        "credit": 2,
+        "slot": "Lab slot"
+      },
+      "IC-222P": {
+        "code": "IC-222P",
+        "name": "Physics Practicum/Practicals",
+        "credit": 2,
+        "slot": "Lab slot",
+        "classroom": "Physics Teaching laboratory, A11",
+        "campus": "North Campus"
+      }
+    }
+  },
+  "pcLab": {
+    "IC-252": {
+      "kind": "IC",
+      "code": "IC-252",
+      "name": "Probability and Statistics",
+      "instructor": "Dr. Sarita Azad",
+      "slot": "L1, L2, L3, L4",
+      "venue": "A10 + A11 PC Labs",
+      "time": "2-3:30 PM"
+    },
+    "IC-102P": {
+      "kind": "IC",
+      "code": "IC-102P",
+      "name": "Foundations of Design Practicum",
+      "instructor": "Dr. Deepak Raina",
+      "slot": "L1, L2, L3, L4",
+      "venue": "A10 + A11 PC Labs",
+      "time": "5-6:30 PM"
+    },
+    "DS-302": {
+      "kind": "NON_IC",
+      "code": "DS-302",
+      "name": "Computing systems for data processing",
+      "instructor": "Dr. Padmanabhan",
+      "slot": "L2",
+      "venue": "A11 PC Lab",
+      "time": "3:30-5 PM"
+    },
+    "CE-563": {
+      "kind": "NON_IC",
+      "code": "CE-563",
+      "name": "Finite Element Methods in Engineering",
+      "instructor": "Dr. Shashank Pathak",
+      "slot": "L4",
+      "venue": "A5 PC Lab 1",
+      "time": "2-5 PM"
+    },
+    "PH-621": {
+      "kind": "NON_IC",
+      "code": "PH-621",
+      "name": "Computational Methods for Physicists",
+      "instructor": "Dr. Arko Roy",
+      "slot": "L3",
+      "venue": "A5 PC Lab 1",
+      "time": "2-5 PM"
+    },
+    "EE-619": {
+      "kind": "NON_IC",
+      "code": "EE-619",
+      "name": "Mixed Signal VLSI Design",
+      "instructor": "Dr. Hitesh",
+      "slot": "L3",
+      "venue": "A10 PC Lab",
+      "time": "3:30-5 PM"
+    },
+    "CS-309": {
+      "kind": "NON_IC",
+      "code": "CS-309",
+      "name": "Information and Database Systems",
+      "instructor": "Dr. Dinesh Singh",
+      "slot": "L5",
+      "venue": "A10 + A11 PC Labs",
+      "time": "2-5 PM"
+    },
+    "BE-304": {
+      "kind": "NON_IC",
+      "code": "BE-304",
+      "name": "Bioinformatics",
+      "instructor": "Dr. Kharerin Hungyo",
+      "slot": "L3",
+      "venue": "A11 PC Lab",
+      "time": "3:30-5 PM"
+    },
+    "DS-412": {
+      "kind": "NON_IC",
+      "code": "DS-412",
+      "name": "Matrix Computations for Data Science",
+      "instructor": "Dr. Adarsh",
+      "slot": "L1",
+      "venue": "A10 PC Lab",
+      "time": "3:30-5 PM"
+    }
+  }
+}

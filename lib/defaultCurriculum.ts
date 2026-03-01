@@ -7,6 +7,10 @@ export interface DefaultCourse {
   credits: number;
   category: "IC" | "ICB" | "HSS" | "IKS" | "DC" | "DE" | "FE" | "ISTP" | "MTP";
   semester: number;
+  /** If true, shown unchecked by default in import-courses (student must opt in) */
+  optional?: boolean;
+  /** Short label shown as a badge in import-courses UI (e.g. "Jan–May 2024") */
+  tag?: string;
 }
 
 // ─── IC Compulsory – common to all B.Tech branches ───────────────────────────
@@ -529,6 +533,13 @@ const bscsSem8: DefaultCourse[] = [
   { code: "CY504", name: "Heterocyclic Chemistry",                  credits: 2, category: "DC", semester: 8 },
 ];
 
+// ─── Optional HSS electives shown (unchecked) in Semester 2 for all branches ──
+// These were offered as 2-credit courses in the Jan–May 2024 term (B23 batch, Sem 2).
+const hssOptionalSem2: DefaultCourse[] = [
+  { code: "HS-357-S24", name: "French Language and Culture", credits: 2, category: "HSS", semester: 2, optional: true, tag: "Jan–May 2024" },
+  { code: "HS-308-S24", name: "European Literature",         credits: 2, category: "HSS", semester: 2, optional: true, tag: "Jan–May 2024" },
+];
+
 // ─── Export ───────────────────────────────────────────────────────────────────
 export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   // CSE
@@ -599,7 +610,10 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
 
 export function getDefaultCurriculum(branch: string, semester: number): DefaultCourse[] {
   const key = `${branch}_${semester}`;
-  return DEFAULT_CURRICULUM[key] || [];
+  const courses = DEFAULT_CURRICULUM[key] || [];
+  // Append optional HSS electives to semester 2 for every branch
+  if (semester === 2) return [...courses, ...hssOptionalSem2];
+  return courses;
 }
 
 export function getAllDefaultCourses(branch: string, upToSemester: number = 8): DefaultCourse[] {
