@@ -253,45 +253,144 @@ export default function ProgramsPage() {
                 </div>
 
                 {/* Credit Requirements */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
-                  <div className="bg-surface/50 rounded-lg p-4 border border-border">
-                    <div className="flex items-center gap-2 mb-1">
+                <div className="mt-6 space-y-3">
+                  {/* Total bar */}
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-primary/8 rounded-xl border border-primary/20">
+                    <div className="flex items-center gap-2">
                       <Award className="w-4 h-4 text-primary" />
-                      <p className="text-sm font-medium text-foreground-secondary">Total Credits</p>
+                      <p className="text-sm font-semibold text-foreground">Total Required</p>
                     </div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {primaryProgram.program.totalCreditsRequired}
+                    <p className="text-xl font-bold text-primary">
+                      {primaryProgram.program.totalCreditsRequired} cr
                     </p>
                   </div>
 
-                  <div className="bg-surface/50 rounded-lg p-4 border border-border">
-                    <div className="flex items-center gap-2 mb-1">
-                      <BookOpen className="w-4 h-4 text-blue-500" />
-                      <p className="text-sm font-medium text-foreground-secondary">IC + DC</p>
+                  {/* IC + DC combined block */}
+                  <div className="rounded-xl border border-border bg-surface/50 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">Core Courses</p>
+                      {progressData && (
+                        <p className="text-xs text-foreground-secondary">
+                          {progressData.completed.core} / {progressData.required.core} cr earned
+                        </p>
+                      )}
                     </div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {primaryProgram.program.icCredits + primaryProgram.program.dcCredits}
-                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
+                        <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">IC</p>
+                        <p className="text-xs text-foreground-secondary mb-1">Institutional Core</p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {primaryProgram.program.icCredits}
+                          <span className="text-xs font-normal text-foreground-secondary ml-1">cr</span>
+                        </p>
+                      </div>
+                      <div className="bg-indigo-500/10 rounded-lg p-3 border border-indigo-500/20">
+                        <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">DC</p>
+                        <p className="text-xs text-foreground-secondary mb-1">Discipline Core</p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {primaryProgram.program.dcCredits}
+                          <span className="text-xs font-normal text-foreground-secondary ml-1">cr</span>
+                        </p>
+                      </div>
+                    </div>
+                    {progressData && progressData.required.core > 0 && (
+                      <div className="mt-3 h-1.5 bg-border rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-700"
+                          style={{ width: `${Math.min(100, (progressData.completed.core / progressData.required.core) * 100)}%` }}
+                        />
+                      </div>
+                    )}
                   </div>
 
-                  <div className="bg-surface/50 rounded-lg p-4 border border-border">
-                    <div className="flex items-center gap-2 mb-1">
-                      <BookOpen className="w-4 h-4 text-green-500" />
-                      <p className="text-sm font-medium text-foreground-secondary">Electives (DE)</p>
+                  {/* Electives row */}
+                  <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {/* DE */}
+                    <div className="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/20">
+                      <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">DE</p>
+                      <p className="text-xs text-foreground-secondary mb-2">Discipline Electives</p>
+                      {progressData ? (
+                        <>
+                          <p className="text-xl font-bold text-foreground">
+                            {progressData.completed.de}
+                            <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.de} cr</span>
+                          </p>
+                          {progressData.required.de > 0 && (
+                            <div className="mt-2 h-1 bg-emerald-500/20 rounded-full overflow-hidden">
+                              <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (progressData.completed.de / progressData.required.de) * 100)}%` }} />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-xl font-bold text-foreground">{primaryProgram.program.deCredits}<span className="text-xs font-normal text-foreground-secondary ml-1">cr</span></p>
+                      )}
                     </div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {primaryProgram.program.deCredits}
-                    </p>
-                  </div>
 
-                  <div className="bg-surface/50 rounded-lg p-4 border border-border">
-                    <div className="flex items-center gap-2 mb-1">
-                      <BookOpen className="w-4 h-4 text-purple-500" />
-                      <p className="text-sm font-medium text-foreground-secondary">Free Electives</p>
+                    {/* FE */}
+                    <div className="bg-purple-500/10 rounded-xl p-3 border border-purple-500/20">
+                      <p className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">FE</p>
+                      <p className="text-xs text-foreground-secondary mb-2">Free Electives</p>
+                      {progressData ? (
+                        <>
+                          <p className="text-xl font-bold text-foreground">
+                            {progressData.completed.freeElective}
+                            <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.freeElective} cr</span>
+                          </p>
+                          {progressData.required.freeElective > 0 && (
+                            <div className="mt-2 h-1 bg-purple-500/20 rounded-full overflow-hidden">
+                              <div className="h-full bg-purple-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (progressData.completed.freeElective / progressData.required.freeElective) * 100)}%` }} />
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-xl font-bold text-foreground">{primaryProgram.program.feCredits}<span className="text-xs font-normal text-foreground-secondary ml-1">cr</span></p>
+                      )}
                     </div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {primaryProgram.program.feCredits}
-                    </p>
+
+                    {/* MTP */}
+                    {progressData && progressData.required.mtp > 0 && (
+                      <div className="bg-orange-500/10 rounded-xl p-3 border border-orange-500/20">
+                        <p className="text-[11px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">MTP</p>
+                        <p className="text-xs text-foreground-secondary mb-2">Major Tech Project</p>
+                        <p className="text-xl font-bold text-foreground">
+                          {progressData.completed.mtp}
+                          <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.mtp} cr</span>
+                        </p>
+                        <div className="mt-2 h-1 bg-orange-500/20 rounded-full overflow-hidden">
+                          <div className="h-full bg-orange-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (progressData.completed.mtp / progressData.required.mtp) * 100)}%` }} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ISTP */}
+                    {progressData && progressData.required.istp > 0 && (
+                      <div className="bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">
+                        <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">ISTP</p>
+                        <p className="text-xs text-foreground-secondary mb-2">Socio-Tech Practicum</p>
+                        <p className="text-xl font-bold text-foreground">
+                          {progressData.completed.istp}
+                          <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.istp} cr</span>
+                        </p>
+                        <div className="mt-2 h-1 bg-rose-500/20 rounded-full overflow-hidden">
+                          <div className="h-full bg-rose-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (progressData.completed.istp / progressData.required.istp) * 100)}%` }} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* BSCS Research */}
+                    {progressData && progressData.required.pe > 0 && (
+                      <div className="bg-amber-500/10 rounded-xl p-3 border border-amber-500/20">
+                        <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Research</p>
+                        <p className="text-xs text-foreground-secondary mb-2">Research Credits</p>
+                        <p className="text-xl font-bold text-foreground">
+                          {progressData.completed.pe}
+                          <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.pe} cr</span>
+                        </p>
+                        <div className="mt-2 h-1 bg-amber-500/20 rounded-full overflow-hidden">
+                          <div className="h-full bg-amber-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, progressData.required.pe > 0 ? (progressData.completed.pe / progressData.required.pe) * 100 : 0)}%` }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
