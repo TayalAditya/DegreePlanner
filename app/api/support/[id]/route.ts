@@ -99,3 +99,37 @@ export async function PATCH(
   }
 }
 
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { id } = await params;
+    const ticket = await prisma.supportTicket.findUnique({
+      where: { id },
+      select: { userId: true, status: true },
+    });
+
+    if (!ticket) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+    const isAdmin = session.user.role === "ADMIN";
+    const isOwner = ticket.userId === session.user.id;
+
+    if (!isAdmin && !isOwner)
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    // Non-admins can only delete their own OPEN tickets
+    if (!isAdmin && ticket.status !== "OPEN")
+      return NextResponse.json({ error: "Cannot delete a ticket that is already being reviewed" }, { status: 403 });
+
+    await prisma.supportTicket.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting support ticket:", error);
+    return NextResponse.json({ error: "Failed to delete ticket" }, { status: 500 });
+  }
+}
+
