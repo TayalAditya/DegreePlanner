@@ -74,7 +74,7 @@ interface ProgressData {
     MTP: number;
     ISTP: number;
   };
-  semesterWiseCredits: { semester: number; credits: number }[];
+  semesterWiseCredits: { semester: number; credits: number; inProgressCredits: number }[];
 }
 
 // Color scheme for each category
@@ -402,15 +402,25 @@ export default function ProgressPage() {
       ISTP: istpRequired,
     };
 
-    // Group by semester
-    const semesterMap = new Map<number, number>();
+    // Group by semester (include IN_PROGRESS when toggle is ON)
+    const semesterMap = new Map<number, { completed: number; inProgress: number }>();
     completedEnrollments.forEach((e) => {
-      const current = semesterMap.get(e.semester) || 0;
-      semesterMap.set(e.semester, current + e.course.credits);
+      const cur = semesterMap.get(e.semester) || { completed: 0, inProgress: 0 };
+      semesterMap.set(e.semester, { ...cur, completed: cur.completed + e.course.credits });
     });
+    if (includeCurrentSemesterCredits) {
+      inProgressEnrollments.forEach((e) => {
+        const cur = semesterMap.get(e.semester) || { completed: 0, inProgress: 0 };
+        semesterMap.set(e.semester, { ...cur, inProgress: cur.inProgress + e.course.credits });
+      });
+    }
 
     const semesterWiseCredits = Array.from(semesterMap.entries())
-      .map(([semester, credits]) => ({ semester, credits }))
+      .map(([semester, { completed, inProgress }]) => ({
+        semester,
+        credits: completed,
+        inProgressCredits: inProgress,
+      }))
       .sort((a, b) => a.semester - b.semester);
 
     return {
@@ -738,15 +748,32 @@ export default function ProgressPage() {
             Semester-wise Credits
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {progress.semesterWiseCredits.map(({ semester, credits }) => (
-              <div
-                key={semester}
-                className="bg-primary/10 rounded-lg p-4 text-center border border-primary/20"
-              >
-                <p className="text-sm text-foreground-secondary mb-1">Sem {semester}</p>
-                <p className="text-2xl font-bold text-primary">{credits}</p>
-              </div>
-            ))}
+            {progress.semesterWiseCredits.map(({ semester, credits, inProgressCredits }) => {
+              const hasPending = inProgressCredits > 0;
+              return (
+                <div
+                  key={semester}
+                  className={`rounded-lg p-4 text-center border ${
+                    hasPending
+                      ? "bg-info/10 border-info/30"
+                      : "bg-primary/10 border-primary/20"
+                  }`}
+                >
+                  <p className="text-sm text-foreground-secondary mb-1">Sem {semester}</p>
+                  <p className={`text-2xl font-bold ${hasPending ? "text-info" : "text-primary"}`}>
+                    {credits + inProgressCredits}
+                  </p>
+                  {hasPending && credits > 0 && (
+                    <p className="text-[10px] text-foreground-secondary mt-0.5">
+                      {credits} done + {inProgressCredits} wip
+                    </p>
+                  )}
+                  {hasPending && credits === 0 && (
+                    <p className="text-[10px] text-info/70 mt-0.5">in progress</p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
