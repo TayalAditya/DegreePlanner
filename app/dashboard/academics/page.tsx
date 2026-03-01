@@ -287,7 +287,6 @@ function CoursesSection() {
             { code: "IC161P", name: "Applied Electronics Lab", credits: 2 },
             { code: "IC272", name: "Machine Learning", credits: 3 },
             { code: "IC222P", name: "Physics Practicum", credits: 2 },
-            { code: "IC010", name: "Internship", credits: 2 },
           ].map((course, idx) => (
             <div key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-lg bg-surface-hover/70 border border-border/60 hover:bg-surface-hover transition-colors">
               <div className="min-w-0">
@@ -352,7 +351,7 @@ function InternshipsSection() {
   return (
     <div className="space-y-6">
       <div className="bg-card p-6 rounded-xl border">
-        <h3 className="font-semibold text-xl mb-4">Mandatory Internship (IC-010)</h3>
+        <h3 className="font-semibold text-xl mb-4">Mandatory Internship</h3>
         <div className="space-y-3">
           <p className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -428,7 +427,7 @@ function InternshipsSection() {
       <div className="bg-card p-6 rounded-xl border border-orange-500/20 dark:border-orange-500/30 bg-orange-500/5 dark:bg-orange-500/10">
         <h3 className="font-semibold text-xl mb-3">⚠️ Important Notes</h3>
         <ul className="space-y-2 text-sm text-muted-foreground">
-          <li>• 20-week internships = 2 credits (IC-010) + 6/9 credits (DP-396P/399P)</li>
+          <li>• 20-week internships = 2 credits (branch-specific IC) + 6/9 credits (DP-396P/399P)</li>
           <li>• Get FA consent before applying, especially for general/non-core companies</li>
           <li>• Some FAs require min 105 credits by end of 5th semester for 6th semester onsite internship</li>
           <li>• Projects under IIT Mandi faculty don&apos;t count as internships</li>
