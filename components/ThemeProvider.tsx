@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useSyncExternalStore } from "react";
 
 type ThemeMode = "light" | "dark" | "system";
 const PALETTES = ["default", "ocean", "sunset", "forest"] as const;
@@ -17,56 +17,37 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>("system");
-  const [effectiveTheme, setEffectiveTheme] = useState<"light" | "dark">("light");
-  const [palette, setPaletteState] = useState<ThemePalette>("default");
-
-  useEffect(() => {
-    // Load theme from localStorage
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") return "system";
     const savedTheme = localStorage.getItem("theme") as ThemeMode | null;
-    if (savedTheme) {
-      setThemeState(savedTheme);
-    }
+    if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system") return savedTheme;
+    return "system";
+  });
 
+  const [palette, setPaletteState] = useState<ThemePalette>(() => {
+    if (typeof window === "undefined") return "default";
     const savedPalette = localStorage.getItem("degreePlanner.palette") as ThemePalette | null;
-    if (savedPalette && PALETTES.includes(savedPalette)) {
-      setPaletteState(savedPalette);
-    }
-  }, []);
+    return savedPalette && PALETTES.includes(savedPalette) ? savedPalette : "default";
+  });
+
+  const prefersDark = useSyncExternalStore(
+    (onStoreChange) => {
+      const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      mediaQuery.addEventListener("change", onStoreChange);
+      return () => mediaQuery.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(prefers-color-scheme: dark)").matches,
+    () => false
+  );
+
+  const effectiveTheme: "light" | "dark" =
+    theme === "system" ? (prefersDark ? "dark" : "light") : theme;
 
   useEffect(() => {
     const root = window.document.documentElement;
-    
-    const updateTheme = () => {
-      let activeTheme: "light" | "dark" = "light";
-
-      if (theme === "system") {
-        const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light";
-        activeTheme = systemTheme;
-      } else {
-        activeTheme = theme;
-      }
-
-      root.classList.remove("light", "dark");
-      root.classList.add(activeTheme);
-      setEffectiveTheme(activeTheme);
-    };
-
-    updateTheme();
-
-    // Listen for system theme changes
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const handleChange = () => {
-      if (theme === "system") {
-        updateTheme();
-      }
-    };
-
-    mediaQuery.addEventListener("change", handleChange);
-    return () => mediaQuery.removeEventListener("change", handleChange);
-  }, [theme]);
+    root.classList.remove("light", "dark");
+    root.classList.add(effectiveTheme);
+  }, [effectiveTheme]);
 
   useEffect(() => {
     const root = window.document.documentElement;

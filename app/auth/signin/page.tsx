@@ -19,18 +19,12 @@ export default function SignIn() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center bg-gradient-to-b from-background-secondary to-background p-4">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-primary/20 dark:bg-primary/10 blur-3xl animate-float" />
-        <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-secondary/20 dark:bg-secondary/10 blur-3xl animate-pulse-slow" />
-        <div className="absolute -bottom-40 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-accent/15 dark:bg-accent/10 blur-3xl animate-float" />
-      </div>
-
-      <div className="max-w-md w-full relative">
-        <div className="bg-surface/80 backdrop-blur-xl rounded-2xl border border-border shadow-xl p-8 animate-scale-in">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="max-w-md w-full">
+        <div className="bg-surface rounded-2xl border border-border shadow-lg p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl shadow-lg shadow-primary/20 mb-4">
-              <Shield className="w-8 h-8 text-white drop-shadow-sm" />
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-primary/10 rounded-2xl border border-primary/20 mb-4">
+              <Shield className="w-7 h-7 text-primary" />
             </div>
             <h1 className="text-3xl font-bold text-foreground mb-2">
               Degree Planner
@@ -44,9 +38,8 @@ export default function SignIn() {
             <button
               onClick={handleSignIn}
               disabled={isLoading}
-              className="group relative w-full flex items-center justify-center gap-3 bg-surface rounded-xl px-6 py-3 text-foreground font-medium border border-border hover:border-border-strong hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+              className="group relative w-full flex items-center justify-center gap-3 bg-background-secondary rounded-xl px-6 py-3 text-foreground font-medium border border-border hover:border-border-strong hover:bg-surface-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
             >
-              <span className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-gradient-to-r from-primary/10 via-secondary/10 to-accent/10 rounded-xl" />
               {isLoading ? (
                 <div className="relative w-5 h-5 border-2 border-border-strong border-t-primary rounded-full animate-spin" />
               ) : (
@@ -85,7 +78,7 @@ export default function SignIn() {
           </div>
         </div>
 
-        <div className="mt-8 text-center text-sm text-foreground-secondary">
+        <div className="mt-6 text-center text-sm text-foreground-secondary">
           <p>
             By signing in, you agree to our Terms of Service and Privacy Policy
           </p>

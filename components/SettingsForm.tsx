@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Mail, BookOpen, Save, Bug, Lightbulb, Palette, Check } from "lucide-react";
+import { User, Mail, BookOpen, Save, Palette, Check } from "lucide-react";
 import { getAllBranches } from "@/lib/branches";
 import { useTheme } from "./ThemeProvider";
 
@@ -27,10 +26,8 @@ export function SettingsForm({ user }: SettingsFormProps) {
     doingISTP: user.doingISTP ?? false,
   });
 
-  const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "";
-
   const paletteOptions = [
-    { value: "default" as const, label: "Default", swatches: ["#6366f1", "#ec4899", "#14b8a6"] },
+    { value: "default" as const, label: "Default", swatches: ["#4f46e5", "#7c3aed", "#14b8a6"] },
     { value: "ocean" as const, label: "Ocean", swatches: ["#0284c7", "#06b6d4", "#14b8a6"] },
     { value: "sunset" as const, label: "Sunset", swatches: ["#f97316", "#db2777", "#8b5cf6"] },
     { value: "forest" as const, label: "Forest", swatches: ["#16a34a", "#84cc16", "#14b8a6"] },
@@ -127,7 +124,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
           </div>
 
           <p className="mt-3 text-xs text-foreground-secondary">
-            Tip: You can also cycle palettes from the theme button in the sidebar.
+            Tip: You can also switch palettes from the sidebar appearance buttons.
           </p>
         </div>
 
@@ -304,69 +301,6 @@ export function SettingsForm({ user }: SettingsFormProps) {
                 <strong>Note:</strong> These preferences affect your credit distribution. You can change them anytime before course registration.
               </p>
             </div>
-          </div>
-        </div>
-
-        {/* Support */}
-        <div className="bg-surface dark:bg-surface rounded-lg border border-border p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-1">
-            Support & Feedback
-          </h3>
-          <p className="text-sm text-foreground-secondary mb-4">
-            Share suggestions, report issues, or contact us for help.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Link
-              href="/dashboard/support?type=CONTACT"
-              className="group flex items-start gap-3 rounded-lg border border-border bg-surface-hover/50 p-4 hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-            >
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Mail className="w-5 h-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-foreground">Contact</p>
-                </div>
-                <p className="text-xs text-foreground-secondary">
-                  {supportEmail ? `Email: ${supportEmail}` : "Message the admin inside the app"}
-                </p>
-              </div>
-            </Link>
-
-            <Link
-              href="/dashboard/support?type=SUGGESTION"
-              className="group flex items-start gap-3 rounded-lg border border-border bg-surface-hover/50 p-4 hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-            >
-              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                <Lightbulb className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-foreground">Suggestion</p>
-                </div>
-                <p className="text-xs text-foreground-secondary">
-                  Request a feature or improvement
-                </p>
-              </div>
-            </Link>
-
-            <Link
-              href="/dashboard/support?type=ISSUE"
-              className="group flex items-start gap-3 rounded-lg border border-border bg-surface-hover/50 p-4 hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-            >
-              <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
-                <Bug className="w-5 h-5 text-red-600 dark:text-red-400" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-foreground">Report Issue</p>
-                </div>
-                <p className="text-xs text-foreground-secondary">
-                  Something broken? Tell us
-                </p>
-              </div>
-            </Link>
           </div>
         </div>
 

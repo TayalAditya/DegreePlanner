@@ -43,18 +43,12 @@ function AuthErrorContent() {
   const errorInfo = errorMessages[error || ""] || errorMessages.Default;
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center bg-gradient-to-b from-background-secondary to-background p-4">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-error/15 dark:bg-error/10 blur-3xl animate-float" />
-        <div className="absolute -top-24 -right-24 h-80 w-80 rounded-full bg-warning/15 dark:bg-warning/10 blur-3xl animate-pulse-slow" />
-        <div className="absolute -bottom-40 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-primary/10 dark:bg-primary/10 blur-3xl animate-float" />
-      </div>
-
-      <div className="max-w-md w-full relative">
-        <div className="bg-surface/80 backdrop-blur-xl rounded-2xl border border-border shadow-xl p-8 animate-scale-in">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="max-w-md w-full">
+        <div className="bg-surface rounded-2xl border border-border shadow-lg p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-error to-warning rounded-2xl shadow-lg shadow-error/20 mb-4">
-              <AlertCircle className="w-8 h-8 text-white drop-shadow-sm" />
+            <div className="inline-flex items-center justify-center w-14 h-14 bg-error/10 rounded-2xl border border-error/20 mb-4">
+              <AlertCircle className="w-7 h-7 text-error" />
             </div>
             <h1 className="text-2xl font-bold text-foreground mb-2">
               {errorInfo.title}
@@ -76,7 +70,7 @@ function AuthErrorContent() {
           {error === "batch_not_supported" && (
             <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-xl">
               <p className="text-sm text-foreground-secondary">
-                We're gradually expanding to other batches. Stay tuned!
+                We&apos;re gradually expanding to other batches. Stay tuned!
               </p>
             </div>
           )}
@@ -107,7 +101,7 @@ function AuthErrorContent() {
 export default function AuthError() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen relative overflow-hidden flex items-center justify-center bg-gradient-to-b from-background-secondary to-background p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <div className="w-8 h-8 border-2 border-border-strong border-t-primary rounded-full animate-spin" aria-label="Loading" />
       </div>
     }>

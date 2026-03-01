@@ -153,6 +153,16 @@ export default function CoursesPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
 
+  // Auto-calculate current semester from batch year (2023) + current date
+  // Odd sems = Fall (Aug-Dec), Even sems = Spring (Jan-May)
+  const currentSem = (() => {
+    const now = new Date();
+    const batch = 2023;
+    const yearsElapsed = now.getFullYear() - batch;
+    const isSpring = now.getMonth() + 1 <= 6;
+    return isSpring ? yearsElapsed * 2 : yearsElapsed * 2 + 1;
+  })();
+
   useEffect(() => {
     loadData();
   }, []);
@@ -1245,7 +1255,7 @@ export default function CoursesPage() {
                     const offeredOddOnly = offeredInFall && !offeredInSpring;
                     const offeredEvenOnly = !offeredInFall && offeredInSpring;
 
-                    // If course is offered in both semesters OR neither specified, show all semesters
+                    // If course is offered in both semesters OR neither specified, show all semesters up to currentSem
                     if (offeredBothSemesters || (!offeredInFall && !offeredInSpring)) {
                       return (
                         <>
@@ -1255,14 +1265,14 @@ export default function CoursesPage() {
                             className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
                           >
                             <option value="">Select semester...</option>
-                            {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                            {[1, 2, 3, 4, 5, 6, 7, 8].filter((s) => s <= currentSem).map((sem) => (
                               <option key={sem} value={sem}>
                                 Semester {sem} ({sem % 2 === 1 ? "Fall" : "Spring"})
                               </option>
                             ))}
                           </select>
                           <p className="text-xs text-foreground-secondary mt-1">
-                            This course is offered in both Fall and Spring semesters
+                            Showing up to Sem {currentSem} (current semester)
                           </p>
                         </>
                       );
@@ -1278,14 +1288,14 @@ export default function CoursesPage() {
                             className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
                           >
                             <option value="">Select semester...</option>
-                            {[1, 3, 5, 7].map((sem) => (
+                            {[1, 3, 5, 7].filter((s) => s <= currentSem).map((sem) => (
                               <option key={sem} value={sem}>
                                 Semester {sem} (Fall)
                               </option>
                             ))}
                           </select>
                           <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                            ⚠️ This course is only offered in Fall semesters (odd)
+                            ⚠️ Fall semesters only — up to Sem {currentSem}
                           </p>
                         </>
                       );
@@ -1301,14 +1311,14 @@ export default function CoursesPage() {
                             className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
                           >
                             <option value="">Select semester...</option>
-                            {[2, 4, 6, 8].map((sem) => (
+                            {[2, 4, 6, 8].filter((s) => s <= currentSem).map((sem) => (
                               <option key={sem} value={sem}>
                                 Semester {sem} (Spring)
                               </option>
                             ))}
                           </select>
                           <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                            ℹ️ This course is only offered in Spring semesters (even)
+                            ℹ️ Spring semesters only — up to Sem {currentSem}
                           </p>
                         </>
                       );

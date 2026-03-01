@@ -450,7 +450,7 @@ export default function ImportCoursesPage() {
             Import Your Courses
           </h1>
           <p className="text-foreground-secondary mt-2">
-            Select courses you've completed from semesters 1-{currentSemester}
+            Select courses you&apos;ve completed from semesters 1-{currentSemester}
           </p>
         </div>
         <button
@@ -543,30 +543,34 @@ export default function ImportCoursesPage() {
           <Info className="h-5 w-5 text-primary" />
           Missing a course? Quick Add from Catalog
         </h3>
-        <div className="grid gap-3 md:grid-cols-[1fr_140px_140px]">
+        <div className="flex flex-col gap-3">
           <input
             type="text"
             value={customQuery}
             onChange={(e) => setCustomQuery(e.target.value)}
             placeholder="Search by code or name (e.g., HS342 German)"
-            className="px-3 py-2 rounded-lg border bg-background"
+            className="w-full px-3 py-2 rounded-lg border bg-background"
           />
-          <input
-            type="number"
-            min={1}
-            max={8}
-            value={customSemester}
-            onChange={(e) => setCustomSemester(Number(e.target.value))}
-            className="px-3 py-2 rounded-lg border bg-background"
-            placeholder="Semester"
-          />
-          <button
-            onClick={searchCatalogCourses}
-            disabled={customLoading || !customQuery.trim()}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50"
-          >
-            {customLoading ? "Searching..." : "Search"}
-          </button>
+          <div className="flex gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-foreground-secondary">Semester</label>
+              <input
+                type="number"
+                min={1}
+                max={8}
+                value={customSemester}
+                onChange={(e) => setCustomSemester(Number(e.target.value))}
+                className="w-28 px-3 py-2 rounded-lg border bg-background"
+              />
+            </div>
+            <button
+              onClick={searchCatalogCourses}
+              disabled={customLoading || !customQuery.trim()}
+              className="flex-1 self-end px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover disabled:opacity-50"
+            >
+              {customLoading ? "Searching..." : "Search"}
+            </button>
+          </div>
         </div>
         {customResults.length > 0 && (
           <div className="mt-4 grid gap-2">
@@ -615,7 +619,7 @@ export default function ImportCoursesPage() {
             These are the standard courses for {branch} branch
           </p>
           <p className="text-foreground-secondary mt-1">
-            Uncheck any courses you haven't taken. You can add grades optionally. Additional courses can be added later from "My Courses" page.
+            Uncheck any courses you haven&apos;t taken. You can add grades optionally. Additional courses can be added later from &quot;My Courses&quot; page.
           </p>
           <p className="text-foreground-secondary mt-2">
             Selecting IC140 in a semester auto-checks IC102P in the other (they always pair across semesters). IC181 is semester-exclusive. IC Basket courses allow only one selection per semester.

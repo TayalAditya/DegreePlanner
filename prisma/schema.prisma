@@ -39,12 +39,14 @@ model User {
   // Relations
   programs      UserProgram[]
   enrollments   CourseEnrollment[]
-  timetableEntries TimetableEntry[]
+  createdTimetableEntries TimetableEntry[] @relation("TimetableCreatedBy")
+  updatedTimetableEntries TimetableEntry[] @relation("TimetableUpdatedBy")
   documents     Document[]
   supportTickets SupportTicket[]
   courseSuggestions CourseSuggestion[]
   accounts      Account[]
   sessions      Session[]
+  announcements Announcement[]
   
   @@index([email])
   @@index([enrollmentId])
@@ -373,7 +375,6 @@ model ApprovedUser {
 // Timetable management
 model TimetableEntry {
   id              String   @id @default(cuid())
-  userId          String
   courseId        String
   semester        Int
   year            Int
@@ -383,6 +384,7 @@ model TimetableEntry {
   dayOfWeek       DayOfWeek
   startTime       String   // HH:MM format
   endTime         String   // HH:MM format
+  slot            String?  // e.g., A1 / B2 (optional)
   venue           String?
   roomNumber      String?
   building        String?
@@ -393,17 +395,24 @@ model TimetableEntry {
   // Optional notes
   instructor      String?
   notes           String?
+
+  // Audit (who created/last updated this shared schedule entry)
+  createdById     String?
+  updatedById     String?
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course          Course   @relation(fields: [courseId], references: [id])
+  createdBy       User?    @relation("TimetableCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy       User?    @relation("TimetableUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  course          Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
   
-  @@index([userId])
   @@index([courseId])
   @@index([semester])
   @@index([dayOfWeek])
+  @@index([term, year])
+  @@index([createdById])
+  @@index([updatedById])
 }
 
 enum DayOfWeek {
@@ -530,4 +539,18 @@ enum DocumentCategory {
   CERTIFICATES
   TRANSCRIPTS
   OTHER
+}
+
+// Announcements (admin posts, all users can see)
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String   @db.Text
+  isActive  Boolean  @default(true)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, createdAt])
 }
