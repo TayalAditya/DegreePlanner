@@ -72,9 +72,9 @@ const ic202pSem4: DefaultCourse[] = [
   { code: "IC202P", name: "Design Practicum", credits: 3, category: "IC", semester: 4 },
 ];
 
-// Internship (IC-010) – done in summer after Sem 4; shows as pending in Sem 5
+// Internship (IC-010) – done in summer before final year; shows in Sem 8
 const icInternship: DefaultCourse[] = [
-  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 5 },
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 8 },
 ];
 
 // ISTP and MTP courses (common for all BTech)
