@@ -277,12 +277,15 @@ export function OcrConfirmModal({
                     <select
                       value={row.catalogCourseId}
                       onChange={(e) => {
-                        const match = catalogCourses.find(
-                          (c) => c.id === e.target.value
-                        );
+                        const nextId = e.target.value;
+                        const match = catalogCourses.find((c) => c.id === nextId);
                         updateRow(row.id, {
-                          catalogCourseId: e.target.value,
+                          catalogCourseId: nextId,
                           matchedName: match?.name,
+                          courseType: match
+                            ? resolveCourseType(match.code, courseTypeMap, dcPrefixes)
+                            : row.courseType,
+                          included: match ? (row.included || !row.alreadyExists) : false,
                         });
                       }}
                       className="w-full px-2 py-1.5 rounded-lg border bg-background text-sm"
