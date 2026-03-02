@@ -89,10 +89,13 @@ export function CreditBreakdownCard({
   };
 
   return (
-    <div className="bg-surface rounded-lg border border-border shadow-sm p-4 sm:p-6">
-      <h3 className="text-base sm:text-lg font-semibold text-foreground mb-4 sm:mb-6">
-        Credit Breakdown
-      </h3>
+    <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">
+      <div className="flex items-center gap-3 mb-4 sm:mb-6">
+        <span className="w-1 h-6 bg-primary rounded-full"></span>
+        <h3 className="text-base sm:text-lg font-semibold text-foreground">
+          Credit Breakdown
+        </h3>
+      </div>
 
       <div className="space-y-3 sm:space-y-4">
         {categories.map((category) => {
@@ -123,10 +126,14 @@ export function CreditBreakdownCard({
                   )}
                 </span>
               </div>
-              <div className="w-full bg-background-secondary rounded-full h-2">
+              <div className="w-full bg-background-secondary rounded-full h-2.5 sm:h-3 overflow-hidden">
                 <div
-                  className={`${barClasses[category.color] || "bg-foreground-muted/40"} h-2 rounded-full transition-all duration-500`}
+                  className={`${barClasses[category.color] || "bg-foreground-muted/40"} h-full rounded-full transition-all duration-700`}
                   style={{ width: `${percentage}%` }}
+                  role="progressbar"
+                  aria-valuenow={Math.round(percentage)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
                 ></div>
               </div>
             </div>
@@ -134,9 +141,9 @@ export function CreditBreakdownCard({
         })}
       </div>
 
-      <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-border">
+      <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-border/60">
         <div className="flex justify-between items-center">
-          <span className="text-sm sm:text-lg font-semibold text-foreground">
+          <span className="text-sm sm:text-base font-semibold text-foreground">
             Total Credits
           </span>
           <span className="text-xl sm:text-2xl font-bold text-primary">

@@ -76,7 +76,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
   return (
     <>
       {/* Desktop & Mobile: Top Navbar */}
-      <nav className="bg-surface/80 border-b border-border no-print sticky top-0 z-50 backdrop-blur-sm h-16">
+      <nav className="bg-surface/90 border-b border-border/60 no-print sticky top-0 z-50 backdrop-blur-md h-16 shadow-sm">
         <div className="flex h-full items-center justify-between px-4 sm:px-6">
           {/* Left: Logo */}
           <Link
@@ -122,8 +122,8 @@ export function DashboardNav({ user }: DashboardNavProps) {
             aria-label="Close menu"
           />
 
-          <div className="absolute right-0 top-0 h-full w-80 max-w-[85vw] bg-surface border-l border-border shadow-xl animate-slide-in flex flex-col">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-surface/40 backdrop-blur-sm">
+            <div className="absolute right-0 top-0 h-full w-80 max-w-[85vw] bg-surface border-l border-border/60 shadow-xl animate-slide-in flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-surface/50 backdrop-blur-md">
               <Link
                 href="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
@@ -150,17 +150,17 @@ export function DashboardNav({ user }: DashboardNavProps) {
                     const Icon = item.icon;
                     const isActive = isActiveRoute(item.href);
                     return (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        aria-current={isActive ? "page" : undefined}
-                        className={`group relative overflow-hidden flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
-                          isActive
-                            ? "text-primary"
-                            : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
-                        }`}
-                      >
+                   <Link
+                     key={item.name}
+                     href={item.href}
+                     onClick={() => setMobileMenuOpen(false)}
+                     aria-current={isActive ? "page" : undefined}
+                     className={`group relative overflow-hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                       isActive
+                         ? "text-primary bg-primary/10 border border-primary/20"
+                         : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover border border-transparent"
+                     }`}
+                   >
                         {isActive && (
                           <motion.span
                             layoutId="nav-indicator-mobile"
@@ -186,7 +186,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
               </div>
             </div>
 
-            <div className="border-t border-border px-4 py-3 flex items-center gap-3">
+            <div className="border-t border-border/60 px-4 py-3 flex items-center gap-3">
               {user.image && (
                 <img
                   src={user.image}
@@ -212,7 +212,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
       )}
 
       {/* Desktop: Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/80 border-r border-border no-print fixed top-16 left-0 h-[calc(100vh-4rem)] backdrop-blur-sm overflow-y-auto z-40">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/90 border-r border-border/60 no-print fixed top-16 left-0 h-[calc(100vh-4rem)] backdrop-blur-md overflow-y-auto z-40 shadow-sm">
         <LayoutGroup id="dashboard-nav-desktop">
           <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-hide">
             <div className="px-1">
@@ -227,16 +227,16 @@ export function DashboardNav({ user }: DashboardNavProps) {
               const Icon = item.icon;
               const isActive = isActiveRoute(item.href);
               return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={`group relative overflow-hidden flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium border transition-all duration-200 no-touch:hover:-translate-y-px focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
-                    isActive
-                      ? "text-primary border-transparent"
-                      : "bg-transparent border-transparent text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
-                  }`}
-                >
+               <Link
+                   key={item.name}
+                   href={item.href}
+                   aria-current={isActive ? "page" : undefined}
+                   className={`group relative overflow-hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium border transition-all duration-200 no-touch:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+                     isActive
+                       ? "text-primary bg-primary/10 border-primary/20"
+                       : "bg-transparent border-transparent text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
+                   }`}
+                 >
                   {isActive && (
                     <motion.span
                       layoutId="nav-indicator-desktop"
@@ -254,7 +254,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
           </div>
         </LayoutGroup>
 
-        <div className="border-t border-border px-4 py-4 space-y-3">
+        <div className="border-t border-border/60 px-4 py-4 space-y-3">
           <div className="flex items-center gap-3">
             {user.image && (
               <img
