@@ -171,9 +171,13 @@ export async function PATCH(
 
     // If non-admin is editing, reset approval status
     if (!isAdmin) {
-      data.isApproved = false;
-      data.approvedById = null;
-      data.approvedAt = null;
+      if (isOwnTaDuty) {
+        data.isApproved = true;
+      } else {
+        data.isApproved = false;
+        data.approvedById = null;
+        data.approvedAt = null;
+      }
     }
 
     const updated = await prisma.timetableEntry.update({
