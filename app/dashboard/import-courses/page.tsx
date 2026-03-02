@@ -282,7 +282,7 @@ export default function ImportCoursesPage() {
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 2 }); // 2× for better OCR accuracy
+      const viewport = page.getViewport({ scale: 1.5 }); // 1.5× is enough for OCR and much faster than 2×
       const canvas = document.createElement("canvas");
       canvas.width = viewport.width;
       canvas.height = viewport.height;
@@ -300,46 +300,65 @@ export default function ImportCoursesPage() {
   const handleOcrUpload = async () => {
     if (ocrFiles.length === 0) return;
 
-    // Start elapsed timer
     setOcrElapsed(0);
     setOcrLoading(true);
-    setOcrStatus("Initialising OCR engine…");
+    setOcrStatus("Analysing files…");
     ocrTimerRef.current = setInterval(
       () => setOcrElapsed((s) => s + 1),
       1000
     );
 
     const allDetected: DetectedCourse[] = [];
+    // Collect blobs that still need image OCR (images + image-based PDFs)
+    const needsOcr: (File | Blob)[] = [];
 
     try {
-      setOcrStatus("Loading language model…");
-      const { createWorker } = await import("tesseract.js");
-      const worker = await createWorker("eng");
-
+      // ── Pass 1: Try fast server-side text extraction for each PDF ──────────
       for (let fi = 0; fi < ocrFiles.length; fi++) {
         const file = ocrFiles[fi];
-        let imagesToOcr: (File | Blob)[] = [];
 
-        if (file.type === "application/pdf") {
-          setOcrStatus(`Rendering PDF pages — file ${fi + 1}/${ocrFiles.length}…`);
-          imagesToOcr = await extractImagesFromPdf(file);
-        } else {
-          imagesToOcr = [file];
+        if (file.type !== "application/pdf") {
+          needsOcr.push(file);
+          continue;
         }
 
-        for (let pi = 0; pi < imagesToOcr.length; pi++) {
-          const label =
-            ocrFiles.length > 1
-              ? `file ${fi + 1}/${ocrFiles.length}, page ${pi + 1}/${imagesToOcr.length}`
-              : `page ${pi + 1}/${imagesToOcr.length}`;
-          setOcrStatus(`Reading text — ${label}…`);
-          const result = await worker.recognize(imagesToOcr[pi]);
+        setOcrStatus(`Extracting text — PDF ${fi + 1}/${ocrFiles.length}…`);
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          const res = await fetch("/api/ocr/parse", { method: "POST", body: fd });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.courses?.length > 0) {
+              // Text-based PDF (e.g. timetable) — direct text works, skip OCR
+              allDetected.push(...data.courses);
+              continue;
+            }
+          }
+        } catch { /* server-side failed — fall through to image OCR */ }
+
+        // Image-based PDF (e.g. Samarth scanned transcript) — render pages → OCR
+        setOcrStatus(`Rendering pages — PDF ${fi + 1}/${ocrFiles.length}…`);
+        const pages = await extractImagesFromPdf(file);
+        needsOcr.push(...pages);
+      }
+
+      // ── Pass 2: Run Tesseract only if image files or image-based PDFs exist ─
+      if (needsOcr.length > 0) {
+        setOcrStatus("Loading language model…");
+        const { createWorker } = await import("tesseract.js");
+        const worker = await createWorker("eng");
+
+        for (let pi = 0; pi < needsOcr.length; pi++) {
+          setOcrStatus(`Reading text — ${pi + 1} / ${needsOcr.length}…`);
+          const result = await worker.recognize(needsOcr[pi]);
           allDetected.push(...parseTranscriptText(result.data.text));
         }
+
+        await worker.terminate();
       }
 
       setOcrStatus("Matching courses…");
-      await worker.terminate();
 
       // Dedupe across all files by rawCode+semester
       const seen = new Set<string>();
