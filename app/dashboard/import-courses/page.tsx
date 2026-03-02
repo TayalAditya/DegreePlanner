@@ -79,28 +79,63 @@ export default function ImportCoursesPage() {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const ocrTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [dbCourseTypeMap, setDbCourseTypeMap] = useState<Map<string, string>>(new Map());
 
   // Course type map for OCR modal — derived from the branch curriculum
   const effectiveBranch = branch === "GE" ? geSubBranch : branch;
   const { courseTypeMap, dcPrefixes } = useMemo(() => {
     const typeMap = new Map<string, string>();
     const prefixes = new Set<string>();
+
+    // Prefer DB-backed course-category mappings for the branch (more up-to-date than the static curriculum list).
+    dbCourseTypeMap.forEach((category, normCode) => {
+      typeMap.set(normCode, category);
+      if (category === "DC") {
+        const pf = /^([A-Z]+)/.exec(normCode)?.[1];
+        if (pf) prefixes.add(pf);
+      }
+    });
+
+    // Fall back to the static default curriculum for anything missing.
     getAllDefaultCourses(effectiveBranch).forEach((c) => {
-      const norm = c.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-      typeMap.set(norm, c.category);
+      const norm = normalizeCourseCode(c.code);
+      if (!typeMap.has(norm)) typeMap.set(norm, c.category);
       if (c.category === "DC") {
         const pf = /^([A-Z]+)/.exec(norm)?.[1];
         if (pf) prefixes.add(pf);
       }
     });
     return { courseTypeMap: typeMap, dcPrefixes: prefixes };
-  }, [effectiveBranch]);
+  }, [effectiveBranch, dbCourseTypeMap]);
 
   useEffect(() => {
     loadUserSettings();
     loadExistingEnrollments();
     loadCatalogIndex();
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadCourseTypeMap = async () => {
+      try {
+        const res = await fetch(
+          `/api/course-category-map?branch=${encodeURIComponent(effectiveBranch)}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const entries = Object.entries(data?.categoriesByCode ?? {}) as Array<[string, string]>;
+        setDbCourseTypeMap(new Map(entries));
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+        console.warn("Failed to load course category map:", err);
+      }
+    };
+
+    loadCourseTypeMap();
+    return () => controller.abort();
+  }, [effectiveBranch]);
 
   useEffect(() => {
     loadDefaultCourses();
@@ -299,7 +334,8 @@ export default function ImportCoursesPage() {
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
-      const viewport = page.getViewport({ scale: 1.5 }); // 1.5× is enough for OCR and much faster than 2×
+      // Render higher-res pages for better OCR on small fonts (transcripts/timetables).
+      const viewport = page.getViewport({ scale: 2 });
       const canvas = document.createElement("canvas");
       canvas.width = viewport.width;
       canvas.height = viewport.height;
@@ -363,8 +399,8 @@ export default function ImportCoursesPage() {
       // ── Pass 2: Run Tesseract only if image files or image-based PDFs exist ─
       let rawTextAccumulated = "";
       if (needsOcr.length > 0) {
-        setOcrStatus("Loading language model…");
-        const { createWorker } = await import("tesseract.js");
+        setOcrStatus("Loading OCR model…");
+        const { createWorker, PSM } = await import("tesseract.js");
         const worker = await createWorker("eng", 1, {
           logger: (m: { status: string; progress: number }) => {
             if (m.status === "recognizing text") {
@@ -372,6 +408,8 @@ export default function ImportCoursesPage() {
             }
           },
         });
+        // Tables/columnar screenshots (Samarth results, timetables) work much better with sparse text mode.
+        await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
 
         for (let pi = 0; pi < needsOcr.length; pi++) {
           setOcrStatus(`Reading image ${pi + 1} / ${needsOcr.length}…`);
