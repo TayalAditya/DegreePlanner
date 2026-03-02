@@ -268,9 +268,11 @@ export default function ImportCoursesPage() {
   const extractImagesFromPdf = async (file: File): Promise<Blob[]> => {
     const arrayBuffer = await file.arrayBuffer();
     const pdfjsLib = await import("pdfjs-dist");
-    // Use CDN worker so we don't need to bundle it
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+    // Resolve worker from the installed package so no CDN needed
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      "pdfjs-dist/build/pdf.worker.min.mjs",
+      import.meta.url
+    ).href;
 
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const blobs: Blob[] = [];
