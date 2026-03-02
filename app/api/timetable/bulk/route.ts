@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
           ? {
               userId: session.user.id,
               courseId,
-              status: { in: [EnrollmentStatus.IN_PROGRESS, EnrollmentStatus.COMPLETED] },
+              status: EnrollmentStatus.COMPLETED,
             }
           : {
               userId: session.user.id,
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error: allTaDuty
-              ? "For TA duties, select a course you are currently taking or have completed"
+              ? "For TA duties, select a course you have completed"
               : "You can only edit schedules for courses you are enrolled in",
           },
           { status: 403 }

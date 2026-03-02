@@ -35,10 +35,10 @@ export async function GET(req: NextRequest) {
       orderBy: [{ course: { code: "asc" } }],
     });
 
-    const availableCourseEnrollments = await prisma.courseEnrollment.findMany({
+    const completedEnrollments = await prisma.courseEnrollment.findMany({
       where: {
         userId: session.user.id,
-        status: { in: [EnrollmentStatus.IN_PROGRESS, EnrollmentStatus.COMPLETED] },
+        status: EnrollmentStatus.COMPLETED,
       },
       include: {
         course: {
@@ -54,9 +54,8 @@ export async function GET(req: NextRequest) {
       distinct: ["courseId"],
     });
 
-    const courses = availableCourseEnrollments
-      .map((e) => e.course)
-      .sort((a, b) => a.code.localeCompare(b.code));
+    const courses = currentEnrollments.map((e) => e.course).sort((a, b) => a.code.localeCompare(b.code));
+    const completedCourses = completedEnrollments.map((e) => e.course).sort((a, b) => a.code.localeCompare(b.code));
     const courseIds = currentEnrollments.map((e) => e.courseId);
 
     // Check if user is admin
@@ -98,7 +97,7 @@ export async function GET(req: NextRequest) {
       orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
     });
 
-    return NextResponse.json({ context, courses, entries });
+    return NextResponse.json({ context, isAdmin, courses, completedCourses, entries });
   } catch (error) {
     console.error("Timetable fetch error:", error);
     return NextResponse.json(
@@ -171,7 +170,7 @@ export async function POST(req: NextRequest) {
           ? {
               userId: session.user.id,
               courseId,
-              status: { in: [EnrollmentStatus.IN_PROGRESS, EnrollmentStatus.COMPLETED] },
+              status: EnrollmentStatus.COMPLETED,
             }
           : {
               userId: session.user.id,
@@ -188,7 +187,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error: taDutyCourseCheck
-              ? "For TA duties, select a course you are currently taking or have completed"
+              ? "For TA duties, select a course you have completed"
               : "You can only edit schedules for courses you are enrolled in",
           },
           { status: 403 }

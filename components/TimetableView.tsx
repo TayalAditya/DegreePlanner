@@ -322,7 +322,9 @@ type BulkCreatePayload = {
 
 type TimetableResponse = {
   context: { semester: number; year: number; term: Term };
+  isAdmin: boolean;
   courses: CourseOption[];
+  completedCourses: CourseOption[];
   entries: TimetableEntry[];
 };
 
@@ -485,7 +487,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
       }
       return res.json();
     },
-    enabled: timetable?.context !== null,
+    enabled: Boolean(timetable?.context) && Boolean(timetable?.isAdmin),
   });
 
   const approveMutation = useMutation({
@@ -717,9 +719,16 @@ export function TimetableView({ userId }: TimetableViewProps) {
 
   const context = timetable?.context ?? null;
   const courses = useMemo(() => timetable?.courses ?? [], [timetable?.courses]);
+  const completedCourses = useMemo(() => timetable?.completedCourses ?? [], [timetable?.completedCourses]);
+  const isAdmin = Boolean(timetable?.isAdmin);
   const entries = useMemo<TimetableEntry[]>(() => timetable?.entries ?? [], [timetable?.entries]);
   const canAddClass = courses.length > 0 && Boolean(context);
   const canAddTaDuty = Boolean(context);
+
+  const modalCourses = useMemo(() => {
+    const isTaDuty = addingTaDuty || editingEntry?.classType === "TA_DUTY";
+    return isTaDuty ? completedCourses : courses;
+  }, [addingTaDuty, editingEntry?.classType, completedCourses, courses]);
 
   const scheduledCourseIds = useMemo(() => new Set(entries.map((e) => e.courseId)), [entries]);
 
@@ -818,19 +827,24 @@ export function TimetableView({ userId }: TimetableViewProps) {
   return (
     <div className="space-y-6">
       {/* Admin Pending Approvals */}
-      {pendingData && pendingData.entries.length > 0 && (
+      {isAdmin && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-              Pending Approvals ({pendingData.entries.length})
+              Pending Approvals ({pendingData?.entries.length ?? 0})
             </h3>
           </div>
           <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
-            Review and approve timetable changes submitted by students
+            Only changes submitted <span className="font-medium">without a Slot</span> need approval. Slot-based classes and TA duties are auto-approved.
           </p>
-          <div className="space-y-2">
-            {pendingData.entries.map((entry) => (
+          {pendingData && pendingData.entries.length === 0 ? (
+            <div className="text-xs text-amber-800 dark:text-amber-200 bg-white/60 dark:bg-surface/50 border border-amber-200/60 dark:border-amber-800/60 rounded-lg p-3">
+              No pending approvals right now.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {(pendingData?.entries ?? []).map((entry) => (
               <div
                 key={entry.id}
                 className="bg-white dark:bg-surface rounded-lg border border-amber-200 dark:border-amber-800 p-3 flex items-start justify-between gap-3"
@@ -868,8 +882,9 @@ export function TimetableView({ userId }: TimetableViewProps) {
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1043,7 +1058,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
             key={editingEntry?.id || "new"}
             initial={editingEntry}
             context={context || null}
-            courses={courses}
+            courses={modalCourses}
             existingEntries={entries}
             saving={saveEntryMutation.isPending || bulkCreateMutation.isPending}
             onClose={() => {
@@ -1905,7 +1920,11 @@ function TimetableEntryModal({
 
   const endOptions = useMemo(() => END_TIMES.filter((t) => t > startTime), [startTime]);
 
-  const title = initial ? "Edit class" : "Add classes";
+  const title = (() => {
+    if (initial) return initial.classType === "TA_DUTY" ? "Edit TA duty" : "Edit class";
+    if (defaultClassType === "TA_DUTY") return "Add TA duty";
+    return "Add classes";
+  })();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
