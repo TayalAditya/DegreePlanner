@@ -46,3 +46,12 @@ next-env.d.ts
 /public/uploads/**
 !/public/uploads/.gitkeep
 !/public/uploads/documents/.gitkeep
+
+# local tooling
+/.kombai/
+
+# local docs artifacts (avoid committing personal copies/screenshots)
+/docs/transcipt*.pdf
+/docs/Screenshot*.png
+/docs/* copy.xlsx
+/docs/iit mandi courses*.pdf

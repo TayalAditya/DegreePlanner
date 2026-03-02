@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import { X, AlertCircle, CheckCircle2, Search } from "lucide-react";
 import { DetectedCourse, normalizeCourseCode } from "@/lib/parseTranscript";
 import { formatCourseCode } from "@/lib/utils";
-import { getAllDefaultCourses } from "@/lib/defaultCurriculum";
 
 interface CatalogCourse {
   id: string;
@@ -32,8 +31,10 @@ interface ConfirmRow {
 interface OcrConfirmModalProps {
   detected: DetectedCourse[];
   catalogCourses: CatalogCourse[];
-  /** User's branch (e.g. "CSE", "EE") — used to guess DC vs DE */
-  branch: string;
+  /** Normalised code → curriculum category, computed in parent from getAllDefaultCourses(branch) */
+  courseTypeMap: Map<string, string>;
+  /** DC prefixes for the branch (e.g. {"CS"} for CSE) — for DE vs FE fallback */
+  dcPrefixes: Set<string>;
   /** Normalised keys already in DB: "MA222|3" */
   importedKeys: Set<string>;
   /** Normalised keys already in the current pending course list */
@@ -80,7 +81,8 @@ function resolveCourseType(
 export function OcrConfirmModal({
   detected,
   catalogCourses,
-  branch,
+  courseTypeMap,
+  dcPrefixes,
   importedKeys,
   pendingKeys,
   rawOcrText,
@@ -95,21 +97,6 @@ export function OcrConfirmModal({
     });
     return map;
   }, [catalogCourses]);
-
-  // Build course type map from the branch's actual curriculum
-  const { courseTypeMap, dcPrefixes } = useMemo(() => {
-    const typeMap = new Map<string, string>();
-    const prefixes = new Set<string>();
-    getAllDefaultCourses(branch).forEach((c) => {
-      const norm = normalizeCourseCode(c.code);
-      typeMap.set(norm, c.category);
-      if (c.category === "DC") {
-        const pf = /^([A-Z]+)/.exec(norm)?.[1];
-        if (pf) prefixes.add(pf);
-      }
-    });
-    return { courseTypeMap: typeMap, dcPrefixes: prefixes };
-  }, [branch]);
 
   // Initialise rows from detected courses, deduped by rawCode+semester
   const initialRows = useMemo<ConfirmRow[]>(() => {
