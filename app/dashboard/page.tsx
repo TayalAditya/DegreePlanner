@@ -2,7 +2,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { DashboardOverview } from "@/components/DashboardOverview";
-import { AnnouncementsSection } from "@/components/AnnouncementsSection";
 import Link from "next/link";
 import { TimeGreeting } from "@/components/TimeGreeting";
 import { 
@@ -27,13 +26,25 @@ export default async function DashboardPage() {
   let currentSemester = 1;
   let activeCoursesCount = 0;
   let completedCoursesCount = 0;
+  let totalCreditsRequired = 160;
+  let doingMTP = true;
 
   if (session?.user?.id) {
     try {
-      const enrollments = await prisma.courseEnrollment.findMany({
-        where: { userId: session.user.id },
-        select: { status: true, semester: true, grade: true },
-      });
+      const [enrollments, userRecord, primaryProgram] = await Promise.all([
+        prisma.courseEnrollment.findMany({
+          where: { userId: session.user.id },
+          select: { status: true, semester: true, grade: true },
+        }),
+        prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { doingMTP: true },
+        }),
+        prisma.userProgram.findFirst({
+          where: { userId: session.user.id, isPrimary: true },
+          select: { program: { select: { totalCreditsRequired: true } } },
+        }),
+      ]);
 
       const inProgress = enrollments.filter((e) => e.status === "IN_PROGRESS");
       if (inProgress.length > 0) {
@@ -50,6 +61,13 @@ export default async function DashboardPage() {
       completedCoursesCount = enrollments.filter(
         (e) => e.status === "COMPLETED" && e.grade !== "F"
       ).length;
+
+      if (primaryProgram?.program?.totalCreditsRequired) {
+        totalCreditsRequired = primaryProgram.program.totalCreditsRequired;
+      }
+      if (userRecord?.doingMTP !== undefined) {
+        doingMTP = userRecord.doingMTP;
+      }
     } catch {
       // keep defaults
     }
@@ -214,9 +232,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Announcements */}
-      <AnnouncementsSection />
-
       {/* Main Overview */}
       <DashboardOverview userId={session?.user?.id!} />
 
@@ -232,16 +247,18 @@ export default async function DashboardPage() {
           <ul className="space-y-3">
             <li className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-              <span className="text-foreground-secondary">Complete 160 credits for degree</span>
+              <span className="text-foreground-secondary">Complete {totalCreditsRequired} credits for degree</span>
             </li>
             <li className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
               <span className="text-foreground-secondary">Maintain CGPA above 8.0 for honours</span>
             </li>
-            <li className="flex items-start gap-3">
-              <Clock className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
-              <span className="text-foreground-secondary">Complete MTP in final year</span>
-            </li>
+            {doingMTP && (
+              <li className="flex items-start gap-3">
+                <Clock className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
+                <span className="text-foreground-secondary">Complete MTP in final year</span>
+              </li>
+            )}
           </ul>
         </div>
 
