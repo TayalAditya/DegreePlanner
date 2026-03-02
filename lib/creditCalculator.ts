@@ -348,21 +348,22 @@ export class CreditCalculator {
     const ICB1_CODES = new Set(["IC131", "IC136", "IC230"]);
     const ICB2_CODES = new Set(["IC121", "IC240", "IC241", "IC253"]);
 
-    const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
+    const IC_BASKET_COMPULSIONS = {
       BIO: { ic1: "IC136", ic2: "IC240" },
-      CE: { ic1: "IC230", ic2: "IC240" },
-      CS: { ic2: "IC253" },
+      CE:  { ic1: "IC230", ic2: "IC240" },
+      CS:  { ic2: "IC253" },
       CSE: { ic2: "IC253" },
       DSE: { ic2: "IC253" },
-      EP: { ic1: "IC230", ic2: "IC121" },
-      ME: { ic2: "IC240" },
-      CH: { ic1: "IC131", ic2: "IC121" },
+      EP:  { ic1: "IC230", ic2: "IC121" },
+      ME:  { ic2: "IC240" },
+      CH:  { ic1: "IC131", ic2: "IC121" },
       MNC: { ic1: "IC136", ic2: "IC253" },
-      MS: { ic1: "IC131", ic2: "IC240" },
-      GE: { ic1: "IC230", ic2: "IC240" },
-      EE: {},
+      MS:  { ic1: "IC131", ic2: "IC241" },
+      MSE: { ic1: "IC131", ic2: "IC241" },
+      GE:  { ic1: "IC230", ic2: "IC240" },
+      EE:  {},
       VLSI: {},
-    };
+    } as Record<string, { ic1?: string; ic2?: string }>;
 
     // Sort enrollments by semester for IC basket first-course logic
     const sortedEnrollments = [...enrollments].sort(
@@ -421,8 +422,19 @@ export class CreditCalculator {
           return;
         }
         
-        // Non-compulsory IC basket course → FE
-        breakdown.freeElective += credits;
+        // Non-compulsory IC basket course → check branch mapping before defaulting to FE
+        // (e.g. IC-240 is ICB2 but mapped as DC for MSE)
+        const basketFallbackAliases = branch === "CSE" ? ["CSE", "CS"] : branch === "CS" ? ["CS", "CSE"] : [branch];
+        const basketFallbackCategory = enrollment.course.branchMappings
+          ?.find(m => basketFallbackAliases.includes(m.branch) || m.branch === "COMMON")
+          ?.courseCategory;
+        if (basketFallbackCategory === "DC" || basketFallbackCategory === "IC" || basketFallbackCategory === "IC_BASKET") {
+          breakdown.core += credits;
+        } else if (basketFallbackCategory === "DE") {
+          breakdown.de += credits;
+        } else {
+          breakdown.freeElective += credits;
+        }
         return;
       }
 
