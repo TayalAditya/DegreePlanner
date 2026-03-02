@@ -885,6 +885,7 @@ export default function ImportCoursesPage() {
         <OcrConfirmModal
           detected={ocrResults}
           catalogCourses={catalogCourses}
+          branch={branch === "GE" ? geSubBranch : branch}
           importedKeys={importedCourseKeys}
           pendingKeys={pendingKeys}
           onConfirm={addOcrCourses}
