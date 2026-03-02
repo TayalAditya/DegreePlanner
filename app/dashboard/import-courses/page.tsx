@@ -74,6 +74,7 @@ export default function ImportCoursesPage() {
   const [ocrStatus, setOcrStatus] = useState("");
   const [ocrElapsed, setOcrElapsed] = useState(0);
   const [ocrResults, setOcrResults] = useState<DetectedCourse[]>([]);
+  const [ocrRawText, setOcrRawText] = useState("");
   const [showOcrModal, setShowOcrModal] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -344,19 +345,32 @@ export default function ImportCoursesPage() {
       }
 
       // ── Pass 2: Run Tesseract only if image files or image-based PDFs exist ─
+      let rawTextAccumulated = "";
       if (needsOcr.length > 0) {
         setOcrStatus("Loading language model…");
         const { createWorker } = await import("tesseract.js");
-        const worker = await createWorker("eng");
+        const worker = await createWorker("eng", 1, {
+          logger: (m: { status: string; progress: number }) => {
+            if (m.status === "recognizing text") {
+              setOcrStatus(`OCR: ${Math.round(m.progress * 100)}%…`);
+            }
+          },
+        });
 
         for (let pi = 0; pi < needsOcr.length; pi++) {
-          setOcrStatus(`Reading text — ${pi + 1} / ${needsOcr.length}…`);
+          setOcrStatus(`Reading image ${pi + 1} / ${needsOcr.length}…`);
           const result = await worker.recognize(needsOcr[pi]);
-          allDetected.push(...parseTranscriptText(result.data.text));
+          const text = result.data.text;
+          rawTextAccumulated += (rawTextAccumulated ? "\n---\n" : "") + text;
+          console.log(`[OCR] image ${pi + 1}: ${text.length} chars`);
+          const found = parseTranscriptText(text);
+          console.log(`[OCR] image ${pi + 1}: ${found.length} courses found`, found);
+          allDetected.push(...found);
         }
 
         await worker.terminate();
       }
+      setOcrRawText(rawTextAccumulated);
 
       setOcrStatus("Matching courses…");
 
@@ -907,6 +921,7 @@ export default function ImportCoursesPage() {
           branch={branch === "GE" ? geSubBranch : branch}
           importedKeys={importedCourseKeys}
           pendingKeys={pendingKeys}
+          rawOcrText={ocrRawText}
           onConfirm={addOcrCourses}
           onClose={() => setShowOcrModal(false)}
         />
