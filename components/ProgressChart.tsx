@@ -71,6 +71,8 @@ const normalizeBranchForIcBasket = (branch?: string) => {
   return upper;
 };
 
+const HSS_CORE_CAP = 12;
+
 const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
 
 export function ProgressChart({ progress, isLoading, enrollments, userBranch }: ProgressChartProps) {
@@ -152,11 +154,12 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     ISTP: 0,
   };
 
-  const getCourseCategory = (enrollment: any, icBasketUsed?: any, branch?: string): keyof typeof categoryCredits => {
+  const getCourseCategory = (enrollment: any, icBasketUsed?: any, branch?: string, hssUsed?: { credits: number }): keyof typeof categoryCredits => {
     const code = enrollment.course?.code?.toUpperCase() || "";
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
+    const credits = enrollment.course?.credits || 0;
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && (branch || userBranch)) {
@@ -191,7 +194,17 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     }
 
     // HS-xxx courses always go to HSS — never let branch mapping override
-    if (normalizedCode.startsWith("HS")) return "HSS";
+    if (normalizedCode.startsWith("HS")) {
+      if (hssUsed) {
+        const before = hssUsed.credits;
+        if (before < HSS_CORE_CAP) {
+          hssUsed.credits = Math.min(HSS_CORE_CAP, before + credits);
+          return "HSS";
+        }
+        return "FE";
+      }
+      return "HSS";
+    }
 
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length > 0) {
@@ -212,7 +225,6 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
 
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
-    if (normalizedCode.startsWith("HS")) return "HSS";
     if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
 
     // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
