@@ -46,18 +46,48 @@ const ICB2_CODES = new Set([
 
 const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
   BIO: { ic1: "IC136", ic2: "IC240" },
-  CE: { ic1: "IC230", ic2: "IC240" },
-  CS: { ic2: "IC253" },
+  CE:  { ic1: "IC230", ic2: "IC240" },
+  CS:  { ic2: "IC253" },
   CSE: { ic2: "IC253" },
   DSE: { ic2: "IC253" },
-  EP: { ic1: "IC230", ic2: "IC121" },
-  ME: { ic2: "IC240" },
-  CH: { ic1: "IC131", ic2: "IC121" },
+  EP:  { ic1: "IC230", ic2: "IC121" },
+  ME:  { ic2: "IC240" },
+  CH:  { ic1: "IC131", ic2: "IC121" },
   MNC: { ic1: "IC136", ic2: "IC253" },
-  MS: { ic1: "IC131", ic2: "IC240" },
-  GE: { ic1: "IC230", ic2: "IC240" },
-  EE: {},
+  MS:  { ic1: "IC131", ic2: "IC241" },
+  MSE: { ic1: "IC131", ic2: "IC241" },
+  GE:  { ic1: "IC230", ic2: "IC240" },
+  EE:  {},
   VLSI: {},
+};
+
+interface DEBasket { name: string; courses: { code: string; name: string; credits: number }[]; }
+
+const DE_BASKET_CONFIG: Record<string, DEBasket[]> = {
+  MNC: [
+    {
+      name: "DE Basket I – Foundation",
+      courses: [
+        { code: "MA-251", name: "Abstract Algebra", credits: 3 },
+        { code: "MA-252", name: "Functional Analysis", credits: 3 },
+        { code: "MA-253", name: "Measure Theory", credits: 3 },
+        { code: "MA-254", name: "Topology", credits: 3 },
+        { code: "MA-255", name: "Number Theory", credits: 3 },
+      ],
+    },
+    {
+      name: "DE Basket II – Advance Modelling",
+      courses: [
+        { code: "MA-351", name: "Climate Modelling", credits: 3 },
+        { code: "MA-352", name: "Computational Financial Modelling & Lab", credits: 3 },
+        { code: "MA-353", name: "Modelling of Infectious Disease", credits: 3 },
+        { code: "MA-354", name: "Mathematical Image Processing", credits: 3 },
+        { code: "MA-355", name: "Mathematical Control Theory", credits: 3 },
+        { code: "MA-356", name: "Modelling and Simulation", credits: 3 },
+        { code: "MA-357", name: "Modelling Population Dynamics", credits: 3 },
+      ],
+    },
+  ],
 };
 
 const normalizeCourseCode = (code: string) =>
@@ -66,7 +96,6 @@ const normalizeCourseCode = (code: string) =>
 const normalizeBranchForIcBasket = (branch?: string) => {
   const upper = String(branch || "").toUpperCase();
   if (upper === "BE") return "BIO";
-  if (upper === "MSE") return "MS";
   if (upper === "MEVLSI" || upper === "VL") return "VLSI";
   return upper;
 };
@@ -425,10 +454,13 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     const mtp = classify(fixedMtp);
     const istp = classify(fixedIstp);
 
+    const deBaskets = DE_BASKET_CONFIG[normalizeBranchForIcBasket(branch)] || [];
+
     return {
       note: "Course lists use the default B23 curriculum. Electives (DE/FE) are credit-based and may vary.",
       sections: [
         { id: "icbasket", title: "IC Basket", kind: "icbasket" as const },
+        ...(deBaskets.length > 0 ? [{ id: "debasket", title: "DE Baskets", kind: "debasket" as const }] : []),
         { id: "ic", title: "Institute Core (IC)", kind: "list" as const, ...ic },
         { id: "iks", title: "IKS", kind: "list" as const, ...iks },
         { id: "dc", title: "Discipline Core (DC)", kind: "list" as const, ...dc },
@@ -540,7 +572,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
               <details
                 key={section.id}
                 className="group rounded-lg border border-border bg-surface"
-                open={section.kind === "icbasket"}
+                open={section.kind === "icbasket" || section.kind === "debasket"}
               >
                 <summary className="cursor-pointer list-none px-3 py-2 flex items-center justify-between gap-4">
                   <div className="min-w-0">
@@ -550,6 +582,8 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
                         {section.pending.length} pending
                         {section.inProg.length > 0 ? ` • ${section.inProg.length} in progress` : ""}
                       </p>
+                    ) : section.kind === "debasket" ? (
+                      <p className="text-xs text-foreground-secondary">Pick 1 course from each DE basket</p>
                     ) : (
                       <p className="text-xs text-foreground-secondary">IC-I + IC-II basket status</p>
                     )}
@@ -560,6 +594,13 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
                 <div className="px-3 pb-3">
                   {section.kind === "icbasket" ? (
                     <ICBasketStatus
+                      branch={userBranch}
+                      completedCodes={completedCodes}
+                      inProgressCodes={inProgressCodes}
+                      includeCurrentSemesterCredits={includeCurrentSemesterCredits}
+                    />
+                  ) : section.kind === "debasket" ? (
+                    <DEBasketStatus
                       branch={userBranch}
                       completedCodes={completedCodes}
                       inProgressCodes={inProgressCodes}
@@ -838,6 +879,91 @@ function ICBasketStatus({
       {slot("IC-II Basket", compulsion.ic2, ICB2)}
       <p className="text-xs text-foreground-secondary">
         Note: Additional IC basket courses beyond your compulsory/first pick count as FE for progress.
+      </p>
+    </div>
+  );
+}
+
+function DEBasketStatus({
+  branch,
+  completedCodes,
+  inProgressCodes,
+  includeCurrentSemesterCredits,
+}: {
+  branch?: string;
+  completedCodes: Set<string>;
+  inProgressCodes: Set<string>;
+  includeCurrentSemesterCredits: boolean;
+}) {
+  const effectiveBranch = normalizeBranchForIcBasket(branch);
+  const baskets = DE_BASKET_CONFIG[effectiveBranch] || [];
+
+  if (baskets.length === 0) return null;
+
+  const anyTakenFrom = (options: { code: string }[]) => {
+    for (const opt of options) {
+      const norm = normalizeCourseCode(opt.code);
+      if (completedCodes.has(norm)) return { status: "COMPLETED" as const, code: opt.code };
+      if (inProgressCodes.has(norm)) return { status: "IN_PROGRESS" as const, code: opt.code };
+    }
+    return { status: "PENDING" as const, code: null as string | null };
+  };
+
+  return (
+    <div className="space-y-2">
+      {baskets.map((basket) => {
+        const filled = anyTakenFrom(basket.courses);
+        const isSatisfied =
+          filled.status === "COMPLETED" ||
+          (includeCurrentSemesterCredits && filled.status === "IN_PROGRESS");
+
+        return (
+          <div key={basket.name} className="rounded-lg border border-border bg-surface-hover/50 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-foreground">{basket.name}</p>
+                <p className="text-xs text-foreground-secondary mt-0.5">Pick any one course from this basket.</p>
+              </div>
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                  isSatisfied
+                    ? "bg-green-500/10 text-green-700 dark:text-green-400"
+                    : "bg-red-500/10 text-red-700 dark:text-red-400"
+                }`}
+              >
+                {isSatisfied ? "Satisfied" : "Pending"}
+              </span>
+            </div>
+
+            {filled.code && (
+              <p className="mt-2 text-xs text-foreground-secondary">
+                Detected: <span className="font-semibold text-foreground">{formatCourseCode(filled.code)}</span>{" "}
+                {filled.status === "IN_PROGRESS" ? (
+                  <span className="text-yellow-600 dark:text-yellow-400">(in progress)</span>
+                ) : null}
+              </p>
+            )}
+
+            {!isSatisfied && (
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {basket.courses.map((o) => (
+                  <div key={o.code} className="rounded-lg border border-border bg-surface px-3 py-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground">{formatCourseCode(o.code)}</p>
+                        <p className="text-xs text-foreground-secondary">{o.name}</p>
+                      </div>
+                      <p className="text-xs text-foreground font-semibold whitespace-nowrap">{o.credits} cr</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      <p className="text-xs text-foreground-secondary">
+        Note: 6 credits (1 from each basket) are required as part of your 15 DE credits.
       </p>
     </div>
   );
