@@ -9,8 +9,10 @@ export interface DetectedCourse {
 // Grade tokens we recognise from Samarth transcripts
 const GRADE_RE = /\b(A\+|A|B\+|B|C|D|F|S|X|W|EX|AB)\b/;
 
-// Course code pattern: 2-4 uppercase letters, optional separator, 3 digits + optional letter suffix
-const CODE_RE = /\b([A-Z]{2,4})\s*[-]?\s*(\d{3}[A-Z]?)\b/g;
+// Course code pattern: 2-4 uppercase letters, optional dash, 3 digits + optional letter suffix.
+// Uses (?![A-Z0-9]) instead of \b at the end so Samarth-style "IC-112_New" still matches —
+// underscore is a word char so \b fails after digits when followed by _.
+const CODE_RE = /\b([A-Z]{2,4})\s*-?\s*(\d{3}[A-Z]?)(?![A-Z0-9])/g;
 
 // Semester header patterns
 const SEM_HEADER_RE =
