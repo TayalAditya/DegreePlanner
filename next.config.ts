@@ -5,6 +5,8 @@ const nextConfig: NextConfig = {
   images: {
     domains: ['lh3.googleusercontent.com'],
   },
+  // pdf-parse uses native Node.js fs — keep it outside the webpack bundle
+  serverExternalPackages: ["pdf-parse"],
 };
 
 export default nextConfig;
