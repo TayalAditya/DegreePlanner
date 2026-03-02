@@ -77,6 +77,7 @@ export default function ImportCoursesPage() {
   const [ocrRawText, setOcrRawText] = useState("");
   const [showOcrModal, setShowOcrModal] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [pastedTranscriptText, setPastedTranscriptText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const ocrTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [dbCourseTypeMap, setDbCourseTypeMap] = useState<Map<string, string>>(new Map());
@@ -164,11 +165,7 @@ export default function ImportCoursesPage() {
       const res = await fetch("/api/enrollments");
       if (res.ok) {
         const data: EnrollmentSummary[] = await res.json();
-        // Normalize course codes to handle IC-131 vs IC131 vs IC 131 variations
-        const normalize = (code: string) => code.toUpperCase().replace(/[\s-]/g, "");
-        const keys = new Set(
-          data.map((e) => `${normalize(e.course.code)}|${e.semester}`)
-        );
+        const keys = new Set(data.map((e) => `${normalizeCourseCode(e.course.code)}|${e.semester}`));
         setImportedCourseKeys(keys);
       }
     } catch (error) {
@@ -182,11 +179,10 @@ export default function ImportCoursesPage() {
       if (!res.ok) return;
 
       const data: CatalogCourse[] = await res.json();
-      const normalize = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
       const index: Record<string, CatalogCourse> = {};
 
       data.forEach((c) => {
-        index[normalize(c.code)] = c;
+        index[normalizeCourseCode(c.code)] = c;
       });
 
       setCatalogIndex(index);
@@ -199,7 +195,7 @@ export default function ImportCoursesPage() {
   const loadDefaultCourses = () => {
     const effectiveBranch = branch === "GE" ? geSubBranch : branch;
     const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester);
-    const normalizeCatalog = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const normalizeCatalog = (code: string) => normalizeCourseCode(code);
     const resolvedCourses = defaultCourses.map((course) => {
       const match = catalogIndex[normalizeCatalog(course.code)];
       if (!match) return course;
@@ -210,7 +206,7 @@ export default function ImportCoursesPage() {
       };
     });
     // Normalize course codes to match enrollment keys
-    const normalize = (code: string) => code.toUpperCase().replace(/[\s-]/g, "");
+    const normalize = (code: string) => normalizeCourseCode(code);
     // ICB basket + mixed-sem courses start unchecked — user must pick manually
     const MANUAL_PICK_CODES = ["IC140", "IC102P", "IC181"];
     // ISTP/MTP courses
@@ -287,7 +283,7 @@ export default function ImportCoursesPage() {
 
   const addCustomCourse = (course: CatalogCourse) => {
     // Normalize to check for duplicates
-    const normalize = (code: string) => code.toUpperCase().replace(/[\s-]/g, "");
+    const normalize = (code: string) => normalizeCourseCode(code);
     const key = `${normalize(course.code)}|${customSemester}`;
     if (importedCourseKeys.has(key)) return;
     if (courses.some((c) => normalize(c.code) === normalize(course.code) && c.semester === customSemester)) return;
@@ -348,6 +344,27 @@ export default function ImportCoursesPage() {
       blobs.push(blob);
     }
     return blobs;
+  };
+
+  const handlePasteExtract = () => {
+    const text = pastedTranscriptText.trim();
+    if (!text) {
+      showToast("warning", "Paste your Samarth transcript text first.");
+      return;
+    }
+
+    const allDetected = parseTranscriptText(text);
+    const seen = new Set<string>();
+    const deduped = allDetected.filter((d) => {
+      const key = `${normalizeCourseCode(d.rawCode)}|${d.detectedSemester ?? "?"}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    setOcrRawText(text);
+    setOcrResults(deduped);
+    setShowOcrModal(true);
   };
 
   const handleOcrUpload = async () => {
@@ -679,7 +696,7 @@ export default function ImportCoursesPage() {
 
   // Pending keys = courses already in the current in-memory list (not yet imported)
   const pendingKeys = new Set(
-    courses.map((c) => `${c.code.toUpperCase().replace(/[\s-]/g, "")}|${c.semester}`)
+    courses.map((c) => `${normalizeCourseCode(c.code)}|${c.semester}`)
   );
 
   return (
@@ -812,7 +829,7 @@ export default function ImportCoursesPage() {
                 Import from Samarth Transcript
               </p>
               <p className="text-xs text-foreground-secondary mt-0.5">
-                Upload your grade card screenshots or PDF to auto-detect courses
+                Paste your Samarth course table or upload screenshots/PDF to auto-detect courses
               </p>
             </div>
           </div>
@@ -836,18 +853,18 @@ export default function ImportCoursesPage() {
                 },
                 {
                   n: 2,
-                  text: 'Go to Dashboard → click "Click Here"',
-                  sub: "The button opens your academic performance / grade card page",
+                  text: 'Open your "My Courses" / grade card page',
+                  sub: "Copy-paste the table text (recommended), or upload screenshots/PDF",
                 },
                 {
                   n: 3,
-                  text: "Capture the page",
-                  sub: 'Take multiple screenshots covering all semesters, or press Ctrl+P → "Save as PDF"',
+                  text: "Recommended: Ctrl+A -> Ctrl+C, then paste below",
+                  sub: "Extra text is fine - as long as course codes are included",
                 },
                 {
                   n: 4,
-                  text: "Upload below and click Extract",
-                  sub: "Accepts PNG, JPG, WebP, and PDF. Multiple files are supported.",
+                  text: "Fallback: upload screenshots/PDF and click Extract",
+                  sub: "Accepts PNG, JPG, WebP, and PDF - multiple files supported",
                 },
               ].map((step) => (
                 <li key={step.n} className="flex items-start gap-3">
@@ -873,6 +890,41 @@ export default function ImportCoursesPage() {
                 </li>
               ))}
             </ol>
+
+            {/* Paste transcript text */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-foreground">
+                  Paste transcript text (recommended)
+                </p>
+                <button
+                  onClick={() => setPastedTranscriptText("")}
+                  disabled={!pastedTranscriptText}
+                  className="text-xs px-2.5 py-1 rounded-lg border border-border bg-background hover:bg-foreground/[0.02] disabled:opacity-50"
+                >
+                  Clear
+                </button>
+              </div>
+              <textarea
+                value={pastedTranscriptText}
+                onChange={(e) => setPastedTranscriptText(e.target.value)}
+                placeholder={`Paste everything from Samarth here (extra text is OK).\nWe will extract course codes like CS-302, IC-102P, HS-342...`}
+                className="w-full min-h-[160px] px-3 py-2 rounded-xl border border-border bg-background font-mono text-xs"
+              />
+              <button
+                onClick={handlePasteExtract}
+                disabled={!pastedTranscriptText.trim() || ocrLoading}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-white font-medium text-sm hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Sparkles className="w-4 h-4 shrink-0" />
+                Extract Courses from Pasted Text
+              </button>
+              <p className="text-xs text-foreground-secondary">
+                Tip: extra text is fine - just make sure course codes are included.
+              </p>
+            </div>
+
+            <div className="text-xs text-foreground-muted text-center">or</div>
 
             {/* Drop zone */}
             <div
