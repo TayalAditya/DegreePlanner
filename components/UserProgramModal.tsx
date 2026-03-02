@@ -1,7 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import {
   X,
   GraduationCap,
@@ -10,9 +10,12 @@ import {
   Target,
   ChevronDown,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { ProgressChart } from "@/components/ProgressChart";
 import { MinorPlannerCard } from "@/components/MinorPlannerCard";
+import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/ToastProvider";
 import { formatCourseCode } from "@/lib/utils";
 
 interface Program {
@@ -70,6 +73,12 @@ interface UserProgramModalProps {
 }
 
 export function UserProgramModal({ userId, userName, onClose }: UserProgramModalProps) {
+  const [view, setView] = useState<"progress" | "programs">("progress");
+  const [deletingEnrollmentId, setDeletingEnrollmentId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
+
   const { data, isLoading, isError, error } = useQuery<UserProgramData>({
     queryKey: ["admin-user-programs", userId],
     queryFn: async ({ signal }) => {
@@ -79,6 +88,75 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     },
     staleTime: 60_000,
   });
+
+  const deleteEnrollmentMutation = useMutation<
+    string,
+    Error,
+    string,
+    { previous?: UserProgramData }
+  >({
+    mutationFn: async (enrollmentId) => {
+      const res = await fetch(`/api/enrollments/${enrollmentId}`, { method: "DELETE" });
+
+      let body: any = null;
+      try {
+        body = await res.json();
+      } catch {
+        // ignore
+      }
+
+      if (!res.ok) {
+        throw new Error(body?.error || "Failed to delete course.");
+      }
+
+      return enrollmentId;
+    },
+    onMutate: async (enrollmentId) => {
+      setDeletingEnrollmentId(enrollmentId);
+
+      await queryClient.cancelQueries({ queryKey: ["admin-user-programs", userId] });
+      const previous = queryClient.getQueryData<UserProgramData>([
+        "admin-user-programs",
+        userId,
+      ]);
+
+      queryClient.setQueryData<UserProgramData>(["admin-user-programs", userId], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          enrollments: old.enrollments.filter((e) => e.id !== enrollmentId),
+        };
+      });
+
+      return { previous };
+    },
+    onError: (err, _enrollmentId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["admin-user-programs", userId], context.previous);
+      }
+      showToast("error", err instanceof Error ? err.message : "Failed to delete course.");
+    },
+    onSuccess: () => {
+      showToast("success", "Course removed");
+    },
+    onSettled: () => {
+      setDeletingEnrollmentId(null);
+      queryClient.invalidateQueries({ queryKey: ["admin-user-programs", userId] });
+    },
+  });
+
+  const onDeleteEnrollment = async (enrollment: Enrollment) => {
+    const ok = await confirm({
+      title: "Remove course?",
+      message: `Remove ${formatCourseCode(enrollment.course?.code)} — ${enrollment.course?.name}?`,
+      confirmText: "Remove",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+
+    if (!ok) return;
+    deleteEnrollmentMutation.mutate(enrollment.id);
+  };
 
   // Escape key to close
   useEffect(() => {
@@ -102,8 +180,10 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   const userSettings = data?.userSettings ?? {};
   const progressData = data?.progressData ?? null;
 
-  const primaryProgram = programs.find((p) => p.isPrimary);
-  const secondaryPrograms = programs.filter((p) => !p.isPrimary);
+  const primaryProgram = programs.find((p) => p.isPrimary) ?? programs[0];
+  const secondaryPrograms = primaryProgram
+    ? programs.filter((p) => p.id !== primaryProgram.id)
+    : [];
 
   const programEnrollments = primaryProgram?.program?.id
     ? enrollments.filter(
@@ -149,7 +229,9 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
           <div className="min-w-0">
             <h2 className="text-lg font-bold text-foreground truncate">{userName}</h2>
-            <p className="text-sm text-foreground-secondary">Academic Programs</p>
+            <p className="text-sm text-foreground-secondary">
+              {view === "progress" ? "Academic Progress" : "Academic Programs"}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -178,15 +260,50 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
             </div>
           ) : (
             <>
+              <div
+                className="inline-flex w-full sm:w-auto rounded-lg border border-border bg-surface p-1"
+                role="tablist"
+                aria-label="User view"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={view === "progress"}
+                  onClick={() => setView("progress")}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    view === "progress"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-foreground-secondary hover:text-foreground"
+                  }`}
+                >
+                  Progress
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={view === "programs"}
+                  onClick={() => setView("programs")}
+                  className={`flex-1 sm:flex-none px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                    view === "programs"
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-foreground-secondary hover:text-foreground"
+                  }`}
+                >
+                  Programs
+                </button>
+              </div>
+
               {/* Primary Program */}
               {primaryProgram && (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Target className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg font-semibold text-foreground">Primary Program</h3>
-                  </div>
+                  {view === "programs" && (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <Target className="w-5 h-5 text-primary" />
+                        <h3 className="text-lg font-semibold text-foreground">Primary Program</h3>
+                      </div>
 
-                  <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg border-2 border-primary p-4 sm:p-6">
+                      <div className="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg border-2 border-primary p-4 sm:p-6">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                       <h4 className="text-xl font-bold text-foreground">
                         {primaryProgram.program.name}
@@ -255,10 +372,14 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                         </div>
                       </div>
                     )}
-                  </div>
+                      </div>
+                    </>
+                  )}
 
-                  {/* Progress chart + semester breakdown */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {view === "progress" && (
+                    <>
+                      {/* Progress chart + semester breakdown */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                     {progressData ? (
                       <ProgressChart
                         progress={progressData}
@@ -307,13 +428,14 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                 </summary>
 
                                 <div className="px-4 pb-4 overflow-x-auto">
-                                  <table className="min-w-[520px] w-full text-sm">
+                                  <table className="min-w-[640px] w-full text-sm">
                                     <thead className="text-foreground-secondary">
                                       <tr className="border-b border-border">
                                         <th className="py-2 pr-4 text-left whitespace-nowrap">Code</th>
                                         <th className="py-2 pr-4 text-left min-w-[12rem]">Course</th>
                                         <th className="py-2 pr-4 text-right whitespace-nowrap">Cr</th>
                                         <th className="py-2 text-left whitespace-nowrap">Result</th>
+                                        <th className="py-2 text-right whitespace-nowrap">Actions</th>
                                       </tr>
                                     </thead>
                                     <tbody>
@@ -331,7 +453,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                           <td className="py-2 pr-4 text-right text-foreground">
                                             {e.course?.credits || 0}
                                           </td>
-                                          <td className="py-2">
+                                          <td className="py-2 pr-4 whitespace-nowrap">
                                             {e.status === "IN_PROGRESS" ? (
                                               <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold whitespace-nowrap">
                                                 In Progress
@@ -341,6 +463,21 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                                 Completed{e.grade ? ` (${e.grade})` : ""}
                                               </span>
                                             )}
+                                          </td>
+                                          <td className="py-2 text-right whitespace-nowrap">
+                                            <button
+                                              type="button"
+                                              onClick={() => onDeleteEnrollment(e)}
+                                              className="dp-icon-btn min-h-0 min-w-0 w-8 h-8 border-transparent bg-transparent hover:bg-surface-hover text-error"
+                                              disabled={deletingEnrollmentId === e.id}
+                                              aria-label={`Remove ${formatCourseCode(e.course?.code)}`}
+                                            >
+                                              {deletingEnrollmentId === e.id ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                              ) : (
+                                                <Trash2 className="w-4 h-4" />
+                                              )}
+                                            </button>
                                           </td>
                                         </tr>
                                       ))}
@@ -354,13 +491,15 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                       )}
                     </div>
                   </div>
+                    </>
+                  )}
 
-                  <MinorPlannerCard enrollments={enrollments} />
+                  {view === "programs" && <MinorPlannerCard enrollments={enrollments} />}
                 </div>
               )}
 
               {/* Secondary Programs */}
-              {secondaryPrograms.length > 0 && (
+              {view === "programs" && secondaryPrograms.length > 0 && (
                 <div className="space-y-3">
                   <h3 className="text-lg font-semibold text-foreground">Additional Programs</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
