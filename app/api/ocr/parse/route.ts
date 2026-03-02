@@ -34,9 +34,10 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
     console.log("[OCR] Buffer size:", buffer.length, "bytes");
 
-    // pdf-parse is CommonJS — require() avoids ESM/CJS interop issues
+    // Import the internal lib directly to avoid pdf-parse's test-file bootstrap
+    // which tries to read from filesystem and fails in Vercel serverless
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const pdfParse = require("pdf-parse");
+    const pdfParse = require("pdf-parse/lib/pdf-parse.js");
     console.log("[OCR] pdf-parse loaded:", typeof pdfParse);
 
     const parsed = await pdfParse(buffer);
