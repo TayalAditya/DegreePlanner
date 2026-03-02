@@ -264,31 +264,61 @@ export default function ImportCoursesPage() {
     });
   };
 
+  /** Render each page of a PDF to a canvas blob for OCR */
+  const extractImagesFromPdf = async (file: File): Promise<Blob[]> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfjsLib = await import("pdfjs-dist");
+    // Use CDN worker so we don't need to bundle it
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const blobs: Blob[] = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 2 }); // 2× for better OCR accuracy
+      const canvas = document.createElement("canvas");
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+      const ctx = canvas.getContext("2d")!;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (page.render as any)({ canvasContext: ctx, viewport }).promise;
+      const blob = await new Promise<Blob>((resolve) =>
+        canvas.toBlob((b) => resolve(b!), "image/png")
+      );
+      blobs.push(blob);
+    }
+    return blobs;
+  };
+
   const handleOcrUpload = async () => {
     if (ocrFiles.length === 0) return;
     setOcrLoading(true);
     const allDetected: DetectedCourse[] = [];
 
     try {
+      // Load Tesseract once for all files
+      const { createWorker } = await import("tesseract.js");
+      const worker = await createWorker("eng");
+
       for (const file of ocrFiles) {
+        let imagesToOcr: (File | Blob)[] = [];
+
         if (file.type === "application/pdf") {
-          // Server-side PDF parse
-          const fd = new FormData();
-          fd.append("file", file);
-          const res = await fetch("/api/ocr/parse", { method: "POST", body: fd });
-          if (res.ok) {
-            const data = await res.json();
-            allDetected.push(...(data.courses ?? []));
-          }
+          // Render each PDF page to canvas → OCR each page image
+          imagesToOcr = await extractImagesFromPdf(file);
         } else {
-          // Client-side image OCR via Tesseract.js (lazy loaded)
-          const { createWorker } = await import("tesseract.js");
-          const worker = await createWorker("eng");
-          const result = await worker.recognize(file);
-          await worker.terminate();
+          imagesToOcr = [file];
+        }
+
+        for (const img of imagesToOcr) {
+          const result = await worker.recognize(img);
           allDetected.push(...parseTranscriptText(result.data.text));
         }
       }
+
+      await worker.terminate();
 
       // Dedupe across all files by rawCode+semester
       const seen = new Set<string>();
