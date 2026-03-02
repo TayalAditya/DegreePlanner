@@ -29,3 +29,41 @@ export const normalizeBranchForIcBasket = (branch?: string): string => {
   if (upper === "MEVLSI" || upper === "VL") return "VLSI";
   return upper;
 };
+
+// ---------------------------------------------------------------------------
+// DE Basket configuration — branches that have named DE sub-baskets
+// (e.g. MNC requires 1 course from Basket I + 1 course from Basket II)
+// ---------------------------------------------------------------------------
+
+export interface DEBasket {
+  name: string;
+  courses: { code: string; name: string; credits: number }[];
+}
+
+export const DE_BASKET_CONFIG: Record<string, DEBasket[]> = {
+  MNC: [
+    {
+      name: "DE Basket I – Foundation",
+      courses: [
+        { code: "MA-251", name: "Abstract Algebra", credits: 3 },
+        { code: "MA-252", name: "Functional Analysis", credits: 3 },
+        { code: "MA-253", name: "Measure Theory", credits: 3 },
+        { code: "MA-254", name: "Topology", credits: 3 },
+        { code: "MA-255", name: "Number Theory", credits: 3 },
+      ],
+    },
+    {
+      name: "DE Basket II – Advance Modelling",
+      courses: [
+        { code: "MA-351", name: "Climate Modelling", credits: 3 },
+        { code: "MA-352", name: "Computational Financial Modelling & Lab", credits: 3 },
+        { code: "MA-353", name: "Modelling of Infectious Disease", credits: 3 },
+        { code: "MA-354", name: "Mathematical Image Processing", credits: 3 },
+        { code: "MA-355", name: "Mathematical Control Theory", credits: 3 },
+        { code: "MA-356", name: "Modelling and Simulation", credits: 3 },
+        { code: "MA-357", name: "Modelling Population Dynamics", credits: 3 },
+      ],
+    },
+  ],
+  // Add more branches here as needed
+};
