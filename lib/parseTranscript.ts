@@ -19,6 +19,8 @@ const SEM_HEADER_RE =
   /(?:semester|sem(?:ester)?)\s*[-:.]?\s*(\d)/i;
 const ODD_SEM_RE = /\bODD\s+SEMESTER\b/i;
 const EVEN_SEM_RE = /\bEVEN\s+SEMESTER\b/i;
+// Samarth tables often show term as "6 SEMESTER" (number before the word).
+const SEM_INLINE_RE = /\b([1-8])\s*SEMESTER\b/i;
 
 // Credits pattern: a standalone decimal or integer (1–9) near a course row
 const CREDITS_RE = /\b([1-9](?:\.\d)?)\b/;
@@ -31,6 +33,8 @@ function normalizeTextForParsing(text: string): string {
   // Join: "IC-\n112" -> "IC-112" (keeps any suffix like "_New" on the following characters)
   // Also join: "IC\n112" -> "IC-112" (OCR sometimes drops the hyphen).
   return normalized
+    // Convert "CS201(P)" -> "CS201P" so the main code regex can pick up the P suffix.
+    .replace(/(\d{3}[A-Z]?)\s*\(\s*P\s*\)/gi, "$1P")
     .replace(/([A-Z]{2,4})\s*-\s*\n\s*(\d{3}[A-Z]?)/gi, "$1-$2")
     // Only stitch when the prefix is the *only* thing on its line (avoids "(icc)\n115" becoming "ICC-115").
     .replace(/(^|\n)\s*([A-Z]{2,4})\s*\n\s*(\d{3}[A-Z]?)/gim, (_m, start, prefix, digits) => (
@@ -65,17 +69,14 @@ export function parseTranscriptText(text: string): DetectedCourse[] {
     const semMatch = SEM_HEADER_RE.exec(line);
     if (semMatch) {
       currentSemester = parseInt(semMatch[1], 10);
-      continue;
     }
     if (ODD_SEM_RE.test(line)) {
       // We can't know which odd semester without context — leave ambiguous
       // (user will confirm in modal). Reset to undefined so modal asks.
       currentSemester = undefined;
-      continue;
     }
     if (EVEN_SEM_RE.test(line)) {
       currentSemester = undefined;
-      continue;
     }
 
     // ── Pending-prefix reconstruction (OCR tables) ─────────────────────────
@@ -107,16 +108,19 @@ export function parseTranscriptText(text: string): DetectedCourse[] {
     let codeMatch: RegExpExecArray | null;
 
     const scanLine = synthesizedCode ? `${synthesizedCode} ${line}` : line;
+    const inlineSemesterMatch = scanLine.match(SEM_INLINE_RE);
+    const inlineSemester = inlineSemesterMatch ? parseInt(inlineSemesterMatch[1], 10) : undefined;
 
     while ((codeMatch = CODE_RE.exec(scanLine)) !== null) {
       const rawCode = `${codeMatch[1].toUpperCase()}-${codeMatch[2].toUpperCase()}`;
+      const detectedSemester = inlineSemester ?? currentSemester;
 
       // Skip codes that look like years (e.g. "20-231") or roll numbers
       if (/^\d{2}-\d{3}$/.test(rawCode)) continue;
       // Skip page numbers / section headers that aren't real course codes
       if (["ODD-SEM", "EVE-SEM"].includes(rawCode.toUpperCase())) continue;
 
-      const dupKey = `${rawCode.toUpperCase()}|${currentSemester ?? "?"}`;
+      const dupKey = `${rawCode.toUpperCase()}|${detectedSemester ?? "?"}`;
       if (seen.has(dupKey)) continue;
       seen.add(dupKey);
 
@@ -142,7 +146,7 @@ export function parseTranscriptText(text: string): DetectedCourse[] {
       results.push({
         rawCode,
         rawName: rawName && rawName.length > 2 ? rawName : undefined,
-        detectedSemester: currentSemester,
+        detectedSemester,
         detectedGrade,
         detectedCredits,
       });
@@ -154,5 +158,14 @@ export function parseTranscriptText(text: string): DetectedCourse[] {
 
 /** Normalise a course code for matching: "MA-222" → "MA222" */
 export function normalizeCourseCode(code: string): string {
-  return code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!code) return "";
+  return String(code)
+    .replace(/\u00a0/g, " ")
+    .trim()
+    .toUpperCase()
+    // "CS201(P)" -> "CS201P"
+    .replace(/(\d{3}[A-Z]?)\s*\(\s*P\s*\)/g, "$1P")
+    // Samarth suffix noise: "CS-302_New", "HS-342_1_New" -> base code
+    .replace(/(_\d{1,2})?_NEW$/g, "")
+    .replace(/[^A-Z0-9]/g, "");
 }

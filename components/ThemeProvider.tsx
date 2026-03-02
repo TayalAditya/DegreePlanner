@@ -26,14 +26,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Hydrate from localStorage after the first client-side render so that the
   // initial server render and the client reconciliation use the same values.
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as ThemeMode | null;
-    if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system") {
-      setThemeState(savedTheme);
-    }
-    const savedPalette = localStorage.getItem("degreePlanner.palette") as ThemePalette | null;
-    if (savedPalette && PALETTES.includes(savedPalette)) {
-      setPaletteState(savedPalette);
-    }
+    const timeoutId = window.setTimeout(() => {
+      const savedTheme = localStorage.getItem("theme") as ThemeMode | null;
+      if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system") {
+        setThemeState(savedTheme);
+      }
+      const savedPalette = localStorage.getItem("degreePlanner.palette") as ThemePalette | null;
+      if (savedPalette && PALETTES.includes(savedPalette)) {
+        setPaletteState(savedPalette);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   const prefersDark = useSyncExternalStore(

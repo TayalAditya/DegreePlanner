@@ -235,8 +235,13 @@ export function sleep(ms: number): Promise<void> {
 export function formatCourseCode(code: string): string {
   if (!code) return "";
   
+  // Normalise common practicum/lab suffix: "XY123(P)" -> "XY123P"
+  const cleaned = code
+    .toUpperCase()
+    .replace(/(\d{3}[A-Z]?)\s*\(\s*P\s*\)/gi, "$1P");
+
   // Remove any existing hyphens and spaces
-  const normalized = code.toUpperCase().replace(/[\s-]/g, "");
+  const normalized = cleaned.replace(/[\s-]/g, "");
   
   // Find where the letters end and numbers begin
   let i = 0;
