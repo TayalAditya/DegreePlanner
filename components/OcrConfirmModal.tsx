@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { X, AlertCircle, CheckCircle2, Search } from "lucide-react";
 import { DetectedCourse, normalizeCourseCode } from "@/lib/parseTranscript";
 import { formatCourseCode } from "@/lib/utils";
+import { getAllDefaultCourses } from "@/lib/defaultCurriculum";
 
 interface CatalogCourse {
   id: string;
@@ -37,6 +38,8 @@ interface OcrConfirmModalProps {
   importedKeys: Set<string>;
   /** Normalised keys already in the current pending course list */
   pendingKeys: Set<string>;
+  /** Raw OCR text from Tesseract — shown in empty state for debugging */
+  rawOcrText?: string;
   onConfirm: (rows: ConfirmRow[]) => void;
   onClose: () => void;
 }
@@ -44,36 +47,34 @@ interface OcrConfirmModalProps {
 // Valid IIT Mandi course categories (no PE)
 const COURSE_TYPE_OPTIONS = ["IC", "ICB", "DC", "DE", "HSS", "IKS", "FE", "MTP", "ISTP"];
 
-/** DC prefixes per branch — anything else from a transcript is likely DE */
-const BRANCH_DC_PREFIXES: Record<string, string[]> = {
-  CSE:    ["CS", "MA", "PH", "CH"],
-  DSE:    ["DS", "MA", "PH", "CH"],
-  EE:     ["EE", "MA", "PH", "CH"],
-  ME:     ["ME", "MA", "PH", "CH"],
-  CE:     ["CE", "MA", "PH", "CH"],
-  BE:     ["BE", "BIO", "MA", "PH", "CH"],
-  EP:     ["PH", "MA", "CH"],
-  MNC:    ["MA", "PH", "CH"],
-  MSE:    ["MS", "MA", "PH", "CH"],
-  MEVLSI: ["EE", "ME", "MA", "PH", "CH"],
-  GERAI:  ["EE", "CS", "MA", "PH", "CH"],
-  GECE:   ["EE", "CS", "MA", "PH", "CH"],
-  GEMECH: ["ME", "EE", "MA", "PH", "CH"],
-  BSCS:   ["CH", "MA", "PH"],
-};
-
-function guessCourseType(code: string, branch: string): string {
+/**
+ * Resolve course type by direct lookup in the branch curriculum first,
+ * then fall back to prefix heuristics for courses not in the curriculum
+ * (e.g. departmental electives the student picked freely).
+ *
+ * courseTypeMap  = normalised code → category from getAllDefaultCourses(branch)
+ * dcPrefixes     = letter-prefixes that appear in DC codes for this branch
+ *                  (e.g. {"CS"} for CSE) — used to tell DE apart from FE
+ */
+function resolveCourseType(
+  code: string,
+  courseTypeMap: Map<string, string>,
+  dcPrefixes: Set<string>
+): string {
   const p = normalizeCourseCode(code);
-  // Institutional courses — always IC/HSS/IKS regardless of branch
+  // Direct hit from the branch curriculum
+  const fromCurriculum = courseTypeMap.get(p);
+  if (fromCurriculum) return fromCurriculum;
+  // Fallback for courses not in curriculum (electives, cross-branch, etc.)
   if (p.startsWith("IC")) return "IC";
   if (p.startsWith("IK")) return "IKS";
   if (p.startsWith("HS")) return "HSS";
   if (p.startsWith("DP")) return p.includes("301") ? "ISTP" : "MTP";
-  // Branch-specific DC prefixes
-  const dcPrefixes = BRANCH_DC_PREFIXES[branch] ?? [];
-  if (dcPrefixes.some((x) => p.startsWith(x))) return "DC";
-  // Anything else on a transcript is most likely a Departmental Elective
-  return "DE";
+  // Same-department prefix but not a required course → Departmental Elective
+  const prefix = /^([A-Z]+)/.exec(p)?.[1] ?? "";
+  if (prefix && dcPrefixes.has(prefix)) return "DE";
+  // Different department entirely → Free Elective
+  return "FE";
 }
 
 export function OcrConfirmModal({
@@ -82,6 +83,7 @@ export function OcrConfirmModal({
   branch,
   importedKeys,
   pendingKeys,
+  rawOcrText,
   onConfirm,
   onClose,
 }: OcrConfirmModalProps) {
@@ -93,6 +95,21 @@ export function OcrConfirmModal({
     });
     return map;
   }, [catalogCourses]);
+
+  // Build course type map from the branch's actual curriculum
+  const { courseTypeMap, dcPrefixes } = useMemo(() => {
+    const typeMap = new Map<string, string>();
+    const prefixes = new Set<string>();
+    getAllDefaultCourses(branch).forEach((c) => {
+      const norm = normalizeCourseCode(c.code);
+      typeMap.set(norm, c.category);
+      if (c.category === "DC") {
+        const pf = /^([A-Z]+)/.exec(norm)?.[1];
+        if (pf) prefixes.add(pf);
+      }
+    });
+    return { courseTypeMap: typeMap, dcPrefixes: prefixes };
+  }, [branch]);
 
   // Initialise rows from detected courses, deduped by rawCode+semester
   const initialRows = useMemo<ConfirmRow[]>(() => {
@@ -118,14 +135,14 @@ export function OcrConfirmModal({
           alreadyExists,
           catalogCourseId: catalogMatch?.id ?? "",
           semester: d.detectedSemester ?? "",
-          courseType: guessCourseType(d.rawCode, branch),
+          courseType: resolveCourseType(d.rawCode, courseTypeMap, dcPrefixes),
           grade: d.detectedGrade ?? "",
           detectedSemester: d.detectedSemester,
           detectedGrade: d.detectedGrade,
           matchedName: catalogMatch?.name,
         };
       });
-  }, [detected, catalogByCode, importedKeys, pendingKeys]);
+  }, [detected, catalogByCode, importedKeys, pendingKeys, courseTypeMap, dcPrefixes]);
 
   const [rows, setRows] = useState<ConfirmRow[]>(initialRows);
   const [search, setSearch] = useState("");
@@ -190,11 +207,28 @@ export function OcrConfirmModal({
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-5 space-y-3">
           {filteredRows.length === 0 && (
-            <div className="text-center py-12">
+            <div className="text-center py-10">
               <AlertCircle className="w-10 h-10 text-foreground-muted mx-auto mb-3" />
-              <p className="text-foreground-secondary">
-                No courses detected. Try a clearer screenshot or a PDF export.
+              <p className="text-foreground-secondary font-medium">No courses detected.</p>
+              <p className="text-sm text-foreground-muted mt-1">
+                Try a clearer screenshot or use Ctrl+P → Save as PDF from Samarth.
               </p>
+              {rawOcrText && (
+                <details className="mt-4 text-left max-w-lg mx-auto">
+                  <summary className="cursor-pointer text-xs text-foreground-muted hover:text-foreground transition-colors">
+                    Show raw OCR text ({rawOcrText.length} chars) — for debugging
+                  </summary>
+                  <pre className="mt-2 text-xs text-foreground-muted bg-background-secondary border border-border p-3 rounded-lg overflow-auto max-h-48 whitespace-pre-wrap break-words">
+                    {rawOcrText.slice(0, 2000)}
+                    {rawOcrText.length > 2000 ? "\n…(truncated)" : ""}
+                  </pre>
+                </details>
+              )}
+              {!rawOcrText && (
+                <p className="text-xs text-foreground-muted mt-2">
+                  (No OCR text captured — image may have failed to load)
+                </p>
+              )}
             </div>
           )}
 
