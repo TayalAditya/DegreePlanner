@@ -10,14 +10,19 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    console.log("[OCR] Request received");
+
     const formData = await req.formData();
     const file = formData.get("file");
+    console.log("[OCR] File field:", file ? `type=${typeof file}, name=${(file as File)?.name}, size=${(file as File)?.size}` : "null");
 
     if (!file || typeof file === "string") {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
     const mimeType = (file as File).type;
+    console.log("[OCR] MIME type:", mimeType);
+
     if (mimeType !== "application/pdf") {
       return NextResponse.json(
         { error: "Only PDF files are supported on this endpoint" },
@@ -27,20 +32,25 @@ export async function POST(req: NextRequest) {
 
     const arrayBuffer = await (file as File).arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    console.log("[OCR] Buffer size:", buffer.length, "bytes");
 
     // pdf-parse is CommonJS — require() avoids ESM/CJS interop issues
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const pdfParse = require("pdf-parse");
+    console.log("[OCR] pdf-parse loaded:", typeof pdfParse);
+
     const parsed = await pdfParse(buffer);
+    console.log("[OCR] PDF parsed, text length:", parsed.text?.length ?? 0, "chars");
 
     const rawText: string = parsed.text ?? "";
     const courses = parseTranscriptText(rawText);
+    console.log("[OCR] Detected courses:", courses.length);
 
     return NextResponse.json({ rawText, courses });
   } catch (err) {
-    console.error("OCR parse error:", err);
+    console.error("[OCR] Error:", err);
     return NextResponse.json(
-      { error: "Failed to parse file" },
+      { error: "Failed to parse file", detail: String(err) },
       { status: 500 }
     );
   }
