@@ -71,10 +71,13 @@ export default function ImportCoursesPage() {
   const [guideOpen, setGuideOpen] = useState(true);
   const [ocrFiles, setOcrFiles] = useState<File[]>([]);
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrStatus, setOcrStatus] = useState("");
+  const [ocrElapsed, setOcrElapsed] = useState(0);
   const [ocrResults, setOcrResults] = useState<DetectedCourse[]>([]);
   const [showOcrModal, setShowOcrModal] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const ocrTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     loadUserSettings();
@@ -296,30 +299,46 @@ export default function ImportCoursesPage() {
 
   const handleOcrUpload = async () => {
     if (ocrFiles.length === 0) return;
+
+    // Start elapsed timer
+    setOcrElapsed(0);
     setOcrLoading(true);
+    setOcrStatus("Initialising OCR engine…");
+    ocrTimerRef.current = setInterval(
+      () => setOcrElapsed((s) => s + 1),
+      1000
+    );
+
     const allDetected: DetectedCourse[] = [];
 
     try {
-      // Load Tesseract once for all files
+      setOcrStatus("Loading language model…");
       const { createWorker } = await import("tesseract.js");
       const worker = await createWorker("eng");
 
-      for (const file of ocrFiles) {
+      for (let fi = 0; fi < ocrFiles.length; fi++) {
+        const file = ocrFiles[fi];
         let imagesToOcr: (File | Blob)[] = [];
 
         if (file.type === "application/pdf") {
-          // Render each PDF page to canvas → OCR each page image
+          setOcrStatus(`Rendering PDF pages — file ${fi + 1}/${ocrFiles.length}…`);
           imagesToOcr = await extractImagesFromPdf(file);
         } else {
           imagesToOcr = [file];
         }
 
-        for (const img of imagesToOcr) {
-          const result = await worker.recognize(img);
+        for (let pi = 0; pi < imagesToOcr.length; pi++) {
+          const label =
+            ocrFiles.length > 1
+              ? `file ${fi + 1}/${ocrFiles.length}, page ${pi + 1}/${imagesToOcr.length}`
+              : `page ${pi + 1}/${imagesToOcr.length}`;
+          setOcrStatus(`Reading text — ${label}…`);
+          const result = await worker.recognize(imagesToOcr[pi]);
           allDetected.push(...parseTranscriptText(result.data.text));
         }
       }
 
+      setOcrStatus("Matching courses…");
       await worker.terminate();
 
       // Dedupe across all files by rawCode+semester
@@ -337,7 +356,10 @@ export default function ImportCoursesPage() {
       console.error("OCR error:", err);
       showToast("error", "Failed to process files. Try again or use a clearer image.");
     } finally {
+      if (ocrTimerRef.current) clearInterval(ocrTimerRef.current);
       setOcrLoading(false);
+      setOcrStatus("");
+      setOcrElapsed(0);
     }
   };
 
@@ -823,24 +845,37 @@ export default function ImportCoursesPage() {
               </div>
             )}
 
-            {/* Extract button */}
-            <button
-              onClick={handleOcrUpload}
-              disabled={ocrFiles.length === 0 || ocrLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-white font-medium text-sm hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {ocrLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Extracting courses…
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Extract Courses from {ocrFiles.length > 0 ? `${ocrFiles.length} file${ocrFiles.length !== 1 ? "s" : ""}` : "Files"}
-                </>
+            {/* Extract button + progress */}
+            <div className="space-y-2">
+              <button
+                onClick={handleOcrUpload}
+                disabled={ocrFiles.length === 0 || ocrLoading}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-white font-medium text-sm hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {ocrLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    <span className="truncate">{ocrStatus || "Extracting…"}</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 shrink-0" />
+                    Extract Courses from {ocrFiles.length > 0 ? `${ocrFiles.length} file${ocrFiles.length !== 1 ? "s" : ""}` : "Files"}
+                  </>
+                )}
+              </button>
+
+              {ocrLoading && (
+                <div className="flex items-center justify-between text-xs text-foreground-secondary px-1">
+                  <span className="truncate max-w-[70%]">{ocrStatus}</span>
+                  <span className="font-mono shrink-0 ml-2 tabular-nums">
+                    {Math.floor(ocrElapsed / 60) > 0
+                      ? `${Math.floor(ocrElapsed / 60)}m ${ocrElapsed % 60}s`
+                      : `${ocrElapsed}s`}
+                  </span>
+                </div>
               )}
-            </button>
+            </div>
           </div>
         )}
       </div>
