@@ -436,8 +436,8 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
   }
 
   return (
-    <div className="bg-surface dark:bg-surface rounded-lg border border-border p-6">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+    <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4 sm:mb-6">
         <h3 className="text-lg font-semibold text-foreground">
           {progress.programName} Progress
         </h3>
@@ -465,9 +465,9 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
         </div>
       </div>
 
-      <div className="mb-4">
-        <div className="flex justify-between text-sm text-foreground-secondary mb-2">
-          <span>
+      <div className="mb-4 sm:mb-6">
+        <div className="flex justify-between text-xs sm:text-sm text-foreground-secondary mb-2 sm:mb-3">
+          <span className="font-medium">
             {totals.countedTotal} / {totals.requiredTotal} credits
             {includeCurrentSemesterCredits ? " (incl. current sem)" : ""}
           </span>
@@ -479,16 +479,20 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
             {totals.remainingTotal} remaining
           </button>
         </div>
-        <div className="w-full bg-background-secondary dark:bg-background rounded-full h-3">
+        <div className="w-full bg-background-secondary rounded-full h-3 sm:h-3.5 overflow-hidden">
           <div
-            className="bg-primary h-3 rounded-full transition-all duration-500"
+            className="bg-primary h-full rounded-full transition-all duration-700 ease-out"
             style={{ width: `${Math.min(100, totals.percentage)}%` }}
+            role="progressbar"
+            aria-valuenow={Math.round(totals.percentage)}
+            aria-valuemin={0}
+            aria-valuemax={100}
           ></div>
         </div>
       </div>
 
       {remainingOpen && (
-        <div className="mb-4 rounded-lg border border-border bg-surface-hover/40 p-4">
+        <div className="mb-4 sm:mb-6 rounded-lg border border-border bg-surface-hover/60 p-3 sm:p-4 backdrop-blur-sm">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">Remaining breakdown</p>

@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { DashboardOverview } from "@/components/DashboardOverview";
+import { AnnouncementsSection } from "@/components/AnnouncementsSection";
 import Link from "next/link";
 import { TimeGreeting } from "@/components/TimeGreeting";
 import { 
@@ -15,10 +16,63 @@ import {
   Clock,
   CheckCircle
 } from "lucide-react";
+import { StatCard } from "@/components/StatCard";
 
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   const firstName = session?.user?.name?.split(" ")[0] || "there";
+
+  // Fetch real enrollment data
+  let currentSemester = 0;
+  let activeCoursesCount = 0;
+  let completedCoursesCount = 0;
+
+  try {
+    const { headers } = await import("next/headers");
+    const headersList = await headers();
+    
+    const enrollmentsRes = await fetch(
+      `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/enrollments`,
+      {
+        headers: {
+          cookie: headersList.get("cookie") || "",
+        },
+      }
+    );
+
+    if (enrollmentsRes.ok) {
+      const enrollments = await enrollmentsRes.json();
+      
+      // Calculate current semester
+      const inProgressEnrollments = enrollments.filter(
+        (e: any) => e.status === "IN_PROGRESS"
+      );
+      if (inProgressEnrollments.length > 0) {
+        currentSemester = Math.max(
+          ...inProgressEnrollments.map((e: any) => e.semester || 0)
+        );
+      } else {
+        const allSemesters = enrollments.map((e: any) => e.semester || 0);
+        currentSemester = allSemesters.length > 0 ? Math.max(...allSemesters) : 1;
+      }
+
+      // Count active courses (IN_PROGRESS in current semester)
+      activeCoursesCount = inProgressEnrollments.filter(
+        (e: any) => e.semester === currentSemester
+      ).length;
+
+      // Count completed courses
+      completedCoursesCount = enrollments.filter(
+        (e: any) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F")
+      ).length;
+    }
+  } catch (error) {
+    console.error("Failed to fetch enrollments:", error);
+    // Fallback to defaults
+    currentSemester = 1;
+    activeCoursesCount = 0;
+    completedCoursesCount = 0;
+  }
   
   const quickActions = [
     {
@@ -100,6 +154,47 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {/* Quick Stats */}
+      <div>
+        <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-4">Overview</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+          <StatCard
+            icon={<BookOpen className="w-full h-full" />}
+            label="Current Semester"
+            value={currentSemester}
+            valueColor="text-primary"
+            iconBg="bg-primary/10"
+            iconColor="text-primary"
+            accentBgColor="bg-primary/10"
+            delay={0}
+          />
+
+          <StatCard
+            icon={<TrendingUp className="w-full h-full" />}
+            label="Active Courses"
+            value={activeCoursesCount}
+            sublabel="This semester"
+            valueColor="text-success"
+            iconBg="bg-success/10"
+            iconColor="text-success"
+            accentBgColor="bg-success/10"
+            delay={0.1}
+          />
+
+          <StatCard
+            icon={<CheckCircle className="w-full h-full" />}
+            label="Courses Completed"
+            value={completedCoursesCount}
+            sublabel="Total progress"
+            valueColor="text-info"
+            iconBg="bg-info/10"
+            iconColor="text-info"
+            accentBgColor="bg-info/10"
+            delay={0.2}
+          />
+        </div>
+      </div>
+
       {/* Quick Actions Grid */}
       <div>
         <div className="flex items-center justify-between mb-4 sm:mb-6">
@@ -137,6 +232,9 @@ export default async function DashboardPage() {
           })}
         </div>
       </div>
+
+      {/* Announcements */}
+      <AnnouncementsSection />
 
       {/* Main Overview */}
       <DashboardOverview userId={session?.user?.id!} />
