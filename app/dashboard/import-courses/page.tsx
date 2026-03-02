@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   CheckCircle,
@@ -79,6 +79,22 @@ export default function ImportCoursesPage() {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const ocrTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Course type map for OCR modal — derived from the branch curriculum
+  const effectiveBranch = branch === "GE" ? geSubBranch : branch;
+  const { courseTypeMap, dcPrefixes } = useMemo(() => {
+    const typeMap = new Map<string, string>();
+    const prefixes = new Set<string>();
+    getAllDefaultCourses(effectiveBranch).forEach((c) => {
+      const norm = c.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      typeMap.set(norm, c.category);
+      if (c.category === "DC") {
+        const pf = /^([A-Z]+)/.exec(norm)?.[1];
+        if (pf) prefixes.add(pf);
+      }
+    });
+    return { courseTypeMap: typeMap, dcPrefixes: prefixes };
+  }, [effectiveBranch]);
 
   useEffect(() => {
     loadUserSettings();
@@ -918,7 +934,8 @@ export default function ImportCoursesPage() {
         <OcrConfirmModal
           detected={ocrResults}
           catalogCourses={catalogCourses}
-          branch={branch === "GE" ? geSubBranch : branch}
+          courseTypeMap={courseTypeMap}
+          dcPrefixes={dcPrefixes}
           importedKeys={importedCourseKeys}
           pendingKeys={pendingKeys}
           rawOcrText={ocrRawText}

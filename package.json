@@ -13,6 +13,8 @@
     "db:studio": "prisma studio",
     "add-users": "tsx scripts/add-users.ts",
     "import-users": "tsx scripts/import-users.ts",
+    "mappings:dry": "tsx scripts/update-course-mappings-from-docs.ts --dry-run",
+    "mappings:update": "tsx scripts/update-course-mappings-from-docs.ts",
     "verify:default-dc": "tsx scripts/verify-default-curriculum-dc.ts"
   },
   "prisma": {
