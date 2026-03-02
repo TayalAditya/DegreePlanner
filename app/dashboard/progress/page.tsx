@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle, ChevronDown, Clock, Target } from "lucide-react";
+import { CheckCircle, ChevronDown, Clock, Loader2, Target, Trash2 } from "lucide-react";
+import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/ToastProvider";
 import { formatCourseCode } from "@/lib/utils";
 
 interface Enrollment {
@@ -131,6 +133,8 @@ const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
   VLSI: {},
 };
 
+const HSS_CORE_CAP = 12;
+
 export default function ProgressPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -140,17 +144,21 @@ export default function ProgressPage() {
   const [includeCurrentSemesterCredits, setIncludeCurrentSemesterCredits] = useState(false);
   const [primaryProgramId, setPrimaryProgramId] = useState<string | null>(null);
   const [progressApiData, setProgressApiData] = useState<any>(null);
+  const [deletingEnrollmentId, setDeletingEnrollmentId] = useState<string | null>(null);
+  const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
 
   type CourseCategory = keyof typeof categoryLabels;
   type ICBasketUsed = { ic1: boolean; ic2: boolean };
 
   const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-  const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any): CourseCategory => {
+  const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any, hssUsed?: { credits: number }): CourseCategory => {
     const code = enrollment.course.code.toUpperCase();
     const normalizedCode = normalizeCode(code);
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
+    const credits = enrollment.course.credits || 0;
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && user?.branch) {
@@ -181,7 +189,17 @@ export default function ProgressPage() {
     }
 
     // HS-xxx courses always go to HSS — never let branch mapping override
-    if (normalizedCode.startsWith("HS")) return "HSS";
+    if (normalizedCode.startsWith("HS")) {
+      if (hssUsed) {
+        const before = hssUsed.credits;
+        if (before < HSS_CORE_CAP) {
+          hssUsed.credits = Math.min(HSS_CORE_CAP, before + credits);
+          return "HSS";
+        }
+        return "FE";
+      }
+      return "HSS";
+    }
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
       const branchAliases = user.branch === "CSE" ? ["CSE", "CS"] : user.branch === "CS" ? ["CS", "CSE"] : [user.branch];
@@ -205,7 +223,6 @@ export default function ProgressPage() {
 
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
-    if (normalizedCode.startsWith("HS")) return "HSS";
     if (normalizedCode.startsWith("IK")) return "IKS";
 
     // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
@@ -234,6 +251,41 @@ export default function ProgressPage() {
   useEffect(() => {
     fetchProgress();
   }, []);
+
+  const deleteEnrollment = async (enrollmentId: string, label: string) => {
+    const ok = await confirm({
+      title: "Remove course?",
+      message: `Remove ${label} from your progress?`,
+      confirmText: "Remove",
+      cancelText: "Cancel",
+      variant: "danger",
+    });
+
+    if (!ok) return;
+
+    setDeletingEnrollmentId(enrollmentId);
+    try {
+      const res = await fetch(`/api/enrollments/${enrollmentId}`, { method: "DELETE" });
+
+      let body: any = null;
+      try {
+        body = await res.json();
+      } catch {
+        // ignore
+      }
+
+      if (!res.ok) {
+        throw new Error(body?.error || "Failed to remove course.");
+      }
+
+      setEnrollments((cur) => cur.filter((e) => e.id !== enrollmentId));
+      showToast("success", "Course removed");
+    } catch (error) {
+      showToast("error", error instanceof Error ? error.message : "Failed to remove course.");
+    } finally {
+      setDeletingEnrollmentId(null);
+    }
+  };
 
   useEffect(() => {
     try {
@@ -337,6 +389,7 @@ export default function ProgressPage() {
     const sortedCompleted = [...completedEnrollments].sort(compareEnrollments);
     const sortedInProgress = [...inProgressEnrollments].sort(compareEnrollments);
     const icBasketUsed: ICBasketUsed = { ic1: false, ic2: false };
+    const hssUsed = { credits: 0 };
 
     const creditsByCategory = {
       IC: 0,
@@ -363,12 +416,12 @@ export default function ProgressPage() {
     };
 
     sortedCompleted.forEach((e) => {
-      const category = getCourseCategory(e, icBasketUsed);
+      const category = getCourseCategory(e, icBasketUsed, hssUsed);
       creditsByCategory[category] += e.course.credits;
     });
 
     sortedInProgress.forEach((e) => {
-      const category = getCourseCategory(e, icBasketUsed);
+      const category = getCourseCategory(e, icBasketUsed, hssUsed);
       creditsInProgressByCategory[category] += e.course.credits;
     });
 
@@ -472,6 +525,7 @@ export default function ProgressPage() {
   );
 
   const icBasketUsedForDisplay: ICBasketUsed = { ic1: false, ic2: false };
+  const hssUsedForDisplay = { credits: 0 };
 
   const semesterCourses = sortedActiveEnrollments
     .map((e) => ({
@@ -482,7 +536,7 @@ export default function ProgressPage() {
       credits: e.course.credits,
       status: e.status,
       grade: e.grade,
-      category: getCourseCategory(e, icBasketUsedForDisplay),
+      category: getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay),
     }))
     .reduce<Record<number, any[]>>((acc, course) => {
       const sem = course.semester || 0;
@@ -696,7 +750,7 @@ export default function ProgressPage() {
                   </summary>
 
                   <div className="px-4 pb-4 overflow-x-auto">
-                    <table className="min-w-[640px] w-full text-sm">
+                    <table className="min-w-[760px] w-full text-sm">
                       <thead className="text-foreground-secondary">
                         <tr className="border-b border-border">
                           <th className="py-2 pr-4 text-left whitespace-nowrap">Code</th>
@@ -704,6 +758,7 @@ export default function ProgressPage() {
                           <th className="py-2 pr-4 text-right whitespace-nowrap">Credits</th>
                           <th className="py-2 pr-4 text-left whitespace-nowrap">Status</th>
                           <th className="py-2 text-left whitespace-nowrap">Counts As</th>
+                          <th className="py-2 text-right whitespace-nowrap">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -739,6 +794,21 @@ export default function ProgressPage() {
                                 <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}>
                                   <span className={`font-semibold ${colors.text}`}>{label}</span>
                                 </span>
+                              </td>
+                              <td className="py-2 text-right whitespace-nowrap">
+                                <button
+                                  type="button"
+                                  onClick={() => deleteEnrollment(c.id, `${c.code} — ${c.name}`)}
+                                  className="dp-icon-btn min-h-0 min-w-0 w-8 h-8 border-transparent bg-transparent hover:bg-surface-hover text-error"
+                                  disabled={deletingEnrollmentId !== null}
+                                  aria-label={`Remove ${c.code}`}
+                                >
+                                  {deletingEnrollmentId === c.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="w-4 h-4" />
+                                  )}
+                                </button>
                               </td>
                             </tr>
                           );

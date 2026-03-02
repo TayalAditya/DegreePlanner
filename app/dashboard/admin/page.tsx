@@ -426,7 +426,7 @@ export default function AdminPage() {
                         onClick={() => setSelectedUser({ id: user.id, name: user.name || user.enrollmentId || "—" })}
                         className="w-full mt-1 py-2 text-sm rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
                       >
-                        View Programs
+                        View Progress
                       </button>
                     </div>
                   )}

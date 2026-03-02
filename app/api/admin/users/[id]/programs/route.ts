@@ -41,7 +41,7 @@ export async function GET(
       }),
     ]);
 
-    const primaryProgram = programs.find((p) => p.isPrimary);
+    const primaryProgram = programs.find((p) => p.isPrimary) ?? programs[0];
 
     let progressData = null;
     if (primaryProgram?.program?.id) {

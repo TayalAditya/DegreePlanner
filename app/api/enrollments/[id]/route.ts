@@ -95,14 +95,46 @@ export async function DELETE(
     const { id } = await params;
     const enrollment = await prisma.courseEnrollment.findUnique({
       where: { id },
+      select: {
+        id: true,
+        userId: true,
+        isPassFail: true,
+        passFailCredits: true,
+      },
     });
 
-    if (!enrollment || enrollment.userId !== session.user.id) {
+    if (!enrollment) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
-    await prisma.courseEnrollment.delete({
-      where: { id },
+    const isAdmin = session.user.role === "ADMIN";
+    const isOwner = enrollment.userId === session.user.id;
+
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.courseEnrollment.delete({ where: { id } });
+
+      if (enrollment.isPassFail && enrollment.passFailCredits > 0) {
+        const user = await tx.user.findUnique({
+          where: { id: enrollment.userId },
+          select: { totalPassFailCredits: true },
+        });
+
+        if (user) {
+          await tx.user.update({
+            where: { id: enrollment.userId },
+            data: {
+              totalPassFailCredits: Math.max(
+                0,
+                user.totalPassFailCredits - enrollment.passFailCredits
+              ),
+            },
+          });
+        }
+      }
     });
 
     return NextResponse.json({ success: true });
