@@ -829,7 +829,7 @@ export default function ImportCoursesPage() {
                 Import from Samarth Transcript
               </p>
               <p className="text-xs text-foreground-secondary mt-0.5">
-                Paste your Samarth course table or upload screenshots/PDF to auto-detect courses
+                Paste your Samarth course table to auto-detect courses
               </p>
             </div>
           </div>
@@ -854,17 +854,12 @@ export default function ImportCoursesPage() {
                 {
                   n: 2,
                   text: 'Open your "My Courses" / grade card page',
-                  sub: "Copy-paste the table text (recommended), or upload screenshots/PDF",
+                  sub: "Scroll to the My Courses table (or Course Selection History)",
                 },
                 {
                   n: 3,
-                  text: "Recommended: Ctrl+A -> Ctrl+C, then paste below",
-                  sub: "Extra text is fine - as long as course codes are included",
-                },
-                {
-                  n: 4,
-                  text: "Fallback: upload screenshots/PDF and click Extract",
-                  sub: "Accepts PNG, JPG, WebP, and PDF - multiple files supported",
+                  text: "Ctrl+A -> Ctrl+C, then paste below",
+                  sub: "Extra text is fine - just make sure course codes are included",
                 },
               ].map((step) => (
                 <li key={step.n} className="flex items-start gap-3">
@@ -924,7 +919,9 @@ export default function ImportCoursesPage() {
               </p>
             </div>
 
-            <div className="text-xs text-foreground-muted text-center">or</div>
+            {false && (
+              <>
+                <div className="text-xs text-foreground-muted text-center">or</div>
 
             {/* Drop zone */}
             <div
@@ -1015,6 +1012,8 @@ export default function ImportCoursesPage() {
                 </div>
               )}
             </div>
+              </>
+            )}
           </div>
         )}
       </div>
