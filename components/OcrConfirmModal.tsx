@@ -31,6 +31,8 @@ interface ConfirmRow {
 interface OcrConfirmModalProps {
   detected: DetectedCourse[];
   catalogCourses: CatalogCourse[];
+  /** User's branch (e.g. "CSE", "EE") — used to guess DC vs DE */
+  branch: string;
   /** Normalised keys already in DB: "MA222|3" */
   importedKeys: Set<string>;
   /** Normalised keys already in the current pending course list */
@@ -39,22 +41,45 @@ interface OcrConfirmModalProps {
   onClose: () => void;
 }
 
-const COURSE_TYPE_OPTIONS = ["IC", "DC", "DE", "PE", "FE", "HSS", "IKS", "ICB"];
+// Valid IIT Mandi course categories (no PE)
+const COURSE_TYPE_OPTIONS = ["IC", "ICB", "DC", "DE", "HSS", "IKS", "FE", "MTP", "ISTP"];
 
-function guessCourseType(code: string): string {
+/** DC prefixes per branch — anything else from a transcript is likely DE */
+const BRANCH_DC_PREFIXES: Record<string, string[]> = {
+  CSE:    ["CS", "MA", "PH", "CH"],
+  DSE:    ["DS", "MA", "PH", "CH"],
+  EE:     ["EE", "MA", "PH", "CH"],
+  ME:     ["ME", "MA", "PH", "CH"],
+  CE:     ["CE", "MA", "PH", "CH"],
+  BE:     ["BE", "BIO", "MA", "PH", "CH"],
+  EP:     ["PH", "MA", "CH"],
+  MNC:    ["MA", "PH", "CH"],
+  MSE:    ["MS", "MA", "PH", "CH"],
+  MEVLSI: ["EE", "ME", "MA", "PH", "CH"],
+  GERAI:  ["EE", "CS", "MA", "PH", "CH"],
+  GECE:   ["EE", "CS", "MA", "PH", "CH"],
+  GEMECH: ["ME", "EE", "MA", "PH", "CH"],
+  BSCS:   ["CH", "MA", "PH"],
+};
+
+function guessCourseType(code: string, branch: string): string {
   const p = normalizeCourseCode(code);
-  if (p.startsWith("IC") || p.startsWith("IK")) return "IC";
+  // Institutional courses — always IC/HSS/IKS regardless of branch
+  if (p.startsWith("IC")) return "IC";
+  if (p.startsWith("IK")) return "IKS";
   if (p.startsWith("HS")) return "HSS";
-  if (["MA", "PH", "CH", "BIO", "CY", "EE", "ME", "CE", "CS", "DS"].some((x) =>
-    p.startsWith(x)
-  ))
-    return "DC";
-  return "FE";
+  if (p.startsWith("DP")) return p.includes("301") ? "ISTP" : "MTP";
+  // Branch-specific DC prefixes
+  const dcPrefixes = BRANCH_DC_PREFIXES[branch] ?? [];
+  if (dcPrefixes.some((x) => p.startsWith(x))) return "DC";
+  // Anything else on a transcript is most likely a Departmental Elective
+  return "DE";
 }
 
 export function OcrConfirmModal({
   detected,
   catalogCourses,
+  branch,
   importedKeys,
   pendingKeys,
   onConfirm,
@@ -93,7 +118,7 @@ export function OcrConfirmModal({
           alreadyExists,
           catalogCourseId: catalogMatch?.id ?? "",
           semester: d.detectedSemester ?? "",
-          courseType: guessCourseType(d.rawCode),
+          courseType: guessCourseType(d.rawCode, branch),
           grade: d.detectedGrade ?? "",
           detectedSemester: d.detectedSemester,
           detectedGrade: d.detectedGrade,
