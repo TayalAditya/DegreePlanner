@@ -16,6 +16,7 @@ import { ProgressChart } from "@/components/ProgressChart";
 import { MinorPlannerCard } from "@/components/MinorPlannerCard";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
+import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS } from "@/lib/icBasketConfig";
 import { formatCourseCode } from "@/lib/utils";
 
 interface Program {
@@ -47,6 +48,7 @@ interface Enrollment {
   semester: number;
   year: number;
   term: string;
+  courseType: string;
   status: string;
   grade?: string | null;
   programId?: string | null;
@@ -71,6 +73,32 @@ interface UserProgramModalProps {
   userName: string;
   onClose: () => void;
 }
+
+const HSS_CORE_CAP = 12;
+
+const categoryLabels = {
+  IC: "Institute Core",
+  IC_BASKET: "IC Basket",
+  DC: "Discipline Core",
+  DE: "Discipline Elective",
+  FE: "Free Elective",
+  HSS: "Humanities & Social Sciences",
+  IKS: "Indian Knowledge System",
+  MTP: "Major Technical Project",
+  ISTP: "Interactive Socio-Technical Practicum",
+};
+
+const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: string }> = {
+  IC: { bg: "bg-info/10", text: "text-info" },
+  IC_BASKET: { bg: "bg-accent/10", text: "text-accent" },
+  DC: { bg: "bg-primary/10", text: "text-primary" },
+  DE: { bg: "bg-secondary/10", text: "text-secondary" },
+  FE: { bg: "bg-success/10", text: "text-success" },
+  HSS: { bg: "bg-warning/10", text: "text-warning" },
+  IKS: { bg: "bg-warning/10", text: "text-warning" },
+  MTP: { bg: "bg-error/10", text: "text-error" },
+  ISTP: { bg: "bg-accent/10", text: "text-accent" },
+};
 
 export function UserProgramModal({ userId, userName, onClose }: UserProgramModalProps) {
   const [view, setView] = useState<"progress" | "programs">("progress");
@@ -180,6 +208,127 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   const userSettings = data?.userSettings ?? {};
   const progressData = data?.progressData ?? null;
 
+  type CourseCategory = keyof typeof categoryLabels;
+  type ICBasketUsed = { ic1: boolean; ic2: boolean };
+
+  const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+  const getCourseCategory = (
+    enrollment: Enrollment,
+    icBasketUsed?: ICBasketUsed,
+    hssUsed?: { credits: number }
+  ): CourseCategory => {
+    const branch = userSettings.branch;
+    const code = enrollment.course.code.toUpperCase();
+    const normalizedCode = normalizeCode(code);
+    const isICB1 = ICB1_CODES.has(normalizedCode);
+    const isICB2 = ICB2_CODES.has(normalizedCode);
+    const credits = enrollment.course.credits || 0;
+
+    // IC Basket compulsion logic - check BEFORE branchMappings
+    if ((isICB1 || isICB2) && branch) {
+      const branchCompulsion = IC_BASKET_COMPULSIONS[branch] || {};
+
+      if (
+        isICB1 &&
+        branchCompulsion.ic1 &&
+        normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")
+      ) {
+        return "IC_BASKET";
+      }
+
+      if (
+        isICB2 &&
+        branchCompulsion.ic2 &&
+        normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")
+      ) {
+        return "IC_BASKET";
+      }
+
+      // No compulsion - first course counts as IC_BASKET
+      if (icBasketUsed) {
+        if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
+          icBasketUsed.ic1 = true;
+          return "IC_BASKET";
+        }
+
+        if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
+          icBasketUsed.ic2 = true;
+          return "IC_BASKET";
+        }
+      }
+
+      return "FE";
+    }
+
+    // HS-xxx courses: first 12 credits count as HSS, remaining HS courses count as FE
+    // (never let branch mapping override this)
+    if (normalizedCode.startsWith("HS")) {
+      if (hssUsed) {
+        const before = hssUsed.credits;
+        if (before < HSS_CORE_CAP) {
+          hssUsed.credits = Math.min(HSS_CORE_CAP, before + credits);
+          return "HSS";
+        }
+        return "FE";
+      }
+      return "HSS";
+    }
+
+    if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && branch) {
+      const branchAliases =
+        branch === "CSE" ? ["CSE", "CS"] : branch === "CS" ? ["CS", "CSE"] : [branch];
+      const mapping =
+        enrollment.course.branchMappings.find(
+          (m) => branchAliases.includes(m.branch) || m.branch === "COMMON"
+        ) ||
+        (branch === "GE"
+          ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
+          : undefined);
+
+      if (mapping?.courseCategory === "NA") {
+        return "FE";
+      }
+
+      if (mapping && mapping.courseCategory in categoryLabels) {
+        return mapping.courseCategory as CourseCategory;
+      }
+    }
+
+    if (branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
+    if (branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
+
+    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode.startsWith("IC")) return "IC";
+    if (normalizedCode.startsWith("IK")) return "IKS";
+
+    // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
+    if (normalizedCode === "DP301P") return "ISTP";
+    if (normalizedCode === "DP498P" || normalizedCode === "DP499P") return "MTP";
+    if (normalizedCode.includes("MTP")) return "MTP";
+    if (normalizedCode.includes("ISTP")) return "ISTP";
+
+    switch (enrollment.courseType) {
+      case "DE":
+        return "DE";
+      case "PE":
+      case "FREE_ELECTIVE":
+        return "FE";
+      case "MTP":
+        return "MTP";
+      case "ISTP":
+        return "ISTP";
+      case "CORE":
+        return "DC";
+      default:
+        return "FE";
+    }
+  };
+
+  const compareEnrollments = (a: Enrollment, b: Enrollment) =>
+    (a.semester || 0) - (b.semester || 0) ||
+    normalizeCode(a.course.code).localeCompare(normalizeCode(b.course.code));
+
   const primaryProgram = programs.find((p) => p.isPrimary) ?? programs[0];
   const secondaryPrograms = primaryProgram
     ? programs.filter((p) => p.id !== primaryProgram.id)
@@ -197,7 +346,17 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       (e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
   );
 
-  const semesterCourses: Record<number, Enrollment[]> = visibleEnrollments.reduce(
+  const sortedVisibleEnrollments = [...visibleEnrollments].sort(compareEnrollments);
+
+  const icBasketUsedForDisplay: ICBasketUsed = { ic1: false, ic2: false };
+  const hssUsedForDisplay = { credits: 0 };
+  const categorizedById = new Map<string, CourseCategory>();
+
+  sortedVisibleEnrollments.forEach((e) => {
+    categorizedById.set(e.id, getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay));
+  });
+
+  const semesterCourses: Record<number, Enrollment[]> = sortedVisibleEnrollments.reduce(
     (acc: Record<number, Enrollment[]>, e) => {
       const sem = e.semester || 0;
       if (!acc[sem]) acc[sem] = [];
@@ -428,59 +587,76 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                 </summary>
 
                                 <div className="px-4 pb-4 overflow-x-auto">
-                                  <table className="min-w-[640px] w-full text-sm">
+                                  <table className="min-w-[820px] w-full text-sm">
                                     <thead className="text-foreground-secondary">
                                       <tr className="border-b border-border">
                                         <th className="py-2 pr-4 text-left whitespace-nowrap">Code</th>
                                         <th className="py-2 pr-4 text-left min-w-[12rem]">Course</th>
                                         <th className="py-2 pr-4 text-right whitespace-nowrap">Cr</th>
                                         <th className="py-2 text-left whitespace-nowrap">Result</th>
+                                        <th className="py-2 pr-4 text-left whitespace-nowrap">Counts As</th>
                                         <th className="py-2 text-right whitespace-nowrap">Actions</th>
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {courses.map((e) => (
-                                        <tr
-                                          key={e.id}
-                                          className="border-b border-border/60 last:border-0"
-                                        >
-                                          <td className="py-2 pr-4 font-semibold text-foreground whitespace-nowrap">
-                                            {formatCourseCode(e.course?.code)}
-                                          </td>
-                                          <td className="py-2 pr-4 text-foreground-secondary">
-                                            {e.course?.name}
-                                          </td>
-                                          <td className="py-2 pr-4 text-right text-foreground">
-                                            {e.course?.credits || 0}
-                                          </td>
-                                          <td className="py-2 pr-4 whitespace-nowrap">
-                                            {e.status === "IN_PROGRESS" ? (
-                                              <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold whitespace-nowrap">
-                                                In Progress
-                                              </span>
-                                            ) : (
-                                              <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-semibold whitespace-nowrap">
-                                                Completed{e.grade ? ` (${e.grade})` : ""}
-                                              </span>
-                                            )}
-                                          </td>
-                                          <td className="py-2 text-right whitespace-nowrap">
-                                            <button
-                                              type="button"
-                                              onClick={() => onDeleteEnrollment(e)}
-                                              className="dp-icon-btn min-h-0 min-w-0 w-8 h-8 border-transparent bg-transparent hover:bg-surface-hover text-error"
-                                              disabled={deletingEnrollmentId === e.id}
-                                              aria-label={`Remove ${formatCourseCode(e.course?.code)}`}
-                                            >
-                                              {deletingEnrollmentId === e.id ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                      {courses.map((e) => {
+                                        const category: CourseCategory =
+                                          categorizedById.get(e.id) ?? "FE";
+                                        const colors = categoryColors[category];
+                                        const label = categoryLabels[category];
+
+                                        return (
+                                          <tr
+                                            key={e.id}
+                                            className="border-b border-border/60 last:border-0"
+                                          >
+                                            <td className="py-2 pr-4 font-semibold text-foreground whitespace-nowrap">
+                                              {formatCourseCode(e.course?.code)}
+                                            </td>
+                                            <td className="py-2 pr-4 text-foreground-secondary">
+                                              {e.course?.name}
+                                            </td>
+                                            <td className="py-2 pr-4 text-right text-foreground">
+                                              {e.course?.credits || 0}
+                                            </td>
+                                            <td className="py-2 pr-4 whitespace-nowrap">
+                                              {e.status === "IN_PROGRESS" ? (
+                                                <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold whitespace-nowrap">
+                                                  In Progress
+                                                </span>
                                               ) : (
-                                                <Trash2 className="w-4 h-4" />
+                                                <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-semibold whitespace-nowrap">
+                                                  Completed{e.grade ? ` (${e.grade})` : ""}
+                                                </span>
                                               )}
-                                            </button>
-                                          </td>
-                                        </tr>
-                                      ))}
+                                            </td>
+                                            <td className="py-2 pr-4 whitespace-nowrap">
+                                              <span
+                                                className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}
+                                              >
+                                                <span className={`font-semibold ${colors.text}`}>
+                                                  {label}
+                                                </span>
+                                              </span>
+                                            </td>
+                                            <td className="py-2 text-right whitespace-nowrap">
+                                              <button
+                                                type="button"
+                                                onClick={() => onDeleteEnrollment(e)}
+                                                className="dp-icon-btn min-h-0 min-w-0 w-8 h-8 border-transparent bg-transparent hover:bg-surface-hover text-error"
+                                                disabled={deletingEnrollmentId === e.id}
+                                                aria-label={`Remove ${formatCourseCode(e.course?.code)}`}
+                                              >
+                                                {deletingEnrollmentId === e.id ? (
+                                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                  <Trash2 className="w-4 h-4" />
+                                                )}
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
                                     </tbody>
                                   </table>
                                 </div>
