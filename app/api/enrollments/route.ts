@@ -69,6 +69,11 @@ export async function DELETE(request: NextRequest) {
       where: { userId: session.user.id },
     });
 
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { updatedAt: new Date() },
+    });
+
     return NextResponse.json({ success: true, deleted: count });
   } catch (error) {
     console.error("Error deleting enrollments:", error);

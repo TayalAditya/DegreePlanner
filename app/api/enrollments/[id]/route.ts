@@ -135,6 +135,12 @@ export async function DELETE(
           });
         }
       }
+
+      // Ensure user "last updated" reflects credit/enrollment changes (used in admin sorting).
+      await tx.user.update({
+        where: { id: enrollment.userId },
+        data: { updatedAt: new Date() },
+      });
     });
 
     return NextResponse.json({ success: true });

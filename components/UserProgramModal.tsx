@@ -169,6 +169,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     onSettled: () => {
       setDeletingEnrollmentId(null);
       queryClient.invalidateQueries({ queryKey: ["admin-user-programs", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
   });
 
