@@ -19,19 +19,35 @@ export async function GET() {
       enrollmentId: true,
       branch: true,
       batch: true,
+      updatedAt: true,
       enrollments: {
         select: {
           semester: true,
           status: true,
           grade: true,
+          updatedAt: true,
           course: { select: { credits: true } },
         },
       },
     },
-    orderBy: { enrollmentId: "asc" },
   });
 
-  const result = users.map((user) => {
+  const usersSorted = users
+    .map((user) => {
+      const lastEnrollmentUpdatedAt = user.enrollments.reduce<Date>(
+        (latest, e) => (e.updatedAt > latest ? e.updatedAt : latest),
+        user.updatedAt
+      );
+      return { user, lastModifiedAt: lastEnrollmentUpdatedAt };
+    })
+    .sort((a, b) => {
+      const diff = b.lastModifiedAt.getTime() - a.lastModifiedAt.getTime();
+      if (diff !== 0) return diff;
+      return (a.user.enrollmentId ?? "").localeCompare(b.user.enrollmentId ?? "");
+    })
+    .map(({ user }) => user);
+
+  const result = usersSorted.map((user) => {
     const semMap: Record<number, { courses: number; credits: number }> = {};
     let completedCredits = 0;
     let inProgressCredits = 0;
