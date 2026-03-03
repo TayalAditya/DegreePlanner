@@ -103,7 +103,8 @@ export class CreditCalculator {
 
     if (!isBSProgram) {
       const doingMTP1Pref = user?.doingMTP ?? true;
-      const doingMTP2Pref = user?.doingMTP2 ?? (user?.doingMTP ?? true);
+      const rawDoingMTP2Pref = user?.doingMTP2 ?? doingMTP1Pref;
+      const doingMTP2Pref = doingMTP1Pref ? rawDoingMTP2Pref : false;
       const doingISTPPref = user?.doingISTP ?? true;
 
       const effectiveDoingMTP1 = doingMTP1Pref || doingMTP2Pref; // MTP-2 implies MTP-1

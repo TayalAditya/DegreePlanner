@@ -70,7 +70,7 @@ export default function ProgramsPage() {
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
   const [doingMTP1, setDoingMTP1] = useState(true);
   const [doingMTP2, setDoingMTP2] = useState(true);
-  const [doingISTP, setDoingISTP] = useState(false);
+  const [doingISTP, setDoingISTP] = useState(true);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savedPrefs, setSavedPrefs] = useState(false);
   const { confirm } = useConfirmDialog();
@@ -135,10 +135,10 @@ export default function ProgramsPage() {
           const data = await userRes.json();
           setUserSettings(data ?? null);
           const mtp1 = data?.doingMTP ?? true;
-          const mtp2 = data?.doingMTP2 ?? mtp1;
+          const mtp2 = (data?.doingMTP2 ?? mtp1) && mtp1;
           setDoingMTP1(mtp1);
           setDoingMTP2(mtp2);
-          setDoingISTP(data?.doingISTP ?? false);
+          setDoingISTP(data?.doingISTP ?? true);
         }
       } catch (error) {
         console.error("Failed to load program progress:", error);
@@ -184,10 +184,10 @@ export default function ProgramsPage() {
         const data = await userRes.json();
         setUserSettings(data ?? null);
         const mtp1 = data?.doingMTP ?? true;
-        const mtp2 = data?.doingMTP2 ?? mtp1;
+        const mtp2 = (data?.doingMTP2 ?? mtp1) && mtp1;
         setDoingMTP1(mtp1);
         setDoingMTP2(mtp2);
-        setDoingISTP(data?.doingISTP ?? false);
+        setDoingISTP(data?.doingISTP ?? true);
       }
     } catch (error) {
       console.error("Failed to load program progress:", error);
