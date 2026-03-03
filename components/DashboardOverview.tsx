@@ -1,9 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
 import { formatCourseCode } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
+import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface DashboardOverviewProps {
   userId: string;
@@ -54,6 +56,11 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
   });
 
   const allEnrollments = enrollments || [];
+  const minorPlanner = useMinorPlannerSelection();
+  const nonMgmtMinorCourseCodes = useMemo(() => {
+    if (!minorPlanner.enabled) return new Set<string>();
+    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
+  }, [minorPlanner.enabled, minorPlanner.codes]);
 
   const latestInProgressSemester =
     allEnrollments.length > 0
@@ -102,6 +109,13 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     enrollment: any,
     icBasketUsed?: { ic1: boolean; ic2: boolean }
   ): keyof typeof categoryLabels => {
+    const applyMinorDeOverride = (category: keyof typeof categoryLabels): keyof typeof categoryLabels => {
+      if (category !== "DE") return category;
+      const code = formatCourseCode(enrollment.course?.code ?? "");
+      if (!code) return category;
+      return nonMgmtMinorCourseCodes.has(code) ? "FE" : category;
+    };
+
     const code = enrollment.course?.code?.toUpperCase() || "";
     const normalizedCode = normalizeCourseCode(code);
     const isICB1 = ICB1_CODES.has(normalizedCode);
@@ -148,13 +162,13 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       }
 
       if (mapping && ["IC", "IC_BASKET", "DC", "DE", "FE", "HSS", "IKS", "MTP", "ISTP"].includes(mapping.courseCategory)) {
-        return mapping.courseCategory as keyof typeof categoryLabels;
+        return applyMinorDeOverride(mapping.courseCategory as keyof typeof categoryLabels);
       }
     }
 
     // Branch-specific course patterns
-    if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return "DE";
-    if (userSettings?.branch === "DSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) return "DE";
+    if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return applyMinorDeOverride("DE");
+    if (userSettings?.branch === "DSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) return applyMinorDeOverride("DE");
 
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
@@ -169,7 +183,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
     if (enrollment.courseType === "MTP") return "MTP";
     if (enrollment.courseType === "ISTP") return "ISTP";
-    if (enrollment.courseType === "DE") return "DE";
+    if (enrollment.courseType === "DE") return applyMinorDeOverride("DE");
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     return "DC";
   };

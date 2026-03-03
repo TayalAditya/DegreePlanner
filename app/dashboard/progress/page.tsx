@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle, ChevronDown, Clock, Loader2, Target, Trash2 } from "lucide-react";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import { formatCourseCode } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
+import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface Enrollment {
   id: string;
@@ -126,6 +127,19 @@ export default function ProgressPage() {
 
   const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
+  const minorPlanner = useMinorPlannerSelection();
+  const nonMgmtMinorCourseCodes = useMemo(() => {
+    if (!minorPlanner.enabled) return new Set<string>();
+    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
+  }, [minorPlanner.enabled, minorPlanner.codes]);
+
+  const applyMinorDeOverride = (category: CourseCategory, enrollment: Enrollment): CourseCategory => {
+    if (category !== "DE") return category;
+    const code = formatCourseCode(enrollment.course.code);
+    if (!code) return category;
+    return nonMgmtMinorCourseCodes.has(code) ? "FE" : category;
+  };
+
   const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any, hssUsed?: { credits: number }): CourseCategory => {
     const code = enrollment.course.code.toUpperCase();
     const normalizedCode = normalizeCode(code);
@@ -187,12 +201,16 @@ export default function ProgressPage() {
       }
 
       if (mapping && mapping.courseCategory in categoryLabels) {
-        return mapping.courseCategory as CourseCategory;
+        return applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
       }
     }
 
-    if (user?.branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
-    if (user?.branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
+    if (user?.branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) {
+      return applyMinorDeOverride("DE", enrollment);
+    }
+    if (user?.branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) {
+      return applyMinorDeOverride("DE", enrollment);
+    }
 
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
@@ -206,7 +224,7 @@ export default function ProgressPage() {
 
     switch (enrollment.courseType) {
       case "DE":
-        return "DE";
+        return applyMinorDeOverride("DE", enrollment);
       case "PE":
       case "FREE_ELECTIVE":
         return "FE";
