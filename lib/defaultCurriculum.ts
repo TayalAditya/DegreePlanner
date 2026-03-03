@@ -343,7 +343,7 @@ const mncSem4: DefaultCourse[] = [
   { code: "MA222", name: "Applied Linear Programming",    credits: 4, category: "DC", semester: 4 },
 ];
 const mncSem5: DefaultCourse[] = [
-  { code: "CS312",  name: "Design of Algorithms",                 credits: 4, category: "DC", semester: 5 },
+  { code: "CS212",  name: "Design of Algorithms",                 credits: 4, category: "DC", semester: 5 },
   { code: "MA310",  name: "Matrix Computation and Lab",           credits: 4, category: "DC", semester: 5 },
   { code: "MA311",  name: "Mathematical Modelling",               credits: 3, category: "DC", semester: 5 },
   { code: "MA322",  name: "Applied Graph Theory",                 credits: 4, category: "DC", semester: 5 },

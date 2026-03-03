@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if enrollment already exists
+    // Check if enrollment already exists (exact match)
     const existing = await prisma.courseEnrollment.findUnique({
       where: {
         userId_courseId_semester_year_term: {
@@ -179,6 +179,39 @@ export async function POST(request: NextRequest) {
     if (existing) {
       return NextResponse.json(
         { error: "Already enrolled in this course for this semester" },
+        { status: 400 }
+      );
+    }
+
+    // Check for duplicate by course code or name (normalize codes to catch MA-323 vs MA323P variations)
+    const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const normalizedCourseCode = normalizeCode(course.code);
+    
+    const duplicateByCourseOrName = await prisma.courseEnrollment.findFirst({
+      where: {
+        userId: session.user.id,
+        semester,
+        year,
+        term,
+        course: {
+          OR: [
+            { code: course.code }, // Exact code match
+            { name: course.name }, // Same name
+          ],
+        },
+      },
+      include: {
+        course: {
+          select: { code: true, name: true },
+        },
+      },
+    });
+
+    if (duplicateByCourseOrName) {
+      return NextResponse.json(
+        { 
+          error: `Already enrolled in "${duplicateByCourseOrName.course.name}" (${duplicateByCourseOrName.course.code}) for this semester` 
+        },
         { status: 400 }
       );
     }
