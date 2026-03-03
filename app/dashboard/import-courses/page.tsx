@@ -1135,6 +1135,37 @@ export default function ImportCoursesPage() {
         </div>
       </div>
 
+      {/* Ready to Import */}
+      {selectedCount > 0 && (
+        <div className="my-6 bg-gradient-to-r from-primary to-secondary rounded-xl p-4 sm:p-6 shadow-2xl">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="text-white">
+              <p className="text-sm opacity-90">Ready to import</p>
+              <p className="font-bold text-lg">
+                {selectedCount} courses • {totalCredits} credits
+              </p>
+            </div>
+            <button
+              onClick={handleSubmit}
+              disabled={loading || selectedCount === 0}
+              className="w-full sm:w-auto px-8 py-3 bg-surface-elevated text-foreground rounded-lg font-semibold border border-white/10 hover:border-white/20 hover:bg-surface-hover hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Importing...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-5 w-5" />
+                  Import Courses
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Semester-wise Courses */}
       <div className="space-y-4">
         {Object.keys(semesterGroups)
@@ -1276,36 +1307,6 @@ export default function ImportCoursesPage() {
           })}
       </div>
 
-      {/* Submit Button */}
-      {selectedCount > 0 && (
-        <div className="mt-6 bg-gradient-to-r from-primary to-secondary rounded-xl p-4 sm:p-6 shadow-2xl">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="text-white">
-            <p className="text-sm opacity-90">Ready to import</p>
-            <p className="font-bold text-lg">
-              {selectedCount} courses • {totalCredits} credits
-            </p>
-          </div>
-          <button
-            onClick={handleSubmit}
-            disabled={loading || selectedCount === 0}
-            className="w-full sm:w-auto px-8 py-3 bg-surface-elevated text-foreground rounded-lg font-semibold border border-white/10 hover:border-white/20 hover:bg-surface-hover hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                Importing...
-              </>
-            ) : (
-              <>
-                <Upload className="h-5 w-5" />
-                Import Courses
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-      )}
     </div>
   );
 }
