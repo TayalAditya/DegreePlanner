@@ -206,7 +206,8 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && (branch || userBranch)) {
-      const checkBranch = normalizeBranchForIcBasket((branch || userBranch) as string);
+      const rawBranch = String(branch || userBranch || "").trim().toUpperCase();
+      const checkBranch = normalizeBranchForIcBasket(rawBranch);
       const branchCompulsion = IC_BASKET_COMPULSIONS[checkBranch] || {};
       
       // Check if this course matches branch's IC-I compulsion
@@ -232,6 +233,49 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
         }
       }
       
+      // Some IC basket courses are mapped as DC for certain branches (e.g. MSE: IC-240).
+      // Respect explicit branch mappings before defaulting to FE.
+      const mappings = enrollment.course?.branchMappings || [];
+      if (mappings.length > 0) {
+        const aliases = new Set<string>([rawBranch, checkBranch]);
+
+        if (checkBranch === "CSE" || rawBranch === "CSE") aliases.add("CS");
+        if (checkBranch === "CS" || rawBranch === "CS") aliases.add("CSE");
+
+        if (checkBranch === "DSE" || rawBranch === "DSE") aliases.add("DS");
+        if (checkBranch === "DS" || rawBranch === "DS") aliases.add("DSE");
+
+        if (checkBranch === "MSE" || rawBranch === "MSE") aliases.add("MS");
+        if (checkBranch === "MS" || rawBranch === "MS") aliases.add("MSE");
+
+        if (checkBranch === "BIO" || rawBranch === "BIO") aliases.add("BE");
+        if (checkBranch === "BE" || rawBranch === "BE") aliases.add("BIO");
+
+        if (checkBranch === "VLSI" || rawBranch === "VLSI") {
+          aliases.add("VL");
+          aliases.add("MEVLSI");
+        }
+        if (checkBranch === "VL" || rawBranch === "VL") {
+          aliases.add("VLSI");
+          aliases.add("MEVLSI");
+        }
+        if (checkBranch === "MEVLSI" || rawBranch === "MEVLSI") {
+          aliases.add("VL");
+          aliases.add("VLSI");
+        }
+
+        const aliasList = Array.from(aliases);
+        const mapping =
+          mappings.find((m: any) => aliasList.includes(m.branch) || m.branch === "COMMON") ||
+          (checkBranch === "GE"
+            ? mappings.find((m: any) => String(m.branch || "").startsWith("GE"))
+            : undefined);
+
+        if (mapping?.courseCategory === "DC") {
+          return "DC";
+        }
+      }
+
       // Additional IC basket courses → FE
       return "FE";
     }

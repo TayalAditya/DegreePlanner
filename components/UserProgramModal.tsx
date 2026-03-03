@@ -15,7 +15,7 @@ import {
 import { ProgressChart } from "@/components/ProgressChart";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
-import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS } from "@/lib/icBasketConfig";
+import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { formatCourseCode } from "@/lib/utils";
 
 interface Program {
@@ -212,6 +212,40 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
 
   const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
+  const mappingBranchAliases = useMemo(() => {
+    const raw = userSettings.branch;
+    if (!raw) return [];
+    const normalized = normalizeBranchForIcBasket(raw);
+    const aliases = new Set<string>([raw, normalized]);
+
+    if (normalized === "CSE" || raw === "CSE") aliases.add("CS");
+    if (normalized === "CS" || raw === "CS") aliases.add("CSE");
+
+    if (normalized === "DSE" || raw === "DSE") aliases.add("DS");
+    if (normalized === "DS" || raw === "DS") aliases.add("DSE");
+
+    if (normalized === "MSE" || raw === "MSE") aliases.add("MS");
+    if (normalized === "MS" || raw === "MS") aliases.add("MSE");
+
+    if (normalized === "BIO" || raw === "BIO") aliases.add("BE");
+    if (normalized === "BE" || raw === "BE") aliases.add("BIO");
+
+    if (normalized === "VLSI" || raw === "VLSI") {
+      aliases.add("VL");
+      aliases.add("MEVLSI");
+    }
+    if (normalized === "VL" || raw === "VL") {
+      aliases.add("VLSI");
+      aliases.add("MEVLSI");
+    }
+    if (normalized === "MEVLSI" || raw === "MEVLSI") {
+      aliases.add("VL");
+      aliases.add("VLSI");
+    }
+
+    return Array.from(aliases);
+  }, [userSettings.branch]);
+
   const applyMinorDeOverride = (category: CourseCategory, enrollment: Enrollment): CourseCategory => {
     return category;
   };
@@ -230,7 +264,8 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && branch) {
-      const branchCompulsion = IC_BASKET_COMPULSIONS[branch] || {};
+      const basketBranch = normalizeBranchForIcBasket(branch);
+      const branchCompulsion = IC_BASKET_COMPULSIONS[basketBranch] || {};
 
       if (
         isICB1 &&
@@ -261,6 +296,22 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
         }
       }
 
+      // Some IC basket courses are mapped as DC for certain branches (e.g. MSE: IC-240).
+      // Respect explicit branch mappings before defaulting to FE.
+      if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0) {
+        const mapping =
+          enrollment.course.branchMappings.find(
+            (m) => mappingBranchAliases.includes(m.branch) || m.branch === "COMMON"
+          ) ||
+          (branch === "GE"
+            ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
+            : undefined);
+
+        if (mapping?.courseCategory === "DC") {
+          return "DC";
+        }
+      }
+
       return "FE";
     }
 
@@ -279,11 +330,9 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     }
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && branch) {
-      const branchAliases =
-        branch === "CSE" ? ["CSE", "CS"] : branch === "CS" ? ["CS", "CSE"] : [branch];
       const mapping =
         enrollment.course.branchMappings.find(
-          (m) => branchAliases.includes(m.branch) || m.branch === "COMMON"
+          (m) => mappingBranchAliases.includes(m.branch) || m.branch === "COMMON"
         ) ||
         (branch === "GE"
           ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))

@@ -140,6 +140,40 @@ export default function ProgressPage() {
     return nonMgmtMinorCourseCodes.has(code) ? "FE" : category;
   };
 
+  const mappingBranchAliases = useMemo(() => {
+    if (!user?.branch) return [];
+    const raw = user.branch;
+    const normalized = normalizeBranchForIcBasket(raw);
+    const aliases = new Set<string>([raw, normalized]);
+
+    if (normalized === "CSE" || raw === "CSE") aliases.add("CS");
+    if (normalized === "CS" || raw === "CS") aliases.add("CSE");
+
+    if (normalized === "DSE" || raw === "DSE") aliases.add("DS");
+    if (normalized === "DS" || raw === "DS") aliases.add("DSE");
+
+    if (normalized === "MSE" || raw === "MSE") aliases.add("MS");
+    if (normalized === "MS" || raw === "MS") aliases.add("MSE");
+
+    if (normalized === "BIO" || raw === "BIO") aliases.add("BE");
+    if (normalized === "BE" || raw === "BE") aliases.add("BIO");
+
+    if (normalized === "VLSI" || raw === "VLSI") {
+      aliases.add("VL");
+      aliases.add("MEVLSI");
+    }
+    if (normalized === "VL" || raw === "VL") {
+      aliases.add("VLSI");
+      aliases.add("MEVLSI");
+    }
+    if (normalized === "MEVLSI" || raw === "MEVLSI") {
+      aliases.add("VL");
+      aliases.add("VLSI");
+    }
+
+    return Array.from(aliases);
+  }, [user?.branch]);
+
   const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any, hssUsed?: { credits: number }): CourseCategory => {
     const code = enrollment.course.code.toUpperCase();
     const normalizedCode = normalizeCode(code);
@@ -149,7 +183,8 @@ export default function ProgressPage() {
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && user?.branch) {
-      const branchCompulsion = IC_BASKET_COMPULSIONS[user.branch] || {};
+      const basketBranch = normalizeBranchForIcBasket(user.branch);
+      const branchCompulsion = IC_BASKET_COMPULSIONS[basketBranch] || {};
       
       if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
         return "IC_BASKET";
@@ -172,6 +207,20 @@ export default function ProgressPage() {
         }
       }
       
+      // Some IC basket courses are mapped as DC for certain branches (e.g. MSE: IC-240).
+      // Respect explicit branch mappings before defaulting to FE.
+      if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0) {
+        const mapping = enrollment.course.branchMappings.find(
+          (m) => mappingBranchAliases.includes(m.branch) || m.branch === "COMMON"
+        ) || (user.branch === "GE"
+          ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
+          : undefined);
+
+        if (mapping?.courseCategory === "DC") {
+          return "DC";
+        }
+      }
+
       return "FE";
     }
 
@@ -189,9 +238,8 @@ export default function ProgressPage() {
     }
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
-      const branchAliases = user.branch === "CSE" ? ["CSE", "CS"] : user.branch === "CS" ? ["CS", "CSE"] : [user.branch];
       const mapping = enrollment.course.branchMappings.find(
-        (m) => branchAliases.includes(m.branch) || m.branch === "COMMON"
+        (m) => mappingBranchAliases.includes(m.branch) || m.branch === "COMMON"
       ) || (user.branch === "GE"
         ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
         : undefined);
