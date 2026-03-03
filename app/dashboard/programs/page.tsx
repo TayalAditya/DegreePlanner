@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { GraduationCap, Award, BookOpen, Target, ChevronDown, AlertCircle } from "lucide-react";
 import { ProgressChart } from "@/components/ProgressChart";
 import { MinorPlannerCard } from "@/components/MinorPlannerCard";
+import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { formatCourseCode } from "@/lib/utils";
 
@@ -54,6 +55,7 @@ interface Enrollment {
 interface UserSettings {
   branch?: string;
   doingMTP?: boolean;
+  doingMTP2?: boolean;
   doingISTP?: boolean;
 }
 
@@ -66,10 +68,12 @@ export default function ProgramsPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [enrollmentsLoading, setEnrollmentsLoading] = useState(false);
   const [userSettings, setUserSettings] = useState<UserSettings | null>(null);
-  const [doingMTP, setDoingMTP] = useState(true);
+  const [doingMTP1, setDoingMTP1] = useState(true);
+  const [doingMTP2, setDoingMTP2] = useState(true);
   const [doingISTP, setDoingISTP] = useState(false);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savedPrefs, setSavedPrefs] = useState(false);
+  const { confirm } = useConfirmDialog();
 
   const minorPlanner = useMinorPlannerSelection();
   const minorCodesKey = useMemo(() => {
@@ -130,7 +134,10 @@ export default function ProgramsPage() {
         if (userRes.ok) {
           const data = await userRes.json();
           setUserSettings(data ?? null);
-          setDoingMTP(data?.doingMTP ?? true);
+          const mtp1 = data?.doingMTP ?? true;
+          const mtp2 = data?.doingMTP2 ?? mtp1;
+          setDoingMTP1(mtp1);
+          setDoingMTP2(mtp2);
           setDoingISTP(data?.doingISTP ?? false);
         }
       } catch (error) {
@@ -145,17 +152,64 @@ export default function ProgramsPage() {
     loadExtras();
   }, [primaryProgram?.program?.id, minorCodesKey]);
 
-  const saveProjectPrefs = async (mtp: boolean, istp: boolean) => {
+  const refreshExtras = async () => {
+    if (!primaryProgram?.program?.id) return;
+
+    setProgressLoading(true);
+    setEnrollmentsLoading(true);
+    setProgressError(null);
+
+    try {
+      const minorCodesParam = minorCodesKey ? `&minorCodes=${encodeURIComponent(minorCodesKey)}` : "";
+
+      const [progressRes, enrollmentsRes, userRes] = await Promise.all([
+        fetch(`/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}`),
+        fetch("/api/enrollments"),
+        fetch("/api/user/settings"),
+      ]);
+
+      if (progressRes.ok) {
+        const data = await progressRes.json();
+        setProgressData(data?.progress ?? null);
+      } else {
+        setProgressError("Failed to load program progress");
+      }
+
+      if (enrollmentsRes.ok) {
+        const data = await enrollmentsRes.json();
+        setEnrollments(Array.isArray(data) ? data : []);
+      }
+
+      if (userRes.ok) {
+        const data = await userRes.json();
+        setUserSettings(data ?? null);
+        const mtp1 = data?.doingMTP ?? true;
+        const mtp2 = data?.doingMTP2 ?? mtp1;
+        setDoingMTP1(mtp1);
+        setDoingMTP2(mtp2);
+        setDoingISTP(data?.doingISTP ?? false);
+      }
+    } catch (error) {
+      console.error("Failed to load program progress:", error);
+      setProgressError("Failed to load program progress");
+    } finally {
+      setProgressLoading(false);
+      setEnrollmentsLoading(false);
+    }
+  };
+
+  const saveProjectPrefs = async (mtp1: boolean, mtp2: boolean, istp: boolean) => {
     setSavingPrefs(true);
     setSavedPrefs(false);
     try {
       await fetch("/api/user/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ doingMTP: mtp, doingISTP: istp }),
+        body: JSON.stringify({ doingMTP: mtp1, doingMTP2: mtp2, doingISTP: istp }),
       });
       setSavedPrefs(true);
       setTimeout(() => setSavedPrefs(false), 2000);
+      await refreshExtras();
     } catch {
       // ignore
     } finally {
@@ -163,14 +217,66 @@ export default function ProgramsPage() {
     }
   };
 
-  const handleMTPChange = (checked: boolean) => {
-    setDoingMTP(checked);
-    saveProjectPrefs(checked, doingISTP);
+  const handleMTP1Change = async (checked: boolean) => {
+    if (!checked) {
+      const ok = await confirm({
+        title: "Skip MTP?",
+        message:
+          "Any course enrolled for MTP-1 or MTP-2 will be automatically deregistered. +8 DE credits will be added to your requirement.",
+        confirmText: "Skip MTP",
+        cancelText: "Keep MTP",
+        variant: "warning",
+      });
+      if (!ok) return;
+
+      setDoingMTP1(false);
+      setDoingMTP2(false);
+      saveProjectPrefs(false, false, doingISTP);
+      return;
+    }
+
+    setDoingMTP1(true);
+    saveProjectPrefs(true, doingMTP2, doingISTP);
   };
 
-  const handleISTPChange = (checked: boolean) => {
+  const handleMTP2Change = async (checked: boolean) => {
+    if (!checked) {
+      const ok = await confirm({
+        title: "Skip MTP-2?",
+        message:
+          "Any course enrolled for MTP-2 will be automatically deregistered. +5 DE credits will be added to your requirement.",
+        confirmText: "Skip MTP-2",
+        cancelText: "Keep MTP-2",
+        variant: "warning",
+      });
+      if (!ok) return;
+
+      setDoingMTP2(false);
+      saveProjectPrefs(doingMTP1, false, doingISTP);
+      return;
+    }
+
+    // MTP-2 implies MTP-1
+    if (!doingMTP1) setDoingMTP1(true);
+    setDoingMTP2(true);
+    saveProjectPrefs(true, true, doingISTP);
+  };
+
+  const handleISTPChange = async (checked: boolean) => {
+    if (!checked) {
+      const ok = await confirm({
+        title: "Skip ISTP?",
+        message:
+          "Any course enrolled for ISTP will be automatically deregistered. +4 FE credits will be added to your requirement.",
+        confirmText: "Skip ISTP",
+        cancelText: "Keep ISTP",
+        variant: "warning",
+      });
+      if (!ok) return;
+    }
+
     setDoingISTP(checked);
-    saveProjectPrefs(doingMTP, checked);
+    saveProjectPrefs(doingMTP1, doingMTP2, checked);
   };
 
   if (loading) {
@@ -429,29 +535,31 @@ export default function ProgramsPage() {
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {/* MTP-1 */}
                           <label
-                            className={`flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-xl border-2 transition-colors cursor-pointer hover:border-primary/50 focus-within:ring-4 focus-within:ring-primary/20 ${
-                              doingMTP ? "border-primary/40" : "border-border"
-                            }`}
+                            className={`flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-xl border-2 transition-colors hover:border-primary/50 focus-within:ring-4 focus-within:ring-primary/20 ${
+                              doingMTP1 ? "border-primary/40" : "border-border"
+                            } ${savingPrefs ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
                           >
                             <input
                               type="checkbox"
-                              checked={doingMTP}
-                              onChange={(e) => handleMTPChange(e.target.checked)}
-                              className="mt-0.5 w-5 h-5 accent-primary cursor-pointer flex-shrink-0"
+                              checked={doingMTP1}
+                              onChange={(e) => handleMTP1Change(e.target.checked)}
+                              disabled={savingPrefs}
+                              className="mt-0.5 w-5 h-5 accent-primary cursor-pointer flex-shrink-0 disabled:cursor-not-allowed"
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <Award className="w-4 h-4 text-orange-500 flex-shrink-0" />
                                 <span className="font-semibold text-foreground text-sm">
-                                  Major Technical Project (MTP)
+                                  MTP-1
                                 </span>
                               </div>
                               <p className="text-sm text-foreground-secondary">
-                                8 credits · MTP-1 (3cr) + MTP-2 (5cr)
+                                3 credits · DP 498P · Semester 7
                               </p>
-                              {!doingMTP && (
+                              {!doingMTP1 && (
                                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
                                   ⚠️ Skipping adds +8 credits to DE
                                 </p>
@@ -459,26 +567,64 @@ export default function ProgramsPage() {
                             </div>
                           </label>
 
+                          {/* MTP-2 */}
                           <label
-                            className={`flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-xl border-2 transition-colors cursor-pointer hover:border-primary/50 focus-within:ring-4 focus-within:ring-primary/20 ${
+                            className={`flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-xl border-2 transition-colors hover:border-primary/50 focus-within:ring-4 focus-within:ring-primary/20 ${
+                              doingMTP2 ? "border-primary/40" : "border-border"
+                            } ${savingPrefs ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={doingMTP2}
+                              onChange={(e) => handleMTP2Change(e.target.checked)}
+                              disabled={savingPrefs}
+                              className="mt-0.5 w-5 h-5 accent-primary cursor-pointer flex-shrink-0 disabled:cursor-not-allowed"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Award className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                                <span className="font-semibold text-foreground text-sm">
+                                  MTP-2
+                                </span>
+                              </div>
+                              <p className="text-sm text-foreground-secondary">
+                                5 credits · DP 499P · Semester 8 · Requires MTP-1
+                              </p>
+                              {doingMTP1 && !doingMTP2 && (
+                                <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
+                                  ⚠️ Skipping adds +5 credits to DE
+                                </p>
+                              )}
+                              {!doingMTP1 && (
+                                <p className="text-xs text-foreground-secondary mt-2">
+                                  Enabling MTP-2 will automatically enable MTP-1.
+                                </p>
+                              )}
+                            </div>
+                          </label>
+
+                          {/* ISTP */}
+                          <label
+                            className={`flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-xl border-2 transition-colors hover:border-primary/50 focus-within:ring-4 focus-within:ring-primary/20 ${
                               doingISTP ? "border-primary/40" : "border-border"
-                            }`}
+                            } ${savingPrefs ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
                           >
                             <input
                               type="checkbox"
                               checked={doingISTP}
                               onChange={(e) => handleISTPChange(e.target.checked)}
-                              className="mt-0.5 w-5 h-5 accent-primary cursor-pointer flex-shrink-0"
+                              disabled={savingPrefs}
+                              className="mt-0.5 w-5 h-5 accent-primary cursor-pointer flex-shrink-0 disabled:cursor-not-allowed"
                             />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 mb-1">
                                 <Award className="w-4 h-4 text-blue-500 flex-shrink-0" />
                                 <span className="font-semibold text-foreground text-sm">
-                                  Socio-Technical Practicum (ISTP)
+                                  ISTP
                                 </span>
                               </div>
                               <p className="text-sm text-foreground-secondary">
-                                4 credits · Semester 6
+                                4 credits · DP 301P · Semester 6
                               </p>
                               {!doingISTP && (
                                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
