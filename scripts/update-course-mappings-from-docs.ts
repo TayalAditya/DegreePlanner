@@ -215,7 +215,7 @@ async function main() {
     const courseIndex = buildCourseIndex(courses);
 
     const existingMappings = await prisma.courseBranchMapping.findMany({
-      where: { branch: { in: ["DSE", "DS", "BE", "BIO", "MNC", "ME", "MSE", "GE-ROBO", "GE-COMM"] } },
+      where: { branch: { in: ["DSE", "DS", "BE", "BIO", "MNC", "ME", "MSE", "MS", "GE-ROBO", "GE-COMM"] } },
       select: { courseId: true, branch: true, courseCategory: true },
     });
     const existingByKey = new Map<string, ExistingMapping>();
@@ -394,6 +394,7 @@ async function main() {
       source: string;
     }> = [
       { branch: "MSE", courseKey: "IC240", category: CourseCategoryType.DC, source: "defaultCurriculum: MSE treats IC-240 as DC" },
+      { branch: "MS", courseKey: "IC240", category: CourseCategoryType.DC, source: "alias: MS treated as MSE for IC-240" },
       { branch: "ME", courseKey: "IC241", category: CourseCategoryType.DC, source: "defaultCurriculum: ME treats IC-241 as DC" },
       { branch: "GE-ROBO", courseKey: "IC241", category: CourseCategoryType.DC, source: "defaultCurriculum: GE-ROBO treats IC-241 as DC" },
       { branch: "GE-ROBO", courseKey: "IC253", category: CourseCategoryType.DC, source: "defaultCurriculum: GE-ROBO treats IC-253 as DC" },
