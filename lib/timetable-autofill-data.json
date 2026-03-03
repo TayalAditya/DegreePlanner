@@ -1393,8 +1393,8 @@
         "classroom": "A13-2C",
         "campus": "North Campus"
       },
-      "MA-323": {
-        "code": "MA-323",
+      "MA-323P": {
+        "code": "MA-323P",
         "name": "Applied Databases Practicum",
         "credit": 2,
         "slot": "L3"
