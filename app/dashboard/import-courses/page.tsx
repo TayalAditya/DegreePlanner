@@ -13,8 +13,6 @@ import {
   Loader2,
   Trash2,
   X,
-  FileText,
-  ImageIcon,
   ExternalLink,
   Sparkles,
 } from "lucide-react";
@@ -67,19 +65,11 @@ export default function ImportCoursesPage() {
   const [submitted, setSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Samarth OCR import state
   const [guideOpen, setGuideOpen] = useState(true);
-  const [ocrFiles, setOcrFiles] = useState<File[]>([]);
-  const [ocrLoading, setOcrLoading] = useState(false);
-  const [ocrStatus, setOcrStatus] = useState("");
-  const [ocrElapsed, setOcrElapsed] = useState(0);
   const [ocrResults, setOcrResults] = useState<DetectedCourse[]>([]);
   const [ocrRawText, setOcrRawText] = useState("");
   const [showOcrModal, setShowOcrModal] = useState(false);
-  const [isDragOver, setIsDragOver] = useState(false);
   const [pastedTranscriptText, setPastedTranscriptText] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const ocrTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [dbCourseTypeMap, setDbCourseTypeMap] = useState<Map<string, string>>(new Map());
 
   // Course type map for OCR modal — derived from the branch curriculum
@@ -304,50 +294,6 @@ export default function ImportCoursesPage() {
     setCourses((prev) => [...prev, newCourse]);
   };
 
-  // ── OCR helpers ────────────────────────────────────────────────────────────
-
-  const addOcrFiles = (files: FileList | File[]) => {
-    const allowed = Array.from(files).filter((f) =>
-      ["image/png", "image/jpeg", "image/webp", "application/pdf"].includes(f.type)
-    );
-    setOcrFiles((prev) => {
-      // Dedupe by name+size
-      const existing = new Set(prev.map((f) => `${f.name}|${f.size}`));
-      return [...prev, ...allowed.filter((f) => !existing.has(`${f.name}|${f.size}`))];
-    });
-  };
-
-  /** Render each page of a PDF to a canvas blob for OCR */
-  const extractImagesFromPdf = async (file: File): Promise<Blob[]> => {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdfjsLib = await import("pdfjs-dist");
-    // Resolve worker from the installed package so no CDN needed
-    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-      "pdfjs-dist/build/pdf.worker.min.mjs",
-      import.meta.url
-    ).href;
-
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const blobs: Blob[] = [];
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      // Render higher-res pages for better OCR on small fonts (transcripts/timetables).
-      const viewport = page.getViewport({ scale: 2 });
-      const canvas = document.createElement("canvas");
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
-      const ctx = canvas.getContext("2d")!;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (page.render as any)({ canvasContext: ctx, viewport }).promise;
-      const blob = await new Promise<Blob>((resolve) =>
-        canvas.toBlob((b) => resolve(b!), "image/png")
-      );
-      blobs.push(blob);
-    }
-    return blobs;
-  };
-
   const handlePasteExtract = () => {
     const text = pastedTranscriptText.trim();
     if (!text) {
@@ -367,106 +313,6 @@ export default function ImportCoursesPage() {
     setOcrRawText(text);
     setOcrResults(deduped);
     setShowOcrModal(true);
-  };
-
-  const handleOcrUpload = async () => {
-    if (ocrFiles.length === 0) return;
-
-    setOcrElapsed(0);
-    setOcrLoading(true);
-    setOcrStatus("Analysing files…");
-    ocrTimerRef.current = setInterval(
-      () => setOcrElapsed((s) => s + 1),
-      1000
-    );
-
-    const allDetected: DetectedCourse[] = [];
-    // Collect blobs that still need image OCR (images + image-based PDFs)
-    const needsOcr: (File | Blob)[] = [];
-
-    try {
-      // ── Pass 1: Try fast server-side text extraction for each PDF ──────────
-      for (let fi = 0; fi < ocrFiles.length; fi++) {
-        const file = ocrFiles[fi];
-
-        if (file.type !== "application/pdf") {
-          needsOcr.push(file);
-          continue;
-        }
-
-        setOcrStatus(`Extracting text — PDF ${fi + 1}/${ocrFiles.length}…`);
-        try {
-          const fd = new FormData();
-          fd.append("file", file);
-          const res = await fetch("/api/ocr/parse", { method: "POST", body: fd });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.courses?.length > 0) {
-              // Text-based PDF (e.g. timetable) — direct text works, skip OCR
-              allDetected.push(...data.courses);
-              continue;
-            }
-          }
-        } catch { /* server-side failed — fall through to image OCR */ }
-
-        // Image-based PDF (e.g. Samarth scanned transcript) — render pages → OCR
-        setOcrStatus(`Rendering pages — PDF ${fi + 1}/${ocrFiles.length}…`);
-        const pages = await extractImagesFromPdf(file);
-        needsOcr.push(...pages);
-      }
-
-      // ── Pass 2: Run Tesseract only if image files or image-based PDFs exist ─
-      let rawTextAccumulated = "";
-      if (needsOcr.length > 0) {
-        setOcrStatus("Loading OCR model…");
-        const { createWorker, PSM } = await import("tesseract.js");
-        const worker = await createWorker("eng", 1, {
-          logger: (m: { status: string; progress: number }) => {
-            if (m.status === "recognizing text") {
-              setOcrStatus(`OCR: ${Math.round(m.progress * 100)}%…`);
-            }
-          },
-        });
-        // Tables/columnar screenshots (Samarth results, timetables) work much better with sparse text mode.
-        await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-
-        for (let pi = 0; pi < needsOcr.length; pi++) {
-          setOcrStatus(`Reading image ${pi + 1} / ${needsOcr.length}…`);
-          const result = await worker.recognize(needsOcr[pi]);
-          const text = result.data.text;
-          rawTextAccumulated += (rawTextAccumulated ? "\n---\n" : "") + text;
-          console.log(`[OCR] image ${pi + 1}: ${text.length} chars`);
-          const found = parseTranscriptText(text);
-          console.log(`[OCR] image ${pi + 1}: ${found.length} courses found`, found);
-          allDetected.push(...found);
-        }
-
-        await worker.terminate();
-      }
-      setOcrRawText(rawTextAccumulated);
-
-      setOcrStatus("Matching courses…");
-
-      // Dedupe across all files by rawCode+semester
-      const seen = new Set<string>();
-      const deduped = allDetected.filter((d) => {
-        const key = `${normalizeCourseCode(d.rawCode)}|${d.detectedSemester ?? "?"}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      });
-
-      setOcrResults(deduped);
-      setShowOcrModal(true);
-    } catch (err) {
-      console.error("OCR error:", err);
-      showToast("error", "Failed to process files. Try again or use a clearer image.");
-    } finally {
-      if (ocrTimerRef.current) clearInterval(ocrTimerRef.current);
-      setOcrLoading(false);
-      setOcrStatus("");
-      setOcrElapsed(0);
-    }
   };
 
   const addOcrCourses = (confirmedRows: ConfirmRow[]) => {
@@ -506,8 +352,6 @@ export default function ImportCoursesPage() {
     }
     setShowOcrModal(false);
   };
-
-  // ── End OCR helpers ─────────────────────────────────────────────────────────
 
   const toggleSemester = (sem: number) => {
     if (expandedSemesters.includes(sem)) {
@@ -910,7 +754,7 @@ export default function ImportCoursesPage() {
               />
               <button
                 onClick={handlePasteExtract}
-                disabled={!pastedTranscriptText.trim() || ocrLoading}
+                disabled={!pastedTranscriptText.trim()}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-white font-medium text-sm hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Sparkles className="w-4 h-4 shrink-0" />
@@ -920,102 +764,6 @@ export default function ImportCoursesPage() {
                 Tip: extra text is fine - just make sure course codes are included.
               </p>
             </div>
-
-            {false && (
-              <>
-                <div className="text-xs text-foreground-muted text-center">or</div>
-
-            {/* Drop zone */}
-            <div
-              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-              onDragLeave={() => setIsDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setIsDragOver(false);
-                addOcrFiles(e.dataTransfer.files);
-              }}
-              onClick={() => fileInputRef.current?.click()}
-              className={`relative border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${
-                isDragOver
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/40 hover:bg-foreground/[0.02]"
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/png,image/jpeg,image/webp,application/pdf"
-                className="hidden"
-                onChange={(e) => e.target.files && addOcrFiles(e.target.files)}
-              />
-              <Upload className="w-8 h-8 text-foreground-muted mx-auto mb-2" />
-              <p className="text-sm font-medium text-foreground">
-                Drop files here or click to browse
-              </p>
-              <p className="text-xs text-foreground-secondary mt-1">
-                PNG, JPG, WebP, PDF — multiple files supported
-              </p>
-            </div>
-
-            {/* Selected files list */}
-            {ocrFiles.length > 0 && (
-              <div className="space-y-2">
-                {ocrFiles.map((f, i) => (
-                  <div
-                    key={`${f.name}-${i}`}
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg border border-border bg-background"
-                  >
-                    {f.type === "application/pdf" ? (
-                      <FileText className="w-4 h-4 text-error shrink-0" />
-                    ) : (
-                      <ImageIcon className="w-4 h-4 text-info shrink-0" />
-                    )}
-                    <span className="text-sm text-foreground flex-1 truncate">{f.name}</span>
-                    <button
-                      onClick={() => setOcrFiles((prev) => prev.filter((_, j) => j !== i))}
-                      className="p-1 hover:bg-foreground/5 rounded text-foreground-muted hover:text-foreground"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Extract button + progress */}
-            <div className="space-y-2">
-              <button
-                onClick={handleOcrUpload}
-                disabled={ocrFiles.length === 0 || ocrLoading}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-white font-medium text-sm hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {ocrLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                    <span className="truncate">{ocrStatus || "Extracting…"}</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 shrink-0" />
-                    Extract Courses from {ocrFiles.length > 0 ? `${ocrFiles.length} file${ocrFiles.length !== 1 ? "s" : ""}` : "Files"}
-                  </>
-                )}
-              </button>
-
-              {ocrLoading && (
-                <div className="flex items-center justify-between text-xs text-foreground-secondary px-1">
-                  <span className="truncate max-w-[70%]">{ocrStatus}</span>
-                  <span className="font-mono shrink-0 ml-2 tabular-nums">
-                    {Math.floor(ocrElapsed / 60) > 0
-                      ? `${Math.floor(ocrElapsed / 60)}m ${ocrElapsed % 60}s`
-                      : `${ocrElapsed}s`}
-                  </span>
-                </div>
-              )}
-            </div>
-              </>
-            )}
           </div>
         )}
       </div>

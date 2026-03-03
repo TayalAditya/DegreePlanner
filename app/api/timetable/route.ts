@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { ClassType, DayOfWeek, EnrollmentStatus } from "@prisma/client";
 import { getCurrentTimetableContext } from "@/lib/timetable";
+import { isApproveableSlot } from "@/lib/timetableSlots";
 
 export async function GET(req: NextRequest) {
   try {
@@ -213,10 +214,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Admins always approved; TA duties are personal (no approval needed); slot-based entries match official schedule (auto-approve)
+    // Admins always approved; TA duties are personal (no approval needed).
+    // For regular entries: auto-approve only when the submitted slot+day+time
+    // exactly matches the official timetable slot tables (A-H, L1-L5).
+    // Free/unscheduled slots (FS, FS1, FS2, NS) and anything else → pending approval.
     const isAdmin = session.user.role === "ADMIN";
     const slotValue = typeof slot === "string" ? slot.trim() || undefined : undefined;
-    const autoApprove = isAdmin || selectedClassType === ClassType.TA_DUTY || Boolean(slotValue);
+    const autoApprove =
+      isAdmin ||
+      selectedClassType === ClassType.TA_DUTY ||
+      isApproveableSlot(slotValue, dayOfWeek, startTime);
 
     const entry = await prisma.timetableEntry.create({
       data: {
