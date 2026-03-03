@@ -283,7 +283,10 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
         }
 
         const aliasList = Array.from(aliases);
-        const direct = mappings.find((m: any) => aliasList.includes(m.branch));
+        const exact =
+          mappings.find((m: any) => m.branch === rawBranch) ||
+          mappings.find((m: any) => m.branch === checkBranch);
+        const direct = exact || mappings.find((m: any) => aliasList.includes(m.branch));
         const ge =
           checkBranch === "GE"
             ? mappings.find((m: any) => String(m.branch || "").startsWith("GE"))
