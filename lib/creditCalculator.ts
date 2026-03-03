@@ -49,7 +49,7 @@ export class CreditCalculator {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { doingMTP: true, doingISTP: true, branch: true },
+      select: { doingMTP: true, doingMTP2: true, doingISTP: true, branch: true },
     });
 
     const enrollments = await prisma.courseEnrollment.findMany({
@@ -71,14 +71,21 @@ export class CreditCalculator {
       },
     });
 
-    // Check if user has completed MTP-1 (but not MTP-2) — for partial MTP skip logic
+    // Check if user has completed ISTP / MTP components (pass grade only)
+    const normalizeCourseCode = (code: string) =>
+      (code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+    const isPassingCompleted = (e: (typeof enrollments)[number]) =>
+      e.status === EnrollmentStatus.COMPLETED && (!e.grade || e.grade !== "F");
+
     const mtp1Completed = enrollments.some(
-      (e) => e.status === EnrollmentStatus.COMPLETED &&
-      e.course.code.endsWith("498P") // MTP-1 course code pattern
+      (e) => isPassingCompleted(e) && normalizeCourseCode(e.course.code) === "DP498P"
     );
     const mtp2Completed = enrollments.some(
-      (e) => e.status === EnrollmentStatus.COMPLETED &&
-      e.course.code.endsWith("499P") // MTP-2 course code pattern
+      (e) => isPassingCompleted(e) && normalizeCourseCode(e.course.code) === "DP499P"
+    );
+    const istpCompleted = enrollments.some(
+      (e) => isPassingCompleted(e) && normalizeCourseCode(e.course.code) === "DP301P"
     );
 
     // Derive individual MTP/ISTP credits from the combined field (BSCS has Research=14, BTech has 12)
@@ -95,21 +102,34 @@ export class CreditCalculator {
     let istpCredits = istpCreditsFull;
 
     if (!isBSProgram) {
-      // If ISTP is skipped, add 4 credits to FE
-      if (!user?.doingISTP) {
-        feCredits += istpCredits; // +4 credits to FE
+      const doingMTP1Pref = user?.doingMTP ?? true;
+      const doingMTP2Pref = user?.doingMTP2 ?? (user?.doingMTP ?? true);
+      const doingISTPPref = user?.doingISTP ?? true;
+
+      const effectiveDoingMTP1 = doingMTP1Pref || doingMTP2Pref; // MTP-2 implies MTP-1
+
+      // If ISTP is skipped (and not already completed), add 4 credits to FE
+      if (!doingISTPPref && !istpCompleted) {
+        feCredits += istpCreditsFull;
         istpCredits = 0;
       }
 
-      // If MTP is skipped completely, add 8 credits to DE
-      if (!user?.doingMTP && !mtp1Completed) {
-        deCredits += mtpCredits; // +8 credits to DE
-        mtpCredits = 0;
-      }
-      // If MTP-1 done but MTP-2 will be skipped, add 5 credits to DE
-      else if (mtp1Completed && !mtp2Completed && !user?.doingMTP) {
-        deCredits += 5; // +5 credits for skipping MTP-2
-        mtpCredits = 3; // Only MTP-1 (3 credits) required
+      // MTP preferences:
+      // - Skip all MTP (MTP-1 unchecked): +8 DE and MTP=0 (only if MTP-1 not already completed)
+      // - Skip MTP-2 (MTP-2 unchecked): +5 DE and MTP=3 (only if MTP-2 not already completed)
+      if (!mtp2Completed) {
+        if (mtp1Completed) {
+          if (!doingMTP2Pref) {
+            deCredits += 5;
+            mtpCredits = 3;
+          }
+        } else if (!effectiveDoingMTP1) {
+          deCredits += mtpCreditsFull;
+          mtpCredits = 0;
+        } else if (!doingMTP2Pref) {
+          deCredits += 5;
+          mtpCredits = 3;
+        }
       }
     }
 

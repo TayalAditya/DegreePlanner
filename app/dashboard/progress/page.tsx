@@ -30,6 +30,7 @@ interface Enrollment {
 interface User {
   branch?: string;
   doingMTP?: boolean;
+  doingMTP2?: boolean;
   doingISTP?: boolean;
 }
 
@@ -480,22 +481,41 @@ export default function ProgressPage() {
     const hssRequired = 12;
     const iksRequired = 3;
     
-    // Adjust MTP/ISTP based on user preferences
+    // Adjust MTP/ISTP based on user preferences (and ignore skips if already completed)
+    const doingMTP1Pref = user?.doingMTP ?? true;
+    const doingMTP2Pref = user?.doingMTP2 ?? (user?.doingMTP ?? true);
+    const doingISTPPref = user?.doingISTP ?? true;
+    const effectiveDoingMTP1 = doingMTP1Pref || doingMTP2Pref; // MTP-2 implies MTP-1
+
+    const mtpCreditsCompleted = creditsByCategory.MTP;
+    const istpCreditsCompleted = creditsByCategory.ISTP;
+    const mtp1Completed = mtpCreditsCompleted >= 3;
+    const mtp2Completed = mtpCreditsCompleted >= 8;
+    const istpCompleted = istpCreditsCompleted >= 4;
+
     let mtpRequired = 8;
     let istpRequired = 4;
-    let deAdjustment = 0;  // DE credit adjustment when MTP/ISTP deselected
-    let feAdjustment = 0;  // FE credit adjustment when ISTP deselected
-    
-    // If user deselected MTP, add 8 credits to DE
-    if (user?.doingMTP === false) {
-      mtpRequired = 0;
-      deAdjustment = 8;
-    }
-    
-    // If user deselected ISTP, add 4 credits to FE
-    if (user?.doingISTP === false) {
+    let deAdjustment = 0; // DE credit adjustment when skipping MTP/MTP-2
+    let feAdjustment = 0; // FE credit adjustment when skipping ISTP
+
+    if (!istpCompleted && !doingISTPPref) {
       istpRequired = 0;
       feAdjustment = 4;
+    }
+
+    if (!mtp2Completed) {
+      if (mtp1Completed) {
+        if (!doingMTP2Pref) {
+          mtpRequired = 3;
+          deAdjustment = 5;
+        }
+      } else if (!effectiveDoingMTP1) {
+        mtpRequired = 0;
+        deAdjustment = 8;
+      } else if (!doingMTP2Pref) {
+        mtpRequired = 3;
+        deAdjustment = 5;
+      }
     }
 
     const creditsRequiredByCategory = {

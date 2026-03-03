@@ -30,6 +30,7 @@ model User {
 
   // Academic preferences
   doingMTP      Boolean   @default(true)
+  doingMTP2     Boolean   @default(true)
   doingISTP     Boolean   @default(true)
 
   // P/F course tracking

@@ -50,6 +50,7 @@ export default function ImportCoursesPage() {
   const [geSubBranch, setGeSubBranch] = useState("GERAI");
   const [currentSemester, setCurrentSemester] = useState(6);
   const [doingMTP, setDoingMTP] = useState(true);
+  const [doingMTP2, setDoingMTP2] = useState(true);
   const [doingISTP, setDoingISTP] = useState(true);
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
   const [importedCourseKeys, setImportedCourseKeys] = useState<Set<string>>(new Set());
@@ -130,7 +131,7 @@ export default function ImportCoursesPage() {
 
   useEffect(() => {
     loadDefaultCourses();
-  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingISTP]);
+  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingMTP2, doingISTP]);
 
   useEffect(() => {
     setCustomSemester(currentSemester);
@@ -142,7 +143,10 @@ export default function ImportCoursesPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.branch) setBranch(data.branch);
-        setDoingMTP(data.doingMTP ?? true);
+        const mtp1 = data.doingMTP ?? true;
+        const mtp2 = data.doingMTP2 ?? mtp1;
+        setDoingMTP(mtp1);
+        setDoingMTP2(mtp2);
         setDoingISTP(data.doingISTP ?? true);
       }
     } catch (error) {
@@ -201,17 +205,25 @@ export default function ImportCoursesPage() {
     const MANUAL_PICK_CODES = ["IC140", "IC102P", "IC181"];
     // ISTP/MTP courses
     const ISTP_CODES = ["DP 301P", "DP301P"];
-    const MTP_CODES = ["DP 498P", "DP 499P", "DP498P", "DP499P"];
+    const MTP1_CODES = ["DP 498P", "DP498P"];
+    const MTP2_CODES = ["DP 499P", "DP499P"];
     
     const coursesWithSelection = resolvedCourses
       .filter((course) => {
         const normalizedCode = normalize(course.code);
+        const isISTP = ISTP_CODES.some((code) => normalize(code) === normalizedCode);
+        const isMTP1 = MTP1_CODES.some((code) => normalize(code) === normalizedCode);
+        const isMTP2 = MTP2_CODES.some((code) => normalize(code) === normalizedCode);
         // Filter out ISTP if user disabled it
-        if (!doingISTP && ISTP_CODES.some(code => normalize(code) === normalizedCode)) {
+        if (!doingISTP && isISTP) {
           return false;
         }
-        // Filter out MTP if user disabled it
-        if (!doingMTP && MTP_CODES.some(code => normalize(code) === normalizedCode)) {
+        // Filter out MTP-1/2 if user disabled MTP entirely
+        if (!doingMTP && (isMTP1 || isMTP2)) {
+          return false;
+        }
+        // Filter out MTP-2 if user disabled it (but still doing MTP-1)
+        if (doingMTP && !doingMTP2 && isMTP2) {
           return false;
         }
         // Filter out already imported courses
@@ -219,11 +231,16 @@ export default function ImportCoursesPage() {
       })
       .map((course) => {
         const normalizedCode = normalize(course.code);
-        const isISTP = ISTP_CODES.some(code => normalize(code) === normalizedCode);
-        const isMTP = MTP_CODES.some(code => normalize(code) === normalizedCode);
+        const isISTP = ISTP_CODES.some((code) => normalize(code) === normalizedCode);
+        const isMTP1 = MTP1_CODES.some((code) => normalize(code) === normalizedCode);
+        const isMTP2 = MTP2_CODES.some((code) => normalize(code) === normalizedCode);
         return {
           ...course,
-          selected: (course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code) && !course.optional) || isISTP || isMTP,
+          selected:
+            (course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code) && !course.optional) ||
+            isISTP ||
+            isMTP1 ||
+            isMTP2,
         };
       });
     setCourses(coursesWithSelection);
