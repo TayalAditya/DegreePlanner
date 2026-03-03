@@ -2,7 +2,7 @@
 
 import { Bell, X, Megaphone, MessageSquare } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useLayoutEffect, useState, useEffect, useRef } from "react";
 
 interface Announcement {
   id: string;
@@ -44,6 +44,9 @@ export function NotificationBell() {
     typeof window === "undefined" ? 0 : getLastSeen()
   );
   const panelRef = useRef<HTMLDivElement>(null);
+  const panelContentRef = useRef<HTMLDivElement>(null);
+  const panelShiftRef = useRef(0);
+  const [panelShift, setPanelShift] = useState(0);
   const queryClient = useQueryClient();
 
   // Close on outside click
@@ -84,7 +87,49 @@ export function NotificationBell() {
   const unreadNotifications = notifications.filter((n) => !n.isRead).length;
   const totalUnread = unreadAnnouncements + unreadNotifications;
 
+  const repositionPanel = useCallback(() => {
+    const el = panelContentRef.current;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const padding = 16;
+
+    // Compute the panel's "base" rect (i.e., where it would be with translateX(0))
+    // from the current rect and the current translateX shift.
+    const currentShift = panelShiftRef.current;
+    const baseLeft = rect.left - currentShift;
+    const baseRight = rect.right - currentShift;
+
+    const minShift = padding - baseLeft;
+    const maxShift = viewportWidth - padding - baseRight;
+
+    let nextShift = 0;
+    if (minShift > maxShift) {
+      // Panel is wider than the available viewport; pin its left edge with padding.
+      nextShift = minShift;
+    } else {
+      // Choose the shift closest to 0 while staying within [minShift, maxShift].
+      nextShift = Math.min(Math.max(0, minShift), maxShift);
+    }
+
+    nextShift = Math.round(nextShift);
+    if (nextShift === panelShiftRef.current) return;
+
+    panelShiftRef.current = nextShift;
+    setPanelShift(nextShift);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    repositionPanel();
+    window.addEventListener("resize", repositionPanel);
+    return () => window.removeEventListener("resize", repositionPanel);
+  }, [open, tab, notifications.length, announcements.length, repositionPanel]);
+
   function openPanel() {
+    panelShiftRef.current = 0;
+    setPanelShift(0);
     setOpen(true);
     setLastSeen();
     setLastSeenState(Date.now());
@@ -124,7 +169,11 @@ export function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 max-w-[90vw] dp-card shadow-xl z-50 overflow-hidden">
+        <div
+          ref={panelContentRef}
+          className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] dp-card shadow-xl z-50 overflow-hidden"
+          style={panelShift ? { transform: `translateX(${panelShift}px)` } : undefined}
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <span className="text-sm font-semibold text-foreground">Notifications</span>
