@@ -5,11 +5,14 @@ import { useMemo } from "react";
 import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
 import { formatCourseCode } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
+import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface DashboardOverviewProps {
   userId: string;
 }
 
+
+const HSS_CORE_CAP = 12;
 
 const categoryLabels = {
   IC: "Institute Core",
@@ -55,9 +58,11 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
   });
 
   const allEnrollments = enrollments || [];
+  const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
-    return new Set<string>();
-  }, []);
+    if (!minorPlanner.enabled) return new Set<string>();
+    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
+  }, [minorPlanner.enabled, minorPlanner.codes]);
 
   const latestInProgressSemester =
     allEnrollments.length > 0
@@ -104,7 +109,8 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
   const getCourseCategory = (
     enrollment: any,
-    icBasketUsed?: { ic1: boolean; ic2: boolean }
+    icBasketUsed?: { ic1: boolean; ic2: boolean },
+    hssUsed?: { credits: number }
   ): keyof typeof categoryLabels => {
     const applyMinorDeOverride = (category: keyof typeof categoryLabels): keyof typeof categoryLabels => {
       if (category !== "DE") return category;
@@ -117,6 +123,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     const normalizedCode = normalizeCourseCode(code);
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
+    const credits = enrollment.course?.credits || 0;
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && userSettings?.branch) {
@@ -146,6 +153,19 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       return "FE";
     }
 
+    // HS-xxx courses always go to HSS — but track cap for correct FE conversion
+    if (normalizedCode.startsWith("HS")) {
+      if (hssUsed) {
+        const before = hssUsed.credits;
+        if (before < HSS_CORE_CAP) {
+          hssUsed.credits = Math.min(HSS_CORE_CAP, before + credits);
+          return "HSS";
+        }
+        return "FE";
+      }
+      return "HSS";
+    }
+
     if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
       const mappingBranch = userSettings.branch === "CSE" ? "CS" : userSettings.branch;
       const mapping = enrollment.course.branchMappings.find(
@@ -169,8 +189,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
-    if (normalizedCode.startsWith("HS")) return "HSS";
-    if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
+    if (normalizedCode.startsWith("IK")) return "IKS";
 
     // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
     if (normalizedCode === "DP301P") return "ISTP";
@@ -193,10 +212,11 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
   const sortedActiveEnrollments = [...activeEnrollmentsForCategory].sort(compareEnrollments);
   const icBasketUsedForCategory = { ic1: false, ic2: false };
+  const hssUsedForCategory = { credits: 0 };
   const categorizedById = new Map<string, keyof typeof categoryLabels>();
 
   sortedActiveEnrollments.forEach((e: any) => {
-    categorizedById.set(e.id, getCourseCategory(e, icBasketUsedForCategory));
+    categorizedById.set(e.id, getCourseCategory(e, icBasketUsedForCategory, hssUsedForCategory));
   });
 
   const currentSemesterCourses = currentSemesterEnrollments
@@ -223,6 +243,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
   );
 
   const icBasketUsedForSemesterStats = { ic1: false, ic2: false };
+  const hssUsedForSemesterStats = { credits: 0 };
 
   const semesterStats = sortedEnrollments.reduce((acc: Record<number, any>, e: any) => {
     const sem = e.semester || 0;
@@ -240,8 +261,10 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
         MTP: 0,
         ISTP: 0,
       };
+      // Reset HSS tracking for each new semester
+      hssUsedForSemesterStats.credits = 0;
     }
-    const category = getCourseCategory(e, icBasketUsedForSemesterStats);
+    const category = getCourseCategory(e, icBasketUsedForSemesterStats, hssUsedForSemesterStats);
     acc[sem][category] = (acc[sem][category] || 0) + (e.course?.credits || 0);
     acc[sem].total += e.course?.credits || 0;
     return acc;
