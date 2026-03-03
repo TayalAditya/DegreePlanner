@@ -246,6 +246,23 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     return Array.from(aliases);
   }, [userSettings.branch]);
 
+  const pickRelevantBranchMapping = (
+    branch: string | undefined,
+    mappings: Enrollment["course"]["branchMappings"] | undefined
+  ) => {
+    if (!branch || !mappings || mappings.length === 0) return undefined;
+
+    const direct = mappings.find((m) => mappingBranchAliases.includes(m.branch));
+    if (direct) return direct;
+
+    if (branch === "GE") {
+      const ge = mappings.find((m) => m.branch.startsWith("GE"));
+      if (ge) return ge;
+    }
+
+    return mappings.find((m) => m.branch === "COMMON");
+  };
+
   const applyMinorDeOverride = (category: CourseCategory, enrollment: Enrollment): CourseCategory => {
     return category;
   };
@@ -299,13 +316,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       // Some IC basket courses are mapped as DC for certain branches (e.g. MSE: IC-240).
       // Respect explicit branch mappings before defaulting to FE.
       if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0) {
-        const mapping =
-          enrollment.course.branchMappings.find(
-            (m) => mappingBranchAliases.includes(m.branch) || m.branch === "COMMON"
-          ) ||
-          (branch === "GE"
-            ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
-            : undefined);
+        const mapping = pickRelevantBranchMapping(branch, enrollment.course.branchMappings);
 
         if (mapping?.courseCategory === "DC") {
           return "DC";
@@ -330,13 +341,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     }
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && branch) {
-      const mapping =
-        enrollment.course.branchMappings.find(
-          (m) => mappingBranchAliases.includes(m.branch) || m.branch === "COMMON"
-        ) ||
-        (branch === "GE"
-          ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
-          : undefined);
+      const mapping = pickRelevantBranchMapping(branch, enrollment.course.branchMappings);
 
       if (mapping?.courseCategory === "NA") {
         return "FE";
