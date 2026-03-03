@@ -1275,7 +1275,8 @@ export default function ImportCoursesPage() {
       </div>
 
       {/* Submit Button */}
-      <div className="sticky bottom-[calc(1rem+env(safe-area-inset-bottom))] bg-gradient-to-r from-primary to-secondary rounded-xl p-4 sm:p-6 shadow-2xl">
+      {selectedCount > 0 && (
+        <div className="mt-6 bg-gradient-to-r from-primary to-secondary rounded-xl p-4 sm:p-6 shadow-2xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="text-white">
             <p className="text-sm opacity-90">Ready to import</p>
@@ -1302,6 +1303,7 @@ export default function ImportCoursesPage() {
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }

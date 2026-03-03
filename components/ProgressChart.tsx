@@ -5,7 +5,6 @@ import { ChevronDown } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { getAllDefaultCourses, type DefaultCourse } from "@/lib/defaultCurriculum";
 import { formatCourseCode } from "@/lib/utils";
-import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface ProgressChartProps {
   progress: any;

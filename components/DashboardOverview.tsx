@@ -5,7 +5,6 @@ import { useMemo } from "react";
 import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
 import { formatCourseCode } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
-import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface DashboardOverviewProps {
   userId: string;

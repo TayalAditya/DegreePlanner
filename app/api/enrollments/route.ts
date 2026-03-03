@@ -184,8 +184,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for duplicate by course code or name (normalize codes to catch MA-323 vs MA323P variations)
-    const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const normalizedCourseCode = normalizeCode(course.code);
     
     const duplicateByCourseOrName = await prisma.courseEnrollment.findFirst({
       where: {
