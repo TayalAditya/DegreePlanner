@@ -1,6 +1,5 @@
 import { CourseType, EnrollmentStatus, ProgramType } from "@prisma/client";
 import prisma from "@/lib/prisma";
-import { buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
 import { formatCourseCode } from "@/lib/utils";
 
 export interface CreditBreakdown {
@@ -123,7 +122,7 @@ export class CreditCalculator {
       total: program.totalCreditsRequired,
     };
 
-    const minorDeToFeCourseCodes = buildNonMgmtMinorCountedCourseCodeSet(options?.minorCodes ?? []);
+    const minorDeToFeCourseCodes = new Set<string>();
 
     const completed = this.calculateCreditsByType(
       enrollments.filter((e) =>

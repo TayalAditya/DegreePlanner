@@ -126,17 +126,12 @@ export default function ProgressPage() {
 
   const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-  const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
-    if (!minorPlanner.enabled) return new Set<string>();
-    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
-  }, [minorPlanner.enabled, minorPlanner.codes]);
+    return new Set<string>();
+  }, []);
 
   const applyMinorDeOverride = (category: CourseCategory, enrollment: Enrollment): CourseCategory => {
-    if (category !== "DE") return category;
-    const code = formatCourseCode(enrollment.course.code);
-    if (!code) return category;
-    return nonMgmtMinorCourseCodes.has(code) ? "FE" : category;
+    return category;
   };
 
   const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any, hssUsed?: { credits: number }): CourseCategory => {
