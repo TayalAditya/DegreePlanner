@@ -162,6 +162,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
   const pickRelevantBranchMapping = (branch: string | undefined, mappings: any[] | undefined) => {
     if (!branch || !mappings || mappings.length === 0) return undefined;
 
+    const exact = mappings.find((m) => m.branch === branch);
+    if (exact) return exact;
+
     const direct = mappings.find((m) => mappingBranchAliases.includes(m.branch));
     if (direct) return direct;
 

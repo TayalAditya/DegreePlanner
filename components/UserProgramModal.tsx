@@ -252,6 +252,9 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   ) => {
     if (!branch || !mappings || mappings.length === 0) return undefined;
 
+    const exact = mappings.find((m) => m.branch === branch);
+    if (exact) return exact;
+
     const direct = mappings.find((m) => mappingBranchAliases.includes(m.branch));
     if (direct) return direct;
 
