@@ -215,7 +215,7 @@ async function main() {
     const courseIndex = buildCourseIndex(courses);
 
     const existingMappings = await prisma.courseBranchMapping.findMany({
-      where: { branch: { in: ["DSE", "DS", "BE", "BIO", "MNC"] } },
+      where: { branch: { in: ["DSE", "DS", "BE", "BIO", "MNC", "ME", "MSE", "GE-ROBO", "GE-COMM"] } },
       select: { courseId: true, branch: true, courseCategory: true },
     });
     const existingByKey = new Map<string, ExistingMapping>();
@@ -384,6 +384,21 @@ async function main() {
         source: "MNC DE baskets (manual list)",
       });
     }
+
+    // IC basket edge cases: some IC-basket-coded courses are actually DC for specific branches.
+    // (Ref: lib/defaultCurriculum.ts)
+    const icBasketOverrides: Array<{
+      branch: string;
+      courseKey: string;
+      category: CourseCategoryType;
+      source: string;
+    }> = [
+      { branch: "MSE", courseKey: "IC240", category: CourseCategoryType.DC, source: "defaultCurriculum: MSE treats IC-240 as DC" },
+      { branch: "ME", courseKey: "IC241", category: CourseCategoryType.DC, source: "defaultCurriculum: ME treats IC-241 as DC" },
+      { branch: "GE-ROBO", courseKey: "IC241", category: CourseCategoryType.DC, source: "defaultCurriculum: GE-ROBO treats IC-241 as DC" },
+      { branch: "GE-ROBO", courseKey: "IC253", category: CourseCategoryType.DC, source: "defaultCurriculum: GE-ROBO treats IC-253 as DC" },
+    ];
+    for (const entry of icBasketOverrides) desired.push(entry);
 
     // MNC: default rule — treat all MA-XXX* courses as DE unless explicitly mapped as DC/DE elsewhere.
     for (const courseKey of courseIndex.keys()) {
