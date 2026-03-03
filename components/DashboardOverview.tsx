@@ -55,11 +55,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
   });
 
   const allEnrollments = enrollments || [];
-  const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
-    if (!minorPlanner.enabled) return new Set<string>();
-    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
-  }, [minorPlanner.enabled, minorPlanner.codes]);
+    return new Set<string>();
+  }, []);
 
   const latestInProgressSemester =
     allEnrollments.length > 0

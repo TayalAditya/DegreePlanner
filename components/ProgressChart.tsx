@@ -105,11 +105,9 @@ const HSS_CORE_CAP = 12;
 const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
 
 export function ProgressChart({ progress, isLoading, enrollments, userBranch }: ProgressChartProps) {
-  const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
-    if (!minorPlanner.enabled) return new Set<string>();
-    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
-  }, [minorPlanner.enabled, minorPlanner.codes]);
+    return new Set<string>();
+  }, []);
 
   const includeCurrentSemesterCredits = useSyncExternalStore(
     (callback) => {

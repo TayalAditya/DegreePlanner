@@ -13,12 +13,10 @@ import {
   Trash2,
 } from "lucide-react";
 import { ProgressChart } from "@/components/ProgressChart";
-import { MinorPlannerCard } from "@/components/MinorPlannerCard";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS } from "@/lib/icBasketConfig";
 import { formatCourseCode } from "@/lib/utils";
-import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface Program {
   id: string;
@@ -214,17 +212,8 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
 
   const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-  const minorPlanner = useMinorPlannerSelection();
-  const nonMgmtMinorCourseCodes = useMemo(() => {
-    if (!minorPlanner.enabled) return new Set<string>();
-    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
-  }, [minorPlanner.enabled, minorPlanner.codes]);
-
   const applyMinorDeOverride = (category: CourseCategory, enrollment: Enrollment): CourseCategory => {
-    if (category !== "DE") return category;
-    const code = formatCourseCode(enrollment.course.code);
-    if (!code) return category;
-    return nonMgmtMinorCourseCodes.has(code) ? "FE" : category;
+    return category;
   };
 
   const getCourseCategory = (
@@ -687,8 +676,6 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                   </div>
                     </>
                   )}
-
-                  {view === "programs" && <MinorPlannerCard enrollments={enrollments} />}
                 </div>
               )}
 
