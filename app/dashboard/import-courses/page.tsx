@@ -144,7 +144,7 @@ export default function ImportCoursesPage() {
         const data = await res.json();
         if (data.branch) setBranch(data.branch);
         const mtp1 = data.doingMTP ?? true;
-        const mtp2 = data.doingMTP2 ?? mtp1;
+        const mtp2 = (data.doingMTP2 ?? mtp1) && mtp1;
         setDoingMTP(mtp1);
         setDoingMTP2(mtp2);
         setDoingISTP(data.doingISTP ?? true);

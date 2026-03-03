@@ -476,14 +476,14 @@ export default function ProgressPage() {
     );
 
     const icCredits = programCredits.icCredits ?? 60;
-    const mtpIstpTotal = programCredits.mtpIstpCredits ?? 12;
     const icBasketRequired = 6;
     const hssRequired = 12;
     const iksRequired = 3;
     
     // Adjust MTP/ISTP based on user preferences (and ignore skips if already completed)
     const doingMTP1Pref = user?.doingMTP ?? true;
-    const doingMTP2Pref = user?.doingMTP2 ?? (user?.doingMTP ?? true);
+    const rawDoingMTP2Pref = user?.doingMTP2 ?? doingMTP1Pref;
+    const doingMTP2Pref = doingMTP1Pref ? rawDoingMTP2Pref : false;
     const doingISTPPref = user?.doingISTP ?? true;
     const effectiveDoingMTP1 = doingMTP1Pref || doingMTP2Pref; // MTP-2 implies MTP-1
 
