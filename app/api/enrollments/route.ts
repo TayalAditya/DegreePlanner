@@ -110,6 +110,9 @@ export async function POST(request: NextRequest) {
       select: {
         branch: true,
         enrollmentId: true,
+        doingMTP: true,
+        doingMTP2: true,
+        doingISTP: true,
         programs: {
           where: { isPrimary: true },
           select: { programId: true },
@@ -281,7 +284,36 @@ export async function POST(request: NextRequest) {
 
     const normalizedCourseCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
     const isDpIstp = normalizedCourseCode === "DP301P";
-    const isDpMtp = normalizedCourseCode === "DP498P" || normalizedCourseCode === "DP499P";
+    const isDpMtp1 = normalizedCourseCode === "DP498P";
+    const isDpMtp2 = normalizedCourseCode === "DP499P";
+    const isDpMtp = isDpMtp1 || isDpMtp2;
+
+    // Respect component preferences: if a component is disabled, don't allow enrolling in its course.
+    const doingMTP1Pref = user.doingMTP ?? true;
+    const rawDoingMTP2Pref = user.doingMTP2 ?? doingMTP1Pref;
+    const doingMTP2Pref = doingMTP1Pref ? rawDoingMTP2Pref : false;
+    const doingISTPPref = user.doingISTP ?? true;
+
+    if (isDpIstp && !doingISTPPref) {
+      return NextResponse.json(
+        { error: "ISTP is disabled in Programs. Enable it to enroll." },
+        { status: 400 }
+      );
+    }
+
+    if (isDpMtp1 && !doingMTP1Pref) {
+      return NextResponse.json(
+        { error: "MTP-1 is disabled in Programs. Enable it to enroll." },
+        { status: 400 }
+      );
+    }
+
+    if (isDpMtp2 && !doingMTP2Pref) {
+      return NextResponse.json(
+        { error: "MTP-2 is disabled in Programs. Enable MTP-2 to enroll." },
+        { status: 400 }
+      );
+    }
 
     let finalCourseType: CourseType =
       courseType && Object.values(CourseType).includes(courseType as CourseType)
