@@ -254,10 +254,12 @@ export default function ImportCoursesPage() {
       if (catalogCourses.length > 0) {
         const results = catalogCourses.filter((c) => {
           const codeNorm = normalizeCourseCodeForSearch(c.code);
+          const codeLower = (c.code || "").toLowerCase();
+          const nameLower = (c.name || "").toLowerCase();
           return (
             (queryCode && codeNorm.includes(queryCode)) ||
-            c.code.toLowerCase().includes(queryLower) ||
-            c.name.toLowerCase().includes(queryLower)
+            codeLower.includes(queryLower) ||
+            nameLower.includes(queryLower)
           );
         });
         setCustomResults(results.slice(0, 8));
