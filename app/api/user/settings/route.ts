@@ -85,19 +85,28 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    let nextDoingMTP = doingMTP !== undefined ? Boolean(doingMTP) : currentUser.doingMTP;
-    let nextDoingMTP2 = doingMTP2 !== undefined
-      ? Boolean(doingMTP2)
-      : (currentUser.doingMTP2 ?? currentUser.doingMTP);
-    let nextDoingISTP = doingISTP !== undefined ? Boolean(doingISTP) : currentUser.doingISTP;
+    const updatingMTPPrefs = doingMTP !== undefined || doingMTP2 !== undefined;
+    const updatingISTPPref = doingISTP !== undefined;
 
-    // Enforce dependency: MTP-2 implies MTP-1
-    if (nextDoingMTP2) nextDoingMTP = true;
+    let nextDoingMTP = currentUser.doingMTP;
+    let nextDoingMTP2 = currentUser.doingMTP2 ?? currentUser.doingMTP;
+    let nextDoingISTP = currentUser.doingISTP;
+
+    if (doingMTP !== undefined) nextDoingMTP = Boolean(doingMTP);
+    if (doingMTP2 !== undefined) nextDoingMTP2 = Boolean(doingMTP2);
+    if (doingISTP !== undefined) nextDoingISTP = Boolean(doingISTP);
+
+    // Enforce dependency:
+    // - Explicitly enabling MTP-2 implies MTP-1
+    // - Disabling MTP-1 always disables MTP-2
+    if (doingMTP2 !== undefined && nextDoingMTP2) nextDoingMTP = true;
     if (!nextDoingMTP) nextDoingMTP2 = false;
 
-    const skippingMTPAll = currentUser.doingMTP && !nextDoingMTP;
-    const skippingMTP2Only = !skippingMTPAll && (currentUser.doingMTP2 ?? currentUser.doingMTP) && !nextDoingMTP2;
-    const skippingISTP = currentUser.doingISTP && !nextDoingISTP;
+    const currentDoingMTP2 = (currentUser.doingMTP2 ?? currentUser.doingMTP) && currentUser.doingMTP;
+
+    const skippingMTPAll = updatingMTPPrefs && currentUser.doingMTP && !nextDoingMTP;
+    const skippingMTP2Only = updatingMTPPrefs && !skippingMTPAll && currentDoingMTP2 && !nextDoingMTP2;
+    const skippingISTP = updatingISTPPref && currentUser.doingISTP && !nextDoingISTP;
 
     const user = await prisma.$transaction(async (tx) => {
       // Auto-deregister enrolled courses for skipped components (only IN_PROGRESS)
