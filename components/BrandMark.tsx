@@ -8,11 +8,11 @@ type BrandMarkProps = {
 
 export function BrandMark({ size = "md", className = "", priority = false }: BrandMarkProps) {
   const zoomScale = 1.75;
-  const boxSize = size === "sm" ? 40 : 48;
-  const wrapperSizeClass = size === "sm" ? "h-10 w-10" : "h-12 w-12";
+  const boxSize = size === "sm" ? 32 : 36;
+  const wrapperSizeClass = size === "sm" ? "h-8 w-8" : "h-9 w-9";
   const imageTransformClass = size === "sm"
-    ? "scale-[1.75] translate-y-[6px]"
-    : "scale-[1.75] translate-y-[8px]";
+    ? "scale-[1.75] translate-y-[5px]"
+    : "scale-[1.75] translate-y-[6px]";
   const effectiveSize = Math.round(boxSize * zoomScale);
 
   return (
