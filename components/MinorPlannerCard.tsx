@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, GraduationCap } from "lucide-react";
 import { MINORS, type MinorDefinition, type MinorRequirementGroup } from "@/lib/minors";
+import { MINOR_PLANNER_STORAGE_KEYS } from "@/lib/minorPlannerClient";
 import { formatCourseCode } from "@/lib/utils";
 
 type EnrollmentLike = {
@@ -52,11 +53,9 @@ type MinorProgressSummary = {
   groups: GroupProgress[];
 };
 
-const STORAGE_KEYS = {
-  enabled: "degreePlanner.minorPlanner.enabled",
-  minorCodes: "degreePlanner.minorPlanner.codes",
-  legacyMinorCode: "degreePlanner.minorPlanner.code",
-} as const;
+type CountedCourseCodesByMinor = Record<string, string[]>;
+
+const STORAGE_KEYS = MINOR_PLANNER_STORAGE_KEYS;
 
 function isPassingCompletion(enrollment: EnrollmentLike): boolean {
   if (enrollment.status !== "COMPLETED") return false;
@@ -112,7 +111,8 @@ function formatCodeList(codes: string[], limit = 6): string {
 
 function computeMinorProgress(
   minor: MinorDefinition,
-  courseStateByCode: Map<string, CourseState>
+  courseStateByCode: Map<string, CourseState>,
+  countedCourseCodes: Set<string>
 ): MinorProgressSummary {
   const groups: GroupProgress[] = minor.groups.map((group) => {
     const codes = normalizeGroupCodes(group);
@@ -126,9 +126,13 @@ function computeMinorProgress(
       (c) => !courseStateByCode.get(c)?.isCompleted && !courseStateByCode.get(c)?.isInProgress
     );
 
-    const countedCompletedCodes = completedCodes.slice(0, group.requiredCount);
+    const countedCompletedCodes = completedCodes
+      .filter((c) => countedCourseCodes.has(c))
+      .slice(0, group.requiredCount);
     const remainingSlots = Math.max(0, group.requiredCount - countedCompletedCodes.length);
-    const countedInProgressCodes = inProgressCodes.slice(0, remainingSlots);
+    const countedInProgressCodes = inProgressCodes
+      .filter((c) => countedCourseCodes.has(c))
+      .slice(0, remainingSlots);
 
     const countedCompletedCredits = countedCompletedCodes.reduce((sum, c) => {
       return sum + (courseStateByCode.get(c)?.credits ?? 0);
@@ -226,6 +230,41 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
     return MINORS[0]?.code ? [MINORS[0].code] : [];
   });
 
+  const [countedCourseCodesConfigured, setCountedCourseCodesConfigured] = useState(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.countedCourseCodesByMinor) !== null;
+    } catch {
+      return false;
+    }
+  });
+
+  const [countedCourseCodesByMinor, setCountedCourseCodesByMinor] = useState<CountedCourseCodesByMinor>(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEYS.countedCourseCodesByMinor);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object") return {};
+
+      const out: CountedCourseCodesByMinor = {};
+      for (const [minorCode, value] of Object.entries(parsed as Record<string, unknown>)) {
+        if (!MINORS.some((m) => m.code === minorCode)) continue;
+        if (!Array.isArray(value)) continue;
+        const unique = Array.from(
+          new Set(
+            value
+              .map((c) => formatCourseCode(String(c ?? "")))
+              .filter((c) => Boolean(c))
+          )
+        );
+        out[minorCode] = unique;
+      }
+
+      return out;
+    } catch {
+      return {};
+    }
+  });
+
   const availableMinors = useMemo(() => {
     return [...MINORS].sort((a, b) => a.name.localeCompare(b.name));
   }, []);
@@ -234,6 +273,14 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
     try {
       localStorage.setItem(STORAGE_KEYS.enabled, String(enabled));
       localStorage.setItem(STORAGE_KEYS.minorCodes, JSON.stringify(selectedMinorCodes));
+      if (countedCourseCodesConfigured) {
+        localStorage.setItem(
+          STORAGE_KEYS.countedCourseCodesByMinor,
+          JSON.stringify(countedCourseCodesByMinor)
+        );
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.countedCourseCodesByMinor);
+      }
     } catch {
       // ignore
     }
@@ -241,7 +288,7 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
     if (typeof window !== "undefined") {
       window.dispatchEvent(new Event("degreePlanner:storage"));
     }
-  }, [enabled, selectedMinorCodes]);
+  }, [enabled, selectedMinorCodes, countedCourseCodesByMinor, countedCourseCodesConfigured]);
 
   const courseStateByCode = useMemo(() => buildCourseStateByCode(enrollments), [enrollments]);
 
@@ -250,9 +297,131 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
     return availableMinors.filter((m) => selectedSet.has(m.code));
   }, [availableMinors, selectedMinorCodes]);
 
+  const countableCodesByMinorCode = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const minor of MINORS) {
+      const set = new Set<string>();
+      for (const group of minor.groups) {
+        if (!group.countsTowardMinor) continue;
+        for (const rawCode of group.courseCodes) {
+          const formatted = formatCourseCode(rawCode);
+          if (formatted) set.add(formatted);
+        }
+      }
+      map.set(minor.code, Array.from(set).sort());
+    }
+    return map;
+  }, []);
+
   const selectedProgress = useMemo(() => {
-    return selectedMinors.map((m) => computeMinorProgress(m, courseStateByCode));
-  }, [selectedMinors, courseStateByCode]);
+    return selectedMinors.map((m) => {
+      const counted = countedCourseCodesConfigured
+        ? new Set(countedCourseCodesByMinor[m.code] ?? [])
+        : new Set(countableCodesByMinorCode.get(m.code) ?? []);
+      return computeMinorProgress(m, courseStateByCode, counted);
+    });
+  }, [
+    selectedMinors,
+    courseStateByCode,
+    countedCourseCodesConfigured,
+    countedCourseCodesByMinor,
+    countableCodesByMinorCode,
+  ]);
+
+  const candidateCoursesByMinorCode = useMemo(() => {
+    const map = new Map<string, CourseState[]>();
+
+    const statusRank = (c: CourseState) => (c.isCompleted ? 0 : c.isInProgress ? 1 : 2);
+
+    for (const minorCode of selectedMinorCodes) {
+      const eligible = countableCodesByMinorCode.get(minorCode) ?? [];
+      const list: CourseState[] = [];
+      for (const code of eligible) {
+        const state = courseStateByCode.get(code);
+        if (!state) continue;
+        if (!state.isCompleted && !state.isInProgress) continue;
+        list.push(state);
+      }
+      list.sort((a, b) => statusRank(a) - statusRank(b) || a.code.localeCompare(b.code));
+      map.set(minorCode, list);
+    }
+
+    return map;
+  }, [selectedMinorCodes, countableCodesByMinorCode, courseStateByCode]);
+
+  const buildInitialCountedCourseCodesByMinor = (): CountedCourseCodesByMinor => {
+    const next: CountedCourseCodesByMinor = {};
+
+    for (const minorCode of selectedMinorCodes) {
+      const candidates = candidateCoursesByMinorCode.get(minorCode) ?? [];
+      const picked = Array.from(
+        new Set(
+          candidates
+            .map((c) => formatCourseCode(c.code))
+            .filter((c) => Boolean(c))
+        )
+      );
+      next[minorCode] = picked;
+    }
+
+    return next;
+  };
+
+  const updateCourseCounting = (
+    updater: (current: CountedCourseCodesByMinor) => CountedCourseCodesByMinor
+  ) => {
+    if (!countedCourseCodesConfigured) {
+      const initial = buildInitialCountedCourseCodesByMinor();
+      const updated = updater(initial);
+      setCountedCourseCodesByMinor(updated);
+      setCountedCourseCodesConfigured(true);
+      return;
+    }
+
+    setCountedCourseCodesByMinor((prev) => updater(prev));
+  };
+
+  const setCourseCountedForMinor = (minorCode: string, courseCode: string, checked: boolean) => {
+    const formatted = formatCourseCode(courseCode);
+    if (!formatted) return;
+
+    updateCourseCounting((prev) => {
+      const next: CountedCourseCodesByMinor = { ...prev };
+
+      if (!Array.isArray(next[minorCode])) next[minorCode] = [];
+
+      if (!checked) {
+        next[minorCode] = (next[minorCode] ?? []).filter((c) => c !== formatted);
+        return next;
+      }
+
+      const cur = new Set(next[minorCode] ?? []);
+      cur.add(formatted);
+      next[minorCode] = Array.from(cur);
+      return next;
+    });
+  };
+
+  const selectAllCoursesForMinor = (minorCode: string) => {
+    const candidates = Array.from(
+      new Set(
+        (candidateCoursesByMinorCode.get(minorCode) ?? [])
+          .map((c) => formatCourseCode(c.code))
+          .filter((c) => Boolean(c))
+      )
+    );
+
+    updateCourseCounting((prev) => {
+      const next: CountedCourseCodesByMinor = { ...prev };
+
+      next[minorCode] = candidates;
+      return next;
+    });
+  };
+
+  const clearCoursesForMinor = (minorCode: string) => {
+    updateCourseCounting((prev) => ({ ...prev, [minorCode]: [] }));
+  };
 
   const toggleMinor = (code: string) => {
     setSelectedMinorCodes((prev) => {
@@ -310,7 +479,7 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
                   <span className="text-foreground-secondary">({selectedMinors.length} selected)</span>
                 </p>
                 <p className="text-xs text-foreground-secondary">
-                  You can select multiple minors to compare. One course can only count towards one minor (in institute rules).
+                  You can select multiple minors to compare. Use the section below to choose which of your enrolled courses should count toward a minor.
                 </p>
               </div>
               <ChevronDown className="w-4 h-4 text-foreground-secondary transition-transform duration-200 group-open:rotate-180" />
@@ -351,12 +520,110 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
                 ))}
               </div>
             </div>
-          </details>
+           </details>
 
-          {selectedMinors.length === 0 ? (
-            <div className="rounded-lg border border-border bg-surface-hover/50 p-4 text-sm text-foreground-secondary">
-              Select at least one minor to see progress.
-            </div>
+           {selectedMinors.length > 0 && (
+             <details className="group rounded-lg border border-border bg-surface-hover/50">
+               <summary className="cursor-pointer list-none px-4 py-3 flex items-center justify-between gap-4">
+                 <div className="min-w-0">
+                   <p className="font-semibold text-foreground">Count courses towards your minor</p>
+                   <p className="text-xs text-foreground-secondary">
+                     Selected courses count toward the minor. If any selected course is counted as <span className="font-semibold">DE</span>{" "}
+                     in your major, it will be treated as <span className="font-semibold">FE</span> instead (so you&apos;ll need to cover DE credits separately).
+                   </p>
+                 </div>
+                 <ChevronDown className="w-4 h-4 text-foreground-secondary transition-transform duration-200 group-open:rotate-180" />
+               </summary>
+
+               <div className="px-4 pb-4 space-y-4">
+                  {selectedMinors.map((minor) => {
+                    const candidates = candidateCoursesByMinorCode.get(minor.code) ?? [];
+                    const countedSet = countedCourseCodesConfigured
+                      ? new Set(countedCourseCodesByMinor[minor.code] ?? [])
+                      : new Set(candidates.map((c) => c.code));
+ 
+                    return (
+                     <div
+                       key={minor.code}
+                       className="rounded-lg border border-border bg-surface px-3 py-3"
+                     >
+                       <div className="flex flex-wrap items-start justify-between gap-3">
+                         <div className="min-w-0">
+                           <p className="text-sm font-semibold text-foreground">{minor.name}</p>
+                           <p className="text-xs text-foreground-secondary mt-0.5">
+                             Selected{" "}
+                             <span className="font-semibold text-foreground">{countedSet.size}</span> /{" "}
+                             <span className="font-semibold text-foreground">{candidates.length}</span>{" "}
+                             eligible enrolled courses
+                           </p>
+                         </div>
+                         <div className="flex flex-wrap items-center gap-2">
+                           <button
+                             type="button"
+                             onClick={() => selectAllCoursesForMinor(minor.code)}
+                             className="px-3 py-1.5 text-xs font-semibold rounded-full border border-border bg-surface hover:bg-surface-hover text-foreground"
+                           >
+                             Select all
+                           </button>
+                           <button
+                             type="button"
+                             onClick={() => clearCoursesForMinor(minor.code)}
+                             className="px-3 py-1.5 text-xs font-semibold rounded-full border border-border bg-surface hover:bg-surface-hover text-foreground"
+                           >
+                             Clear
+                           </button>
+                         </div>
+                       </div>
+
+                       {candidates.length === 0 ? (
+                         <p className="mt-3 text-xs text-foreground-secondary">
+                           No eligible enrolled courses found for this minor yet.
+                         </p>
+                       ) : (
+                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {candidates.map((c) => {
+                              const checked = countedSet.has(c.code);
+                              const statusLabel = c.isCompleted ? "Completed" : c.isInProgress ? "In progress" : "";
+
+                              return (
+                                <label
+                                  key={`${minor.code}|${c.code}`}
+                                  className="flex items-start gap-2 rounded-lg border border-border px-3 py-2 text-sm text-foreground cursor-pointer hover:bg-surface-hover"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="mt-0.5 h-4 w-4 accent-primary"
+                                    checked={checked}
+                                    onChange={(e) => setCourseCountedForMinor(minor.code, c.code, e.target.checked)}
+                                  />
+                                  <div className="min-w-0">
+                                   <p className="text-sm font-semibold text-foreground">
+                                     {c.code}{" "}
+                                     <span className="text-[11px] font-semibold text-foreground-secondary">
+                                       {statusLabel}
+                                       {c.credits ? ` · ${c.credits} cr` : ""}
+                                     </span>
+                                   </p>
+                                    {c.name ? (
+                                      <p className="text-xs text-foreground-secondary truncate">{c.name}</p>
+                                    ) : null}
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
+                       )}
+                     </div>
+                   );
+                 })}
+               </div>
+             </details>
+           )}
+
+           {selectedMinors.length === 0 ? (
+             <div className="rounded-lg border border-border bg-surface-hover/50 p-4 text-sm text-foreground-secondary">
+               Select at least one minor to see progress.
+             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
               {(isLoading ? Array.from({ length: Math.min(2, selectedMinors.length) }) : selectedProgress).map(

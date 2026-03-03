@@ -2,28 +2,40 @@
 
 import { useSyncExternalStore } from "react";
 import { MINORS } from "@/lib/minors";
+import { formatCourseCode } from "@/lib/utils";
 
 export { MANAGEMENT_MINOR_CODE, buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
 
 export const MINOR_PLANNER_STORAGE_KEYS = {
   enabled: "degreePlanner.minorPlanner.enabled",
   minorCodes: "degreePlanner.minorPlanner.codes",
+  countedCourseCodesByMinor: "degreePlanner.minorPlanner.countedCourseCodesByMinor",
   legacyMinorCode: "degreePlanner.minorPlanner.code",
 } as const;
 
 export type MinorPlannerSelection = {
   enabled: boolean;
   codes: string[];
+  countedCourseCodes: string[];
+  countedCourseCodesConfigured: boolean;
 };
 
-const DEFAULT_SELECTION: MinorPlannerSelection = { enabled: false, codes: [] };
+const DEFAULT_SELECTION: MinorPlannerSelection = {
+  enabled: false,
+  codes: [],
+  countedCourseCodes: [],
+  countedCourseCodesConfigured: false,
+};
 const KNOWN_MINOR_CODES = new Set(MINORS.map((m) => m.code));
 
 let cachedSelectionKey = "";
 let cachedSelection: MinorPlannerSelection = DEFAULT_SELECTION;
 
 function selectionKey(selection: MinorPlannerSelection): string {
-  return `${selection.enabled ? "1" : "0"}|${selection.codes.join(",")}`;
+  const codesKey = [...selection.codes].sort().join(",");
+  const countedKey = [...selection.countedCourseCodes].sort().join(",");
+  const configuredKey = selection.countedCourseCodesConfigured ? "1" : "0";
+  return `${selection.enabled ? "1" : "0"}|${codesKey}|${countedKey}|${configuredKey}`;
 }
 
 function readMinorPlannerSelection(): MinorPlannerSelection {
@@ -32,9 +44,35 @@ function readMinorPlannerSelection(): MinorPlannerSelection {
   try {
     const enabledRaw = localStorage.getItem(MINOR_PLANNER_STORAGE_KEYS.enabled);
     const storedCodesRaw = localStorage.getItem(MINOR_PLANNER_STORAGE_KEYS.minorCodes);
+    const countedByMinorRaw = localStorage.getItem(
+      MINOR_PLANNER_STORAGE_KEYS.countedCourseCodesByMinor
+    );
     const legacyRaw = localStorage.getItem(MINOR_PLANNER_STORAGE_KEYS.legacyMinorCode);
 
     const enabled = enabledRaw === "true";
+    const countedCourseCodesConfigured = countedByMinorRaw !== null;
+
+    const readCountedCourseCodes = (selectedMinorCodes: string[]): string[] => {
+      if (!countedByMinorRaw) return [];
+
+      try {
+        const parsed = JSON.parse(countedByMinorRaw);
+        if (!parsed || typeof parsed !== "object") return [];
+
+        const out = new Set<string>();
+        for (const minorCode of selectedMinorCodes) {
+          const rawList = (parsed as Record<string, unknown>)[minorCode];
+          if (!Array.isArray(rawList)) continue;
+          for (const item of rawList) {
+            const formatted = formatCourseCode(String(item ?? ""));
+            if (formatted) out.add(formatted);
+          }
+        }
+        return Array.from(out);
+      } catch {
+        return [];
+      }
+    };
 
     if (storedCodesRaw) {
       const parsed = JSON.parse(storedCodesRaw);
@@ -46,7 +84,8 @@ function readMinorPlannerSelection(): MinorPlannerSelection {
               .filter((c) => Boolean(c) && KNOWN_MINOR_CODES.has(c))
           )
         );
-        const next = { enabled, codes: unique };
+        const countedCourseCodes = readCountedCourseCodes(unique);
+        const next = { enabled, codes: unique, countedCourseCodes, countedCourseCodesConfigured };
         const nextKey = selectionKey(next);
         if (nextKey === cachedSelectionKey) return cachedSelection;
         cachedSelectionKey = nextKey;
@@ -57,7 +96,8 @@ function readMinorPlannerSelection(): MinorPlannerSelection {
 
     const legacyCode = String(legacyRaw ?? "").trim().toUpperCase();
     if (legacyCode && KNOWN_MINOR_CODES.has(legacyCode)) {
-      const next = { enabled, codes: [legacyCode] };
+      const countedCourseCodes = readCountedCourseCodes([legacyCode]);
+      const next = { enabled, codes: [legacyCode], countedCourseCodes, countedCourseCodesConfigured };
       const nextKey = selectionKey(next);
       if (nextKey === cachedSelectionKey) return cachedSelection;
       cachedSelectionKey = nextKey;
@@ -65,7 +105,7 @@ function readMinorPlannerSelection(): MinorPlannerSelection {
       return next;
     }
 
-    const next = { enabled, codes: [] };
+    const next = { enabled, codes: [], countedCourseCodes: [], countedCourseCodesConfigured };
     const nextKey = selectionKey(next);
     if (nextKey === cachedSelectionKey) return cachedSelection;
     cachedSelectionKey = nextKey;
@@ -83,6 +123,7 @@ function subscribeMinorPlannerSelection(callback: () => void) {
     if (
       e.key === MINOR_PLANNER_STORAGE_KEYS.enabled ||
       e.key === MINOR_PLANNER_STORAGE_KEYS.minorCodes ||
+      e.key === MINOR_PLANNER_STORAGE_KEYS.countedCourseCodesByMinor ||
       e.key === MINOR_PLANNER_STORAGE_KEYS.legacyMinorCode
     ) {
       callback();

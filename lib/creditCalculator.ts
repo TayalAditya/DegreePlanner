@@ -37,7 +37,7 @@ export class CreditCalculator {
   async calculateProgramProgress(
     userId: string,
     programId: string,
-    options?: { minorCodes?: string[] }
+    options?: { minorCodes?: string[]; minorCountedCourseCodes?: string[] }
   ): Promise<ProgramProgress> {
     const program = await prisma.program.findUnique({
       where: { id: programId },
@@ -144,7 +144,23 @@ export class CreditCalculator {
       total: program.totalCreditsRequired,
     };
 
-    const minorDeToFeCourseCodes = buildNonMgmtMinorCountedCourseCodeSet(options?.minorCodes ?? []);
+    const minorEligibleCourseCodes = buildNonMgmtMinorCountedCourseCodeSet(options?.minorCodes ?? []);
+    const minorDeToFeCourseCodes = (() => {
+      const selected = options?.minorCountedCourseCodes;
+      if (selected === undefined) return minorEligibleCourseCodes;
+
+      const selectedSet = new Set<string>();
+      for (const raw of selected) {
+        const formatted = formatCourseCode(String(raw ?? ""));
+        if (formatted) selectedSet.add(formatted);
+      }
+
+      const out = new Set<string>();
+      selectedSet.forEach((code) => {
+        if (minorEligibleCourseCodes.has(code)) out.add(code);
+      });
+      return out;
+    })();
 
     const completed = this.calculateCreditsByType(
       enrollments.filter((e) =>
