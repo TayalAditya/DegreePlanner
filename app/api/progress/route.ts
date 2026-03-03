@@ -13,6 +13,15 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const programId = searchParams.get("programId");
+    const minorCodesRaw = searchParams.get("minorCodes");
+
+    const minorCodes =
+      minorCodesRaw?.trim()
+        ? minorCodesRaw
+            .split(",")
+            .map((c) => c.trim())
+            .filter(Boolean)
+        : undefined;
 
     if (!programId) {
       return NextResponse.json(
@@ -21,10 +30,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const progress = await creditCalculator.calculateProgramProgress(
-      session.user.id,
-      programId
-    );
+    const progress = await creditCalculator.calculateProgramProgress(session.user.id, programId, {
+      minorCodes,
+    });
 
     const mtpEligibility = await creditCalculator.checkMTPEligibility(
       session.user.id,
