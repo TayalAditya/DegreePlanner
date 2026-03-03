@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { formatCourseCode } from "@/lib/utils";
+import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface Course {
   id: string;
@@ -303,8 +304,17 @@ export default function CoursesPage() {
     "IC253",
   ]);
 
+  const minorPlanner = useMinorPlannerSelection();
+  const nonMgmtMinorCourseCodes = useMemo(() => {
+    if (!minorPlanner.enabled) return new Set<string>();
+    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
+  }, [minorPlanner.enabled, minorPlanner.codes]);
+
   const applyMinorDeOverride = (category: string, enrollment: Enrollment): string => {
-    return category;
+    if (category !== "DE") return category;
+    const code = formatCourseCode(enrollment.course.code);
+    if (!code) return category;
+    return nonMgmtMinorCourseCodes.has(code) ? "FE" : category;
   };
 
   // Calculate credits by category

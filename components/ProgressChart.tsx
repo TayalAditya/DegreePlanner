@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { getAllDefaultCourses, type DefaultCourse } from "@/lib/defaultCurriculum";
 import { formatCourseCode } from "@/lib/utils";
+import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface ProgressChartProps {
   progress: any;
@@ -105,9 +106,11 @@ const HSS_CORE_CAP = 12;
 const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
 
 export function ProgressChart({ progress, isLoading, enrollments, userBranch }: ProgressChartProps) {
+  const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
-    return new Set<string>();
-  }, []);
+    if (!minorPlanner.enabled) return new Set<string>();
+    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
+  }, [minorPlanner.enabled, minorPlanner.codes]);
 
   const includeCurrentSemesterCredits = useSyncExternalStore(
     (callback) => {

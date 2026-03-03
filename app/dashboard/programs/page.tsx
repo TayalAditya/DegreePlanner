@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { GraduationCap, Award, BookOpen, Target, ChevronDown, AlertCircle } from "lucide-react";
 import { ProgressChart } from "@/components/ProgressChart";
-
+import { MinorPlannerCard } from "@/components/MinorPlannerCard";
+import { useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { formatCourseCode } from "@/lib/utils";
 
 interface Program {
@@ -70,6 +71,13 @@ export default function ProgramsPage() {
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savedPrefs, setSavedPrefs] = useState(false);
 
+  const minorPlanner = useMinorPlannerSelection();
+  const minorCodesKey = useMemo(() => {
+    if (!minorPlanner.enabled) return "";
+    const codes = [...minorPlanner.codes].filter(Boolean).sort();
+    return codes.join(",");
+  }, [minorPlanner.enabled, minorPlanner.codes]);
+
   useEffect(() => {
     fetchPrograms();
   }, []);
@@ -99,8 +107,10 @@ export default function ProgramsPage() {
       setProgressError(null);
 
       try {
+        const minorCodesParam = minorCodesKey ? `&minorCodes=${encodeURIComponent(minorCodesKey)}` : "";
+
         const [progressRes, enrollmentsRes, userRes] = await Promise.all([
-          fetch(`/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}`),
+          fetch(`/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}`),
           fetch("/api/enrollments"),
           fetch("/api/user/settings"),
         ]);
@@ -133,7 +143,7 @@ export default function ProgramsPage() {
     };
 
     loadExtras();
-  }, [primaryProgram?.program?.id]);
+  }, [primaryProgram?.program?.id, minorCodesKey]);
 
   const saveProjectPrefs = async (mtp: boolean, istp: boolean) => {
     setSavingPrefs(true);
@@ -624,6 +634,8 @@ export default function ProgramsPage() {
               </div>
             </div>
           )}
+
+          <MinorPlannerCard enrollments={enrollments} isLoading={enrollmentsLoading} />
 
           {/* Secondary Programs (Minor/Double Major) */}
           {secondaryPrograms.length > 0 && (
