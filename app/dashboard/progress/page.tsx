@@ -131,8 +131,26 @@ export default function ProgressPage() {
   const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
     if (!minorPlanner.enabled) return new Set<string>();
-    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
-  }, [minorPlanner.enabled, minorPlanner.codes]);
+    const eligible = buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
+    if (!minorPlanner.countedCourseCodesConfigured) return eligible;
+
+    const selected = new Set(
+      (minorPlanner.countedCourseCodes ?? [])
+        .map((c) => formatCourseCode(String(c ?? "")))
+        .filter((c) => Boolean(c))
+    );
+
+    const out = new Set<string>();
+    selected.forEach((code) => {
+      if (eligible.has(code)) out.add(code);
+    });
+    return out;
+  }, [
+    minorPlanner.enabled,
+    minorPlanner.codes,
+    minorPlanner.countedCourseCodes,
+    minorPlanner.countedCourseCodesConfigured,
+  ]);
 
   const applyMinorDeOverride = (category: CourseCategory, enrollment: Enrollment): CourseCategory => {
     if (category !== "DE") return category;

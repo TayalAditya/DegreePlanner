@@ -82,6 +82,12 @@ export default function ProgramsPage() {
     return codes.join(",");
   }, [minorPlanner.enabled, minorPlanner.codes]);
 
+  const minorCountedCodesKey = useMemo(() => {
+    if (!minorPlanner.enabled) return "";
+    const codes = [...(minorPlanner.countedCourseCodes ?? [])].filter(Boolean).sort();
+    return codes.join(",");
+  }, [minorPlanner.enabled, minorPlanner.countedCourseCodes]);
+
   useEffect(() => {
     fetchPrograms();
   }, []);
@@ -112,9 +118,14 @@ export default function ProgramsPage() {
 
       try {
         const minorCodesParam = minorCodesKey ? `&minorCodes=${encodeURIComponent(minorCodesKey)}` : "";
-
+        const minorCountedCodesParam = minorPlanner.countedCourseCodesConfigured
+          ? `&minorCountedCodes=${encodeURIComponent(minorCountedCodesKey)}`
+          : "";
+ 
         const [progressRes, enrollmentsRes, userRes] = await Promise.all([
-          fetch(`/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}`),
+          fetch(
+            `/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}${minorCountedCodesParam}`
+          ),
           fetch("/api/enrollments"),
           fetch("/api/user/settings"),
         ]);
@@ -150,7 +161,12 @@ export default function ProgramsPage() {
     };
 
     loadExtras();
-  }, [primaryProgram?.program?.id, minorCodesKey]);
+  }, [
+    primaryProgram?.program?.id,
+    minorCodesKey,
+    minorCountedCodesKey,
+    minorPlanner.countedCourseCodesConfigured,
+  ]);
 
   const refreshExtras = async () => {
     if (!primaryProgram?.program?.id) return;
@@ -161,9 +177,14 @@ export default function ProgramsPage() {
 
     try {
       const minorCodesParam = minorCodesKey ? `&minorCodes=${encodeURIComponent(minorCodesKey)}` : "";
+      const minorCountedCodesParam = minorPlanner.countedCourseCodesConfigured
+        ? `&minorCountedCodes=${encodeURIComponent(minorCountedCodesKey)}`
+        : "";
 
       const [progressRes, enrollmentsRes, userRes] = await Promise.all([
-        fetch(`/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}`),
+        fetch(
+          `/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}${minorCountedCodesParam}`
+        ),
         fetch("/api/enrollments"),
         fetch("/api/user/settings"),
       ]);

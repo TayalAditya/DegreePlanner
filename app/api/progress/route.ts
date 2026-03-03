@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const programId = searchParams.get("programId");
     const minorCodesRaw = searchParams.get("minorCodes");
+    const minorCountedCodesRaw = searchParams.get("minorCountedCodes");
 
     const minorCodes =
       minorCodesRaw?.trim()
@@ -21,6 +22,16 @@ export async function GET(request: NextRequest) {
             .split(",")
             .map((c) => c.trim())
             .filter(Boolean)
+        : undefined;
+
+    const minorCountedCourseCodes =
+      minorCountedCodesRaw !== null
+        ? (minorCountedCodesRaw.trim()
+            ? minorCountedCodesRaw
+                .split(",")
+                .map((c) => c.trim())
+                .filter(Boolean)
+            : [])
         : undefined;
 
     if (!programId) {
@@ -32,6 +43,7 @@ export async function GET(request: NextRequest) {
 
     const progress = await creditCalculator.calculateProgramProgress(session.user.id, programId, {
       minorCodes,
+      minorCountedCourseCodes,
     });
 
     const mtpEligibility = await creditCalculator.checkMTPEligibility(
