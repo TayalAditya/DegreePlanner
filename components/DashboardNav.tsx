@@ -25,6 +25,7 @@ import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { NotificationBell } from "./NotificationBell";
+import { BrandMark } from "./BrandMark";
 
 interface DashboardNavProps {
   user: {
@@ -83,7 +84,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             href="/dashboard"
             className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
           >
-            <GraduationCap className="w-7 h-7 text-primary" />
+            <BrandMark size="md" priority />
             <span className="ml-2 text-lg font-bold text-foreground">
               Degree Planner
             </span>
@@ -129,7 +130,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
               >
-                <GraduationCap className="w-6 h-6 text-primary" />
+                <BrandMark size="sm" priority />
                 <span className="ml-2 text-base font-bold text-foreground">
                   Degree Planner
                 </span>
