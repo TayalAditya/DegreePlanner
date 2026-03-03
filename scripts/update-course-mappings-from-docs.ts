@@ -385,6 +385,17 @@ async function main() {
       });
     }
 
+    // MNC: default rule — treat all MA-XXX* courses as DE unless explicitly mapped as DC/DE elsewhere.
+    for (const courseKey of courseIndex.keys()) {
+      if (!/^MA\d{3}[A-Z]?$/.test(courseKey)) continue;
+      desired.push({
+        branch: "MNC",
+        courseKey,
+        category: CourseCategoryType.DE,
+        source: "MNC rule: MA-XXX* => DE (fallback)",
+      });
+    }
+
     // De-dupe desired mappings: last one wins (DC should generally override DE)
     const desiredByBranchAndKey = new Map<string, (typeof desired)[number]>();
     const precedence: Record<CourseCategoryType, number> = {
