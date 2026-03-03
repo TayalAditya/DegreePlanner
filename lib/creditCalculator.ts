@@ -469,9 +469,10 @@ export class CreditCalculator {
         // Non-compulsory IC basket course → check branch mapping before defaulting to FE
         // (e.g. IC-240 is ICB2 but mapped as DC for MSE)
         const basketFallbackAliases = branch === "CSE" ? ["CSE", "CS"] : branch === "CS" ? ["CS", "CSE"] : [branch];
-        const basketFallbackCategory = enrollment.course.branchMappings
-          ?.find(m => basketFallbackAliases.includes(m.branch) || m.branch === "COMMON")
-          ?.courseCategory;
+        const basketMappings = enrollment.course.branchMappings || [];
+        const basketDirect = basketMappings.find((m) => basketFallbackAliases.includes(m.branch));
+        const basketCommon = basketMappings.find((m) => m.branch === "COMMON");
+        const basketFallbackCategory = (basketDirect || basketCommon)?.courseCategory;
         if (basketFallbackCategory === "DC" || basketFallbackCategory === "IC" || basketFallbackCategory === "IC_BASKET") {
           breakdown.core += credits;
         } else if (basketFallbackCategory === "DE") {
@@ -489,14 +490,11 @@ export class CreditCalculator {
       }
 
       const branchAliases = branch === "CSE" ? ["CSE", "CS"] : branch === "CS" ? ["CS", "CSE"] : [branch];
-      const mappedCategory = enrollment.course.branchMappings
-        ? (enrollment.course.branchMappings.find(
-              (m) => branchAliases.includes(m.branch) || m.branch === "COMMON"
-            )?.courseCategory ||
-           (branch && branch.startsWith("GE")
-            ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))?.courseCategory
-            : undefined))
-        : undefined;
+      const mappings = enrollment.course.branchMappings || [];
+      const direct = mappings.find((m) => branchAliases.includes(m.branch));
+      const ge = branch && branch.startsWith("GE") ? mappings.find((m) => m.branch.startsWith("GE")) : undefined;
+      const common = mappings.find((m) => m.branch === "COMMON");
+      const mappedCategory = (direct || ge || common)?.courseCategory;
 
       if (mappedCategory) {
         switch (mappedCategory) {
