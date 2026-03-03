@@ -218,6 +218,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const normalizeCourseCode = (code: string) =>
+      (code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+    const normalizedCourseCode = normalizeCourseCode(course.code);
+    const semesterNumber = typeof semester === "string" ? parseInt(semester, 10) : Number(semester);
+
+    // Semester-long onsite internship constraint (e.g., DP-399P):
+    // If any *399P course is enrolled in semester 6/7, no other courses are allowed in that semester.
+    if (semesterNumber === 6 || semesterNumber === 7) {
+      const is399PCourse = normalizedCourseCode.endsWith("399P");
+
+      const semesterEnrollments = await prisma.courseEnrollment.findMany({
+        where: {
+          userId: session.user.id,
+          semester: semesterNumber,
+          status: { not: EnrollmentStatus.DROPPED },
+        },
+        select: {
+          id: true,
+          status: true,
+          course: { select: { code: true } },
+        },
+      });
+
+      const semesterHas399P = semesterEnrollments.some((e) =>
+        normalizeCourseCode(e.course.code).endsWith("399P")
+      );
+
+      if (is399PCourse && semesterEnrollments.length > 0) {
+        return NextResponse.json(
+          { error: "Cannot enroll in a 399P course with other courses in semester 6/7. Remove other courses from that semester first." },
+          { status: 400 }
+        );
+      }
+
+      if (!is399PCourse && semesterHas399P) {
+        return NextResponse.json(
+          { error: "Cannot enroll in any other course in semester 6/7 while a 399P course is enrolled." },
+          { status: 400 }
+        );
+      }
+    }
+
     // Validate P/F course enrollment
     if (isPassFail) {
       if (!course.isPassFailEligible) {
@@ -282,38 +325,10 @@ export async function POST(request: NextRequest) {
           ? EnrollmentStatus.COMPLETED
           : EnrollmentStatus.IN_PROGRESS;
 
-    const normalizedCourseCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
     const isDpIstp = normalizedCourseCode === "DP301P";
     const isDpMtp1 = normalizedCourseCode === "DP498P";
     const isDpMtp2 = normalizedCourseCode === "DP499P";
     const isDpMtp = isDpMtp1 || isDpMtp2;
-
-    // Respect component preferences: if a component is disabled, don't allow enrolling in its course.
-    const doingMTP1Pref = user.doingMTP ?? true;
-    const rawDoingMTP2Pref = user.doingMTP2 ?? doingMTP1Pref;
-    const doingMTP2Pref = doingMTP1Pref ? rawDoingMTP2Pref : false;
-    const doingISTPPref = user.doingISTP ?? true;
-
-    if (isDpIstp && !doingISTPPref) {
-      return NextResponse.json(
-        { error: "ISTP is disabled in Programs. Enable it to enroll." },
-        { status: 400 }
-      );
-    }
-
-    if (isDpMtp1 && !doingMTP1Pref) {
-      return NextResponse.json(
-        { error: "MTP-1 is disabled in Programs. Enable it to enroll." },
-        { status: 400 }
-      );
-    }
-
-    if (isDpMtp2 && !doingMTP2Pref) {
-      return NextResponse.json(
-        { error: "MTP-2 is disabled in Programs. Enable MTP-2 to enroll." },
-        { status: 400 }
-      );
-    }
 
     let finalCourseType: CourseType =
       courseType && Object.values(CourseType).includes(courseType as CourseType)
@@ -327,26 +342,45 @@ export async function POST(request: NextRequest) {
     const finalIsPassFail =
       finalCourseType === CourseType.FREE_ELECTIVE ? Boolean(isPassFail) : false;
 
-    const enrollment = await prisma.courseEnrollment.create({
-      data: {
-        userId: session.user.id,
-        courseId,
-        semester,
-        year,
-        term,
-        courseType: finalCourseType,
-        programId: finalProgramId,
-        status: finalStatus,
-        grade: grade || null,
-        isPassFail: finalIsPassFail,
-        passFailCredits: finalIsPassFail ? course.credits : 0,
-        isInternship: isInternship || false,
-        internshipType: isInternship ? internshipType : null,
-        internshipDays: isInternship ? internshipDays : null,
-      },
-      include: {
-        course: true,
-      },
+    // If a user re-adds ISTP/MTP courses, auto-enable the corresponding preferences
+    // so Programs checkboxes stay consistent.
+    const preferenceUpdates: { doingMTP?: boolean; doingMTP2?: boolean; doingISTP?: boolean } = {};
+    if (isDpIstp && user.doingISTP === false) preferenceUpdates.doingISTP = true;
+    if (isDpMtp1 && user.doingMTP === false) preferenceUpdates.doingMTP = true;
+    if (isDpMtp2 && (user.doingMTP === false || user.doingMTP2 === false)) {
+      preferenceUpdates.doingMTP = true;
+      preferenceUpdates.doingMTP2 = true;
+    }
+
+    const enrollment = await prisma.$transaction(async (tx) => {
+      if (Object.keys(preferenceUpdates).length > 0) {
+        await tx.user.update({
+          where: { id: session.user.id },
+          data: preferenceUpdates,
+        });
+      }
+
+      return tx.courseEnrollment.create({
+        data: {
+          userId: session.user.id,
+          courseId,
+          semester,
+          year,
+          term,
+          courseType: finalCourseType,
+          programId: finalProgramId,
+          status: finalStatus,
+          grade: grade || null,
+          isPassFail: finalIsPassFail,
+          passFailCredits: finalIsPassFail ? course.credits : 0,
+          isInternship: isInternship || false,
+          internshipType: isInternship ? internshipType : null,
+          internshipDays: isInternship ? internshipDays : null,
+        },
+        include: {
+          course: true,
+        },
+      });
     });
 
     // If student overrides the inferred course type, log it for admin review.

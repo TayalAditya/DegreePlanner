@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
         batch: true,
         enrollmentId: true,
         branch: true,
+        doingMTP: true,
+        doingMTP2: true,
+        doingISTP: true,
         programs: {
           where: { isPrimary: true },
           select: { programId: true },
@@ -129,6 +132,38 @@ export async function POST(req: NextRequest) {
       return new Date().getFullYear() - 3;
     };
 
+    let doingMTP1Pref = user.doingMTP ?? true;
+    let doingMTP2Pref = user.doingMTP2 ?? doingMTP1Pref;
+    let doingISTPPref = user.doingISTP ?? true;
+
+    const maybeEnableProjectPrefsForCourse = async (normalizedCode: string) => {
+      const updates: { doingMTP?: boolean; doingMTP2?: boolean; doingISTP?: boolean } = {};
+
+      if (normalizedCode === "DP301P" && !doingISTPPref) {
+        updates.doingISTP = true;
+        doingISTPPref = true;
+      }
+
+      if (normalizedCode === "DP498P" && !doingMTP1Pref) {
+        updates.doingMTP = true;
+        doingMTP1Pref = true;
+      }
+
+      if (normalizedCode === "DP499P" && (!doingMTP1Pref || !doingMTP2Pref)) {
+        updates.doingMTP = true;
+        updates.doingMTP2 = true;
+        doingMTP1Pref = true;
+        doingMTP2Pref = true;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: updates,
+        });
+      }
+    };
+
     for (const enrollment of enrollments) {
       try {
         const { courseCode, semester, grade } = enrollment as {
@@ -166,6 +201,9 @@ export async function POST(req: NextRequest) {
         const status =
           grade ? "COMPLETED" : isPastSemester ? "COMPLETED" : "IN_PROGRESS";
 
+        const normalizedCode = normalizeCourseCode(course.code);
+        await maybeEnableProjectPrefsForCourse(normalizedCode);
+
         const existing = await prisma.courseEnrollment.findFirst({
           where: {
             userId: user.id,
@@ -188,6 +226,45 @@ export async function POST(req: NextRequest) {
           });
           results.push({ courseCode, action: "updated", id: updated.id });
         } else {
+          // Semester-long onsite internship constraint (e.g., DP-399P):
+          // If any *399P course is enrolled in semester 6/7, no other courses are allowed in that semester.
+          if (semester === 6 || semester === 7) {
+            const is399PCourse = normalizedCode.endsWith("399P");
+            const semesterEnrollments = await prisma.courseEnrollment.findMany({
+              where: {
+                userId: user.id,
+                semester,
+                status: { not: "DROPPED" },
+              },
+              select: {
+                id: true,
+                course: { select: { code: true } },
+              },
+            });
+
+            const semesterHas399P = semesterEnrollments.some((e) =>
+              normalizeCourseCode(e.course.code).endsWith("399P")
+            );
+
+            if (is399PCourse && semesterEnrollments.length > 0) {
+              errors.push({
+                courseCode,
+                error:
+                  "Cannot enroll in a 399P course with other courses in semester 6/7. Remove other courses from that semester first.",
+              });
+              continue;
+            }
+
+            if (!is399PCourse && semesterHas399P) {
+              errors.push({
+                courseCode,
+                error:
+                  "Cannot enroll in any other course in semester 6/7 while a 399P course is enrolled.",
+              });
+              continue;
+            }
+          }
+
           const created = await prisma.courseEnrollment.create({
             data: {
               userId: user.id,
