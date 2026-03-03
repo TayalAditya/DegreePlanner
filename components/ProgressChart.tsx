@@ -265,11 +265,13 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
         }
 
         const aliasList = Array.from(aliases);
-        const mapping =
-          mappings.find((m: any) => aliasList.includes(m.branch) || m.branch === "COMMON") ||
-          (checkBranch === "GE"
+        const direct = mappings.find((m: any) => aliasList.includes(m.branch));
+        const ge =
+          checkBranch === "GE"
             ? mappings.find((m: any) => String(m.branch || "").startsWith("GE"))
-            : undefined);
+            : undefined;
+        const common = mappings.find((m: any) => m.branch === "COMMON");
+        const mapping = direct || ge || common;
 
         if (mapping?.courseCategory === "DC") {
           return "DC";
@@ -296,10 +298,12 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length > 0) {
       const branchAliases = userBranch === "CSE" ? ["CSE", "CS"] : userBranch === "CS" ? ["CS", "CSE"] : [userBranch];
-      const mapping = mappings.find((m: any) => branchAliases.includes(m.branch) || m.branch === "COMMON")
-        || (userBranch?.startsWith("GE")
-          ? mappings.find((m: any) => m.branch?.startsWith("GE"))
-          : undefined);
+      const direct = mappings.find((m: any) => branchAliases.includes(m.branch));
+      const ge = userBranch?.startsWith("GE")
+        ? mappings.find((m: any) => m.branch?.startsWith("GE"))
+        : undefined;
+      const common = mappings.find((m: any) => m.branch === "COMMON");
+      const mapping = direct || ge || common;
 
       if (mapping && mapping.courseCategory in categoryCredits) {
         return applyMinorDeOverride(mapping.courseCategory as keyof typeof categoryCredits);
