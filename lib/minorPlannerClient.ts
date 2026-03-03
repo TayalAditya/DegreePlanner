@@ -19,6 +19,13 @@ export type MinorPlannerSelection = {
 const DEFAULT_SELECTION: MinorPlannerSelection = { enabled: false, codes: [] };
 const KNOWN_MINOR_CODES = new Set(MINORS.map((m) => m.code));
 
+let cachedSelectionKey = "";
+let cachedSelection: MinorPlannerSelection = DEFAULT_SELECTION;
+
+function selectionKey(selection: MinorPlannerSelection): string {
+  return `${selection.enabled ? "1" : "0"}|${selection.codes.join(",")}`;
+}
+
 function readMinorPlannerSelection(): MinorPlannerSelection {
   if (typeof window === "undefined") return DEFAULT_SELECTION;
 
@@ -39,16 +46,31 @@ function readMinorPlannerSelection(): MinorPlannerSelection {
               .filter((c) => Boolean(c) && KNOWN_MINOR_CODES.has(c))
           )
         );
-        return { enabled, codes: unique };
+        const next = { enabled, codes: unique };
+        const nextKey = selectionKey(next);
+        if (nextKey === cachedSelectionKey) return cachedSelection;
+        cachedSelectionKey = nextKey;
+        cachedSelection = next;
+        return next;
       }
     }
 
     const legacyCode = String(legacyRaw ?? "").trim().toUpperCase();
     if (legacyCode && KNOWN_MINOR_CODES.has(legacyCode)) {
-      return { enabled, codes: [legacyCode] };
+      const next = { enabled, codes: [legacyCode] };
+      const nextKey = selectionKey(next);
+      if (nextKey === cachedSelectionKey) return cachedSelection;
+      cachedSelectionKey = nextKey;
+      cachedSelection = next;
+      return next;
     }
 
-    return { enabled, codes: [] };
+    const next = { enabled, codes: [] };
+    const nextKey = selectionKey(next);
+    if (nextKey === cachedSelectionKey) return cachedSelection;
+    cachedSelectionKey = nextKey;
+    cachedSelection = next;
+    return next;
   } catch {
     return DEFAULT_SELECTION;
   }
