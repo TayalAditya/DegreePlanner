@@ -18,6 +18,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS } from "@/lib/icBasketConfig";
 import { formatCourseCode } from "@/lib/utils";
+import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface Program {
   id: string;

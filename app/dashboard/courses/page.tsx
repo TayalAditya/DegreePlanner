@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen,
@@ -303,6 +303,10 @@ export default function CoursesPage() {
     "IC253",
   ]);
 
+  const applyMinorDeOverride = (category: string, enrollment: Enrollment): string => {
+    return category;
+  };
+
   // Calculate credits by category
   const getCourseCategory = (enrollment: Enrollment): string => {
     // First try to get from branchMappings if available
@@ -318,7 +322,7 @@ export default function CoursesPage() {
         if (mapping.courseCategory === "NA") {
           return "FE";
         }
-        return mapping.courseCategory;
+        return applyMinorDeOverride(mapping.courseCategory, enrollment);
       }
     }
 
@@ -332,8 +336,8 @@ export default function CoursesPage() {
     if (normalizedCode === "IC181") return "IKS";
     
     // Branch-specific course patterns
-    if (user?.branch === "CSE" && code.startsWith("DS")) return "DE";
-    if (user?.branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
+    if (user?.branch === "CSE" && code.startsWith("DS")) return applyMinorDeOverride("DE", enrollment);
+    if (user?.branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE", enrollment);
     
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("HS")) return "HSS";
@@ -348,7 +352,7 @@ export default function CoursesPage() {
     // Fallback to courseType mapping
     switch (enrollment.courseType) {
       case "DE":
-        return "DE";
+        return applyMinorDeOverride("DE", enrollment);
       case "FREE_ELECTIVE":
       case "PE":
         return "FE";

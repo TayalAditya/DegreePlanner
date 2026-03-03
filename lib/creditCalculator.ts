@@ -1,5 +1,7 @@
 import { CourseType, EnrollmentStatus, ProgramType } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import { buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
+import { formatCourseCode } from "@/lib/utils";
 
 export interface CreditBreakdown {
   core: number;
@@ -34,7 +36,8 @@ export interface MTPEligibility {
 export class CreditCalculator {
   async calculateProgramProgress(
     userId: string,
-    programId: string
+    programId: string,
+    options?: { minorCodes?: string[] }
   ): Promise<ProgramProgress> {
     const program = await prisma.program.findUnique({
       where: { id: programId },
@@ -120,17 +123,21 @@ export class CreditCalculator {
       total: program.totalCreditsRequired,
     };
 
+    const minorDeToFeCourseCodes = buildNonMgmtMinorCountedCourseCodeSet(options?.minorCodes ?? []);
+
     const completed = this.calculateCreditsByType(
       enrollments.filter((e) =>
         e.status === EnrollmentStatus.COMPLETED &&
         (!e.grade || e.grade !== "F") // Exclude failed courses
       ),
-      user?.branch || undefined
+      user?.branch || undefined,
+      minorDeToFeCourseCodes
     );
 
     const inProgress = this.calculateCreditsByType(
       enrollments.filter((e) => e.status === EnrollmentStatus.IN_PROGRESS),
-      user?.branch || undefined
+      user?.branch || undefined,
+      minorDeToFeCourseCodes
     );
 
     // DE overflow → FE: excess DE credits beyond requirement count as Free Electives
@@ -333,7 +340,8 @@ export class CreditCalculator {
       grade?: string | null;
       semester?: number;
     }>,
-    branch?: string
+    branch?: string,
+    minorDeToFeCourseCodes?: Set<string>
   ): CreditBreakdown {
     const breakdown: CreditBreakdown = {
       core: 0,
@@ -386,6 +394,21 @@ export class CreditCalculator {
       breakdown.total -= ignored; // undo the total increment for credits that don't count
     };
 
+    const shouldOverrideDeToFe = (courseCode: string): boolean => {
+      if (!minorDeToFeCourseCodes || minorDeToFeCourseCodes.size === 0) return false;
+      const formatted = formatCourseCode(courseCode);
+      if (!formatted) return false;
+      return minorDeToFeCourseCodes.has(formatted);
+    };
+
+    const addDeCredits = (credits: number, courseCode: string) => {
+      if (shouldOverrideDeToFe(courseCode)) {
+        breakdown.freeElective += credits;
+      } else {
+        breakdown.de += credits;
+      }
+    };
+
     sortedEnrollments.forEach((enrollment) => {
       const credits = enrollment.course.credits;
       breakdown.total += credits;
@@ -431,7 +454,7 @@ export class CreditCalculator {
         if (basketFallbackCategory === "DC" || basketFallbackCategory === "IC" || basketFallbackCategory === "IC_BASKET") {
           breakdown.core += credits;
         } else if (basketFallbackCategory === "DE") {
-          breakdown.de += credits;
+          addDeCredits(credits, enrollment.course.code);
         } else {
           breakdown.freeElective += credits;
         }
@@ -466,7 +489,7 @@ export class CreditCalculator {
             addHssCredits(credits);
             return;
           case "DE":
-            breakdown.de += credits;
+            addDeCredits(credits, enrollment.course.code);
             return;
           case "FE":
             breakdown.freeElective += credits;
@@ -529,11 +552,11 @@ export class CreditCalculator {
 
       // Branch-specific course patterns
       if (branch === "CSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) {
-        breakdown.de += credits;
+        addDeCredits(credits, enrollment.course.code);
         return;
       }
       if (branch === "DSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) {
-        breakdown.de += credits;
+        addDeCredits(credits, enrollment.course.code);
         return;
       }
 
@@ -542,7 +565,7 @@ export class CreditCalculator {
       // the student's branch, this is a "parent branch" course → counts as DE.
       switch (enrollment.courseType) {
         case CourseType.DE:
-          breakdown.de += credits;
+          addDeCredits(credits, enrollment.course.code);
           break;
         case CourseType.PE:
           breakdown.pe += credits;
@@ -557,7 +580,7 @@ export class CreditCalculator {
           breakdown.istp += credits;
           break;
         default:
-          breakdown.de += credits; // CORE or unknown → parent branch course → DE
+          addDeCredits(credits, enrollment.course.code); // CORE or unknown → parent branch course → DE
       }
     });
 
