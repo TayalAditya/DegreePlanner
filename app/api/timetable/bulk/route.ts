@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { ClassType, DayOfWeek, EnrollmentStatus } from "@prisma/client";
 import { getCurrentTimetableContext } from "@/lib/timetable";
+import { isApproveableSlot } from "@/lib/timetableSlots";
 
 type BulkEntryInput = {
   dayOfWeek: DayOfWeek;
@@ -160,7 +161,10 @@ export async function POST(req: NextRequest) {
         }
 
         const isAdmin = session.user.role === "ADMIN";
-        const autoApprove = isAdmin || e.classType === ClassType.TA_DUTY || Boolean(e.slot);
+        const autoApprove =
+          isAdmin ||
+          e.classType === ClassType.TA_DUTY ||
+          isApproveableSlot(e.slot, e.dayOfWeek, e.startTime);
 
         const entry = await tx.timetableEntry.create({
           data: {
