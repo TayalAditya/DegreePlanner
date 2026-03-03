@@ -150,6 +150,7 @@ export async function POST(request: NextRequest) {
       select: {
         id: true,
         code: true,
+        name: true,
         credits: true,
         isBranchSpecific: true,
         isPassFailEligible: true,
