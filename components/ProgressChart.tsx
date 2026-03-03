@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { getAllDefaultCourses, type DefaultCourse } from "@/lib/defaultCurriculum";
 import { formatCourseCode } from "@/lib/utils";
+import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface ProgressChartProps {
   progress: any;
@@ -105,6 +106,12 @@ const HSS_CORE_CAP = 12;
 const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
 
 export function ProgressChart({ progress, isLoading, enrollments, userBranch }: ProgressChartProps) {
+  const minorPlanner = useMinorPlannerSelection();
+  const nonMgmtMinorCourseCodes = useMemo(() => {
+    if (!minorPlanner.enabled) return new Set<string>();
+    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
+  }, [minorPlanner.enabled, minorPlanner.codes]);
+
   const includeCurrentSemesterCredits = useSyncExternalStore(
     (callback) => {
       if (typeof window === "undefined") return () => {};
@@ -184,6 +191,13 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
   };
 
   const getCourseCategory = (enrollment: any, icBasketUsed?: any, branch?: string, hssUsed?: { credits: number }): keyof typeof categoryCredits => {
+    const applyMinorDeOverride = (category: keyof typeof categoryCredits): keyof typeof categoryCredits => {
+      if (category !== "DE") return category;
+      const courseCode = formatCourseCode(enrollment.course?.code ?? "");
+      if (!courseCode) return category;
+      return nonMgmtMinorCourseCodes.has(courseCode) ? "FE" : category;
+    };
+
     const code = enrollment.course?.code?.toUpperCase() || "";
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     const isICB1 = ICB1_CODES.has(normalizedCode);
@@ -244,7 +258,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
           : undefined);
 
       if (mapping && mapping.courseCategory in categoryCredits) {
-        return mapping.courseCategory as keyof typeof categoryCredits;
+        return applyMinorDeOverride(mapping.courseCategory as keyof typeof categoryCredits);
       }
 
       if (mapping?.courseCategory === "NA") {
@@ -263,15 +277,15 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     if (normalizedCode.includes("ISTP")) return "ISTP";
     
     // Check courseType AFTER branchMappings
-    if (enrollment.courseType === "DE") return "DE";
+    if (enrollment.courseType === "DE") return applyMinorDeOverride("DE");
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     
     // Branch-specific course patterns (only if no explicit courseType)
-    if (userBranch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
-    if (userBranch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
+    if (userBranch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE");
+    if (userBranch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE");
 
     // No branch mapping found → parent branch course → counts as DE
-    return "DE";
+    return applyMinorDeOverride("DE");
   };
 
   const completedCodes = useMemo(() => {
@@ -308,9 +322,10 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     
     // Track which IC basket slots have been used
     const icBasketUsed = { ic1: false, ic2: false };
+    const hssUsed = { credits: 0 };
 
     sortedEnrollments.forEach((e: any) => {
-      const category = getCourseCategory(e, icBasketUsed, userBranch);
+      const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
       categoryCredits[category] += e.course?.credits || 0;
     });
 
@@ -360,10 +375,106 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
         },
       ].filter((item) => item.total > 0);
 
-  const remainingBreakdown = useMemo(() => {
+  const breakdownFromEnrollments = (() => {
+    if (!enrollments || enrollments.length === 0) return null;
+
+    const requiredDE = Number(progress?.required?.de || 0);
+
+    const isPassingCompletion = (e: any) =>
+      e?.status === "COMPLETED" && (!e?.grade || e.grade !== "F");
+
+    const compareEnrollments = (a: any, b: any) =>
+      (a.semester || 0) - (b.semester || 0) ||
+      normalizeCourseCode(a.course?.code).localeCompare(normalizeCourseCode(b.course?.code));
+
+    const completedEnrollments = [...enrollments].filter(isPassingCompletion).sort(compareEnrollments);
+    const inProgressEnrollments = [...enrollments].filter((e: any) => e?.status === "IN_PROGRESS").sort(compareEnrollments);
+
+    const icBasketUsed = { ic1: false, ic2: false };
+    const hssUsed = { credits: 0 };
+
+    const completed = { core: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, total: 0 };
+    const inProgress = { core: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, total: 0 };
+
+    const add = (bucket: typeof completed, category: keyof typeof categoryCredits, credits: number) => {
+      const c = Number(credits || 0);
+      bucket.total += c;
+      switch (category) {
+        case "IC":
+        case "IC_BASKET":
+        case "DC":
+        case "HSS":
+        case "IKS":
+          bucket.core += c;
+          break;
+        case "DE":
+          bucket.de += c;
+          break;
+        case "FE":
+          bucket.freeElective += c;
+          break;
+        case "MTP":
+          bucket.mtp += c;
+          break;
+        case "ISTP":
+          bucket.istp += c;
+          break;
+        default:
+          break;
+      }
+    };
+
+    completedEnrollments.forEach((e: any) => {
+      const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
+      add(completed, category, e.course?.credits || 0);
+    });
+
+    inProgressEnrollments.forEach((e: any) => {
+      const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
+      add(inProgress, category, e.course?.credits || 0);
+    });
+
+    // DE overflow â†’ FE: excess DE beyond requirement counts as Free Electives
+    if (requiredDE > 0) {
+      const completedOverflow = Math.max(0, completed.de - requiredDE);
+      completed.de -= completedOverflow;
+      completed.freeElective += completedOverflow;
+
+      const deStillNeeded = Math.max(0, requiredDE - completed.de);
+      const inProgressOverflow = Math.max(0, inProgress.de - deStillNeeded);
+      inProgress.de -= inProgressOverflow;
+      inProgress.freeElective += inProgressOverflow;
+    }
+
+    return { completed, inProgress };
+  })();
+
+  const remainingBreakdown = (() => {
     const required = progress?.required || {};
-    const completed = progress?.completed || {};
-    const inProgress = progress?.inProgress || {};
+    const completedServer = progress?.completed || {};
+    const inProgressServer = progress?.inProgress || {};
+
+    const completed = breakdownFromEnrollments
+      ? {
+          ...completedServer,
+          core: breakdownFromEnrollments.completed.core,
+          de: breakdownFromEnrollments.completed.de,
+          freeElective: breakdownFromEnrollments.completed.freeElective,
+          mtp: breakdownFromEnrollments.completed.mtp,
+          istp: breakdownFromEnrollments.completed.istp,
+        }
+      : completedServer;
+
+    const inProgress = breakdownFromEnrollments
+      ? {
+          ...inProgressServer,
+          core: breakdownFromEnrollments.inProgress.core,
+          de: breakdownFromEnrollments.inProgress.de,
+          freeElective: breakdownFromEnrollments.inProgress.freeElective,
+          mtp: breakdownFromEnrollments.inProgress.mtp,
+          istp: breakdownFromEnrollments.inProgress.istp,
+        }
+      : inProgressServer;
 
     const rows: Array<{
       key: string;
@@ -392,7 +503,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       .filter((r) => r.required > 0);
 
     return rows;
-  }, [progress, includeCurrentSemesterCredits]);
+  })();
 
   const pendingCourseSections = useMemo(() => {
     if (isLoading) {

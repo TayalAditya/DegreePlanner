@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   X,
   GraduationCap,
@@ -18,6 +18,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS } from "@/lib/icBasketConfig";
 import { formatCourseCode } from "@/lib/utils";
+import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface Program {
   id: string;
@@ -213,6 +214,19 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
 
   const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
+  const minorPlanner = useMinorPlannerSelection();
+  const nonMgmtMinorCourseCodes = useMemo(() => {
+    if (!minorPlanner.enabled) return new Set<string>();
+    return buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
+  }, [minorPlanner.enabled, minorPlanner.codes]);
+
+  const applyMinorDeOverride = (category: CourseCategory, enrollment: Enrollment): CourseCategory => {
+    if (category !== "DE") return category;
+    const code = formatCourseCode(enrollment.course.code);
+    if (!code) return category;
+    return nonMgmtMinorCourseCodes.has(code) ? "FE" : category;
+  };
+
   const getCourseCategory = (
     enrollment: Enrollment,
     icBasketUsed?: ICBasketUsed,
@@ -291,12 +305,16 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       }
 
       if (mapping && mapping.courseCategory in categoryLabels) {
-        return mapping.courseCategory as CourseCategory;
+        return applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
       }
     }
 
-    if (branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
-    if (branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
+    if (branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) {
+      return applyMinorDeOverride("DE", enrollment);
+    }
+    if (branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) {
+      return applyMinorDeOverride("DE", enrollment);
+    }
 
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
@@ -310,7 +328,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
 
     switch (enrollment.courseType) {
       case "DE":
-        return "DE";
+        return applyMinorDeOverride("DE", enrollment);
       case "PE":
       case "FREE_ELECTIVE":
         return "FE";

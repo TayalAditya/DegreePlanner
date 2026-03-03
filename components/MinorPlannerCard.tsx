@@ -237,6 +237,10 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
     } catch {
       // ignore
     }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("degreePlanner:storage"));
+    }
   }, [enabled, selectedMinorCodes]);
 
   const courseStateByCode = useMemo(() => buildCourseStateByCode(enrollments), [enrollments]);
