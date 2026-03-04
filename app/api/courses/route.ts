@@ -24,6 +24,14 @@ function sanitizeCourseName(name: string): string {
   return trimmed.replace(DOT_LEADER_RE, "").trim();
 }
 
+const COURSE_OFFERING_OVERRIDES: Record<
+  string,
+  { offeredInFall?: boolean; offeredInSpring?: boolean; offeredInSummer?: boolean }
+> = {
+  // IK-593 is offered in both Fall and Spring (allow odd sem selection).
+  IK593: { offeredInFall: true, offeredInSpring: true },
+};
+
 // GET /api/courses - Get all courses
 export async function GET(req: NextRequest) {
   try {
@@ -139,6 +147,7 @@ export async function GET(req: NextRequest) {
 
     const sanitized = filteredCourses.map((c) => ({
       ...c,
+      ...(COURSE_OFFERING_OVERRIDES[courseIdentityKey(c.code)] ?? {}),
       name: sanitizeCourseName(c.name),
       description: sanitizeCourseDescription(c.description),
     }));
