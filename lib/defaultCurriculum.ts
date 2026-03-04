@@ -678,8 +678,10 @@ const applyBatchOverrides = (
 export function getDefaultCurriculum(branch: string, semester: number, batch?: number | null): DefaultCourse[] {
   const key = `${branch}_${semester}`;
   const courses = applyBatchOverrides(branch, semester, DEFAULT_CURRICULUM[key] || [], batch);
-  // Append optional HSS electives to semester 2 for every branch
-  if (semester === 2) return [...courses, ...hssOptionalSem2];
+  // Append optional HSS electives to semester 2 (Batch 2023 only)
+  if (semester === 2 && (batch == null || batch === 2023)) {
+    return [...courses, ...hssOptionalSem2];
+  }
   return courses;
 }
 
