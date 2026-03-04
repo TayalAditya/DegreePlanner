@@ -560,6 +560,7 @@ export class CreditCalculator {
       const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
       const isICB1 = ICB1_CODES.has(normalizedCode);
       const isICB2 = ICB2_CODES.has(normalizedCode);
+      const isIkCourse = /^IK\d/.test(normalizedCode);
 
       // IC Basket compulsion logic - check BEFORE branchMappings
       if ((isICB1 || isICB2) && branch) {
@@ -611,6 +612,12 @@ export class CreditCalculator {
       const mappedCategory = pickBranchMappingCategory(enrollment.course.branchMappings, branch);
 
       if (mappedCategory) {
+        // IK-xxx courses should not count towards IKS requirement.
+        if (mappedCategory === "IKS" && isIkCourse) {
+          breakdown.freeElective += credits;
+          return;
+        }
+
         switch (mappedCategory) {
           case "IC":
           case "IC_BASKET":
@@ -654,6 +661,10 @@ export class CreditCalculator {
       }
       if (normalizedCode === "IC181" || normalizedCode === "IC182") {
         breakdown.core += credits; // IKS
+        return;
+      }
+      if (isIkCourse) {
+        breakdown.freeElective += credits;
         return;
       }
       if (normalizedCode.startsWith("IC")) {

@@ -223,6 +223,7 @@ export default function ProgressPage() {
     const normalizedCode = normalizeCode(code);
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
+    const isIkCourse = /^IK\d/.test(normalizedCode);
     const credits = enrollment.course.credits || 0;
 
     // IC Basket compulsion logic - check BEFORE branchMappings
@@ -300,9 +301,15 @@ export default function ProgressPage() {
       }
 
       if (mapping && mapping.courseCategory in categoryLabels) {
+        // IK-xxx courses should not count towards IKS requirement.
+        if (mapping.courseCategory === "IKS" && isIkCourse) {
+          return "FE";
+        }
         return applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
       }
     }
+
+    if (isIkCourse) return "FE";
 
     if (user?.branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) {
       return applyMinorDeOverride("DE", enrollment);

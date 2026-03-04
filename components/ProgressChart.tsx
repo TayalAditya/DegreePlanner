@@ -229,6 +229,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
+    const isIkCourse = /^IK\d/.test(normalizedCode);
     const credits = enrollment.course?.credits || 0;
 
     // Hard overrides (batch-sensitive)
@@ -374,14 +375,21 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
       const common = mappings.find((m: any) => m.branch === "COMMON");
       const mapping = direct || ge || common;
 
-      if (mapping && mapping.courseCategory in categoryCredits) {
-        return applyMinorDeOverride(mapping.courseCategory as keyof typeof categoryCredits);
-      }
-
       if (mapping?.courseCategory === "NA") {
         return "FE";
       }
+
+      // IK-xxx courses should not count towards IKS requirement.
+      if (mapping?.courseCategory === "IKS" && isIkCourse) {
+        return "FE";
+      }
+
+      if (mapping && mapping.courseCategory in categoryCredits) {
+        return applyMinorDeOverride(mapping.courseCategory as keyof typeof categoryCredits);
+      }
     }
+
+    if (isIkCourse) return "FE";
 
     if (normalizedCode.startsWith("IC")) return "IC";
 

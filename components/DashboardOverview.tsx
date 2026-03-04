@@ -192,6 +192,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     const normalizedCode = normalizeCourseCode(code);
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
+    const isIkCourse = /^IK\d/.test(normalizedCode);
     const credits = enrollment.course?.credits || 0;
 
     // IC Basket compulsion logic - check BEFORE branchMappings
@@ -269,9 +270,15 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       }
 
       if (mapping && ["IC", "IC_BASKET", "DC", "DE", "FE", "HSS", "IKS", "MTP", "ISTP"].includes(mapping.courseCategory)) {
+        // IK-xxx courses should not count towards IKS requirement.
+        if (mapping.courseCategory === "IKS" && isIkCourse) {
+          return "FE";
+        }
         return applyMinorDeOverride(mapping.courseCategory as keyof typeof categoryLabels);
       }
     }
+
+    if (isIkCourse) return "FE";
 
     // Branch-specific course patterns
     if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return applyMinorDeOverride("DE");
