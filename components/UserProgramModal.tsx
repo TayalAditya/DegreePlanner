@@ -344,6 +344,9 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       return "HSS";
     }
 
+    // Never let branch mappings override IKS categorization for these
+    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
+
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && branch) {
       const mapping = pickRelevantBranchMapping(branch, enrollment.course.branchMappings);
 
@@ -363,7 +366,6 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       return applyMinorDeOverride("DE", enrollment);
     }
 
-    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("IK")) return "IKS";
 

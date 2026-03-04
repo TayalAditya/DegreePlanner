@@ -106,6 +106,10 @@ export default function ImportCoursesPage() {
       }
     });
 
+    // Hard override (DB mappings can be stale): IC181/IC182 always count as IKS
+    typeMap.set("IC181", "IKS");
+    typeMap.set("IC182", "IKS");
+
     // Fall back to the static default curriculum for anything missing.
     getAllDefaultCourses(effectiveBranch, 8, userBatch).forEach((c) => {
       const norm = normalizeCourseCode(c.code);

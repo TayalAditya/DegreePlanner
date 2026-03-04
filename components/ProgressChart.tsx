@@ -222,6 +222,9 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     const isICB2 = ICB2_CODES.has(normalizedCode);
     const credits = enrollment.course?.credits || 0;
 
+    // Never let branch mappings override IKS categorization for these
+    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
+
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && (branch || userBranch)) {
       const rawBranch = String(branch || userBranch || "").trim().toUpperCase();
@@ -335,7 +338,6 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       }
     }
 
-    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
 
