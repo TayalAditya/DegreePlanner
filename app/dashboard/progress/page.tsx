@@ -117,6 +117,7 @@ export default function ProgressPage() {
   const [programCredits, setProgramCredits] = useState<ProgramCredits>({});
   const [loading, setLoading] = useState(true);
   const [includeCurrentSemesterCredits, setIncludeCurrentSemesterCredits] = useState(false);
+  const [remainingOpen, setRemainingOpen] = useState(false);
   const [primaryProgramId, setPrimaryProgramId] = useState<string | null>(null);
   const [progressApiData, setProgressApiData] = useState<any>(null);
   const [deletingEnrollmentId, setDeletingEnrollmentId] = useState<string | null>(null);
@@ -650,6 +651,30 @@ export default function ProgressPage() {
       ? Math.round((totalCountedCredits / progress.totalCreditsRequired) * 100)
       : 0;
 
+  const remainingBreakdown = (Object.keys(categoryLabels) as CourseCategory[])
+    .map((category) => {
+      const required = progress.creditsRequiredByCategory[category] ?? 0;
+      const completed = progress.creditsByCategory[category] ?? 0;
+      const inProgress = progress.creditsInProgressByCategory[category] ?? 0;
+      const countedRaw = completed + (includeCurrentSemesterCredits ? inProgress : 0);
+      const counted = required > 0 ? Math.min(required, countedRaw) : countedRaw;
+      const remaining = required > 0 ? Math.max(0, required - counted) : 0;
+      const colors = categoryColors[category];
+      const label = categoryLabels[category];
+
+      return {
+        category,
+        label,
+        colors,
+        required,
+        completed,
+        inProgress,
+        counted,
+        remaining,
+      };
+    })
+    .filter((row) => row.required > 0);
+
   return (
     <div className="space-y-6">
       <div>
@@ -730,20 +755,79 @@ export default function ProgressPage() {
           </div>
         </div>
 
-        <div className="bg-surface rounded-lg border border-border p-3 sm:p-6">
+        <button
+          type="button"
+          onClick={() => setRemainingOpen((v) => !v)}
+          aria-expanded={remainingOpen}
+          className="bg-surface rounded-lg border border-border p-3 sm:p-6 text-left transition-colors hover:bg-surface-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+        >
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
             <div className="w-8 h-8 sm:w-12 sm:h-12 bg-warning/10 rounded-lg flex items-center justify-center flex-shrink-0">
               <Target className="w-4 h-4 sm:w-6 sm:h-6 text-warning" />
             </div>
-            <div>
+            <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm text-foreground-secondary">Remaining</p>
               <p className="text-xl sm:text-2xl font-bold text-foreground">
                 {remainingCredits}
               </p>
             </div>
+            <ChevronDown
+              className={`w-4 h-4 text-foreground-secondary transition-transform duration-200 ${remainingOpen ? "rotate-180" : ""}`}
+              aria-hidden="true"
+            />
+          </div>
+          <p className="text-xs text-foreground-secondary">
+            {remainingOpen ? "Hide breakdown" : "View breakdown"}
+          </p>
+        </button>
+      </div>
+
+      {remainingOpen && (
+        <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
+          <div className="flex items-start justify-between gap-3 mb-4">
+            <div className="min-w-0">
+              <h3 className="text-base sm:text-lg font-semibold text-foreground">
+                Remaining breakdown
+              </h3>
+              <p className="text-xs text-foreground-secondary mt-1">
+                Required vs counted credits by category
+                {includeCurrentSemesterCredits ? " (including current semester)" : ""}.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {remainingBreakdown.map((r) => (
+              <div key={r.category} className="rounded-lg border border-border bg-surface-hover/50 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className={`text-sm font-semibold ${r.colors.text}`}>
+                      {r.label}
+                    </p>
+                    <p className="text-xs text-foreground-secondary mt-0.5">
+                      {r.counted} / {r.required} credits
+                      {includeCurrentSemesterCredits && r.inProgress > 0 && (
+                        <span className="text-info"> (+{r.inProgress} in progress)</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-[11px] text-foreground-secondary">Remaining</p>
+                    <p className="text-sm font-semibold text-foreground">{r.remaining}</p>
+                  </div>
+                </div>
+                <div className="mt-3 h-2 bg-border rounded-full overflow-hidden">
+                  <div
+                    className={`h-full ${r.colors.bar} rounded-full transition-all duration-500 ease-out`}
+                    style={{ width: `${r.required > 0 ? Math.min(100, (r.counted / r.required) * 100) : 0}%` }}
+                    aria-hidden="true"
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Credits by Category */}
       <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
