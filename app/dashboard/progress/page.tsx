@@ -33,6 +33,8 @@ interface User {
   doingMTP?: boolean;
   doingMTP2?: boolean;
   doingISTP?: boolean;
+  batch?: number | null;
+  enrollmentId?: string | null;
 }
 
 interface ProgramCredits {
@@ -514,6 +516,15 @@ export default function ProgressPage() {
     const icBasketRequired = 6;
     const hssRequired = 12;
     const iksRequired = 3;
+
+    const inferredBatch = (() => {
+      if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;
+      const enrollmentId = String(user?.enrollmentId || "").toUpperCase();
+      const match = /B(\d{2})/i.exec(enrollmentId);
+      if (match) return 2000 + Number.parseInt(match[1], 10);
+      return null;
+    })();
+    const isBatch22 = inferredBatch === 2022;
     
     // Adjust MTP/ISTP based on user preferences (and ignore skips if already completed)
     const doingMTP1Pref = user?.doingMTP ?? true;
@@ -531,25 +542,35 @@ export default function ProgressPage() {
     let mtpRequired = 8;
     let istpRequired = 4;
     let deAdjustment = 0; // DE credit adjustment when skipping MTP/MTP-2
-    let feAdjustment = 0; // FE credit adjustment when skipping ISTP
+    let feAdjustment = 0; // FE credit adjustment when skipping ISTP (and batch-specific MTP rules)
 
     if (!istpCompleted && !doingISTPPref) {
       istpRequired = 0;
-      feAdjustment = 4;
+      if (isBatch22) {
+        deAdjustment += 3;
+        feAdjustment += 1;
+      } else {
+        feAdjustment += 4;
+      }
     }
 
     if (!mtp2Completed) {
       if (mtp1Completed) {
         if (!doingMTP2Pref) {
           mtpRequired = 3;
-          deAdjustment = 5;
+          deAdjustment += 5;
         }
       } else if (!effectiveDoingMTP1) {
         mtpRequired = 0;
-        deAdjustment = 8;
+        if (isBatch22) {
+          deAdjustment += 5;
+          feAdjustment += 3;
+        } else {
+          deAdjustment += 8;
+        }
       } else if (!doingMTP2Pref) {
         mtpRequired = 3;
-        deAdjustment = 5;
+        deAdjustment += 5;
       }
     }
 
