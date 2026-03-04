@@ -22,6 +22,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { formatCourseCode } from "@/lib/utils";
 import { OcrConfirmModal, ConfirmRow } from "@/components/OcrConfirmModal";
 import { parseTranscriptText, normalizeCourseCode, DetectedCourse } from "@/lib/parseTranscript";
+import { courseIdentityKey } from "@/lib/courseIdentity";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 
 interface SelectedCourse extends DefaultCourse {
@@ -31,6 +32,9 @@ interface SelectedCourse extends DefaultCourse {
 
 interface EnrollmentSummary {
   semester: number;
+  year?: number;
+  term?: string;
+  status?: string;
   course: {
     code: string;
   };
@@ -185,7 +189,12 @@ export default function ImportCoursesPage() {
       const res = await fetch("/api/enrollments");
       if (res.ok) {
         const data: EnrollmentSummary[] = await res.json();
-        const keys = new Set(data.map((e) => `${normalizeCourseCode(e.course.code)}|${e.semester}`));
+        const keys = new Set(
+          data
+            .filter((e) => e.status !== "DROPPED" && e.status !== "FAILED")
+            .map((e) => courseIdentityKey(e.course.code))
+            .filter(Boolean)
+        );
         setImportedCourseKeys(keys);
       }
     } catch (error) {
@@ -264,7 +273,8 @@ export default function ImportCoursesPage() {
           return false;
         }
         // Filter out already imported courses
-        return !importedCourseKeys.has(`${normalizedCode}|${course.semester}`);
+        const identity = courseIdentityKey(course.code);
+        return !identity || !importedCourseKeys.has(identity);
       })
       .map((course) => {
         const normalizedCode = normalize(course.code);
@@ -338,24 +348,41 @@ export default function ImportCoursesPage() {
   };
 
   const addCustomCourse = (course: CatalogCourse) => {
-    // Normalize to check for duplicates
-    const normalize = (code: string) => normalizeCourseCode(code);
-    const key = `${normalize(course.code)}|${customSemester}`;
-    if (importedCourseKeys.has(key)) return;
-    if (courses.some((c) => normalize(c.code) === normalize(course.code) && c.semester === customSemester)) return;
+    const identity = courseIdentityKey(course.code);
+    if (identity && importedCourseKeys.has(identity)) return;
 
-    const category = course.code.toUpperCase().startsWith("HS") ? "HSS" : "FE";
+    setCourses((prev) => {
+      const alreadyInSameSemester = prev.some(
+        (c) => courseIdentityKey(c.code) === identity && c.semester === customSemester
+      );
 
-    const newCourse: SelectedCourse = {
-      code: course.code,
-      name: course.name,
-      credits: course.credits,
-      category,
-      semester: customSemester,
-      selected: true,
-    };
+      // If it's already present for that semester, just select it (and deselect other semesters of the same course).
+      if (alreadyInSameSemester) {
+        return prev.map((c) => {
+          if (courseIdentityKey(c.code) !== identity) return c;
+          return { ...c, selected: c.semester === customSemester };
+        });
+      }
 
-    setCourses((prev) => [...prev, newCourse]);
+      const category = course.code.toUpperCase().startsWith("HS") ? "HSS" : "FE";
+
+      const newCourse: SelectedCourse = {
+        code: course.code,
+        name: course.name,
+        credits: course.credits,
+        category,
+        semester: customSemester,
+        selected: true,
+      };
+
+      // Enforce "one semester per course": adding selects it and deselects other semesters of the same course.
+      const next = prev.map((c) => {
+        if (courseIdentityKey(c.code) !== identity) return c;
+        return { ...c, selected: false };
+      });
+
+      return [...next, newCourse];
+    });
   };
 
   const handlePasteExtract = () => {
@@ -380,9 +407,14 @@ export default function ImportCoursesPage() {
   };
 
   const addOcrCourses = (confirmedRows: ConfirmRow[]) => {
-    const normalize = (code: string) => code.toUpperCase().replace(/[\s-]/g, "");
     let added = 0;
+    let updated = 0;
     const toAdd: SelectedCourse[] = [];
+    const toSelect = new Map<string, { grade?: string; category: DefaultCourse["category"] }>();
+    const touchedIdentities = new Set<string>();
+
+    const selectionKey = (identity: string, semester: number) =>
+      `${identity}|${semester}`;
 
     for (const row of confirmedRows) {
       if (!row.catalogCourseId || row.semester === "") continue;
@@ -391,10 +423,26 @@ export default function ImportCoursesPage() {
       const catalog = catalogCourses.find((c) => c.id === row.catalogCourseId);
       if (!catalog) continue;
 
-      const key = `${normalize(catalog.code)}|${semester}`;
-      // Skip if already in DB or already in the pending list
-      if (importedCourseKeys.has(key)) continue;
-      if (courses.some((c) => normalize(c.code) === normalize(catalog.code) && c.semester === semester)) continue;
+      const identity = courseIdentityKey(catalog.code);
+      if (!identity) continue;
+
+      // Skip if already in DB (enrolled in any semester)
+      if (importedCourseKeys.has(identity)) continue;
+
+      touchedIdentities.add(identity);
+
+      const existsInSameSemester = courses.some(
+        (c) => courseIdentityKey(c.code) === identity && c.semester === semester
+      );
+
+      if (existsInSameSemester) {
+        toSelect.set(selectionKey(identity, semester), {
+          grade: row.grade || undefined,
+          category: row.courseType as DefaultCourse["category"],
+        });
+        updated++;
+        continue;
+      }
 
       toAdd.push({
         code: catalog.code,
@@ -408,9 +456,30 @@ export default function ImportCoursesPage() {
       added++;
     }
 
-    if (added > 0) {
-      setCourses((prev) => [...prev, ...toAdd]);
-      showToast("success", `${added} course${added !== 1 ? "s" : ""} added to import list`);
+    if (added > 0 || updated > 0) {
+      setCourses((prev) => {
+        const base = prev.map((c) => {
+          const key = courseIdentityKey(c.code);
+          if (key && touchedIdentities.has(key)) return { ...c, selected: false };
+          return c;
+        });
+
+        const withSelected = base.map((c) => {
+          const key = courseIdentityKey(c.code);
+          if (!key) return c;
+          const patch = toSelect.get(selectionKey(key, c.semester));
+          if (!patch) return c;
+          return {
+            ...c,
+            selected: true,
+            grade: patch.grade ?? c.grade,
+            category: patch.category ?? c.category,
+          };
+        });
+
+        return [...withSelected, ...toAdd];
+      });
+      showToast("success", `OCR: ${added} added, ${updated} updated`);
     } else {
       showToast("warning", "No new courses to add — they may already be in the list.");
     }
@@ -430,6 +499,7 @@ export default function ImportCoursesPage() {
       const clicked = prev.find((c) => c.code === code && c.semester === semester);
       if (!clicked) return prev;
       const nowSelected = !clicked.selected;
+      const clickedIdentity = courseIdentityKey(clicked.code);
 
       return prev.map((c) => {
         // Toggle the clicked course itself
@@ -438,6 +508,11 @@ export default function ImportCoursesPage() {
         }
 
         if (nowSelected) {
+          // Enforce "one semester per course": selecting a course deselects the same course elsewhere.
+          if (clickedIdentity && courseIdentityKey(c.code) === clickedIdentity) {
+            return { ...c, selected: false };
+          }
+
           const isBatch24 = userBatch === 2024;
           const crossSemesterExclusive = isBatch24
             ? ["IC140"]
@@ -495,14 +570,37 @@ export default function ImportCoursesPage() {
   };
 
   const toggleAllInSemester = (sem: number) => {
-    const semCourses = courses.filter((c) => c.semester === sem);
-    const allSelected = semCourses.every((c) => c.selected);
-    
-    setCourses(
-      courses.map((c) =>
-        c.semester === sem ? { ...c, selected: !allSelected } : c
-      )
-    );
+    setCourses((prev) => {
+      const semCourses = prev.filter((c) => c.semester === sem);
+      const allSelected = semCourses.length > 0 && semCourses.every((c) => c.selected);
+
+      if (allSelected) {
+        return prev.map((c) => (c.semester === sem ? { ...c, selected: false } : c));
+      }
+
+      const selectedElsewhere = new Set(
+        prev
+          .filter((c) => c.selected && c.semester !== sem)
+          .map((c) => courseIdentityKey(c.code))
+          .filter(Boolean)
+      );
+
+      const selectedInSem = new Set<string>();
+
+      return prev.map((c) => {
+        if (c.semester !== sem) return c;
+        const key = courseIdentityKey(c.code);
+
+        // Don't select duplicates across semesters (or within this semester)
+        if (key) {
+          if (selectedElsewhere.has(key)) return { ...c, selected: false };
+          if (selectedInSem.has(key)) return { ...c, selected: false };
+          selectedInSem.add(key);
+        }
+
+        return { ...c, selected: true };
+      });
+    });
   };
 
   const updateGrade = (code: string, grade: string) => {
@@ -541,6 +639,29 @@ export default function ImportCoursesPage() {
     setErrorMessage(null);
     try {
       const selectedCourses = courses.filter((c) => c.selected);
+
+      const duplicatesByIdentity = new Map<string, SelectedCourse[]>();
+      for (const c of selectedCourses) {
+        const key = courseIdentityKey(c.code);
+        if (!key) continue;
+        const list = duplicatesByIdentity.get(key) ?? [];
+        list.push(c);
+        duplicatesByIdentity.set(key, list);
+      }
+
+      const duplicateEntries = Array.from(duplicatesByIdentity.entries()).filter(
+        ([, list]) => list.length > 1
+      );
+
+      if (duplicateEntries.length > 0) {
+        const details = duplicateEntries
+          .map(([key, list]) => `${formatCourseCode(key)} (Sem ${list.map((x) => x.semester).join(", ")})`)
+          .join("; ");
+        const msg = `Same course selected in multiple semesters: ${details}`;
+        setErrorMessage(msg);
+        showToast("error", msg);
+        return;
+      }
       
       const enrollments = selectedCourses.map((course) => ({
         courseCode: course.code,
@@ -633,7 +754,10 @@ export default function ImportCoursesPage() {
 
   // Pending keys = courses already in the current in-memory list (not yet imported)
   const pendingKeys = new Set(
-    courses.map((c) => `${normalizeCourseCode(c.code)}|${c.semester}`)
+    courses
+      .filter((c) => c.selected)
+      .map((c) => courseIdentityKey(c.code))
+      .filter(Boolean)
   );
 
   return (

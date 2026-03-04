@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { X, AlertCircle, CheckCircle2, Search } from "lucide-react";
 import { DetectedCourse, normalizeCourseCode } from "@/lib/parseTranscript";
+import { courseIdentityKey } from "@/lib/courseIdentity";
 import { formatCourseCode } from "@/lib/utils";
 
 interface CatalogCourse {
@@ -35,9 +36,9 @@ interface OcrConfirmModalProps {
   courseTypeMap: Map<string, string>;
   /** DC prefixes for the branch (e.g. {"CS"} for CSE) — for DE vs FE fallback */
   dcPrefixes: Set<string>;
-  /** Normalised keys already in DB: "MA222|3" */
+  /** Course identity keys already in DB (active): e.g. "MA222" */
   importedKeys: Set<string>;
-  /** Normalised keys already in the current pending course list */
+  /** Course identity keys already selected in the current pending import list */
   pendingKeys: Set<string>;
   /** Raw OCR text from Tesseract — shown in empty state for debugging */
   rawOcrText?: string;
@@ -113,9 +114,9 @@ export function OcrConfirmModal({
       .map((d, idx) => {
         const norm = normalizeCourseCode(d.rawCode);
         const catalogMatch = catalogByCode.get(norm);
-        const semKey = `${norm}|${d.detectedSemester}`;
+        const identity = courseIdentityKey(d.rawCode) || norm;
         const alreadyExists =
-          importedKeys.has(semKey) || pendingKeys.has(semKey);
+          !!identity && (importedKeys.has(identity) || pendingKeys.has(identity));
 
         return {
           id: `${norm}-${idx}`,

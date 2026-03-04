@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { courseIdentityKey } from "@/lib/courseIdentity";
+import { EnrollmentStatus } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -164,6 +166,34 @@ export async function POST(req: NextRequest) {
       }
     };
 
+    const existingActiveEnrollments = await prisma.courseEnrollment.findMany({
+      where: {
+        userId: user.id,
+        status: { notIn: [EnrollmentStatus.DROPPED, EnrollmentStatus.FAILED] },
+      },
+      select: {
+        id: true,
+        semester: true,
+        year: true,
+        term: true,
+        status: true,
+        course: {
+          select: {
+            code: true,
+          },
+        },
+      },
+    });
+
+    const existingByIdentity = new Map<string, (typeof existingActiveEnrollments)>();
+    for (const e of existingActiveEnrollments) {
+      const key = courseIdentityKey(e.course.code);
+      if (!key) continue;
+      const list = existingByIdentity.get(key) ?? [];
+      list.push(e);
+      existingByIdentity.set(key, list);
+    }
+
     for (const enrollment of enrollments) {
       try {
         const { courseCode, semester, grade } = enrollment as {
@@ -190,6 +220,24 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
+        const identityKey = courseIdentityKey(course.code);
+        if (!identityKey) {
+          errors.push({ courseCode, error: "Invalid course code." });
+          continue;
+        }
+
+        const existingSameIdentity = existingByIdentity.get(identityKey) ?? [];
+        const existingInSameSemester = existingSameIdentity.find((e) => e.semester === semester);
+
+        if (existingSameIdentity.length > 0 && !existingInSameSemester) {
+          const other = existingSameIdentity[0];
+          errors.push({
+            courseCode,
+            error: `Already enrolled in this course in Semester ${other.semester} (${other.term} ${other.year}). Remove it before importing again in a different semester.`,
+          });
+          continue;
+        }
+
         // Determine correct academic year from batch + semester number
         // Sem 1 = FALL batchYear, Sem 2 = SPRING batchYear+1, Sem 3 = FALL batchYear+1 ...
         const batchYear = inferBatchYear(user.batch, user.enrollmentId);
@@ -204,17 +252,9 @@ export async function POST(req: NextRequest) {
         const normalizedCode = normalizeCourseCode(course.code);
         await maybeEnableProjectPrefsForCourse(normalizedCode);
 
-        const existing = await prisma.courseEnrollment.findFirst({
-          where: {
-            userId: user.id,
-            courseId: course.id,
-            semester,
-          },
-        });
-
-        if (existing) {
+        if (existingInSameSemester) {
           const updated = await prisma.courseEnrollment.update({
-            where: { id: existing.id },
+            where: { id: existingInSameSemester.id },
             data: {
               courseType,
               grade,
@@ -279,6 +319,17 @@ export async function POST(req: NextRequest) {
             },
           });
           results.push({ courseCode, action: "created", id: created.id });
+
+          const nextList = existingByIdentity.get(identityKey) ?? [];
+          nextList.push({
+            id: created.id,
+            semester,
+            year: semYear,
+            term,
+            status,
+            course: { code: course.code },
+          });
+          existingByIdentity.set(identityKey, nextList);
         }
       } catch (error) {
         console.error(`Error processing ${(enrollment as any).courseCode}:`, error);
