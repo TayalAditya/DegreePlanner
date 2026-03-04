@@ -4,6 +4,11 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { creditCalculator } from "@/lib/creditCalculator";
 import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
+import { courseIdentityKey } from "@/lib/courseIdentity";
+
+const COURSE_NAME_OVERRIDES: Record<string, string> = {
+  IK593: "Kulhad Economy",
+};
 
 export async function GET(
   _request: NextRequest,
@@ -64,9 +69,22 @@ export async function GET(
       }
     }
 
+    const enrollmentsWithOverrides = enrollments.map((e) => {
+      const key = courseIdentityKey(e.course?.code);
+      const overrideName = COURSE_NAME_OVERRIDES[key];
+      if (!overrideName) return e;
+      return {
+        ...e,
+        course: {
+          ...e.course,
+          name: overrideName,
+        },
+      };
+    });
+
     return NextResponse.json({
       programs,
-      enrollments,
+      enrollments: enrollmentsWithOverrides,
       userSettings: { branch: user?.branch, batch: user?.batch, enrollmentId: user?.enrollmentId },
       progressData,
     });

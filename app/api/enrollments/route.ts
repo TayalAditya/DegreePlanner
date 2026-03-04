@@ -11,6 +11,10 @@ import {
   getInternshipCredits,
 } from "@/lib/course-validation";
 
+const COURSE_NAME_OVERRIDES: Record<string, string> = {
+  IK593: "Kulhad Economy",
+};
+
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
@@ -54,7 +58,21 @@ export async function GET(request: NextRequest) {
         { course: { code: "asc" } },
       ],
     });
-    return NextResponse.json(enrollments);
+
+    const enrollmentsWithOverrides = enrollments.map((e) => {
+      const key = courseIdentityKey(e.course?.code);
+      const overrideName = COURSE_NAME_OVERRIDES[key];
+      if (!overrideName) return e;
+      return {
+        ...e,
+        course: {
+          ...e.course,
+          name: overrideName,
+        },
+      };
+    });
+
+    return NextResponse.json(enrollmentsWithOverrides);
   } catch (error) {
     console.error("Error fetching enrollments:", error);
     return NextResponse.json(
