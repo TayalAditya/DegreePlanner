@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { PrismaClient, CourseCategoryType } from "@prisma/client";
 import * as XLSX from "xlsx";
+import { getAllDefaultCourses } from "../lib/defaultCurriculum";
 
 const pdfParse = require("pdf-parse") as (data: Buffer) => Promise<{ text: string }>;
 
@@ -40,6 +41,58 @@ const EXCLUDED_COURSE_KEYS = new Set<string>([
 
 const DSE_BRANCH_ALIASES = ["DSE", "DS"] as const;
 const BIOE_BRANCH_ALIASES = ["BE", "BIO"] as const;
+const CSE_BRANCH_ALIASES = ["CSE", "CS"] as const;
+const MSE_BRANCH_ALIASES = ["MSE", "MS"] as const;
+const VLSI_BRANCH_ALIASES = ["MEVLSI", "VLSI", "VL"] as const;
+const BSCS_BRANCH_ALIASES = ["BSCS", "BS", "CH"] as const;
+const GE_ROBO_BRANCH_ALIASES = ["GE", "GERAI", "GE-ROBO"] as const;
+const GE_COMM_BRANCH_ALIASES = ["GECE", "GE-COMM"] as const;
+const GE_MECH_BRANCH_ALIASES = ["GEMECH", "GE-MECH"] as const;
+
+const TARGET_BRANCHES = Array.from(
+  new Set<string>([
+    ...CSE_BRANCH_ALIASES,
+    ...DSE_BRANCH_ALIASES,
+    ...BIOE_BRANCH_ALIASES,
+    ...MSE_BRANCH_ALIASES,
+    ...VLSI_BRANCH_ALIASES,
+    ...BSCS_BRANCH_ALIASES,
+    ...GE_ROBO_BRANCH_ALIASES,
+    ...GE_COMM_BRANCH_ALIASES,
+    ...GE_MECH_BRANCH_ALIASES,
+    "EE",
+    "EP",
+    "ME",
+    "MNC",
+    "CE",
+  ])
+);
+
+function mapDefaultCurriculumCategory(category: string): CourseCategoryType | null {
+  const c = String(category || "").toUpperCase().trim();
+  switch (c) {
+    case "IC":
+      return CourseCategoryType.IC;
+    case "ICB":
+      return CourseCategoryType.IC_BASKET;
+    case "DC":
+      return CourseCategoryType.DC;
+    case "DE":
+      return CourseCategoryType.DE;
+    case "FE":
+      return CourseCategoryType.FE;
+    case "HSS":
+      return CourseCategoryType.HSS;
+    case "IKS":
+      return CourseCategoryType.IKS;
+    case "MTP":
+      return CourseCategoryType.MTP;
+    case "ISTP":
+      return CourseCategoryType.ISTP;
+    default:
+      return null;
+  }
+}
 
 function courseIdentityKey(code: string): string {
   const text = String(code ?? "")
@@ -215,7 +268,7 @@ async function main() {
     const courseIndex = buildCourseIndex(courses);
 
     const existingMappings = await prisma.courseBranchMapping.findMany({
-      where: { branch: { in: ["DSE", "DS", "BE", "BIO", "MNC", "ME", "MSE", "MS", "GE-ROBO", "GE-COMM"] } },
+      where: { branch: { in: TARGET_BRANCHES } },
       select: { courseId: true, branch: true, courseCategory: true },
     });
     const existingByKey = new Map<string, ExistingMapping>();
@@ -402,6 +455,54 @@ async function main() {
     for (const entry of icBasketOverrides) desired.push(entry);
 
     // MNC: default rule — treat all MA-XXX* courses as DE unless explicitly mapped as DC/DE elsewhere.
+    // Default curriculum: ensure core mappings exist (and override bad DE mappings) for all branches.
+    // This prevents regressions when doc parsers miss a DC list or accidentally pick up DC courses as DE.
+    const defaultCurriculumGroups: Array<{ curriculumBranch: string; branches: readonly string[] }> = [
+      { curriculumBranch: "CSE", branches: CSE_BRANCH_ALIASES },
+      { curriculumBranch: "DSE", branches: DSE_BRANCH_ALIASES },
+      { curriculumBranch: "EE", branches: ["EE"] },
+      { curriculumBranch: "EP", branches: ["EP"] },
+      { curriculumBranch: "ME", branches: ["ME"] },
+      { curriculumBranch: "MNC", branches: ["MNC"] },
+      { curriculumBranch: "MSE", branches: MSE_BRANCH_ALIASES },
+      { curriculumBranch: "MEVLSI", branches: VLSI_BRANCH_ALIASES },
+      { curriculumBranch: "CE", branches: ["CE"] },
+      { curriculumBranch: "BE", branches: BIOE_BRANCH_ALIASES },
+      { curriculumBranch: "BSCS", branches: BSCS_BRANCH_ALIASES },
+      { curriculumBranch: "GE", branches: GE_ROBO_BRANCH_ALIASES },
+      { curriculumBranch: "GECE", branches: GE_COMM_BRANCH_ALIASES },
+      { curriculumBranch: "GEMECH", branches: GE_MECH_BRANCH_ALIASES },
+    ];
+
+    const coreish = new Set<CourseCategoryType>([
+      CourseCategoryType.IC,
+      CourseCategoryType.IC_BASKET,
+      CourseCategoryType.DC,
+      CourseCategoryType.HSS,
+      CourseCategoryType.IKS,
+      CourseCategoryType.MTP,
+      CourseCategoryType.ISTP,
+    ]);
+
+    for (const group of defaultCurriculumGroups) {
+      const defaults = getAllDefaultCourses(group.curriculumBranch, 8, 2023);
+      for (const c of defaults) {
+        const mapped = mapDefaultCurriculumCategory(c.category);
+        if (!mapped || !coreish.has(mapped)) continue;
+        const key = courseIdentityKey(c.code);
+        if (!key || EXCLUDED_COURSE_KEYS.has(key)) continue;
+
+        for (const branch of group.branches) {
+          desired.push({
+            branch,
+            courseKey: key,
+            category: mapped,
+            source: `defaultCurriculum:${group.curriculumBranch}:sem${c.semester}`,
+          });
+        }
+      }
+    }
+
     for (const courseKey of courseIndex.keys()) {
       if (!/^MA\d{3}[A-Z]?$/.test(courseKey)) continue;
       desired.push({
