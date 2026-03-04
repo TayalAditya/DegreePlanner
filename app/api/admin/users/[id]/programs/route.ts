@@ -37,7 +37,7 @@ export async function GET(
       }),
       prisma.user.findUnique({
         where: { id: userId },
-        select: { branch: true },
+        select: { branch: true, batch: true, enrollmentId: true },
       }),
     ]);
 
@@ -58,7 +58,7 @@ export async function GET(
     return NextResponse.json({
       programs,
       enrollments,
-      userSettings: { branch: user?.branch },
+      userSettings: { branch: user?.branch, batch: user?.batch, enrollmentId: user?.enrollmentId },
       progressData,
     });
   } catch (error) {

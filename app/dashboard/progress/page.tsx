@@ -7,6 +7,7 @@ import { useToast } from "@/components/ToastProvider";
 import { formatCourseCode } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
+import { normalizeCourseCode } from "@/lib/parseTranscript";
 
 interface Enrollment {
   id: string;
@@ -127,7 +128,8 @@ export default function ProgressPage() {
   type CourseCategory = keyof typeof categoryLabels;
   type ICBasketUsed = { ic1: boolean; ic2: boolean };
 
-  const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  // Must ignore Samarth suffix noise like "_New" so course-type matching works consistently
+  const normalizeCode = (code: string) => normalizeCourseCode(code);
 
   const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {

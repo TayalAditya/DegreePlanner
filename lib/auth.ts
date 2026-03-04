@@ -6,6 +6,7 @@ import type { Adapter } from "next-auth/adapters";
 import { DOCS_ADMIN_ENROLLMENT_ID } from "@/lib/permissions";
 
 const SUPPORTED_BATCHES = new Set([2022, 2023, 2024]);
+const B22_ALLOWED_BRANCHES = new Set(["CSE"]);
 const B24_ALLOWED_BRANCHES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE"]);
 const ENROLLMENT_FALLBACK_ALLOWED_DOMAINS = new Set([
   "students.iitmandi.ac.in",
@@ -16,6 +17,13 @@ type Batch24Student = {
   enrollmentId: string;
   name: string;
   branch: string;
+  department: string | null;
+};
+
+type Batch22Student = {
+  enrollmentId: string;
+  name: string;
+  branch: "CSE";
   department: string | null;
 };
 
@@ -44,6 +52,82 @@ const inferBranchFromProgram = (program: string) => {
 };
 
 let batch24IndexPromise: Promise<Map<string, Batch24Student>> | null = null;
+let batch22IndexPromise: Promise<Map<string, Batch22Student>> | null = null;
+
+const parseNameFromBatch22Segment = (segment: string) => {
+  let s = String(segment || "").replace(/\s+/g, " ").trim();
+  if (!s) return null;
+
+  // Common PDF extraction artifacts (row numbers / punctuation)
+  s = s.replace(/^\d+\s+/, "");
+  s = s.replace(/^[|,.;:-]+\s*/, "");
+
+  // Remove common suffixes/headers if present
+  s = s.replace(/\b(B\.?\s*TECH|B\.?\s*S\.?)\b.*$/i, "").trim();
+  s = s.replace(/\b(COMPUTER\s+SCIENCE|CSE)\b.*$/i, "").trim();
+  s = s.replace(/\bIIT\b.*$/i, "").trim();
+  s = s.replace(/\bMANDI\b.*$/i, "").trim();
+
+  // Trim trailing punctuation/digits
+  s = s.replace(/[|,.;:-]+$/, "").trim();
+  s = s.replace(/\d+$/, "").trim();
+
+  // If any extra tokens leak in (page markers / footer text), keep the first clean chunk.
+  const cut = s.search(/[0-9(]/);
+  if (cut >= 0) s = s.slice(0, cut).trim();
+
+  if (s.length < 2) return null;
+  return s;
+};
+
+const loadBatch22Index = async () => {
+  if (!batch22IndexPromise) {
+    batch22IndexPromise = (async () => {
+      try {
+        const fs = await import("fs/promises");
+        const path = await import("path");
+        const pdfParse = (await import("pdf-parse")).default as any;
+
+        const pdfPath = path.join(process.cwd(), "docs", "batch22cse.pdf");
+        const buffer = await fs.readFile(pdfPath);
+        const data = await pdfParse(buffer);
+        const text = String(data?.text ?? "");
+
+        const matches: Array<{ enrollmentId: string; index: number }> = [];
+        const rollRe = /B22\d{3,}/gi;
+        let m: RegExpExecArray | null;
+        while ((m = rollRe.exec(text)) !== null) {
+          matches.push({ enrollmentId: m[0].toUpperCase(), index: m.index });
+        }
+
+        const index = new Map<string, Batch22Student>();
+        for (let i = 0; i < matches.length; i++) {
+          const { enrollmentId, index: start } = matches[i];
+          const end = i + 1 < matches.length ? matches[i + 1].index : text.length;
+          const raw = text.slice(start + enrollmentId.length, end);
+          const name = parseNameFromBatch22Segment(raw);
+          if (!name) continue;
+
+          if (!index.has(enrollmentId)) {
+            index.set(enrollmentId, {
+              enrollmentId,
+              name,
+              branch: "CSE",
+              department: departmentForBranch("CSE"),
+            });
+          }
+        }
+
+        return index;
+      } catch (err) {
+        console.warn("Failed to load batch22 index:", err);
+        return new Map<string, Batch22Student>();
+      }
+    })();
+  }
+
+  return batch22IndexPromise;
+};
 
 const loadBatch24Index = async () => {
   if (!batch24IndexPromise) {
@@ -130,6 +214,33 @@ const maybeAutoApproveBatch24 = async (email: string, enrollmentId: string) => {
   });
 };
 
+const maybeAutoApproveBatch22Cse = async (email: string, enrollmentId: string) => {
+  const index = await loadBatch22Index();
+  const student = index.get(enrollmentId.toUpperCase());
+  if (!student) return null;
+
+  return prisma.approvedUser.upsert({
+    where: { enrollmentId: student.enrollmentId },
+    update: {
+      email,
+      name: student.name,
+      department: student.department,
+      branch: student.branch,
+      batch: 2022,
+      allowedPrograms: [student.branch],
+    },
+    create: {
+      email,
+      enrollmentId: student.enrollmentId,
+      name: student.name,
+      department: student.department,
+      branch: student.branch,
+      batch: 2022,
+      allowedPrograms: [student.branch],
+    },
+  });
+};
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
   providers: [
@@ -208,6 +319,8 @@ export const authOptions: NextAuthOptions = {
             });
           } else if (/^B24\d+$/i.test(emailPrefix)) {
             approvedUser = await maybeAutoApproveBatch24(user.email, emailPrefix);
+          } else if (/^B22\d+$/i.test(emailPrefix)) {
+            approvedUser = await maybeAutoApproveBatch22Cse(user.email, emailPrefix);
           }
         }
       }
@@ -228,6 +341,12 @@ export const authOptions: NextAuthOptions = {
       const isB24 = approvedUser.batch === 2024 || /^B24\d+$/i.test(enrollmentId);
       if (isB24 && !B24_ALLOWED_BRANCHES.has(approvedUser.branch || "")) {
         console.log("❌ Login rejected: Branch", approvedUser.branch, "not allowed for B24");
+        return "/auth/error?error=branch_not_allowed";
+      }
+
+      const isB22 = approvedUser.batch === 2022 || /^B22\d+$/i.test(enrollmentId);
+      if (isB22 && !B22_ALLOWED_BRANCHES.has(approvedUser.branch || "")) {
+        console.log("Login rejected: Branch", approvedUser.branch, "not allowed for B22");
         return "/auth/error?error=branch_not_allowed";
       }
 

@@ -16,6 +16,7 @@ import { ProgressChart } from "@/components/ProgressChart";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
+import { normalizeCourseCode } from "@/lib/parseTranscript";
 import { formatCourseCode } from "@/lib/utils";
 
 interface Program {
@@ -63,7 +64,7 @@ interface Enrollment {
 interface UserProgramData {
   programs: UserProgram[];
   enrollments: Enrollment[];
-  userSettings: { branch?: string };
+  userSettings: { branch?: string; batch?: number | null; enrollmentId?: string | null };
   progressData: any | null;
 }
 
@@ -208,10 +209,20 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   const userSettings = data?.userSettings ?? {};
   const progressData = data?.progressData ?? null;
 
+  const inferredBatch = useMemo(() => {
+    const batch = userSettings.batch;
+    if (typeof batch === "number" && batch > 2000) return batch;
+    const enrollmentId = String(userSettings.enrollmentId || "").toUpperCase();
+    const match = /B(\d{2})/i.exec(enrollmentId);
+    if (match) return 2000 + Number.parseInt(match[1], 10);
+    return null;
+  }, [userSettings.batch, userSettings.enrollmentId]);
+
   type CourseCategory = keyof typeof categoryLabels;
   type ICBasketUsed = { ic1: boolean; ic2: boolean };
 
-  const normalizeCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  // Must ignore Samarth suffix noise like "_New" so course-type matching works consistently
+  const normalizeCode = (code: string) => normalizeCourseCode(code);
 
   const mappingBranchAliases = useMemo(() => {
     const raw = userSettings.branch;
@@ -612,6 +623,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                         isLoading={false}
                         enrollments={programEnrollments}
                         userBranch={userSettings.branch}
+                        userBatch={inferredBatch}
                       />
                     ) : (
                       <div className="bg-surface rounded-lg border border-border p-6 flex items-center justify-center">
