@@ -343,6 +343,27 @@ export default function ProgramsPage() {
     saveProjectPrefs(doingMTP1, doingMTP2, checked);
   };
 
+  const displayProgress = useMemo(() => {
+    if (!progressData) return null;
+
+    const counted = (key: string) => {
+      const required = Number(progressData?.required?.[key] ?? 0);
+      const completed = Number(progressData?.completed?.[key] ?? 0);
+      const inProgress = Number(progressData?.inProgress?.[key] ?? 0);
+      const value = completed + (includeCurrentSemesterCredits ? inProgress : 0);
+      return Math.min(required, value);
+    };
+
+    return {
+      core: counted("core"),
+      de: counted("de"),
+      freeElective: counted("freeElective"),
+      mtp: counted("mtp"),
+      istp: counted("istp"),
+      pe: counted("pe"),
+    };
+  }, [progressData, includeCurrentSemesterCredits]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -381,27 +402,6 @@ export default function ProgramsPage() {
     .sort((a, b) => a - b);
 
   const latestSemester = semesters.length > 0 ? semesters[semesters.length - 1] : null;
-
-  const displayProgress = useMemo(() => {
-    if (!progressData) return null;
-
-    const counted = (key: string) => {
-      const required = Number(progressData?.required?.[key] ?? 0);
-      const completed = Number(progressData?.completed?.[key] ?? 0);
-      const inProgress = Number(progressData?.inProgress?.[key] ?? 0);
-      const value = completed + (includeCurrentSemesterCredits ? inProgress : 0);
-      return Math.min(required, value);
-    };
-
-    return {
-      core: counted("core"),
-      de: counted("de"),
-      freeElective: counted("freeElective"),
-      mtp: counted("mtp"),
-      istp: counted("istp"),
-      pe: counted("pe"),
-    };
-  }, [progressData, includeCurrentSemesterCredits]);
 
   return (
     <div className="space-y-6">

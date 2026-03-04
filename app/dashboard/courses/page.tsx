@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { StatCard } from "@/components/StatCard";
 import { formatCourseCode } from "@/lib/utils";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
@@ -60,15 +61,15 @@ interface User {
 
 // Color scheme for each category
 const categoryColors = {
-  IC: { bg: "bg-blue-500/10", text: "text-blue-600 dark:text-blue-400", bar: "bg-blue-500" },
-  IC_BASKET: { bg: "bg-cyan-500/10", text: "text-cyan-600 dark:text-cyan-400", bar: "bg-cyan-500" },
-  DC: { bg: "bg-purple-500/10", text: "text-purple-600 dark:text-purple-400", bar: "bg-purple-500" },
-  DE: { bg: "bg-pink-500/10", text: "text-pink-600 dark:text-pink-400", bar: "bg-pink-500" },
-  FE: { bg: "bg-green-500/10", text: "text-green-600 dark:text-green-400", bar: "bg-green-500" },
-  HSS: { bg: "bg-orange-500/10", text: "text-orange-600 dark:text-orange-400", bar: "bg-orange-500" },
-  IKS: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", bar: "bg-amber-500" },
-  MTP: { bg: "bg-red-500/10", text: "text-red-600 dark:text-red-400", bar: "bg-red-500" },
-  ISTP: { bg: "bg-teal-500/10", text: "text-teal-600 dark:text-teal-400", bar: "bg-teal-500" },
+  IC: { bg: "bg-info/10", text: "text-info", bar: "bg-info", border: "border-info/20" },
+  IC_BASKET: { bg: "bg-accent/10", text: "text-accent", bar: "bg-accent", border: "border-accent/20" },
+  DC: { bg: "bg-primary/10", text: "text-primary", bar: "bg-primary", border: "border-primary/20" },
+  DE: { bg: "bg-secondary/10", text: "text-secondary", bar: "bg-secondary", border: "border-secondary/20" },
+  FE: { bg: "bg-success/10", text: "text-success", bar: "bg-success", border: "border-success/20" },
+  HSS: { bg: "bg-warning/10", text: "text-warning", bar: "bg-warning", border: "border-warning/20" },
+  IKS: { bg: "bg-warning/10", text: "text-warning", bar: "bg-warning", border: "border-warning/20" },
+  MTP: { bg: "bg-error/10", text: "text-error", bar: "bg-error", border: "border-error/20" },
+  ISTP: { bg: "bg-accent/10", text: "text-accent", bar: "bg-accent", border: "border-accent/20" },
 };
 
 const DEPARTMENT_PAGE_SIZE = 20;
@@ -570,11 +571,16 @@ export default function CoursesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-700 rounded-2xl p-6 sm:p-8 shadow-2xl">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
-        <div className="relative z-10">
-          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">Courses</h1>
-          <p className="text-white/90 text-sm sm:text-lg">
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
+        <div
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-primary/12 via-transparent to-accent/12"
+          aria-hidden="true"
+        />
+        <div className="relative p-6 sm:p-8">
+          <h1 className="text-2xl sm:text-4xl font-semibold tracking-tight text-foreground">
+            Courses
+          </h1>
+          <p className="mt-2 text-sm sm:text-base text-foreground-secondary">
             Manage your enrollments and explore the course catalog
           </p>
         </div>
@@ -582,41 +588,41 @@ export default function CoursesPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <Award className="w-6 h-6 opacity-80" />
-            <span className="text-sm font-medium opacity-90">Completed</span>
-          </div>
-          <p className="text-3xl font-bold">{totalCreditsCompleted}</p>
-          <p className="text-sm opacity-80">Credits Earned</p>
-        </motion.div>
+        <StatCard
+          icon={<Award className="w-full h-full" />}
+          label="Completed"
+          value={totalCreditsCompleted}
+          sublabel="Credits earned"
+          valueColor="text-success"
+          iconBg="bg-success/10"
+          iconColor="text-success"
+          accentBgColor="bg-success/10"
+          delay={0}
+        />
 
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-xl p-6 text-white shadow-lg"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <Clock className="w-6 h-6 opacity-80" />
-            <span className="text-sm font-medium opacity-90">In Progress</span>
-          </div>
-          <p className="text-3xl font-bold">{totalCreditsInProgress}</p>
-          <p className="text-sm opacity-80">Credits Current</p>
-        </motion.div>
+        <StatCard
+          icon={<Clock className="w-full h-full" />}
+          label="In Progress"
+          value={totalCreditsInProgress}
+          sublabel="Credits current"
+          valueColor="text-info"
+          iconBg="bg-info/10"
+          iconColor="text-info"
+          accentBgColor="bg-info/10"
+          delay={0.05}
+        />
 
-        <motion.div
-          whileHover={{ scale: 1.02 }}
-          className="bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl p-6 text-white shadow-lg"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <BookOpen className="w-6 h-6 opacity-80" />
-            <span className="text-sm font-medium opacity-90">Total</span>
-          </div>
-          <p className="text-3xl font-bold">{enrollments.length}</p>
-          <p className="text-sm opacity-80">All Enrollments</p>
-        </motion.div>
+        <StatCard
+          icon={<BookOpen className="w-full h-full" />}
+          label="Total"
+          value={enrollments.length}
+          sublabel="All enrollments"
+          valueColor="text-primary"
+          iconBg="bg-primary/10"
+          iconColor="text-primary"
+          accentBgColor="bg-primary/10"
+          delay={0.1}
+        />
       </div>
 
       {/* Category Breakdown */}
@@ -640,7 +646,7 @@ export default function CoursesPage() {
                   ISTP: "ISTP",
                 };
                 return (
-                  <div key={category} className={`${colors.bg} rounded-lg p-4 border border-opacity-20`}>
+                  <div key={category} className={`${colors.bg} ${colors.border} rounded-lg p-4 border`}>
                     <div className="flex items-center gap-2 mb-2">
                       <div className={`w-2 h-2 rounded-full ${colors.bar}`}></div>
                       <span className={`text-xs font-semibold ${colors.text}`}>
@@ -682,9 +688,9 @@ export default function CoursesPage() {
         </div>
         <button
           onClick={() => setTab("catalog")}
-          className="px-8 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all flex items-center justify-center gap-2"
+          className="dp-btn dp-btn-primary sm:self-start"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           Add Courses
         </button>
       </div>
@@ -710,7 +716,7 @@ export default function CoursesPage() {
                 </p>
                 <button
                   onClick={() => setTab("catalog")}
-                  className="px-6 py-3 bg-primary text-white rounded-lg hover:shadow-lg transition-all inline-flex items-center gap-2"
+                  className="dp-btn dp-btn-primary"
                 >
                   <Plus className="w-5 h-5" />
                   Browse Courses
@@ -762,8 +768,8 @@ export default function CoursesPage() {
                                     <span
                                       className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${
                                         enrollment.status === "COMPLETED"
-                                          ? "bg-green-500/10 text-green-600 border border-green-500/30"
-                                          : "bg-blue-500/10 text-blue-600 border border-blue-500/30"
+                                          ? "bg-success/10 text-success border border-success/30"
+                                          : "bg-info/10 text-info border border-info/30"
                                       }`}
                                     >
                                       {enrollment.status}
@@ -799,7 +805,7 @@ export default function CoursesPage() {
                                       e.stopPropagation();
                                       deleteEnrollment(enrollment.id, enrollment.course.name);
                                     }}
-                                    className="p-2 bg-red-500/10 text-red-600 rounded-lg hover:bg-red-500/20 transition-colors"
+                                    className="p-2 bg-error/10 text-error rounded-lg hover:bg-error/20 transition-colors"
                                     title="Remove course"
                                   >
                                     <Trash2 className="w-4 h-4" />
@@ -911,7 +917,7 @@ export default function CoursesPage() {
                           L{course.level}
                         </span>
                             {enrolledCourseIds.has(course.id) ? (
-                              <span className="px-3 py-1 bg-green-500/10 text-green-600 rounded font-medium border border-green-500/30 ml-auto">
+                              <span className="px-3 py-1 bg-success/10 text-success rounded font-medium border border-success/30 ml-auto">
                                 ✓ Enrolled
                               </span>
                             ) : (
@@ -929,17 +935,17 @@ export default function CoursesPage() {
                             )}
                             <div className="flex gap-2">
                               {course.offeredInFall && (
-                                <span className="px-2 py-1 bg-orange-500/10 text-orange-600 rounded text-xs font-semibold">
+                                <span className="px-2 py-1 bg-warning/10 text-warning rounded text-xs font-semibold">
                                   Fall
                                 </span>
                               )}
                               {course.offeredInSpring && (
-                                <span className="px-2 py-1 bg-green-500/10 text-green-600 rounded text-xs font-semibold">
+                                <span className="px-2 py-1 bg-success/10 text-success rounded text-xs font-semibold">
                                   Spring
                                 </span>
                               )}
                               {course.offeredInSummer && (
-                                <span className="px-2 py-1 bg-blue-500/10 text-blue-600 rounded text-xs font-semibold">
+                                <span className="px-2 py-1 bg-info/10 text-info rounded text-xs font-semibold">
                                   Summer
                                 </span>
                               )}
@@ -1048,7 +1054,7 @@ export default function CoursesPage() {
                                             L{course.level}
                                           </span>
                                           {enrolledCourseIds.has(course.id) ? (
-                                            <span className="px-3 py-1 bg-green-500/10 text-green-600 rounded font-medium border border-green-500/30 ml-auto">
+                                            <span className="px-3 py-1 bg-success/10 text-success rounded font-medium border border-success/30 ml-auto">
                                               ✓ Enrolled
                                             </span>
                                           ) : (
@@ -1066,17 +1072,17 @@ export default function CoursesPage() {
                                           )}
                                           <div className="flex gap-2">
                                             {course.offeredInFall && (
-                                              <span className="px-2 py-1 bg-orange-500/10 text-orange-600 rounded text-xs font-semibold">
+                                              <span className="px-2 py-1 bg-warning/10 text-warning rounded text-xs font-semibold">
                                                 Fall
                                               </span>
                                             )}
                                             {course.offeredInSpring && (
-                                              <span className="px-2 py-1 bg-green-500/10 text-green-600 rounded text-xs font-semibold">
+                                              <span className="px-2 py-1 bg-success/10 text-success rounded text-xs font-semibold">
                                                 Spring
                                               </span>
                                             )}
                                             {course.offeredInSummer && (
-                                              <span className="px-2 py-1 bg-blue-500/10 text-blue-600 rounded text-xs font-semibold">
+                                              <span className="px-2 py-1 bg-info/10 text-info rounded text-xs font-semibold">
                                                 Summer
                                               </span>
                                             )}
@@ -1176,17 +1182,17 @@ export default function CoursesPage() {
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {selectedCourse.offeredInFall && (
-                    <span className="px-4 py-2 bg-orange-500/10 text-orange-600 rounded-lg font-medium border border-orange-500/20">
+                    <span className="px-4 py-2 bg-warning/10 text-warning rounded-lg font-medium border border-warning/20">
                       Fall
                     </span>
                   )}
                   {selectedCourse.offeredInSpring && (
-                    <span className="px-4 py-2 bg-green-500/10 text-green-600 rounded-lg font-medium border border-green-500/20">
+                    <span className="px-4 py-2 bg-success/10 text-success rounded-lg font-medium border border-success/20">
                       Spring
                     </span>
                   )}
                   {selectedCourse.offeredInSummer && (
-                    <span className="px-4 py-2 bg-blue-500/10 text-blue-600 rounded-lg font-medium border border-blue-500/20">
+                    <span className="px-4 py-2 bg-info/10 text-info rounded-lg font-medium border border-info/20">
                       Summer
                     </span>
                   )}
@@ -1279,7 +1285,7 @@ export default function CoursesPage() {
                 {/* Semester Input */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Semester Number <span className="text-red-500">*</span>
+                    Semester Number <span className="text-error">*</span>
                   </label>
                   {(() => {
                     const { offeredInFall, offeredInSpring } = addingCourse;
@@ -1326,7 +1332,7 @@ export default function CoursesPage() {
                               </option>
                             ))}
                           </select>
-                          <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                          <p className="text-xs text-warning mt-1">
                             ⚠️ Fall semesters only — up to Sem {currentSem}
                           </p>
                         </>
@@ -1349,7 +1355,7 @@ export default function CoursesPage() {
                               </option>
                             ))}
                           </select>
-                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          <p className="text-xs text-info mt-1">
                             ℹ️ Spring semesters only — up to Sem {currentSem}
                           </p>
                         </>
@@ -1426,9 +1432,9 @@ export default function CoursesPage() {
                       <>
                         {addingCourse.code.startsWith("HS-") ? (
                           hssCreditsCompleted < 12 ? (
-                            <span className="text-green-600">→ Will be marked as HSS/Core ({12 - hssCreditsCompleted} credits remaining)</span>
+                            <span className="text-success">→ Will be marked as HSS/Core ({12 - hssCreditsCompleted} credits remaining)</span>
                           ) : (
-                            <span className="text-blue-600">→ Will be marked as Free Elective (HSS limit reached)</span>
+                            <span className="text-info">→ Will be marked as Free Elective (HSS limit reached)</span>
                           )
                         ) : (
                           <span>→ Will auto-detect based on course code</span>

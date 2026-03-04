@@ -122,9 +122,14 @@ export function NotificationBell() {
 
   useLayoutEffect(() => {
     if (!open) return;
-    repositionPanel();
+    const frame = window.requestAnimationFrame(() => {
+      repositionPanel();
+    });
     window.addEventListener("resize", repositionPanel);
-    return () => window.removeEventListener("resize", repositionPanel);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", repositionPanel);
+    };
   }, [open, tab, notifications.length, announcements.length, repositionPanel]);
 
   function openPanel() {
