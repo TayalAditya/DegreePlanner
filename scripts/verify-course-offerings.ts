@@ -21,6 +21,11 @@ const XLSX_PATH = path.join(__dirname, "../docs/Course List semester wise.xlsx")
 
 type CourseRow = Record<string, string | number | undefined>;
 
+const OFFERING_OVERRIDES: Record<string, { fall: boolean; spring: boolean }> = {
+  // HS-202 is offered in both semesters (xlsx is incomplete).
+  "HS-202": { fall: true, spring: true },
+};
+
 async function main() {
   // ── 1. Parse xlsx ─────────────────────────────────────────────────────────
   const workbook = XLSX.readFile(XLSX_PATH);
@@ -75,7 +80,7 @@ async function main() {
   for (const [code, sems] of codeToSems) {
     const hasOdd  = [...sems].some((s) => s % 2 === 1);
     const hasEven = [...sems].some((s) => s % 2 === 0);
-    expected.set(code, { fall: hasOdd, spring: hasEven });
+    expected.set(code, OFFERING_OVERRIDES[code] ?? { fall: hasOdd, spring: hasEven });
   }
 
   // ── 3. Fetch actual flags from DB ──────────────────────────────────────────
