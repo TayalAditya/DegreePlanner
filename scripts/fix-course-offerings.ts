@@ -13,6 +13,11 @@ const XLSX_PATH = path.join(__dirname, "../docs/Course List semester wise.xlsx")
 
 type CourseRow = Record<string, string | number | undefined>;
 
+const OFFERING_OVERRIDES: Record<string, { fall: boolean; spring: boolean }> = {
+  // HS-202 is offered in both semesters (xlsx is incomplete).
+  "HS-202": { fall: true, spring: true },
+};
+
 async function main() {
   const workbook = XLSX.readFile(XLSX_PATH);
 
@@ -57,8 +62,9 @@ async function main() {
     const db = dbMap.get(code);
     if (!db) continue;
 
-    const expFall   = sems.has(1);
-    const expSpring = sems.has(2);
+    const override = OFFERING_OVERRIDES[code];
+    const expFall = override ? override.fall : sems.has(1);
+    const expSpring = override ? override.spring : sems.has(2);
 
     if (db.offeredInFall === expFall && db.offeredInSpring === expSpring) {
       skipped++;
@@ -69,7 +75,8 @@ async function main() {
       where: { id: db.id },
       data: { offeredInFall: expFall, offeredInSpring: expSpring },
     });
-    console.log(`  ✅ ${code.padEnd(14)} Fall=${expFall} Spring=${expSpring}`);
+    const suffix = override ? " (override)" : "";
+    console.log(`  ✅ ${code.padEnd(14)} Fall=${expFall} Spring=${expSpring}${suffix}`);
     fixed++;
   }
 
