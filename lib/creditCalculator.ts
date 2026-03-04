@@ -697,6 +697,10 @@ export class CreditCalculator {
       // CourseType.CORE means DC for some branch — but since no branchMapping matched
       // the student's branch, this is a "parent branch" course → counts as DE.
       switch (enrollment.courseType) {
+        // Treat CORE as core-category credits for the student's program.
+        case CourseType.CORE:
+          breakdown.core += credits;
+          break;
         case CourseType.DE:
           addDeCredits(credits, enrollment.course.code);
           break;

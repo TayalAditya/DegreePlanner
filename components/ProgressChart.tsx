@@ -394,6 +394,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     // Check courseType AFTER branchMappings
     if (enrollment.courseType === "DE") return applyMinorDeOverride("DE");
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
+    if (enrollment.courseType === "CORE") return "DC";
     
     // Branch-specific course patterns (only if no explicit courseType)
     if (userBranch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE");
