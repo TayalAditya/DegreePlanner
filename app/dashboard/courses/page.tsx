@@ -338,6 +338,12 @@ export default function CoursesPage() {
 
   // Calculate credits by category
   const getCourseCategory = (enrollment: Enrollment): string => {
+    const code = enrollment.course.code.toUpperCase();
+    const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+
+    // Never let branch mappings override IKS categorization for these
+    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
+
     // First try to get from branchMappings if available
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
       const mappingBranch = user.branch === "CSE" ? "CS" : user.branch;
@@ -356,13 +362,10 @@ export default function CoursesPage() {
     }
 
     // Fallback to code analysis
-    const code = enrollment.course.code.toUpperCase();
-    const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
 
     if (isICB1 || isICB2) return "IC_BASKET";
-    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
     
     // Branch-specific course patterns
     if (user?.branch === "CSE" && code.startsWith("DS")) return applyMinorDeOverride("DE", enrollment);

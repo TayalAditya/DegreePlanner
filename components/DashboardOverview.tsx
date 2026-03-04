@@ -246,6 +246,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       return "HSS";
     }
 
+    // Never let branch mappings override IKS categorization for these
+    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
+
     if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
       const mapping = pickRelevantBranchMapping(userSettings.branch, enrollment.course.branchMappings);
 
@@ -262,7 +265,6 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return applyMinorDeOverride("DE");
     if (userSettings?.branch === "DSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) return applyMinorDeOverride("DE");
 
-    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("IK")) return "IKS";
 
