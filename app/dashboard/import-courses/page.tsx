@@ -161,16 +161,16 @@ export default function ImportCoursesPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.branch) setBranch(data.branch);
-        setUserBatch(typeof data.batch === "number" ? data.batch : null);
+        const inferredBatch = inferBatchYear(data.batch, data.enrollmentId);
+        setUserBatch(typeof data.batch === "number" ? data.batch : inferredBatch);
         setBatch24Icb1Course(
           typeof data.batch24Icb1Course === "string"
             ? normalizeCourseCode(data.batch24Icb1Course)
             : null
         );
 
-        const batchYear = inferBatchYear(data.batch, data.enrollmentId);
-        if (batchYear) {
-          setCurrentSemester(inferCurrentSemester(batchYear));
+        if (inferredBatch) {
+          setCurrentSemester(inferCurrentSemester(inferredBatch));
         }
 
         const mtp1 = data.doingMTP ?? true;
