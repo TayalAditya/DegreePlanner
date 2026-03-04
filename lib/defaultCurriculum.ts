@@ -642,18 +642,51 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   BSCS_7: bscsSem7, BSCS_8: bscsSem8,
 };
 
-export function getDefaultCurriculum(branch: string, semester: number): DefaultCourse[] {
+const B24_BRANCH_OVERRIDES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE"]);
+const B24_IKS_IC182_SEM2: DefaultCourse = {
+  code: "IC182",
+  name: "Indian Knowledge Systems (Alt)",
+  credits: 3,
+  category: "IKS",
+  semester: 2,
+};
+
+const normalizeCurriculumCode = (code: string) =>
+  (code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+const applyBatchOverrides = (
+  branch: string,
+  semester: number,
+  courses: DefaultCourse[],
+  batch?: number | null
+) => {
+  if (batch !== 2024 || !B24_BRANCH_OVERRIDES.has(branch)) return courses;
+  if (semester !== 1 && semester !== 2) return courses;
+
+  if (semester === 1) {
+    // Batch-24: IC102P is compulsory in Sem-2 (not shown in Sem-1).
+    return courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC102P");
+  }
+
+  // semester === 2:
+  // Batch-24: Sem-1 choice IC140/IC181, Sem-2 choice IC140/IC182. So IC181 not shown in Sem-2; add IC182.
+  const filtered = courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC181");
+  const hasIc182 = filtered.some((c) => normalizeCurriculumCode(c.code) === "IC182");
+  return hasIc182 ? filtered : [...filtered, B24_IKS_IC182_SEM2];
+};
+
+export function getDefaultCurriculum(branch: string, semester: number, batch?: number | null): DefaultCourse[] {
   const key = `${branch}_${semester}`;
-  const courses = DEFAULT_CURRICULUM[key] || [];
+  const courses = applyBatchOverrides(branch, semester, DEFAULT_CURRICULUM[key] || [], batch);
   // Append optional HSS electives to semester 2 for every branch
   if (semester === 2) return [...courses, ...hssOptionalSem2];
   return courses;
 }
 
-export function getAllDefaultCourses(branch: string, upToSemester: number = 8): DefaultCourse[] {
+export function getAllDefaultCourses(branch: string, upToSemester: number = 8, batch?: number | null): DefaultCourse[] {
   const courses: DefaultCourse[] = [];
   for (let sem = 1; sem <= upToSemester; sem++) {
-    courses.push(...getDefaultCurriculum(branch, sem));
+    courses.push(...getDefaultCurriculum(branch, sem, batch));
   }
   return courses;
 }

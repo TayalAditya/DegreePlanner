@@ -16,7 +16,7 @@ import {
   ExternalLink,
   Sparkles,
 } from "lucide-react";
-import { getAllDefaultCourses, getDefaultCurriculum, DefaultCourse } from "@/lib/defaultCurriculum";
+import { getAllDefaultCourses, DefaultCourse } from "@/lib/defaultCurriculum";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { formatCourseCode } from "@/lib/utils";
@@ -65,6 +65,8 @@ export default function ImportCoursesPage() {
   const { confirm } = useConfirmDialog();
   const [branch, setBranch] = useState("CSE");
   const [geSubBranch, setGeSubBranch] = useState("GERAI");
+  const [userBatch, setUserBatch] = useState<number | null>(null);
+  const [batch24Icb1Course, setBatch24Icb1Course] = useState<string | null>(null);
   const [currentSemester, setCurrentSemester] = useState(6);
   const [doingMTP, setDoingMTP] = useState(true);
   const [doingMTP2, setDoingMTP2] = useState(true);
@@ -105,7 +107,7 @@ export default function ImportCoursesPage() {
     });
 
     // Fall back to the static default curriculum for anything missing.
-    getAllDefaultCourses(effectiveBranch).forEach((c) => {
+    getAllDefaultCourses(effectiveBranch, 8, userBatch).forEach((c) => {
       const norm = normalizeCourseCode(c.code);
       if (!typeMap.has(norm)) typeMap.set(norm, c.category);
       if (c.category === "DC") {
@@ -114,7 +116,7 @@ export default function ImportCoursesPage() {
       }
     });
     return { courseTypeMap: typeMap, dcPrefixes: prefixes };
-  }, [effectiveBranch, dbCourseTypeMap]);
+  }, [effectiveBranch, dbCourseTypeMap, userBatch]);
 
   useEffect(() => {
     loadUserSettings();
@@ -147,7 +149,7 @@ export default function ImportCoursesPage() {
 
   useEffect(() => {
     loadDefaultCourses();
-  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingMTP2]);
+  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingMTP2, userBatch, batch24Icb1Course]);
 
   useEffect(() => {
     setCustomSemester(currentSemester);
@@ -159,6 +161,12 @@ export default function ImportCoursesPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.branch) setBranch(data.branch);
+        setUserBatch(typeof data.batch === "number" ? data.batch : null);
+        setBatch24Icb1Course(
+          typeof data.batch24Icb1Course === "string"
+            ? normalizeCourseCode(data.batch24Icb1Course)
+            : null
+        );
 
         const batchYear = inferBatchYear(data.batch, data.enrollmentId);
         if (batchYear) {
@@ -209,7 +217,7 @@ export default function ImportCoursesPage() {
 
   const loadDefaultCourses = () => {
     const effectiveBranch = branch === "GE" ? geSubBranch : branch;
-    const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester);
+    const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester, userBatch);
     const normalizeCatalog = (code: string) => normalizeCourseCode(code);
     const resolvedCourses = defaultCourses.map((course) => {
       const match = catalogIndex[normalizeCatalog(course.code)];
@@ -220,16 +228,31 @@ export default function ImportCoursesPage() {
         credits: typeof match.credits === "number" ? match.credits : course.credits,
       };
     });
+
+    const isBatch24 = userBatch === 2024;
+    const isB24EligibleBranch = isBatch24 && ["CSE", "DSE", "EE", "MEVLSI", "MSE"].includes(effectiveBranch);
+    const icb1Assigned = isB24EligibleBranch ? batch24Icb1Course : null;
+    const ICB1_CODES = new Set(["IC131", "IC136", "IC230"]);
+
+    const filteredResolvedCourses =
+      icb1Assigned
+        ? resolvedCourses.filter(
+            (c) =>
+              !(c.category === "ICB" && c.semester === 1 && ICB1_CODES.has(c.code) && c.code !== icb1Assigned)
+          )
+        : resolvedCourses;
     // Normalize course codes to match enrollment keys
     const normalize = (code: string) => normalizeCourseCode(code);
     // ICB basket + mixed-sem courses start unchecked — user must pick manually
-    const MANUAL_PICK_CODES = ["IC140", "IC102P", "IC181"];
+    const MANUAL_PICK_CODES = isBatch24
+      ? ["IC140", "IC181", "IC182"]
+      : ["IC140", "IC102P", "IC181"];
     // ISTP/MTP courses
     const ISTP_CODES = ["DP 301P", "DP301P"];
     const MTP1_CODES = ["DP 498P", "DP498P"];
     const MTP2_CODES = ["DP 499P", "DP499P"];
     
-    const coursesWithSelection = resolvedCourses
+    const coursesWithSelection = filteredResolvedCourses
       .filter((course) => {
         const normalizedCode = normalize(course.code);
         const isISTP = ISTP_CODES.some((code) => normalize(code) === normalizedCode);
@@ -251,6 +274,11 @@ export default function ImportCoursesPage() {
         const isISTP = ISTP_CODES.some((code) => normalize(code) === normalizedCode);
         const isMTP1 = MTP1_CODES.some((code) => normalize(code) === normalizedCode);
         const isMTP2 = MTP2_CODES.some((code) => normalize(code) === normalizedCode);
+        const isAssignedIcb1 =
+          typeof icb1Assigned === "string" &&
+          course.category === "ICB" &&
+          course.semester === 1 &&
+          normalize(course.code) === normalize(icb1Assigned);
         const autoSelected =
           course.category !== "ICB" &&
           !MANUAL_PICK_CODES.includes(course.code) &&
@@ -259,6 +287,7 @@ export default function ImportCoursesPage() {
         return {
           ...course,
           selected:
+            isAssignedIcb1 ||
             autoSelected ||
             isMTP1 ||
             isMTP2,
@@ -412,12 +441,13 @@ export default function ImportCoursesPage() {
         }
 
         if (nowSelected) {
-          // IC140/IC102P/IC181: selecting in one semester deselects the same course in the other
-          if (
-            ["IC140", "IC102P", "IC181"].includes(code) &&
-            c.code === code &&
-            c.semester !== semester
-          ) {
+          const isBatch24 = userBatch === 2024;
+          const crossSemesterExclusive = isBatch24
+            ? ["IC140"]
+            : ["IC140", "IC102P", "IC181"];
+
+          // Mixed/paired courses: selecting in one semester deselects the same course in the other (when applicable)
+          if (crossSemesterExclusive.includes(code) && c.code === code && c.semester !== semester) {
             return { ...c, selected: false };
           }
 
@@ -426,13 +456,39 @@ export default function ImportCoursesPage() {
             return { ...c, selected: false };
           }
 
-          // IC140 ↔ IC102P pairing: always in opposite semesters
-          if (code === "IC140" || code === "IC102P") {
-            const paired = code === "IC140" ? "IC102P" : "IC140";
-            // Auto-select paired course in the OTHER semester
-            if (c.code === paired && c.semester !== semester) return { ...c, selected: true };
-            // Auto-deselect paired course in the SAME semester
-            if (c.code === paired && c.semester === semester) return { ...c, selected: false };
+          if (!isBatch24) {
+            // IC140 ↔ IC102P pairing: always in opposite semesters (Batch 2023)
+            if (code === "IC140" || code === "IC102P") {
+              const paired = code === "IC140" ? "IC102P" : "IC140";
+              // Auto-select paired course in the OTHER semester
+              if (c.code === paired && c.semester !== semester) return { ...c, selected: true };
+              // Auto-deselect paired course in the SAME semester
+              if (c.code === paired && c.semester === semester) return { ...c, selected: false };
+            }
+          } else {
+            // Batch 2024: IC102P is compulsory in Sem-2.
+            // Sem-1 choice: IC140 vs IC181. Sem-2 choice: IC140 vs IC182.
+            // (IC140 in Sem-1) ↔ (IC182 in Sem-2), and (IC181 in Sem-1) ↔ (IC140 in Sem-2).
+            if (code === "IC140" && semester === 1) {
+              if (c.code === "IC181" && c.semester === 1) return { ...c, selected: false };
+              if (c.code === "IC140" && c.semester === 2) return { ...c, selected: false };
+              if (c.code === "IC182" && c.semester === 2) return { ...c, selected: true };
+            }
+            if (code === "IC140" && semester === 2) {
+              if (c.code === "IC182" && c.semester === 2) return { ...c, selected: false };
+              if (c.code === "IC140" && c.semester === 1) return { ...c, selected: false };
+              if (c.code === "IC181" && c.semester === 1) return { ...c, selected: true };
+            }
+            if (code === "IC181") {
+              if (c.code === "IC140" && c.semester === 1) return { ...c, selected: false };
+              if (c.code === "IC182" && c.semester === 2) return { ...c, selected: false };
+              if (c.code === "IC140" && c.semester === 2) return { ...c, selected: true };
+            }
+            if (code === "IC182") {
+              if (c.code === "IC140" && c.semester === 2) return { ...c, selected: false };
+              if (c.code === "IC181" && c.semester === 1) return { ...c, selected: false };
+              if (c.code === "IC140" && c.semester === 1) return { ...c, selected: true };
+            }
           }
         }
 
@@ -916,7 +972,9 @@ export default function ImportCoursesPage() {
             Uncheck any courses you haven&apos;t taken. You can add grades optionally. Additional courses can be added later from &quot;My Courses&quot; page.
           </p>
           <p className="text-foreground-secondary mt-2">
-            Selecting IC140 in a semester auto-checks IC102P in the other (they always pair across semesters). IC181 is semester-exclusive. IC Basket courses allow only one selection per semester.
+            {userBatch === 2024
+              ? "Batch 2024: IC102P is compulsory in Semester 2. Choose IC140/IC181 in Semester 1 and IC140/IC182 in Semester 2 — selecting one will auto-pick the paired option. IC Basket courses allow only one selection per semester."
+              : "Selecting IC140 in a semester auto-checks IC102P in the other (they always pair across semesters). IC181 is semester-exclusive. IC Basket courses allow only one selection per semester."}
           </p>
         </div>
       </div>

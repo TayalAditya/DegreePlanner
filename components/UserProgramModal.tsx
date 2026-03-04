@@ -363,7 +363,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       return applyMinorDeOverride("DE", enrollment);
     }
 
-    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("IK")) return "IKS";
 

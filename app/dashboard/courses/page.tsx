@@ -362,7 +362,7 @@ export default function CoursesPage() {
     const isICB2 = ICB2_CODES.has(normalizedCode);
 
     if (isICB1 || isICB2) return "IC_BASKET";
-    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
     
     // Branch-specific course patterns
     if (user?.branch === "CSE" && code.startsWith("DS")) return applyMinorDeOverride("DE", enrollment);

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { CourseType, EnrollmentStatus } from "@prisma/client";
+import { getBatch24Icb1Course } from "@/lib/batch24";
 
 export async function GET(req: NextRequest) {
   try {
@@ -33,7 +34,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    const enrollmentId = (user.enrollmentId || "").toUpperCase();
+    const isBatch24 = user.batch === 2024 || /^B24\d+$/i.test(enrollmentId);
+    const batch24Icb1Course =
+      isBatch24 && enrollmentId ? await getBatch24Icb1Course(enrollmentId) : null;
+
+    return NextResponse.json({ ...user, batch24Icb1Course });
   } catch (error) {
     console.error("User fetch error:", error);
     return NextResponse.json(

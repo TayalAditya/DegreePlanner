@@ -262,7 +262,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return applyMinorDeOverride("DE");
     if (userSettings?.branch === "DSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) return applyMinorDeOverride("DE");
 
-    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("IK")) return "IKS";
 

@@ -335,7 +335,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
       }
     }
 
-    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
 
