@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { EnrollmentStatus, CourseType } from "@prisma/client";
 import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
+import { courseIdentityKey } from "@/lib/courseIdentity";
 import {
   canTakePassFailCourse,
   validateBranchSpecificCourse,
@@ -176,6 +177,40 @@ export async function POST(request: NextRequest) {
         { error: "Course not found" },
         { status: 404 }
       );
+    }
+
+    const targetIdentityKey = courseIdentityKey(course.code);
+    if (targetIdentityKey) {
+      const existingActiveEnrollments = await prisma.courseEnrollment.findMany({
+        where: {
+          userId: session.user.id,
+          status: { notIn: [EnrollmentStatus.DROPPED, EnrollmentStatus.FAILED] },
+        },
+        select: {
+          semester: true,
+          year: true,
+          term: true,
+          course: {
+            select: {
+              code: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      const duplicate = existingActiveEnrollments.find(
+        (e) => courseIdentityKey(e.course.code) === targetIdentityKey
+      );
+
+      if (duplicate) {
+        return NextResponse.json(
+          {
+            error: `Already enrolled in \"${duplicate.course.name}\" (${duplicate.course.code}) in Semester ${duplicate.semester} (${duplicate.term} ${duplicate.year}). Remove it before enrolling again.`,
+          },
+          { status: 409 }
+        );
+      }
     }
 
     // Check if enrollment already exists (exact match)
