@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import type { Adapter } from "next-auth/adapters";
 import { DOCS_ADMIN_ENROLLMENT_ID } from "@/lib/permissions";
 
+const SUPPORTED_BATCHES = new Set([2022, 2023, 2024]);
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as Adapter,
   providers: [
@@ -64,7 +66,7 @@ export const authOptions: NextAuthOptions = {
       // Fallback: look up by enrollmentId extracted from email prefix
       if (!approvedUser) {
         const emailPrefix = user.email.split("@")[0].toUpperCase();
-        const matches = emailPrefix.match(/^B23\d+$/i);
+        const matches = emailPrefix.match(/^B(22|23|24)\d+$/i);
         
         if (matches) {
           approvedUser = await prisma.approvedUser.findUnique({
@@ -83,13 +85,13 @@ export const authOptions: NextAuthOptions = {
 
       if (!approvedUser) {
         console.log("❌ Login rejected: User not in approved list");
-        return false;
+        return "/auth/error?error=user_not_approved";
       }
 
       // Batch validation
-      if (approvedUser.batch && approvedUser.batch !== 2023) {
+      if (approvedUser.batch && !SUPPORTED_BATCHES.has(approvedUser.batch)) {
         console.log("❌ Login rejected: Batch", approvedUser.batch, "not supported");
-        return false;
+        return "/auth/error?error=batch_not_supported";
       }
 
       console.log("✅ signIn: User approved, allowing login");
