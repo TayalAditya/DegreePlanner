@@ -355,8 +355,11 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       return "HSS";
     }
 
-    // Never let branch mappings override IKS categorization for these
-    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
+    // Hard overrides (batch-sensitive)
+    const isBatch24 = inferredBatch === 2024;
+    if (normalizedCode === "IK593") return "FE";
+    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode === "IC182") return isBatch24 ? "IKS" : "IC";
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && branch) {
       const mapping = pickRelevantBranchMapping(branch, enrollment.course.branchMappings);
@@ -378,7 +381,6 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     }
 
     if (normalizedCode.startsWith("IC")) return "IC";
-    if (normalizedCode.startsWith("IK")) return "IKS";
 
     // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
     if (normalizedCode === "DP301P") return "ISTP";

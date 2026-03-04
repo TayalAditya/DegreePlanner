@@ -22,6 +22,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { formatCourseCode } from "@/lib/utils";
 import { OcrConfirmModal, ConfirmRow } from "@/components/OcrConfirmModal";
 import { parseTranscriptText, normalizeCourseCode, DetectedCourse } from "@/lib/parseTranscript";
+import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 
 interface SelectedCourse extends DefaultCourse {
   selected: boolean;
@@ -42,23 +43,6 @@ interface CatalogCourse {
   credits: number;
   department: string;
 }
-
-const inferBatchYear = (batch: number | null | undefined, enrollmentId: string | null | undefined) => {
-  if (typeof batch === "number" && batch > 2000) return batch;
-  if (enrollmentId) {
-    const match = enrollmentId.match(/B(\d{2})/i);
-    if (match) return 2000 + Number.parseInt(match[1], 10);
-  }
-  return null;
-};
-
-// Odd sems = Fall (Jul-Dec), Even sems = Spring (Jan-Jun)
-const inferCurrentSemester = (batchYear: number, now: Date = new Date()) => {
-  const yearsElapsed = now.getFullYear() - batchYear;
-  const isSpring = now.getMonth() + 1 <= 6;
-  const rawSemester = isSpring ? yearsElapsed * 2 : yearsElapsed * 2 + 1;
-  return Math.min(8, Math.max(1, rawSemester));
-};
 
 export default function ImportCoursesPage() {
   const { showToast } = useToast();
@@ -106,9 +90,18 @@ export default function ImportCoursesPage() {
       }
     });
 
-    // Hard override (DB mappings can be stale): IC181/IC182 always count as IKS
+    // Hard overrides (DB mappings can be stale):
+    // - IC181 is IKS for all batches
+    // - IC182 is IKS only for Batch 2024
+    // - IK593 (Kulhad Economy) is a Free Elective for everyone
     typeMap.set("IC181", "IKS");
-    typeMap.set("IC182", "IKS");
+    if (userBatch === 2024) {
+      typeMap.set("IC182", "IKS");
+    } else {
+      // Prevent stale DB mappings from classifying IC182 as IKS for non-B24 batches.
+      typeMap.set("IC182", "IC");
+    }
+    typeMap.set("IK593", "FE");
 
     // Fall back to the static default curriculum for anything missing.
     getAllDefaultCourses(effectiveBranch, 8, userBatch).forEach((c) => {
@@ -174,7 +167,7 @@ export default function ImportCoursesPage() {
         );
 
         if (inferredBatch) {
-          setCurrentSemester(inferCurrentSemester(inferredBatch));
+          setCurrentSemester(inferAcademicState(inferredBatch).currentSemester);
         }
 
         const mtp1 = data.doingMTP ?? true;

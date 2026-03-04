@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { EnrollmentStatus, CourseType } from "@prisma/client";
+import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
 import {
   canTakePassFailCourse,
   validateBranchSpecificCourse,
@@ -17,6 +18,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    await syncEnrollmentStatusesForUser(session.user.id, {
+      batch: session.user.batch,
+      enrollmentId: session.user.enrollmentId,
+    });
+
     const { searchParams } = new URL(request.url);
     const semester = searchParams.get("semester");
 

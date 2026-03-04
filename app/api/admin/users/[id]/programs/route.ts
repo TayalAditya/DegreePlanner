@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { creditCalculator } from "@/lib/creditCalculator";
+import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
 
 export async function GET(
   _request: NextRequest,
@@ -17,7 +18,19 @@ export async function GET(
   const { id: userId } = await params;
 
   try {
-    const [programs, enrollments, user] = await Promise.all([
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { branch: true, batch: true, enrollmentId: true },
+    });
+
+    if (user) {
+      await syncEnrollmentStatusesForUser(userId, {
+        batch: user.batch,
+        enrollmentId: user.enrollmentId,
+      });
+    }
+
+    const [programs, enrollments] = await Promise.all([
       prisma.userProgram.findMany({
         where: { userId, status: "ACTIVE" },
         include: { program: true },
@@ -34,10 +47,6 @@ export async function GET(
           },
         },
         orderBy: [{ semester: "asc" }, { year: "asc" }],
-      }),
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: { branch: true, batch: true, enrollmentId: true },
       }),
     ]);
 

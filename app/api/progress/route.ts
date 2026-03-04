@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { creditCalculator } from "@/lib/creditCalculator";
+import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -11,6 +12,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    await syncEnrollmentStatusesForUser(session.user.id, {
+      batch: session.user.batch,
+      enrollmentId: session.user.enrollmentId,
+    });
+
     const { searchParams } = new URL(request.url);
     const programId = searchParams.get("programId");
     const minorCodesRaw = searchParams.get("minorCodes");

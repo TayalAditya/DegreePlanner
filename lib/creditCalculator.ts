@@ -648,6 +648,10 @@ export class CreditCalculator {
       }
 
       // Apply prefix-based categorization (same as other components)
+      if (normalizedCode === "IK593") {
+        breakdown.freeElective += credits;
+        return;
+      }
       if (normalizedCode === "IC181" || normalizedCode === "IC182") {
         breakdown.core += credits; // IKS
         return;
@@ -658,10 +662,6 @@ export class CreditCalculator {
       }
       if (normalizedCode.startsWith("HS")) {
         addHssCredits(credits);
-        return;
-      }
-      if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) {
-        breakdown.core += credits;
         return;
       }
 

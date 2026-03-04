@@ -231,8 +231,11 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     const isICB2 = ICB2_CODES.has(normalizedCode);
     const credits = enrollment.course?.credits || 0;
 
-    // Never let branch mappings override IKS categorization for these
-    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
+    // Hard overrides (batch-sensitive)
+    const isBatch24 = userBatch === 2024;
+    if (normalizedCode === "IK593") return "FE";
+    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode === "IC182") return isBatch24 ? "IKS" : "IC";
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && (branch || userBranch)) {
@@ -381,7 +384,6 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     }
 
     if (normalizedCode.startsWith("IC")) return "IC";
-    if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
 
     // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
     if (normalizedCode === "DP301P") return "ISTP";
