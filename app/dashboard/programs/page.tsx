@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { GraduationCap, Award, BookOpen, Target, ChevronDown, AlertCircle } from "lucide-react";
 import { ProgressChart } from "@/components/ProgressChart";
 import { MinorPlannerCard } from "@/components/MinorPlannerCard";
@@ -59,6 +59,8 @@ interface UserSettings {
   doingISTP?: boolean;
 }
 
+const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
+
 export default function ProgramsPage() {
   const [userPrograms, setUserPrograms] = useState<UserProgram[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +76,47 @@ export default function ProgramsPage() {
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savedPrefs, setSavedPrefs] = useState(false);
   const { confirm } = useConfirmDialog();
+
+  const includeCurrentSemesterCredits = useSyncExternalStore(
+    (callback) => {
+      if (typeof window === "undefined") return () => {};
+      const onStorage = (e: StorageEvent) => {
+        if (e.key === INCLUDE_CURRENT_SEM_KEY) callback();
+      };
+      const onLocal = () => callback();
+      window.addEventListener("storage", onStorage);
+      window.addEventListener("degreePlanner:storage", onLocal);
+      return () => {
+        window.removeEventListener("storage", onStorage);
+        window.removeEventListener("degreePlanner:storage", onLocal);
+      };
+    },
+    () => {
+      if (typeof window === "undefined") return false;
+      try {
+        return localStorage.getItem(INCLUDE_CURRENT_SEM_KEY) === "true";
+      } catch {
+        return false;
+      }
+    },
+    () => false
+  );
+
+  const setIncludeCurrentSemesterCredits = (next: boolean | ((prev: boolean) => boolean)) => {
+    const nextValue = typeof next === "function"
+      ? next(includeCurrentSemesterCredits)
+      : next;
+
+    try {
+      localStorage.setItem(INCLUDE_CURRENT_SEM_KEY, String(nextValue));
+    } catch {
+      // ignore
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("degreePlanner:storage"));
+    }
+  };
 
   const minorPlanner = useMinorPlannerSelection();
   const minorCodesKey = useMemo(() => {
@@ -339,6 +382,27 @@ export default function ProgramsPage() {
 
   const latestSemester = semesters.length > 0 ? semesters[semesters.length - 1] : null;
 
+  const displayProgress = useMemo(() => {
+    if (!progressData) return null;
+
+    const counted = (key: string) => {
+      const required = Number(progressData?.required?.[key] ?? 0);
+      const completed = Number(progressData?.completed?.[key] ?? 0);
+      const inProgress = Number(progressData?.inProgress?.[key] ?? 0);
+      const value = completed + (includeCurrentSemesterCredits ? inProgress : 0);
+      return Math.min(required, value);
+    };
+
+    return {
+      core: counted("core"),
+      de: counted("de"),
+      freeElective: counted("freeElective"),
+      mtp: counted("mtp"),
+      istp: counted("istp"),
+      pe: counted("pe"),
+    };
+  }, [progressData, includeCurrentSemesterCredits]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -391,6 +455,28 @@ export default function ProgramsPage() {
 
                 {/* Credit Requirements */}
                 <div className="mt-6 space-y-3">
+                  {progressData && (
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={includeCurrentSemesterCredits}
+                        onClick={() => setIncludeCurrentSemesterCredits((v) => !v)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full border border-border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+                          includeCurrentSemesterCredits ? "bg-primary" : "bg-border"
+                        }`}
+                      >
+                        <span className="sr-only">Include current semester credits</span>
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                            includeCurrentSemesterCredits ? "translate-x-6" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                      <span className="text-xs text-foreground-secondary">Include current sem</span>
+                    </div>
+                  )}
+
                   {/* Total bar */}
                   <div className="flex items-center justify-between px-4 py-2.5 bg-primary/8 rounded-xl border border-primary/20">
                     <div className="flex items-center gap-2">
@@ -408,7 +494,8 @@ export default function ProgramsPage() {
                       <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">Core Courses</p>
                       {progressData && (
                         <p className="text-xs text-foreground-secondary">
-                          {progressData.completed.core} / {progressData.required.core} cr earned
+                          {displayProgress?.core ?? progressData.completed.core} / {progressData.required.core} cr
+                          {includeCurrentSemesterCredits ? " (incl. current sem)" : ""}
                         </p>
                       )}
                     </div>
@@ -434,7 +521,7 @@ export default function ProgramsPage() {
                       <div className="mt-3 h-1.5 bg-border rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-700"
-                          style={{ width: `${Math.min(100, (progressData.completed.core / progressData.required.core) * 100)}%` }}
+                          style={{ width: `${Math.min(100, ((displayProgress?.core ?? progressData.completed.core) / progressData.required.core) * 100)}%` }}
                         />
                       </div>
                     )}
@@ -449,12 +536,12 @@ export default function ProgramsPage() {
                       {progressData ? (
                         <>
                           <p className="text-xl font-bold text-foreground">
-                            {progressData.completed.de}
+                            {displayProgress?.de ?? progressData.completed.de}
                             <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.de} cr</span>
                           </p>
                           {progressData.required.de > 0 && (
                             <div className="mt-2 h-1 bg-emerald-500/20 rounded-full overflow-hidden">
-                              <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (progressData.completed.de / progressData.required.de) * 100)}%` }} />
+                              <div className="h-full bg-emerald-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.de ?? progressData.completed.de) / progressData.required.de) * 100)}%` }} />
                             </div>
                           )}
                         </>
@@ -470,12 +557,12 @@ export default function ProgramsPage() {
                       {progressData ? (
                         <>
                           <p className="text-xl font-bold text-foreground">
-                            {progressData.completed.freeElective}
+                            {displayProgress?.freeElective ?? progressData.completed.freeElective}
                             <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.freeElective} cr</span>
                           </p>
                           {progressData.required.freeElective > 0 && (
                             <div className="mt-2 h-1 bg-purple-500/20 rounded-full overflow-hidden">
-                              <div className="h-full bg-purple-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (progressData.completed.freeElective / progressData.required.freeElective) * 100)}%` }} />
+                              <div className="h-full bg-purple-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.freeElective ?? progressData.completed.freeElective) / progressData.required.freeElective) * 100)}%` }} />
                             </div>
                           )}
                         </>
@@ -490,11 +577,11 @@ export default function ProgramsPage() {
                         <p className="text-[11px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">MTP</p>
                         <p className="text-xs text-foreground-secondary mb-2">Major Tech Project</p>
                         <p className="text-xl font-bold text-foreground">
-                          {progressData.completed.mtp}
+                          {displayProgress?.mtp ?? progressData.completed.mtp}
                           <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.mtp} cr</span>
                         </p>
                         <div className="mt-2 h-1 bg-orange-500/20 rounded-full overflow-hidden">
-                          <div className="h-full bg-orange-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (progressData.completed.mtp / progressData.required.mtp) * 100)}%` }} />
+                          <div className="h-full bg-orange-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.mtp ?? progressData.completed.mtp) / progressData.required.mtp) * 100)}%` }} />
                         </div>
                       </div>
                     )}
@@ -505,11 +592,11 @@ export default function ProgramsPage() {
                         <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">ISTP</p>
                         <p className="text-xs text-foreground-secondary mb-2">Socio-Tech Practicum</p>
                         <p className="text-xl font-bold text-foreground">
-                          {progressData.completed.istp}
+                          {displayProgress?.istp ?? progressData.completed.istp}
                           <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.istp} cr</span>
                         </p>
                         <div className="mt-2 h-1 bg-rose-500/20 rounded-full overflow-hidden">
-                          <div className="h-full bg-rose-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, (progressData.completed.istp / progressData.required.istp) * 100)}%` }} />
+                          <div className="h-full bg-rose-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.istp ?? progressData.completed.istp) / progressData.required.istp) * 100)}%` }} />
                         </div>
                       </div>
                     )}
@@ -520,11 +607,11 @@ export default function ProgramsPage() {
                         <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Research</p>
                         <p className="text-xs text-foreground-secondary mb-2">Research Credits</p>
                         <p className="text-xl font-bold text-foreground">
-                          {progressData.completed.pe}
+                          {displayProgress?.pe ?? progressData.completed.pe}
                           <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.pe} cr</span>
                         </p>
                         <div className="mt-2 h-1 bg-amber-500/20 rounded-full overflow-hidden">
-                          <div className="h-full bg-amber-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, progressData.required.pe > 0 ? (progressData.completed.pe / progressData.required.pe) * 100 : 0)}%` }} />
+                          <div className="h-full bg-amber-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, progressData.required.pe > 0 ? ((displayProgress?.pe ?? progressData.completed.pe) / progressData.required.pe) * 100 : 0)}%` }} />
                         </div>
                       </div>
                     )}
