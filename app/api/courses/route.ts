@@ -24,12 +24,18 @@ function sanitizeCourseName(name: string): string {
   return trimmed.replace(DOT_LEADER_RE, "").trim();
 }
 
-const COURSE_OFFERING_OVERRIDES: Record<
+const COURSE_OVERRIDES: Record<
   string,
-  { offeredInFall?: boolean; offeredInSpring?: boolean; offeredInSummer?: boolean }
+  {
+    name?: string;
+    offeredInFall?: boolean;
+    offeredInSpring?: boolean;
+    offeredInSummer?: boolean;
+  }
 > = {
   // IK-593 is offered in both Fall and Spring (allow odd sem selection).
-  IK593: { offeredInFall: true, offeredInSpring: true },
+  // Also override the displayed name in the catalog UI.
+  IK593: { name: "Kulhad Economy", offeredInFall: true, offeredInSpring: true },
 };
 
 // GET /api/courses - Get all courses
@@ -145,12 +151,18 @@ export async function GET(req: NextRequest) {
       a.code.localeCompare(b.code)
     );
 
-    const sanitized = filteredCourses.map((c) => ({
-      ...c,
-      ...(COURSE_OFFERING_OVERRIDES[courseIdentityKey(c.code)] ?? {}),
-      name: sanitizeCourseName(c.name),
-      description: sanitizeCourseDescription(c.description),
-    }));
+    const sanitized = filteredCourses.map((c) => {
+      const key = courseIdentityKey(c.code);
+      const override = COURSE_OVERRIDES[key] ?? {};
+      const { name: _ignoredName, ...overrideRest } = override;
+
+      return {
+        ...c,
+        ...overrideRest,
+        name: sanitizeCourseName(override.name ?? c.name),
+        description: sanitizeCourseDescription(c.description),
+      };
+    });
 
     return NextResponse.json(sanitized);
   } catch (error) {
