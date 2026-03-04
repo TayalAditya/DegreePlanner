@@ -91,8 +91,16 @@ const DE_BASKET_CONFIG: Record<string, DEBasket[]> = {
   ],
 };
 
-const normalizeCourseCode = (code: string) =>
-  String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+const normalizeCourseCode = (code: unknown) =>
+  String(code ?? "")
+    .replace(/\u00a0/g, " ")
+    .trim()
+    .toUpperCase()
+    // "CS201(P)" -> "CS201P"
+    .replace(/(\d{3}[A-Z]?)\s*\(\s*P\s*\)/g, "$1P")
+    // Samarth suffix noise: "CS-302_New", "HS-342_1_New" -> base code
+    .replace(/(_\d{1,2})?_NEW$/g, "")
+    .replace(/[^A-Z0-9]/g, "");
 
 const normalizeBranchForIcBasket = (branch?: string) => {
   const upper = String(branch || "").toUpperCase();
@@ -321,11 +329,44 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
 
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length > 0) {
-      const branchAliases = userBranch === "CSE" ? ["CSE", "CS"] : userBranch === "CS" ? ["CS", "CSE"] : [userBranch];
-      const direct = mappings.find((m: any) => branchAliases.includes(m.branch));
-      const ge = userBranch?.startsWith("GE")
-        ? mappings.find((m: any) => m.branch?.startsWith("GE"))
-        : undefined;
+      const rawBranch = String(branch || userBranch || "").trim().toUpperCase();
+      const checkBranch = normalizeBranchForIcBasket(rawBranch);
+      const aliases = new Set<string>([rawBranch, checkBranch]);
+
+      if (checkBranch === "CSE" || rawBranch === "CSE") aliases.add("CS");
+      if (checkBranch === "CS" || rawBranch === "CS") aliases.add("CSE");
+
+      if (checkBranch === "DSE" || rawBranch === "DSE") aliases.add("DS");
+      if (checkBranch === "DS" || rawBranch === "DS") aliases.add("DSE");
+
+      if (checkBranch === "MSE" || rawBranch === "MSE") aliases.add("MS");
+      if (checkBranch === "MS" || rawBranch === "MS") aliases.add("MSE");
+
+      if (checkBranch === "BIO" || rawBranch === "BIO") aliases.add("BE");
+      if (checkBranch === "BE" || rawBranch === "BE") aliases.add("BIO");
+
+      if (checkBranch === "VLSI" || rawBranch === "VLSI") {
+        aliases.add("VL");
+        aliases.add("MEVLSI");
+      }
+      if (checkBranch === "VL" || rawBranch === "VL") {
+        aliases.add("VLSI");
+        aliases.add("MEVLSI");
+      }
+      if (checkBranch === "MEVLSI" || rawBranch === "MEVLSI") {
+        aliases.add("VL");
+        aliases.add("VLSI");
+      }
+
+      const aliasList = Array.from(aliases);
+      const exact =
+        mappings.find((m: any) => m.branch === rawBranch) ||
+        mappings.find((m: any) => m.branch === checkBranch);
+      const direct = exact || mappings.find((m: any) => aliasList.includes(m.branch));
+      const ge =
+        checkBranch === "GE"
+          ? mappings.find((m: any) => String(m.branch || "").startsWith("GE"))
+          : undefined;
       const common = mappings.find((m: any) => m.branch === "COMMON");
       const mapping = direct || ge || common;
 
