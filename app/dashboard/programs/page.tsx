@@ -54,6 +54,8 @@ interface Enrollment {
 
 interface UserSettings {
   branch?: string;
+  batch?: number | null;
+  enrollmentId?: string | null;
   doingMTP?: boolean;
   doingMTP2?: boolean;
   doingISTP?: boolean;
@@ -76,6 +78,17 @@ export default function ProgramsPage() {
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savedPrefs, setSavedPrefs] = useState(false);
   const { confirm } = useConfirmDialog();
+
+  const inferredBatch = useMemo(() => {
+    const batch = userSettings?.batch;
+    if (typeof batch === "number" && batch > 2000) return batch;
+    const enrollmentId = String(userSettings?.enrollmentId || "").toUpperCase();
+    const match = /B(\d{2})/i.exec(enrollmentId);
+    if (match) return 2000 + Number.parseInt(match[1], 10);
+    return null;
+  }, [userSettings?.batch, userSettings?.enrollmentId]);
+
+  const isBatch22 = inferredBatch === 2022;
 
   const includeCurrentSemesterCredits = useSyncExternalStore(
     (callback) => {
@@ -286,7 +299,9 @@ export default function ProgramsPage() {
       const ok = await confirm({
         title: "Skip MTP?",
         message:
-          "Any course enrolled for MTP-1 or MTP-2 will be automatically deregistered. +8 DE credits will be added to your requirement.",
+          `Any course enrolled for MTP-1 or MTP-2 will be automatically deregistered. ${
+            isBatch22 ? "+5 DE +3 FE credits" : "+8 DE credits"
+          } will be added to your requirement.`,
         confirmText: "Skip MTP",
         cancelText: "Keep MTP",
         variant: "warning",
@@ -331,7 +346,9 @@ export default function ProgramsPage() {
       const ok = await confirm({
         title: "Skip ISTP?",
         message:
-          "Any course enrolled for ISTP will be automatically deregistered. +4 FE credits will be added to your requirement.",
+          `Any course enrolled for ISTP will be automatically deregistered. ${
+            isBatch22 ? "+3 DE +1 FE credits" : "+4 FE credits"
+          } will be added to your requirement.`,
         confirmText: "Skip ISTP",
         cancelText: "Keep ISTP",
         variant: "warning",
@@ -790,6 +807,7 @@ export default function ProgramsPage() {
                     isLoading={false}
                     enrollments={programEnrollments}
                     userBranch={userSettings?.branch}
+                    userBatch={inferredBatch}
                   />
                 ) : (
                   <div className="bg-surface rounded-lg border border-border p-6">

@@ -664,6 +664,20 @@ const B24_IC222P_SEM4: DefaultCourse = {
   category: "IC",
   semester: 4,
 };
+const B22_IC202P_SEM4: DefaultCourse = {
+  code: "IC202P",
+  name: "Design Practicum",
+  credits: 3,
+  category: "IC",
+  semester: 4,
+};
+const B22_IC222P_SEM3: DefaultCourse = {
+  code: "IC222P",
+  name: "Physics Practicum",
+  credits: 2,
+  category: "IC",
+  semester: 3,
+};
 
 const normalizeCurriculumCode = (code: string) =>
   (code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -674,56 +688,83 @@ const applyBatchOverrides = (
   courses: DefaultCourse[],
   batch?: number | null
 ) => {
-  if (batch !== 2024 || !B24_BRANCH_OVERRIDES.has(branch)) return courses;
-
-  switch (semester) {
-    case 1: {
-      // Batch-24: IC102P is compulsory in Sem-2 (not shown in Sem-1).
-      return courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC102P");
-    }
-
-    case 2: {
-      // Batch-24: Sem-1 choice IC140/IC181, Sem-2 choice IC140/IC182. So IC181 not shown in Sem-2; add IC182.
-      // Batch-24: Physics Practicum (IC222P) is in Sem-4 (not Sem-2).
-      const filtered = courses.filter((c) => {
-        const code = normalizeCurriculumCode(c.code);
-        return code !== "IC181" && code !== "IC222P";
-      });
-      const hasIc182 = filtered.some((c) => normalizeCurriculumCode(c.code) === "IC182");
-      return hasIc182 ? filtered : [...filtered, B24_IKS_IC182_SEM2];
-    }
-
-    case 3: {
-      // Batch-24: Design Practicum (IC202P) is in Sem-3 for all allowed B24 branches.
-      const hasIc202p = courses.some((c) => normalizeCurriculumCode(c.code) === "IC202P");
-      return hasIc202p ? courses : [B24_IC202P_SEM3, ...courses];
-    }
-
-    case 4: {
-      // Batch-24: Physics Practicum (IC222P) is in Sem-4 for all allowed B24 branches.
-      // Batch-24: DSE removes DS404 from Sem-4.
-      // Batch-24: EE Reverse Engineering code is EE223P (not placeholder EEXXXP).
-      let updated = courses;
-
-      if (branch === "DSE" || branch === "EE") {
-        updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "IC202P");
-      }
-      if (branch === "DSE") {
-        updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "DS404");
-      }
-      if (branch === "EE") {
-        updated = updated.map((c) =>
-          normalizeCurriculumCode(c.code) === "EEXXXP" ? { ...c, code: "EE223P" } : c
-        );
+  if (batch === 2024 && B24_BRANCH_OVERRIDES.has(branch)) {
+    switch (semester) {
+      case 1: {
+        // Batch-24: IC102P is compulsory in Sem-2 (not shown in Sem-1).
+        return courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC102P");
       }
 
-      const hasIc222p = updated.some((c) => normalizeCurriculumCode(c.code) === "IC222P");
-      return hasIc222p ? updated : [B24_IC222P_SEM4, ...updated];
-    }
+      case 2: {
+        // Batch-24: Sem-1 choice IC140/IC181, Sem-2 choice IC140/IC182. So IC181 not shown in Sem-2; add IC182.
+        // Batch-24: Physics Practicum (IC222P) is in Sem-4 (not Sem-2).
+        const filtered = courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return code !== "IC181" && code !== "IC222P";
+        });
+        const hasIc182 = filtered.some((c) => normalizeCurriculumCode(c.code) === "IC182");
+        return hasIc182 ? filtered : [...filtered, B24_IKS_IC182_SEM2];
+      }
 
-    default:
-      return courses;
+      case 3: {
+        // Batch-24: Design Practicum (IC202P) is in Sem-3 for all allowed B24 branches.
+        const hasIc202p = courses.some((c) => normalizeCurriculumCode(c.code) === "IC202P");
+        return hasIc202p ? courses : [B24_IC202P_SEM3, ...courses];
+      }
+
+      case 4: {
+        // Batch-24: Physics Practicum (IC222P) is in Sem-4 for all allowed B24 branches.
+        // Batch-24: DSE removes DS404 from Sem-4.
+        // Batch-24: EE Reverse Engineering code is EE223P (not placeholder EEXXXP).
+        let updated = courses;
+
+        if (branch === "DSE" || branch === "EE") {
+          updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "IC202P");
+        }
+        if (branch === "DSE") {
+          updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "DS404");
+        }
+        if (branch === "EE") {
+          updated = updated.map((c) =>
+            normalizeCurriculumCode(c.code) === "EEXXXP" ? { ...c, code: "EE223P" } : c
+          );
+        }
+
+        const hasIc222p = updated.some((c) => normalizeCurriculumCode(c.code) === "IC222P");
+        return hasIc222p ? updated : [B24_IC222P_SEM4, ...updated];
+      }
+
+      default:
+        return courses;
+    }
   }
+
+  if (batch === 2022) {
+    switch (semester) {
+      case 2: {
+        // Batch-22: Physics Practicum (IC222P) is in Sem-3 (not Sem-2).
+        return courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC222P");
+      }
+
+      case 3: {
+        // Batch-22: Physics Practicum (IC222P) is in Sem-3.
+        // Batch-22: Design Practicum (IC202P) is in Sem-4 (not Sem-3).
+        const filtered = courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC202P");
+        const hasIc222p = filtered.some((c) => normalizeCurriculumCode(c.code) === "IC222P");
+        return hasIc222p ? filtered : [B22_IC222P_SEM3, ...filtered];
+      }
+
+      case 4: {
+        const hasIc202p = courses.some((c) => normalizeCurriculumCode(c.code) === "IC202P");
+        return hasIc202p ? courses : [B22_IC202P_SEM4, ...courses];
+      }
+
+      default:
+        return courses;
+    }
+  }
+
+  return courses;
 };
 
 export function getDefaultCurriculum(branch: string, semester: number, batch?: number | null): DefaultCourse[] {

@@ -12,6 +12,7 @@ interface ProgressChartProps {
   isLoading: boolean;
   enrollments?: any[];
   userBranch?: string;
+  userBatch?: number | null;
 }
 
 const COLORS = {
@@ -113,7 +114,7 @@ const HSS_CORE_CAP = 12;
 
 const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
 
-export function ProgressChart({ progress, isLoading, enrollments, userBranch }: ProgressChartProps) {
+export function ProgressChart({ progress, isLoading, enrollments, userBranch, userBatch }: ProgressChartProps) {
   const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
     if (!minorPlanner.enabled) return new Set<string>();
@@ -629,7 +630,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
     const requiredMtp = Number(progress?.required?.mtp || 0);
     const requiredIstp = Number(progress?.required?.istp || 0);
 
-    const allDefault = getAllDefaultCourses(branch, 8);
+    const allDefault = getAllDefaultCourses(branch, 8, userBatch);
 
     const byNormalized = <T extends DefaultCourse>(list: T[]) => {
       const map = new Map<string, T>();
@@ -679,8 +680,10 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
 
     const deBaskets = DE_BASKET_CONFIG[normalizeBranchForIcBasket(branch)] || [];
 
+    const batchLabel = typeof userBatch === "number" ? `batch ${userBatch}` : "batch 2023";
+
     return {
-      note: "Course lists use the default B23 curriculum. Electives (DE/FE) are credit-based and may vary.",
+      note: `Course lists use the default curriculum for ${batchLabel}. Electives (DE/FE) are credit-based and may vary.`,
       sections: [
         { id: "icbasket", title: "IC Basket", kind: "icbasket" as const },
         ...(deBaskets.length > 0 ? [{ id: "debasket", title: "DE Baskets", kind: "debasket" as const }] : []),
@@ -691,7 +694,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch }: 
         ...(requiredMtp > 0 ? [{ id: "mtp", title: "MTP", kind: "list" as const, ...mtp }] : []),
       ],
     };
-  }, [completedCodes, inProgressCodes, isLoading, progress, userBranch]);
+  }, [completedCodes, inProgressCodes, isLoading, progress, userBranch, userBatch]);
 
   if (isLoading) {
     return (
