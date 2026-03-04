@@ -296,7 +296,7 @@ export function OcrConfirmModal({
                       <option value="">— No match —</option>
                       {catalogCourses.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {formatCourseCode(c.code)} — {c.name}
+                          {formatCourseCode(c.code)} — {c.name} ({c.credits} cr)
                         </option>
                       ))}
                     </select>
