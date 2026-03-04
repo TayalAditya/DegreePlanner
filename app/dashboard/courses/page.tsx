@@ -340,6 +340,7 @@ export default function CoursesPage() {
   const getCourseCategory = (enrollment: Enrollment): string => {
     const code = enrollment.course.code.toUpperCase();
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+    const isIkCourse = /^IK\d/.test(normalizedCode);
 
     // Hard overrides (batch-sensitive)
     const inferredBatch = (() => {
@@ -369,9 +370,15 @@ export default function CoursesPage() {
         if (mapping.courseCategory === "NA") {
           return "FE";
         }
+        // IK-xxx courses should not count towards IKS requirement.
+        if (mapping.courseCategory === "IKS" && isIkCourse) {
+          return "FE";
+        }
         return applyMinorDeOverride(mapping.courseCategory, enrollment);
       }
     }
+
+    if (isIkCourse) return "FE";
 
     // Fallback to code analysis
     const isICB1 = ICB1_CODES.has(normalizedCode);

@@ -117,7 +117,10 @@ export async function GET(req: NextRequest) {
     if (existingIdx !== undefined && existingIdx <= idx) continue;
 
     pickedIndexByCode.set(code, idx);
-    categoriesByCode[code] = toUiCategory(m.courseCategory);
+
+    const uiCategory = toUiCategory(m.courseCategory);
+    // IK-xxx courses should not count towards IKS requirement.
+    categoriesByCode[code] = uiCategory === "IKS" && /^IK\d/.test(code) ? "FE" : uiCategory;
   }
 
   return NextResponse.json({
