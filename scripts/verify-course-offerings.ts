@@ -24,6 +24,8 @@ type CourseRow = Record<string, string | number | undefined>;
 const OFFERING_OVERRIDES: Record<string, { fall: boolean; spring: boolean }> = {
   // HS-202 is offered in both semesters (xlsx is incomplete).
   "HS-202": { fall: true, spring: true },
+  // IK-593 is offered in both semesters (allow odd sem selection).
+  "IK-593": { fall: true, spring: true },
 };
 
 async function main() {
@@ -59,6 +61,11 @@ async function main() {
         }
       }
     }
+  }
+
+  // Ensure override codes are included even if missing in the xlsx.
+  for (const code of Object.keys(OFFERING_OVERRIDES)) {
+    if (!codeToSems.has(code)) codeToSems.set(code, new Set());
   }
 
   console.log(`\nFound ${codeToSems.size} unique course codes in xlsx\n`);
