@@ -167,7 +167,7 @@ const eeSem4: DefaultCourse[] = [
 const eeSem5: DefaultCourse[] = [
   { code: "EE231", name: "Measurement and Instrumentation",                         credits: 3, category: "DC", semester: 5 },
   { code: "EE301", name: "Control Systems",                                      credits: 4, category: "DC", semester: 5 },
-  { code: "EE314", name: "Digital Signal Processing",                             credits: 3, category: "DC", semester: 5 },
+  { code: "EE305", name: "Digital Signal Processing",                             credits: 3, category: "DC", semester: 5 },
   { code: "EE326", name: "Computer Organization & Processor Architecture Design", credits: 4, category: "DC", semester: 5 },
   { code: "EEXXX", name: "Power and Energy Systems",                               credits: 4, category: "DC", semester: 5 },
 ];
@@ -571,6 +571,7 @@ const bscsSem8: DefaultCourse[] = [
 const hssOptionalSem2: DefaultCourse[] = [
   { code: "HS-357-S24", name: "French Language and Culture", credits: 2, category: "HSS", semester: 2, optional: true, tag: "Jan–May 2024" },
   { code: "HS-308-S24", name: "European Literature",         credits: 2, category: "HSS", semester: 2, optional: true, tag: "Jan–May 2024" },
+  { code: "HS-151",     name: "Introduction to English Literature", credits: 3, category: "HSS", semester: 2, optional: true },
 ];
 
 // ─── Export ───────────────────────────────────────────────────────────────────

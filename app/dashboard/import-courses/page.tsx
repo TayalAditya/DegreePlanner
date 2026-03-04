@@ -51,7 +51,6 @@ export default function ImportCoursesPage() {
   const [currentSemester, setCurrentSemester] = useState(6);
   const [doingMTP, setDoingMTP] = useState(true);
   const [doingMTP2, setDoingMTP2] = useState(true);
-  const [doingISTP, setDoingISTP] = useState(true);
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
   const [importedCourseKeys, setImportedCourseKeys] = useState<Set<string>>(new Set());
   const [catalogIndex, setCatalogIndex] = useState<Record<string, CatalogCourse>>({});
@@ -131,7 +130,7 @@ export default function ImportCoursesPage() {
 
   useEffect(() => {
     loadDefaultCourses();
-  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingMTP2, doingISTP]);
+  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingMTP2]);
 
   useEffect(() => {
     setCustomSemester(currentSemester);
@@ -147,7 +146,6 @@ export default function ImportCoursesPage() {
         const mtp2 = (data.doingMTP2 ?? mtp1) && mtp1;
         setDoingMTP(mtp1);
         setDoingMTP2(mtp2);
-        setDoingISTP(data.doingISTP ?? true);
       }
     } catch (error) {
       console.error("Failed to load settings:", error);
@@ -214,10 +212,6 @@ export default function ImportCoursesPage() {
         const isISTP = ISTP_CODES.some((code) => normalize(code) === normalizedCode);
         const isMTP1 = MTP1_CODES.some((code) => normalize(code) === normalizedCode);
         const isMTP2 = MTP2_CODES.some((code) => normalize(code) === normalizedCode);
-        // Filter out ISTP if user disabled it
-        if (!doingISTP && isISTP) {
-          return false;
-        }
         // Filter out MTP-1/2 if user disabled MTP entirely
         if (!doingMTP && (isMTP1 || isMTP2)) {
           return false;
@@ -234,11 +228,15 @@ export default function ImportCoursesPage() {
         const isISTP = ISTP_CODES.some((code) => normalize(code) === normalizedCode);
         const isMTP1 = MTP1_CODES.some((code) => normalize(code) === normalizedCode);
         const isMTP2 = MTP2_CODES.some((code) => normalize(code) === normalizedCode);
+        const autoSelected =
+          course.category !== "ICB" &&
+          !MANUAL_PICK_CODES.includes(course.code) &&
+          !course.optional &&
+          !isISTP;
         return {
           ...course,
           selected:
-            (course.category !== "ICB" && !MANUAL_PICK_CODES.includes(course.code) && !course.optional) ||
-            isISTP ||
+            autoSelected ||
             isMTP1 ||
             isMTP2,
         };
