@@ -162,7 +162,7 @@ const eeSem4: DefaultCourse[] = [
   { code: "EE202",  name: "Electromagnetic Theory", credits: 3, category: "DC", semester: 4 },
   { code: "EE211",  name: "Analog Circuit Design",  credits: 4, category: "DC", semester: 4 },
   { code: "EE304",  name: "Communication Systems",  credits: 4, category: "DC", semester: 4 },
-  { code: "EEXXXP", name: "Reverse Engineering",    credits: 1, category: "DC", semester: 4 },
+  { code: "EE223P", name: "Reverse Engineering",    credits: 1, category: "DC", semester: 4 },
 ];
 const eeSem5: DefaultCourse[] = [
   { code: "EE231", name: "Measurement and Instrumentation",                         credits: 3, category: "DC", semester: 5 },
