@@ -43,6 +43,23 @@ interface CatalogCourse {
   department: string;
 }
 
+const inferBatchYear = (batch: number | null | undefined, enrollmentId: string | null | undefined) => {
+  if (typeof batch === "number" && batch > 2000) return batch;
+  if (enrollmentId) {
+    const match = enrollmentId.match(/B(\d{2})/i);
+    if (match) return 2000 + Number.parseInt(match[1], 10);
+  }
+  return null;
+};
+
+// Odd sems = Fall (Jul-Dec), Even sems = Spring (Jan-Jun)
+const inferCurrentSemester = (batchYear: number, now: Date = new Date()) => {
+  const yearsElapsed = now.getFullYear() - batchYear;
+  const isSpring = now.getMonth() + 1 <= 6;
+  const rawSemester = isSpring ? yearsElapsed * 2 : yearsElapsed * 2 + 1;
+  return Math.min(8, Math.max(1, rawSemester));
+};
+
 export default function ImportCoursesPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
@@ -142,6 +159,12 @@ export default function ImportCoursesPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.branch) setBranch(data.branch);
+
+        const batchYear = inferBatchYear(data.batch, data.enrollmentId);
+        if (batchYear) {
+          setCurrentSemester(inferCurrentSemester(batchYear));
+        }
+
         const mtp1 = data.doingMTP ?? true;
         const mtp2 = (data.doingMTP2 ?? mtp1) && mtp1;
         setDoingMTP(mtp1);
