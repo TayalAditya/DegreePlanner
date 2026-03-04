@@ -1,6 +1,7 @@
 import { CourseType, EnrollmentStatus, ProgramType } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
+import { normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { formatCourseCode } from "@/lib/utils";
 
 export interface CreditBreakdown {
@@ -33,6 +34,92 @@ export interface MTPEligibility {
   minSemesterRequired?: number;
 }
 
+function normalizeBranchCode(branch?: string): string {
+  const b = String(branch || "").trim().toUpperCase();
+  if (!b) return b;
+
+  // UI aliases used in import UI / curriculum defaults
+  if (b === "GERAI") return "GE-ROBO";
+  if (b === "GECE") return "GE-COMM";
+  if (b === "GEMECH") return "GE-MECH";
+
+  return b;
+}
+
+function unique(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function getBranchCandidates(branch?: string): string[] {
+  const b = normalizeBranchCode(branch);
+  if (!b) return ["COMMON"];
+
+  const candidates: string[] = [b];
+
+  if (b === "CSE") candidates.push("CS");
+  if (b === "CS") candidates.push("CSE");
+
+  if (b === "DSE") candidates.push("DS");
+  if (b === "DS") candidates.push("DSE");
+
+  if (b === "MSE") candidates.push("MS");
+  if (b === "MS") candidates.push("MSE");
+
+  if (b === "MEVLSI") candidates.push("VL", "VLSI");
+  if (b === "VL") candidates.push("MEVLSI", "VLSI");
+  if (b === "VLSI") candidates.push("VL", "MEVLSI");
+
+  if (b === "BSCS") candidates.push("BS", "CH");
+  if (b === "BS") candidates.push("BSCS", "CH");
+  if (b === "CH") candidates.push("BSCS", "BS");
+
+  if (b === "BE") candidates.push("BIO");
+  if (b === "BIO") candidates.push("BE");
+
+  if (b === "GE-MECH" || b === "GE-COMM" || b === "GE-ROBO" || b.startsWith("GE-")) {
+    candidates.push("GE");
+  }
+
+  candidates.push("COMMON");
+  return unique(candidates);
+}
+
+function pickBranchMappingCategory(
+  mappings: Array<{ courseCategory: string; branch: string }> | undefined,
+  branch?: string
+): string | undefined {
+  if (!mappings || mappings.length === 0) return undefined;
+
+  const normalizedBranch = normalizeBranchCode(branch);
+  const candidates = getBranchCandidates(normalizedBranch);
+  const candidateOrder = new Map<string, number>(candidates.map((br, idx) => [br, idx]));
+
+  let best: { courseCategory: string; branch: string } | undefined;
+  let bestIdx = Number.POSITIVE_INFINITY;
+
+  for (const m of mappings) {
+    const mappingBranch = normalizeBranchCode(m.branch);
+    const idx = candidateOrder.get(mappingBranch);
+
+    if (idx !== undefined && idx < bestIdx) {
+      best = m;
+      bestIdx = idx;
+      continue;
+    }
+
+    // GE specializations are stored as "GE-*" mappings; allow a GE user to match them.
+    if (normalizedBranch === "GE" && mappingBranch.startsWith("GE") && candidateOrder.has("GE")) {
+      const geIdx = (candidateOrder.get("GE") ?? Number.POSITIVE_INFINITY) + 0.5;
+      if (geIdx < bestIdx) {
+        best = m;
+        bestIdx = geIdx;
+      }
+    }
+  }
+
+  return best?.courseCategory;
+}
+
 export class CreditCalculator {
   async calculateProgramProgress(
     userId: string,
@@ -49,7 +136,7 @@ export class CreditCalculator {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { doingMTP: true, doingMTP2: true, doingISTP: true, branch: true },
+      select: { doingMTP: true, doingMTP2: true, doingISTP: true, branch: true, batch: true, enrollmentId: true },
     });
 
     const enrollments = await prisma.courseEnrollment.findMany({
@@ -102,6 +189,15 @@ export class CreditCalculator {
     let istpCredits = istpCreditsFull;
 
     if (!isBSProgram) {
+      const inferredBatch = (() => {
+        if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;
+        const enrollmentId = String(user?.enrollmentId || "").toUpperCase();
+        const match = /B(\d{2})/i.exec(enrollmentId);
+        if (match) return 2000 + Number.parseInt(match[1], 10);
+        return null;
+      })();
+      const isBatch22 = inferredBatch === 2022;
+
       const doingMTP1Pref = user?.doingMTP ?? true;
       const rawDoingMTP2Pref = user?.doingMTP2 ?? doingMTP1Pref;
       const doingMTP2Pref = doingMTP1Pref ? rawDoingMTP2Pref : false;
@@ -111,7 +207,12 @@ export class CreditCalculator {
 
       // If ISTP is skipped (and not already completed), add 4 credits to FE
       if (!doingISTPPref && !istpCompleted) {
-        feCredits += istpCreditsFull;
+        if (isBatch22) {
+          deCredits += 3;
+          feCredits += 1;
+        } else {
+          feCredits += istpCreditsFull;
+        }
         istpCredits = 0;
       }
 
@@ -125,7 +226,12 @@ export class CreditCalculator {
             mtpCredits = 3;
           }
         } else if (!effectiveDoingMTP1) {
-          deCredits += mtpCreditsFull;
+          if (isBatch22) {
+            deCredits += 5;
+            feCredits += 3;
+          } else {
+            deCredits += mtpCreditsFull;
+          }
           mtpCredits = 0;
         } else if (!doingMTP2Pref) {
           deCredits += 5;
@@ -457,7 +563,8 @@ export class CreditCalculator {
 
       // IC Basket compulsion logic - check BEFORE branchMappings
       if ((isICB1 || isICB2) && branch) {
-        const branchCompulsion = IC_BASKET_COMPULSIONS[branch] || {};
+        const basketBranch = normalizeBranchForIcBasket(branch);
+        const branchCompulsion = IC_BASKET_COMPULSIONS[basketBranch] || {};
         
         if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
           breakdown.core += credits;
@@ -484,11 +591,7 @@ export class CreditCalculator {
         
         // Non-compulsory IC basket course → check branch mapping before defaulting to FE
         // (e.g. IC-240 is ICB2 but mapped as DC for MSE)
-        const basketFallbackAliases = branch === "CSE" ? ["CSE", "CS"] : branch === "CS" ? ["CS", "CSE"] : [branch];
-        const basketMappings = enrollment.course.branchMappings || [];
-        const basketDirect = basketMappings.find((m) => basketFallbackAliases.includes(m.branch));
-        const basketCommon = basketMappings.find((m) => m.branch === "COMMON");
-        const basketFallbackCategory = (basketDirect || basketCommon)?.courseCategory;
+        const basketFallbackCategory = pickBranchMappingCategory(enrollment.course.branchMappings, branch);
         if (basketFallbackCategory === "DC" || basketFallbackCategory === "IC" || basketFallbackCategory === "IC_BASKET") {
           breakdown.core += credits;
         } else if (basketFallbackCategory === "DE") {
@@ -505,12 +608,7 @@ export class CreditCalculator {
         return;
       }
 
-      const branchAliases = branch === "CSE" ? ["CSE", "CS"] : branch === "CS" ? ["CS", "CSE"] : [branch];
-      const mappings = enrollment.course.branchMappings || [];
-      const direct = mappings.find((m) => branchAliases.includes(m.branch));
-      const ge = branch && branch.startsWith("GE") ? mappings.find((m) => m.branch.startsWith("GE")) : undefined;
-      const common = mappings.find((m) => m.branch === "COMMON");
-      const mappedCategory = (direct || ge || common)?.courseCategory;
+      const mappedCategory = pickBranchMappingCategory(enrollment.course.branchMappings, branch);
 
       if (mappedCategory) {
         switch (mappedCategory) {
