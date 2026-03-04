@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { DashboardOverview } from "@/components/DashboardOverview";
 import Link from "next/link";
 import { TimeGreeting } from "@/components/TimeGreeting";
+import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
 import { 
   BookOpen, 
   GraduationCap, 
@@ -31,6 +32,11 @@ export default async function DashboardPage() {
 
   if (session?.user?.id) {
     try {
+      await syncEnrollmentStatusesForUser(session.user.id, {
+        batch: session.user.batch,
+        enrollmentId: session.user.enrollmentId,
+      });
+
       const [enrollments, userRecord, primaryProgram] = await Promise.all([
         prisma.courseEnrollment.findMany({
           where: { userId: session.user.id },

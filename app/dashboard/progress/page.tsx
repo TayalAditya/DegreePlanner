@@ -277,8 +277,20 @@ export default function ProgressPage() {
       return "HSS";
     }
 
-    // Never let branch mappings override IKS categorization for these
-    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
+    // Hard overrides (batch-sensitive)
+    const inferredBatch = (() => {
+      const batch = user?.batch;
+      if (typeof batch === "number" && batch > 2000) return batch;
+      const enrollmentId = String(user?.enrollmentId || "").toUpperCase();
+      const match = /B(\d{2})/i.exec(enrollmentId);
+      if (match) return 2000 + Number.parseInt(match[1], 10);
+      return null;
+    })();
+    const isBatch24 = inferredBatch === 2024;
+
+    if (normalizedCode === "IK593") return "FE";
+    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode === "IC182") return isBatch24 ? "IKS" : "IC";
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
       const mapping = pickRelevantBranchMapping(user.branch, enrollment.course.branchMappings);
@@ -300,7 +312,6 @@ export default function ProgressPage() {
     }
 
     if (normalizedCode.startsWith("IC")) return "IC";
-    if (normalizedCode.startsWith("IK")) return "IKS";
 
     // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
     if (normalizedCode === "DP301P") return "ISTP";

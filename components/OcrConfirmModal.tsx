@@ -63,12 +63,14 @@ function resolveCourseType(
   dcPrefixes: Set<string>
 ): string {
   const p = normalizeCourseCode(code);
+  // Hard overrides
+  if (p === "IK593") return "FE";
+  if (p === "IC181") return "IKS";
   // Direct hit from the branch curriculum
   const fromCurriculum = courseTypeMap.get(p);
   if (fromCurriculum) return fromCurriculum;
   // Fallback for courses not in curriculum (electives, cross-branch, etc.)
   if (p.startsWith("IC")) return "IC";
-  if (p.startsWith("IK")) return "IKS";
   if (p.startsWith("HS")) return "HSS";
   if (p.startsWith("DP")) return p.includes("301") ? "ISTP" : "MTP";
   // Same-department prefix but not a required course → Departmental Elective

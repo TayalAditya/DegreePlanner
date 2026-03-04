@@ -341,8 +341,20 @@ export default function CoursesPage() {
     const code = enrollment.course.code.toUpperCase();
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
 
-    // Never let branch mappings override IKS categorization for these
-    if (normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
+    // Hard overrides (batch-sensitive)
+    const inferredBatch = (() => {
+      const batch = user?.batch;
+      if (typeof batch === "number" && batch > 2000) return batch;
+      const enrollmentId = String(user?.enrollmentId || "").toUpperCase();
+      const match = /B(\d{2})/i.exec(enrollmentId);
+      if (match) return 2000 + parseInt(match[1], 10);
+      return null;
+    })();
+    const isBatch24 = inferredBatch === 2024;
+
+    if (normalizedCode === "IK593") return "FE";
+    if (normalizedCode === "IC181") return "IKS";
+    if (normalizedCode === "IC182") return isBatch24 ? "IKS" : "IC";
 
     // First try to get from branchMappings if available
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
@@ -373,7 +385,6 @@ export default function CoursesPage() {
     
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("HS")) return "HSS";
-    if (normalizedCode.startsWith("IKS") || normalizedCode.startsWith("IK")) return "IKS";
 
     // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
     if (normalizedCode === "DP301P") return "ISTP";
