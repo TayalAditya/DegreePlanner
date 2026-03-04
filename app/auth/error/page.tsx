@@ -34,6 +34,10 @@ function AuthErrorContent() {
       title: "Access Restricted",
       description: "This app is only for IIT Mandi students on the approved list (B22/B23/B24 supported).",
     },
+    branch_not_allowed: {
+      title: "Branch Not Supported",
+      description: "For Batch 2024, access is currently enabled only for CSE/DSE/EE/MEVLSI/MSE students. If you believe this is a mistake, please contact the administrator.",
+    },
     Default: {
       title: "Authentication Error",
       description: "An error occurred during authentication. Please try again.",
