@@ -550,7 +550,7 @@ export class CreditCalculator {
       }
 
       // Apply prefix-based categorization (same as other components)
-      if (normalizedCode === "IC181") {
+      if (normalizedCode === "IC181" || normalizedCode === "IC182") {
         breakdown.core += credits; // IKS
         return;
       }
