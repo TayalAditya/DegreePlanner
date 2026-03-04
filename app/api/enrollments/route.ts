@@ -288,6 +288,23 @@ export async function POST(request: NextRequest) {
     const normalizedCourseCode = normalizeCourseCode(course.code);
     const semesterNumber = typeof semester === "string" ? parseInt(semester, 10) : Number(semester);
 
+    const isDpIstp = normalizedCourseCode === "DP301P";
+    const isDpMtp1 = normalizedCourseCode === "DP498P";
+    const isDpMtp2 = normalizedCourseCode === "DP499P";
+    const isDpMtp = isDpMtp1 || isDpMtp2;
+
+    let finalCourseType: CourseType =
+      courseType && Object.values(CourseType).includes(courseType as CourseType)
+        ? (courseType as CourseType)
+        : CourseType.FREE_ELECTIVE;
+
+    // Special DP codes (always treated as ISTP/MTP)
+    if (isDpIstp) finalCourseType = CourseType.ISTP;
+    if (isDpMtp) finalCourseType = CourseType.MTP;
+
+    const finalIsPassFail =
+      finalCourseType === CourseType.FREE_ELECTIVE ? Boolean(isPassFail) : false;
+
     // Semester-long onsite internship constraint (e.g., DP-399P):
     // If any *399P course is enrolled in semester 6/7, no other courses are allowed in that semester.
     if (semesterNumber === 6 || semesterNumber === 7) {
@@ -325,19 +342,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate P/F course enrollment
-    if (isPassFail) {
-      if (!course.isPassFailEligible) {
-        return NextResponse.json(
-          { error: "This course cannot be taken as Pass/Fail" },
-          { status: 400 }
-        );
-      }
+    // Validate P/F course enrollment (FE only)
+    if (isPassFail && finalCourseType !== CourseType.FREE_ELECTIVE) {
+      return NextResponse.json(
+        { error: "Only Free Electives can be taken as Pass/Fail" },
+        { status: 400 }
+      );
+    }
 
+    if (finalIsPassFail) {
       const { allowed, reason } = await canTakePassFailCourse(
         session.user.id,
         course.credits,
-        semester
+        semesterNumber
       );
 
       if (!allowed) {
@@ -388,23 +405,6 @@ export async function POST(request: NextRequest) {
         : grade
           ? EnrollmentStatus.COMPLETED
           : EnrollmentStatus.IN_PROGRESS;
-
-    const isDpIstp = normalizedCourseCode === "DP301P";
-    const isDpMtp1 = normalizedCourseCode === "DP498P";
-    const isDpMtp2 = normalizedCourseCode === "DP499P";
-    const isDpMtp = isDpMtp1 || isDpMtp2;
-
-    let finalCourseType: CourseType =
-      courseType && Object.values(CourseType).includes(courseType as CourseType)
-        ? (courseType as CourseType)
-        : CourseType.FREE_ELECTIVE;
-
-    // Special DP codes (always treated as ISTP/MTP)
-    if (isDpIstp) finalCourseType = CourseType.ISTP;
-    if (isDpMtp) finalCourseType = CourseType.MTP;
-
-    const finalIsPassFail =
-      finalCourseType === CourseType.FREE_ELECTIVE ? Boolean(isPassFail) : false;
 
     // If a user re-adds ISTP/MTP courses, auto-enable the corresponding preferences
     // so Programs checkboxes stay consistent.

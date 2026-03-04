@@ -139,6 +139,7 @@ export default function CoursesPage() {
   const [tab, setTab] = useState<"my-courses" | "catalog">("my-courses");
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [dbCourseCategoryMap, setDbCourseCategoryMap] = useState<Map<string, string>>(new Map());
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -168,6 +169,31 @@ export default function CoursesPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    const branch = user?.branch;
+    if (!branch) return;
+    const controller = new AbortController();
+
+    const loadCourseCategoryMap = async () => {
+      try {
+        const res = await fetch(
+          `/api/course-category-map?branch=${encodeURIComponent(branch)}`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        const entries = Object.entries(data?.categoriesByCode ?? {}) as Array<[string, string]>;
+        setDbCourseCategoryMap(new Map(entries));
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+        console.warn("Failed to load course category map:", err);
+      }
+    };
+
+    loadCourseCategoryMap();
+    return () => controller.abort();
+  }, [user?.branch]);
 
   const loadData = async () => {
     try {
@@ -459,23 +485,28 @@ export default function CoursesPage() {
         return "FREE_ELECTIVE";
       }
     }
-    
-    // DC courses (Discipline Core) - starts with branch code
-    if (code.startsWith("CS-") || code.startsWith("EE-") || 
-        code.startsWith("ME-") || code.startsWith("CE-") ||
-        code.match(/^[A-Z]{2,3}-[0-9]/)) {
-      // Check if it's actually a DC course by looking at department
-      if (course.department.includes("Computer") || 
-          course.department.includes("Electrical") ||
-          course.department.includes("Mechanical") ||
-          course.department.includes("Civil")) {
-        // Most parent discipline courses are DE (unless marked as core)
-        return "DE";
+
+    const mappedCategory = dbCourseCategoryMap.get(normalizedCode);
+    if (mappedCategory) {
+      switch (mappedCategory) {
+        case "DE":
+          return "DE";
+        case "FE":
+          return "FREE_ELECTIVE";
+        case "MTP":
+          return "MTP";
+        case "ISTP":
+          return "ISTP";
+        default:
+          return "CORE";
       }
     }
-    
-    // Default to FE for other courses
-    return "FREE_ELECTIVE";
+
+    // Fallback heuristics (conservative)
+    if (normalizedCode.startsWith("IC")) return "CORE";
+    if (user?.branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
+    if (user?.branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
+    return "CORE";
   };
 
   const handleAddCourse = (course: Course) => {
@@ -1437,7 +1468,11 @@ export default function CoursesPage() {
                   </label>
                   <select
                     value={courseType}
-                    onChange={(e) => setCourseType(e.target.value)}
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setCourseType(next);
+                      if (next !== "FREE_ELECTIVE") setIsPassFail(false);
+                    }}
                     className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
                   >
                     <option value="AUTO">Auto-detect (Recommended)</option>
@@ -1471,8 +1506,7 @@ export default function CoursesPage() {
                     ? determineCourseType(addingCourse)
                     : courseType;
                   const isFE = inferredType === "FREE_ELECTIVE";
-                  const eligible = Boolean(addingCourse.isPassFailEligible);
-                  const canUsePF = isFE && eligible && passFailRemaining > 0;
+                  const canUsePF = isFE && passFailRemaining > 0;
 
                   return (
                     <div className="p-4 bg-surface-hover rounded-lg border border-border">
@@ -1484,9 +1518,6 @@ export default function CoursesPage() {
                           </p>
                           {!isFE && (
                             <p className="text-xs text-foreground-secondary mt-1">Only Free Electives can be taken as P/F.</p>
-                          )}
-                          {isFE && !eligible && (
-                            <p className="text-xs text-foreground-secondary mt-1">This course is not P/F eligible.</p>
                           )}
                         </div>
                         <label className="inline-flex items-center gap-2">
