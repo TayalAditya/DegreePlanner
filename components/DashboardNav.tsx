@@ -19,7 +19,8 @@ import {
   Download,
   LifeBuoy,
   Inbox,
-  Users
+  Users,
+  Megaphone
 } from "lucide-react";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
@@ -56,6 +57,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
   const adminNavigation = [
     { name: "Users", href: "/dashboard/admin", icon: Users },
+    { name: "Announcements", href: "/dashboard/admin/announcements", icon: Megaphone },
     { name: "Course Mappings", href: "/dashboard/course-mappings", icon: GitBranch },
     { name: "Inbox", href: "/dashboard/inbox", icon: Inbox },
   ];

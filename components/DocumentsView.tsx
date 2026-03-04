@@ -10,6 +10,7 @@ import {
   ExternalLink,
   Link2,
   Eye,
+  Pencil,
   Trash2,
   FolderOpen,
   X
@@ -198,6 +199,7 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
   const [searchQuery, setSearchQuery] = useState("");
   const [previewDoc, setPreviewDoc] = useState<DocumentRecord | null>(null);
   const [isAddLinkOpen, setIsAddLinkOpen] = useState(false);
+  const [editingDoc, setEditingDoc] = useState<DocumentRecord | null>(null);
 
   const reducedMotion = useReducedMotion() ?? false;
   const queryClient = useQueryClient();
@@ -230,17 +232,18 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
   const previewConfig = useMemo(() => getPreviewConfig(previewDoc?.fileUrl), [previewDoc?.fileUrl]);
 
   useEffect(() => {
-    if (!previewDoc && !isAddLinkOpen) return;
+    if (!previewDoc && !isAddLinkOpen && !editingDoc) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setPreviewDoc(null);
       setIsAddLinkOpen(false);
+      setEditingDoc(null);
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [previewDoc, isAddLinkOpen]);
+  }, [previewDoc, isAddLinkOpen, editingDoc]);
 
   const handleCreateLinkDoc = async (payload: {
     title: string;
@@ -309,6 +312,46 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
       await queryClient.invalidateQueries({ queryKey: ["documents", userId, selectedCategory] });
     } catch (error: any) {
       showToast("error", error?.message || "Failed to delete document");
+    }
+  };
+
+  const handleUpdateDocument = async (document: DocumentRecord, payload: {
+    title: string;
+    description?: string;
+    category: string;
+    url?: string;
+    isPublic: boolean;
+  }) => {
+    if (!payload.title.trim()) {
+      showToast("warning", "Title is required");
+      return;
+    }
+
+    const url = payload.url ? normalizeUrlInput(payload.url) : "";
+
+    try {
+      const res = await fetch(`/api/documents/${document.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: payload.title.trim(),
+          description: payload.description?.trim() || null,
+          category: payload.category,
+          fileUrl: url.trim() ? url.trim() : null,
+          isPublic: payload.isPublic,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || "Failed to update document");
+      }
+
+      showToast("success", "Document updated");
+      setEditingDoc(null);
+      await queryClient.invalidateQueries({ queryKey: ["documents", userId, selectedCategory] });
+    } catch (error: any) {
+      showToast("error", error?.message || "Failed to update document");
     }
   };
 
@@ -387,6 +430,7 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
               document={doc}
               isAdmin={canManage}
               onView={() => setPreviewDoc(doc)}
+              onEdit={() => setEditingDoc(doc)}
               onDelete={() => handleDeleteDocument(doc)}
             />
           ))}
@@ -488,6 +532,18 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
         )}
       </AnimatePresence>
 
+      {/* Edit Document Modal */}
+      <AnimatePresence>
+        {editingDoc && (
+          <EditDocumentModal
+            reducedMotion={reducedMotion}
+            document={editingDoc}
+            onClose={() => setEditingDoc(null)}
+            onSubmit={(payload) => handleUpdateDocument(editingDoc, payload)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Add Link / Embed Modal */}
       <AnimatePresence>
         {isAddLinkOpen && (
@@ -506,11 +562,13 @@ function DocumentCard({
   document,
   isAdmin,
   onView,
+  onEdit,
   onDelete,
 }: {
   document: DocumentRecord;
   isAdmin: boolean;
   onView: () => void;
+  onEdit: () => void;
   onDelete: () => void;
 }) {
   const formatFileSize = (bytes: number) => {
@@ -529,9 +587,24 @@ function DocumentCard({
           </span>
         </div>
         {isAdmin && (
-          <button onClick={onDelete} className="text-red-500 hover:text-red-600 p-1">
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={onEdit}
+              className="text-foreground-secondary hover:text-foreground p-1"
+              aria-label="Edit document"
+              title="Edit"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onDelete}
+              className="text-red-500 hover:text-red-600 p-1"
+              aria-label="Delete document"
+              title="Delete"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         )}
       </div>
 
@@ -571,6 +644,158 @@ function DocumentCard({
         )}
       </div>
     </div>
+  );
+}
+
+function EditDocumentModal({
+  reducedMotion,
+  document,
+  onClose,
+  onSubmit,
+}: {
+  reducedMotion: boolean;
+  document: DocumentRecord;
+  onClose: () => void;
+  onSubmit: (payload: { title: string; description?: string; category: string; url?: string; isPublic: boolean }) => void;
+}) {
+  const [title, setTitle] = useState(document.title);
+  const [url, setUrl] = useState(document.fileUrl ?? "");
+  const [category, setCategory] = useState(document.category || (CATEGORIES[0]?.value ?? "FORMS"));
+  const [description, setDescription] = useState(document.description ?? "");
+  const [isPublic, setIsPublic] = useState(document.isPublic ?? true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  return (
+    <motion.div
+      key="edit-doc-modal"
+      initial={reducedMotion ? { opacity: 1 } : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={reducedMotion ? { opacity: 0 } : { opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Edit document"
+    >
+      <motion.div
+        initial={reducedMotion ? { opacity: 1 } : { scale: 0.98, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={reducedMotion ? { opacity: 0 } : { scale: 0.98, opacity: 0 }}
+        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 35 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-surface rounded-2xl shadow-2xl w-full max-w-xl border border-border overflow-hidden"
+      >
+        <div className="flex items-center justify-between gap-4 p-5 border-b border-border">
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Edit Document</h2>
+            <p className="text-sm text-foreground-secondary mt-1">
+              Update title, category, visibility, or the URL/embed link.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg hover:bg-surface-hover text-foreground-secondary hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Title</label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">URL (optional)</label>
+            <input
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://drive.google.com/... or /uploads/documents/..."
+              className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            />
+            <p className="text-xs text-foreground-muted mt-1">
+              Leave blank to remove the link/preview.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">Category</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-end gap-3">
+              <label className="flex items-center gap-2 text-sm text-foreground-secondary select-none">
+                <input
+                  type="checkbox"
+                  checked={isPublic}
+                  onChange={(e) => setIsPublic(e.target.checked)}
+                  className="h-4 w-4 rounded border-border text-primary focus-visible:ring-4 focus-visible:ring-primary/20"
+                />
+                Visible to everyone
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">Description (optional)</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 resize-none"
+            />
+          </div>
+        </div>
+
+        <div className="p-5 border-t border-border flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-border bg-surface text-foreground-secondary hover:text-foreground hover:bg-surface-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            disabled={isSubmitting}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={async () => {
+              if (isSubmitting) return;
+              setIsSubmitting(true);
+              try {
+                await onSubmit({
+                  title,
+                  description,
+                  category,
+                  url,
+                  isPublic,
+                });
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}
+            className="px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Saving..." : "Save"}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
