@@ -70,7 +70,7 @@ export function StatCard({
     >
       <div
         onClick={onClick}
-        className={`relative overflow-hidden bg-surface rounded-xl shadow-sm border border-border p-5 sm:p-6 transition-all duration-300 hover:shadow-md ${borderClass} ${
+        className={`relative h-full overflow-hidden bg-surface rounded-xl shadow-sm border border-border p-5 sm:p-6 transition-all duration-300 hover:shadow-md ${borderClass} ${
           onClick ? "cursor-pointer hover:-translate-y-1" : ""
         }`}
       >
@@ -80,7 +80,7 @@ export function StatCard({
           aria-hidden="true"
         />
 
-        <div className="relative flex items-center justify-between">
+        <div className="relative flex items-center justify-between h-full">
           <div className="min-w-0">
             <p className="text-xs sm:text-sm text-foreground-secondary font-medium mb-1 sm:mb-2">
               {label}
