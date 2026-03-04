@@ -854,7 +854,9 @@ export default function ProgressPage() {
                     </span>
                   </div>
                   <span className="text-foreground font-bold sm:text-right">
-                    {credits} {inProgress > 0 && <span className="text-info">(+{inProgress})</span>}
+                    {credits}
+                    {inProgress > 0 && <span className="text-info"> (+{inProgress})</span>}
+                    {required > 0 ? `/${required}` : null}
                   </span>
                 </div>
                 <div className="w-full bg-border rounded-full h-2.5 overflow-hidden">
