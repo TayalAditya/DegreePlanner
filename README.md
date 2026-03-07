@@ -1,65 +1,96 @@
 # PlanMyDegree
 
-A degree planning tool built for IIT Mandi students. Tracks credits, timetable, academic progress, MTP/ISTP eligibility, and more — all in one place.
+A degree planning tool built for IIT Mandi students. One place for credits, timetable, academic progress, MTP/ISTP eligibility, and everything else that usually requires four portals and a spreadsheet.
 
-Live at planmydegree.app
+Live at **[planmydegree.app](https://planmydegree.app)**
 
 Currently available for UG Batch 23 and select branches of Batch 22 and Batch 24.
 
+---
+
 ## Features
 
-- Google OAuth authentication
-- Semester-wise course management across all credit categories (IC, IC Basket, DC, DE, FE, HSS, IKS)
-- Real-time credit calculation and progress tracking
-- MTP and ISTP eligibility checking
-- Weekly timetable with conflict detection and calendar export
-- Shared timetables with batch
-- Document management
-- Mobile-responsive, PWA-ready, works offline
+**Credit Tracking**
+- Auto-calculates credits across IC, IC Basket, DC, DE, FE, HSS, IKS, MTP, and ISTP
+- Real-time MTP and ISTP eligibility based on your enrollment history
+- Visual progress breakdown by category
+
+**Timetable**
+- Weekly timetable with venue and timing
+- Conflict detection before it becomes a problem
+- Share your timetable with batchmates
+- Export to calendar
+
+**Courses**
+- Semester-wise course management
+- Smart recommendations based on pending requirements
+- Tracks enrollment status, grades, and credit types
+
+**Other**
+- Document management (forms, certificates, transcripts)
+- Mobile-responsive and PWA-ready — works offline
 - Dark and light modes, 4 colour themes
+- Google OAuth with institute email validation
+
+---
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes
-- **Database**: PostgreSQL with Prisma ORM
-- **Auth**: NextAuth.js with Google Provider
-- **Data Fetching**: TanStack React Query
-- **Visualizations**: Recharts
+| Layer | Tech |
+|---|---|
+| Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS |
+| Backend | Next.js API Routes |
+| Database | PostgreSQL + Prisma ORM |
+| Auth | NextAuth.js (Google Provider) |
+| Data Fetching | TanStack React Query |
+| Charts | Recharts |
+
+---
 
 ## Getting Started
 
-1. Install dependencies:
-
+```bash
+# Install dependencies
 npm install
 
-2. Set up environment variables:
-
+# Copy environment variables
 cp .env.example .env
+```
 
-3. Configure .env with your database URL and Google OAuth credentials
+Fill in `.env` with your database URL and Google OAuth credentials, then:
 
-4. Set up the database:
-
+```bash
+# Generate Prisma client and push schema
 npx prisma generate
 npx prisma db push
 
-5. Run the development server:
+# Seed initial data (optional)
+npx prisma db seed
 
+# Start dev server
 npm run dev
+```
 
-6. Open http://localhost:3000
+Open [http://localhost:3000](http://localhost:3000)
+
+---
 
 ## Project Structure
 
-app/                    # Next.js App Router
-├── api/               # API routes
-├── auth/              # Authentication pages
-├── dashboard/         # Main dashboard pages
+```
+app/
+├── api/               # API routes (auth, courses, timetable, documents, etc.)
+├── auth/              # Sign-in and error pages
+├── dashboard/         # Protected pages (courses, progress, timetable, settings)
 └── layout.tsx
-components/            # React components
-lib/                   # Utility functions and business logic
-prisma/                # Database schema and seed
+
+components/            # Reusable React components
+lib/                   # Business logic, credit calculator, validation, utils
+prisma/                # Schema and seed data
+public/                # Static assets, service worker, PWA manifest
+```
+
+---
 
 ## License
 
