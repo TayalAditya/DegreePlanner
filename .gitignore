@@ -57,3 +57,7 @@ next-env.d.ts
 /docs/iit mandi courses*.pdf
 docs/
 tmp/
+
+# Internal docs
+*.md
+!README.md
