@@ -56,3 +56,4 @@ next-env.d.ts
 /docs/* copy.xlsx
 /docs/iit mandi courses*.pdf
 docs/
+tmp/
