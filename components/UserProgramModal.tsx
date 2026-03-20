@@ -376,6 +376,9 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
         }
         return applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
       }
+
+      // Mappings exist but none matched this student's branch → FE
+      return "FE";
     }
 
     if (isIkCourse) return "FE";

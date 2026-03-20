@@ -387,6 +387,9 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
       if (mapping && mapping.courseCategory in categoryCredits) {
         return applyMinorDeOverride(mapping.courseCategory as keyof typeof categoryCredits);
       }
+
+      // Mappings exist but none matched this student's branch → FE
+      return "FE";
     }
 
     if (isIkCourse) return "FE";
@@ -398,18 +401,17 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     if (normalizedCode === "DP498P" || normalizedCode === "DP499P") return "MTP";
     if (normalizedCode.includes("MTP")) return "MTP";
     if (normalizedCode.includes("ISTP")) return "ISTP";
-    
-    // Check courseType AFTER branchMappings
+
+    // No branchMappings at all — fall back to courseType
     if (enrollment.courseType === "DE") return applyMinorDeOverride("DE");
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     if (enrollment.courseType === "CORE") return "DC";
-    
+
     // Branch-specific course patterns (only if no explicit courseType)
     if (userBranch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE");
     if (userBranch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE");
 
-    // No branch mapping found → parent branch course → counts as DE
-    return applyMinorDeOverride("DE");
+    return "FE";
   };
 
   const completedCodes = useMemo(() => {
