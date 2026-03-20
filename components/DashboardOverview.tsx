@@ -276,6 +276,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
         }
         return applyMinorDeOverride(mapping.courseCategory as keyof typeof categoryLabels);
       }
+
+      // Mappings exist but none matched this student's branch → FE
+      return "FE";
     }
 
     if (isIkCourse) return "FE";
@@ -296,7 +299,8 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     if (enrollment.courseType === "ISTP") return "ISTP";
     if (enrollment.courseType === "DE") return applyMinorDeOverride("DE");
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
-    return "DC";
+    if (enrollment.courseType === "CORE") return "DC";
+    return "FE";
   };
 
   const activeEnrollmentsForCategory = allEnrollments.filter(
