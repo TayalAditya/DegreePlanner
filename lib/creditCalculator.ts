@@ -704,11 +704,16 @@ export class CreditCalculator {
         return;
       }
 
-      // Fall back to courseType.
-      // CourseType.CORE means DC for some branch — but since no branchMapping matched
-      // the student's branch, this is a "parent branch" course → counts as DE.
+      // If the course has branchMappings defined but none matched this student's
+      // branch, the course is NOT part of their curriculum → Free Elective.
+      const hasMappings = enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0;
+      if (hasMappings) {
+        breakdown.freeElective += credits;
+        return;
+      }
+
+      // No branchMappings at all — fall back to courseType.
       switch (enrollment.courseType) {
-        // Treat CORE as core-category credits for the student's program.
         case CourseType.CORE:
           breakdown.core += credits;
           break;
@@ -728,7 +733,7 @@ export class CreditCalculator {
           breakdown.istp += credits;
           break;
         default:
-          addDeCredits(credits, enrollment.course.code); // CORE or unknown → parent branch course → DE
+          breakdown.freeElective += credits;
       }
     });
 
