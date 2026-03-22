@@ -2,56 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { getBranchCandidates, normalizeBranchCode } from "@/lib/branchInfo";
 import { CourseCategoryType } from "@prisma/client";
 
 function normalizeCourseCode(code: string): string {
   return code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
-function normalizeBranchCode(branch: string): string {
-  const b = branch.trim().toUpperCase();
-  if (!b) return b;
-
-  // UI aliases used in `defaultCurriculum.ts` / import UI
-  if (b === "GERAI") return "GE-ROBO";
-  if (b === "GECE") return "GE-COMM";
-  if (b === "GEMECH") return "GE-MECH";
-
-  return b;
-}
-
 function unique(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
-}
-
-function getBranchCandidates(branch: string): string[] {
-  const b = normalizeBranchCode(branch);
-  const candidates: string[] = [b];
-
-  if (b === "CSE") candidates.push("CS");
-  if (b === "CS") candidates.push("CSE");
-
-  if (b === "DSE") candidates.push("DS");
-  if (b === "DS") candidates.push("DSE");
-
-  if (b === "MSE") candidates.push("MS");
-  if (b === "MS") candidates.push("MSE");
-
-  if (b === "MEVLSI") candidates.push("VL", "VLSI");
-  if (b === "VL") candidates.push("MEVLSI", "VLSI");
-  if (b === "VLSI") candidates.push("VL", "MEVLSI");
-
-  if (b === "BSCS") candidates.push("BS", "CH");
-  if (b === "BS") candidates.push("BSCS", "CH");
-  if (b === "CH") candidates.push("BSCS", "BS");
-
-  if (b === "BE") candidates.push("BIO");
-  if (b === "BIO") candidates.push("BE");
-
-  if (b === "GE-MECH" || b === "GE-COMM" || b === "GE-ROBO") candidates.push("GE");
-
-  candidates.push("COMMON");
-  return unique(candidates);
 }
 
 function toUiCategory(category: CourseCategoryType): string {

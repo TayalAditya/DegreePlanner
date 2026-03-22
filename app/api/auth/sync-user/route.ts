@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -37,9 +38,14 @@ export async function POST(req: NextRequest) {
       });
 
       if (dbUser) {
-        const program = await prisma.program.findUnique({
-          where: { code: session.user.branch },
+        let program = await prisma.program.findUnique({
+          where: { code: session.user.branch || "" },
         });
+        if (!program) {
+          program = await prisma.program.findUnique({
+            where: { code: getProgramLookupBranchCode(session.user.branch) },
+          });
+        }
 
         if (program) {
           const alreadyEnrolled = await prisma.userProgram.findFirst({

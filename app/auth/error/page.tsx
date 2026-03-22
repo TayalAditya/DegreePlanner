@@ -24,7 +24,7 @@ function AuthErrorContent() {
     },
     batch_not_supported: {
       title: "Batch Not Supported",
-      description: "Currently, we're operating for Batch 2023 and a limited set of Batch 2022/2024 students. We might expand to other batches later. Please check back soon!",
+      description: "Currently, we're operating for Batch 2023, all of Batch 2025, and supported sets of Batch 2022/2024 students. We might expand to other batches later. Please check back soon!",
     },
     domain_not_allowed: {
       title: "Email Domain Not Allowed",
@@ -32,7 +32,7 @@ function AuthErrorContent() {
     },
     user_not_approved: {
       title: "Access Restricted",
-      description: "This app is only for IIT Mandi students on the approved list (B22/B23/B24 supported).",
+      description: "This app is only for IIT Mandi students with supported institute accounts (B22/B23/B24/B25 supported).",
     },
     branch_not_allowed: {
       title: "Branch Not Supported",
@@ -83,12 +83,14 @@ function AuthErrorContent() {
             <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-xl">
               <p className="text-sm text-foreground-secondary">
                 <span className="font-semibold text-warning">IIT Mandi Students Only:</span> Please sign in with your institute Google account (e.g.{" "}
-                <code className="bg-warning/10 dark:bg-warning/20 px-1.5 py-0.5 rounded border border-warning/20">b23xxxxx@students.iitmandi.ac.in</code>{" "}
+                <code className="bg-warning/10 dark:bg-warning/20 px-1.5 py-0.5 rounded border border-warning/20">b23xxx@students.iitmandi.ac.in</code>{" "}
                 /{" "}
-                <code className="bg-warning/10 dark:bg-warning/20 px-1.5 py-0.5 rounded border border-warning/20">b22xxxxx@students.iitmandi.ac.in</code>{" "}
+                <code className="bg-warning/10 dark:bg-warning/20 px-1.5 py-0.5 rounded border border-warning/20">b22xxx@students.iitmandi.ac.in</code>{" "}
                 /{" "}
-                <code className="bg-warning/10 dark:bg-warning/20 px-1.5 py-0.5 rounded border border-warning/20">b24xxxxx@students.iitmandi.ac.in</code>
-                ). Only students on the approved list are permitted.
+                <code className="bg-warning/10 dark:bg-warning/20 px-1.5 py-0.5 rounded border border-warning/20">b24xxx@students.iitmandi.ac.in</code>{" "}
+                /{" "}
+                <code className="bg-warning/10 dark:bg-warning/20 px-1.5 py-0.5 rounded border border-warning/20">b25xxx@students.iitmandi.ac.in</code>
+                ). Only supported institutional accounts are permitted.
               </p>
             </div>
           )}

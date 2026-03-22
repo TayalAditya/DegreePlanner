@@ -52,6 +52,21 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
+  DSAI: {
+    code: 'DSAI',
+    name: 'Data Science & Artificial Intelligence',
+    fullName: 'B.Tech in Data Science & Artificial Intelligence',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 33,
+    deCredits: 33,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 7,
+  },
+
   MEVLSI: {
     code: 'MEVLSI',
     name: 'Microelectronics & VLSI',

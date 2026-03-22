@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
 import { formatCourseCode } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
+import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface DashboardOverviewProps {
@@ -128,35 +129,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
   const mappingBranchAliases = useMemo(() => {
     const raw = userSettings?.branch;
     if (!raw) return [];
-    const normalized = normalizeBranchForIcBasket(raw);
-    const aliases = new Set<string>([raw, normalized]);
-
-    if (normalized === "CSE" || raw === "CSE") aliases.add("CS");
-    if (normalized === "CS" || raw === "CS") aliases.add("CSE");
-
-    if (normalized === "DSE" || raw === "DSE") aliases.add("DS");
-    if (normalized === "DS" || raw === "DS") aliases.add("DSE");
-
-    if (normalized === "MSE" || raw === "MSE") aliases.add("MS");
-    if (normalized === "MS" || raw === "MS") aliases.add("MSE");
-
-    if (normalized === "BIO" || raw === "BIO") aliases.add("BE");
-    if (normalized === "BE" || raw === "BE") aliases.add("BIO");
-
-    if (normalized === "VLSI" || raw === "VLSI") {
-      aliases.add("VL");
-      aliases.add("MEVLSI");
-    }
-    if (normalized === "VL" || raw === "VL") {
-      aliases.add("VLSI");
-      aliases.add("MEVLSI");
-    }
-    if (normalized === "MEVLSI" || raw === "MEVLSI") {
-      aliases.add("VL");
-      aliases.add("VLSI");
-    }
-
-    return Array.from(aliases);
+    return getBranchCandidates(raw).filter((branch) => branch !== "COMMON");
   }, [userSettings?.branch]);
 
   const pickRelevantBranchMapping = (branch: string | undefined, mappings: any[] | undefined) => {
@@ -256,11 +229,11 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       if (match) return 2000 + Number.parseInt(match[1], 10);
       return null;
     })();
-    const isBatch24 = inferredBatch === 2024;
+    const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
 
     if (normalizedCode === "IK593") return "FE";
     if (normalizedCode === "IC181") return "IKS";
-    if (normalizedCode === "IC182") return isBatch24 ? "IKS" : "IC";
+    if (normalizedCode === "IC182") return isBatch24Or25 ? "IKS" : "IC";
 
     if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
       const mapping = pickRelevantBranchMapping(userSettings.branch, enrollment.course.branchMappings);
@@ -285,7 +258,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
     // Branch-specific course patterns
     if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return applyMinorDeOverride("DE");
-    if (userSettings?.branch === "DSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) return applyMinorDeOverride("DE");
+    if (isDataScienceBranch(userSettings?.branch) && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) return applyMinorDeOverride("DE");
 
     if (normalizedCode.startsWith("IC")) return "IC";
 

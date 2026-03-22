@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import * as XLSX from "xlsx";
 import * as fs from "fs";
 import * as path from "path";
+import { getDepartmentForBranch, getProgramLookupBranchCode, inferBranchFromProgram } from "../lib/branchInfo";
 
 const prisma = new PrismaClient();
 
@@ -16,50 +17,104 @@ function parseRollNumber(rollNumber: string) {
   };
 }
 
-async function importUsers() {
-  try {
-    console.log("📊 Reading CSV/Excel file...");
+type ImportedUser = {
+  rollNumber: string;
+  name?: string;
+  branch?: string;
+};
 
-    const dataDir = path.join(process.cwd(), "public", "data");
-    let filePath = path.join(dataDir, "approved-students.csv");
-    
-    if (!fs.existsSync(filePath)) {
-      filePath = path.join(dataDir, "approved-students.xlsx");
-    }
-    
-    if (!fs.existsSync(filePath)) {
-      throw new Error("File not found");
-    }
+function loadPrimaryApprovedUsers(): ImportedUser[] {
+  const dataDir = path.join(process.cwd(), "public", "data");
+  let filePath = path.join(dataDir, "approved-students.csv");
 
-    let userData: Array<{ rollNumber: string; name?: string; branch?: string }> = [];
-    
-    if (filePath.endsWith('.csv')) {
-      const csvContent = fs.readFileSync(filePath, 'utf-8');
-      const lines = csvContent.split('\n').filter(line => line.trim());
-      const dataLines = lines.slice(2);
-      
-      userData = dataLines.map(line => {
-        const parts = line.split(',').map(p => p.trim().replace(/^"|"$/g, ''));
+  if (!fs.existsSync(filePath)) {
+    filePath = path.join(dataDir, "approved-students.xlsx");
+  }
+
+  if (!fs.existsSync(filePath)) {
+    throw new Error("File not found");
+  }
+
+  if (filePath.endsWith(".csv")) {
+    const csvContent = fs.readFileSync(filePath, "utf-8");
+    const lines = csvContent.split("\n").filter((line) => line.trim());
+    const dataLines = lines.slice(2);
+
+    return dataLines
+      .map((line) => {
+        const parts = line.split(",").map((p) => p.trim().replace(/^"|"$/g, ""));
         return {
-          rollNumber: parts[0] || '',
+          rollNumber: parts[0] || "",
           name: parts[1] || undefined,
           branch: parts[2] || undefined,
         };
-      }).filter(u => u.rollNumber && u.rollNumber.toLowerCase() !== 'roll no.');
-    } else {
-      const workbook = XLSX.readFile(filePath);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-      
-      userData = data.slice(2).map(row => ({
-        rollNumber: String(row[0] || '').trim(),
-        name: String(row[1] || '').trim() || undefined,
-        branch: String(row[2] || '').trim() || undefined,
-      })).filter(u => u.rollNumber);
-    }
+      })
+      .filter((user) => user.rollNumber && user.rollNumber.toLowerCase() !== "roll no.");
+  }
+
+  const workbook = XLSX.readFile(filePath);
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+
+  return data
+    .slice(2)
+    .map((row) => ({
+      rollNumber: String(row[0] || "").trim(),
+      name: String(row[1] || "").trim() || undefined,
+      branch: String(row[2] || "").trim() || undefined,
+    }))
+    .filter((user) => user.rollNumber);
+}
+
+function loadBatch25Users(): ImportedUser[] {
+  const filePath = path.join(process.cwd(), "docs", "b25 students.xlsx");
+  if (!fs.existsSync(filePath)) {
+    return [];
+  }
+
+  const workbook = XLSX.readFile(filePath);
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false }) as any[][];
+
+  return data
+    .slice(1)
+    .map((row) => ({
+      rollNumber: String(row[0] || "").trim(),
+      name: String(row[1] || "").trim() || undefined,
+      branch: String(row[2] || "").trim() || undefined,
+    }))
+    .filter((user) => /^B25\d+$/i.test(user.rollNumber));
+}
+
+function mergeUsers(primaryUsers: ImportedUser[], batch25Users: ImportedUser[]): ImportedUser[] {
+  const merged = new Map<string, ImportedUser>();
+
+  for (const user of primaryUsers) {
+    merged.set(user.rollNumber.toUpperCase(), user);
+  }
+
+  // Batch 25 roster is authoritative for branch/name if present.
+  for (const user of batch25Users) {
+    merged.set(user.rollNumber.toUpperCase(), user);
+  }
+
+  return Array.from(merged.values());
+}
+
+async function importUsers() {
+  try {
+    console.log("📊 Reading approved users + Batch 25 roster...");
+
+    const primaryUsers = loadPrimaryApprovedUsers();
+    const batch25Users = loadBatch25Users();
+    const userData = mergeUsers(primaryUsers, batch25Users);
 
     console.log(`Found ${userData.length} students\n`);
+    if (batch25Users.length > 0) {
+      console.log(`Included ${batch25Users.length} Batch 25 students from docs/b25 students.xlsx\n`);
+    }
 
     await prisma.approvedUser.deleteMany({});
     console.log("🗑️  Cleared existing\n");
@@ -71,53 +126,9 @@ async function importUsers() {
       try {
         const { batch, enrollmentId } = parseRollNumber(userInfo.rollNumber);
         const email = `${userInfo.rollNumber.toLowerCase()}@students.iitmandi.ac.in`;
-
-        let branchCode = null;
-        let department = null;
-        
-        if (userInfo.branch) {
-          const b = userInfo.branch.toLowerCase();
-          if (b.includes('computer science') || b.includes('cse') || b.includes('b.tech') && b.includes('computer')) {
-            branchCode = 'CSE';
-            department = 'School of Computing & Electrical Engineering';
-          } else if (b.includes('data science') || b.includes('dse')) {
-            branchCode = 'DSE';
-            department = 'School of Computing & Electrical Engineering';
-          } else if (b.includes('mathematics and computing') || b.includes('mnc')) {
-            branchCode = 'MNC';
-            department = 'School of Mathematics & Statistical Science';
-          } else if (b.includes('microelectronics') || b.includes('vlsi') || b.includes('mevlsi')) {
-            branchCode = 'MEVLSI';
-            department = 'School of Computing & Electrical Engineering';
-          } else if (b.includes('electrical') || b.includes('ee') && !b.includes('ece')) {
-            branchCode = 'EE';
-            department = 'School of Computing & Electrical Engineering';
-          } else if (b.includes('mechanical') || b.includes('me') && !b.includes('mse')) {
-            branchCode = 'ME';
-            department = 'School of Mechanical and Materials Engineering';
-          } else if (b.includes('civil') || b.includes('ce') && !b.includes('ece')) {
-            branchCode = 'CE';
-            department = 'School of Environmental and Natural Sciences';
-          } else if (b.includes('geological') || b.includes('ge') && !b.includes('engineering physics')) {
-            branchCode = 'GE';
-            department = 'School of Mechanical and Materials Engineering';
-          } else if (b.includes('engineering physics') || b.includes('ep')) {
-            branchCode = 'EP';
-            department = 'School of Physical Sciences';
-          } else if (b.includes('bioengineering') || b.includes('biological') || b.includes('be') && !b.includes('mse')) {
-            branchCode = 'BE';
-            department = 'School of Bioengineering';
-          } else if (b.includes('materials science') || b.includes('mse')) {
-            branchCode = 'MSE';
-            department = 'School of Mechanical and Materials Engineering';
-          } else if (b.includes('chemical sciences') || b.includes('chemistry') || b.includes('bs') && b.includes('chemical')) {
-            branchCode = 'CS';
-            department = 'School of Chemical Sciences';
-          } else if (b.includes('electronics') || b.includes('ece')) {
-            branchCode = 'ECE';
-            department = 'School of Computing & Electrical Engineering';
-          }
-        }
+        const branchCode = inferBranchFromProgram(userInfo.branch) || null;
+        const department = getDepartmentForBranch(branchCode);
+        const allowedPrograms = branchCode ? [getProgramLookupBranchCode(branchCode)] : [];
 
         await prisma.approvedUser.upsert({
           where: { email },
@@ -128,7 +139,7 @@ async function importUsers() {
             department,
             branch: branchCode,
             batch,
-            allowedPrograms: [],
+            allowedPrograms,
           },
           create: {
             email,
@@ -137,7 +148,7 @@ async function importUsers() {
             department,
             branch: branchCode,
             batch,
-            allowedPrograms: [],
+            allowedPrograms,
           },
         });
 

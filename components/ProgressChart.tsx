@@ -4,6 +4,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { ChevronDown } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { getAllDefaultCourses, type DefaultCourse } from "@/lib/defaultCurriculum";
+import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { formatCourseCode } from "@/lib/utils";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
@@ -105,6 +106,7 @@ const normalizeCourseCode = (code: unknown) =>
 
 const normalizeBranchForIcBasket = (branch?: string) => {
   const upper = String(branch || "").toUpperCase();
+  if (upper === "DSAI" || upper === "DS") return "DSE";
   if (upper === "BE") return "BIO";
   if (upper === "MEVLSI" || upper === "VL") return "VLSI";
   return upper;
@@ -233,10 +235,10 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     const credits = enrollment.course?.credits || 0;
 
     // Hard overrides (batch-sensitive)
-    const isBatch24 = userBatch === 2024;
+    const isBatch24Or25 = userBatch === 2024 || userBatch === 2025;
     if (normalizedCode === "IK593") return "FE";
     if (normalizedCode === "IC181") return "IKS";
-    if (normalizedCode === "IC182") return isBatch24 ? "IKS" : "IC";
+    if (normalizedCode === "IC182") return isBatch24Or25 ? "IKS" : "IC";
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && (branch || userBranch)) {
@@ -271,34 +273,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
       // Respect explicit branch mappings before defaulting to FE.
       const mappings = enrollment.course?.branchMappings || [];
       if (mappings.length > 0) {
-        const aliases = new Set<string>([rawBranch, checkBranch]);
-
-        if (checkBranch === "CSE" || rawBranch === "CSE") aliases.add("CS");
-        if (checkBranch === "CS" || rawBranch === "CS") aliases.add("CSE");
-
-        if (checkBranch === "DSE" || rawBranch === "DSE") aliases.add("DS");
-        if (checkBranch === "DS" || rawBranch === "DS") aliases.add("DSE");
-
-        if (checkBranch === "MSE" || rawBranch === "MSE") aliases.add("MS");
-        if (checkBranch === "MS" || rawBranch === "MS") aliases.add("MSE");
-
-        if (checkBranch === "BIO" || rawBranch === "BIO") aliases.add("BE");
-        if (checkBranch === "BE" || rawBranch === "BE") aliases.add("BIO");
-
-        if (checkBranch === "VLSI" || rawBranch === "VLSI") {
-          aliases.add("VL");
-          aliases.add("MEVLSI");
-        }
-        if (checkBranch === "VL" || rawBranch === "VL") {
-          aliases.add("VLSI");
-          aliases.add("MEVLSI");
-        }
-        if (checkBranch === "MEVLSI" || rawBranch === "MEVLSI") {
-          aliases.add("VL");
-          aliases.add("VLSI");
-        }
-
-        const aliasList = Array.from(aliases);
+        const aliasList = getBranchCandidates(rawBranch).filter((branch) => branch !== "COMMON");
         const exact =
           mappings.find((m: any) => m.branch === rawBranch) ||
           mappings.find((m: any) => m.branch === checkBranch);
@@ -336,34 +311,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     if (mappings.length > 0) {
       const rawBranch = String(branch || userBranch || "").trim().toUpperCase();
       const checkBranch = normalizeBranchForIcBasket(rawBranch);
-      const aliases = new Set<string>([rawBranch, checkBranch]);
-
-      if (checkBranch === "CSE" || rawBranch === "CSE") aliases.add("CS");
-      if (checkBranch === "CS" || rawBranch === "CS") aliases.add("CSE");
-
-      if (checkBranch === "DSE" || rawBranch === "DSE") aliases.add("DS");
-      if (checkBranch === "DS" || rawBranch === "DS") aliases.add("DSE");
-
-      if (checkBranch === "MSE" || rawBranch === "MSE") aliases.add("MS");
-      if (checkBranch === "MS" || rawBranch === "MS") aliases.add("MSE");
-
-      if (checkBranch === "BIO" || rawBranch === "BIO") aliases.add("BE");
-      if (checkBranch === "BE" || rawBranch === "BE") aliases.add("BIO");
-
-      if (checkBranch === "VLSI" || rawBranch === "VLSI") {
-        aliases.add("VL");
-        aliases.add("MEVLSI");
-      }
-      if (checkBranch === "VL" || rawBranch === "VL") {
-        aliases.add("VLSI");
-        aliases.add("MEVLSI");
-      }
-      if (checkBranch === "MEVLSI" || rawBranch === "MEVLSI") {
-        aliases.add("VL");
-        aliases.add("VLSI");
-      }
-
-      const aliasList = Array.from(aliases);
+      const aliasList = getBranchCandidates(rawBranch).filter((branch) => branch !== "COMMON");
       const exact =
         mappings.find((m: any) => m.branch === rawBranch) ||
         mappings.find((m: any) => m.branch === checkBranch);
@@ -409,7 +357,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
     // Branch-specific course patterns (only if no explicit courseType)
     if (userBranch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE");
-    if (userBranch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE");
+    if (isDataScienceBranch(userBranch) && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE");
 
     return "FE";
   };

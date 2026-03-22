@@ -2,6 +2,7 @@ import { CourseType, EnrollmentStatus, ProgramType } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
 import { normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
+import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
 import { formatCourseCode } from "@/lib/utils";
 
 export interface CreditBreakdown {
@@ -32,56 +33,6 @@ export interface MTPEligibility {
   creditsRequired?: number;
   semesterNumber: number;
   minSemesterRequired?: number;
-}
-
-function normalizeBranchCode(branch?: string): string {
-  const b = String(branch || "").trim().toUpperCase();
-  if (!b) return b;
-
-  // UI aliases used in import UI / curriculum defaults
-  if (b === "GERAI") return "GE-ROBO";
-  if (b === "GECE") return "GE-COMM";
-  if (b === "GEMECH") return "GE-MECH";
-
-  return b;
-}
-
-function unique(values: string[]): string[] {
-  return Array.from(new Set(values.filter(Boolean)));
-}
-
-function getBranchCandidates(branch?: string): string[] {
-  const b = normalizeBranchCode(branch);
-  if (!b) return ["COMMON"];
-
-  const candidates: string[] = [b];
-
-  if (b === "CSE") candidates.push("CS");
-  if (b === "CS") candidates.push("CSE");
-
-  if (b === "DSE") candidates.push("DS");
-  if (b === "DS") candidates.push("DSE");
-
-  if (b === "MSE") candidates.push("MS");
-  if (b === "MS") candidates.push("MSE");
-
-  if (b === "MEVLSI") candidates.push("VL", "VLSI");
-  if (b === "VL") candidates.push("MEVLSI", "VLSI");
-  if (b === "VLSI") candidates.push("VL", "MEVLSI");
-
-  if (b === "BSCS") candidates.push("BS", "CH");
-  if (b === "BS") candidates.push("BSCS", "CH");
-  if (b === "CH") candidates.push("BSCS", "BS");
-
-  if (b === "BE") candidates.push("BIO");
-  if (b === "BIO") candidates.push("BE");
-
-  if (b === "GE-MECH" || b === "GE-COMM" || b === "GE-ROBO" || b.startsWith("GE-")) {
-    candidates.push("GE");
-  }
-
-  candidates.push("COMMON");
-  return unique(candidates);
 }
 
 function pickBranchMappingCategory(
@@ -699,7 +650,7 @@ export class CreditCalculator {
         addDeCredits(credits, enrollment.course.code);
         return;
       }
-      if (branch === "DSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) {
+      if (isDataScienceBranch(branch) && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) {
         addDeCredits(credits, enrollment.course.code);
         return;
       }

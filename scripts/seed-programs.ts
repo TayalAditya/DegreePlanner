@@ -42,6 +42,17 @@ async function seedPrograms() {
       mtpIstpCredits: 12,
     },
     {
+      code: "DSAI",
+      name: "B.Tech in Data Science & Artificial Intelligence",
+      department: "School of Computing & Electrical Engineering",
+      totalCreditsRequired: 160,
+      icCredits: 60,
+      dcCredits: 33,
+      deCredits: 33,
+      feCredits: 22,
+      mtpIstpCredits: 12,
+    },
+    {
       code: "MEVLSI",
       name: "B.Tech in Microelectronics & VLSI",
       department: "School of Computing & Electrical Engineering",
