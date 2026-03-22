@@ -179,7 +179,7 @@ const loadBatch25Index = async () => {
         const path = await import("path");
         const XLSX = await import("xlsx");
 
-        const xlsxPath = path.join(process.cwd(), "docs", "b25 students.xlsx");
+        const xlsxPath = path.join(process.cwd(), "public", "data", "b25-students.xlsx");
         const workbook = XLSX.readFile(xlsxPath);
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false }) as any[][];
