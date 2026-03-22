@@ -585,3 +585,20 @@ model Notification {
   @@index([userId, isRead])
   @@index([userId, createdAt])
 }
+
+// Login attempt log — tracks every Google OAuth attempt (approved or rejected)
+model LoginAttempt {
+  id           String   @id @default(cuid())
+  email        String
+  enrollmentId String?
+  name         String?
+  outcome      String   // "approved" | "rejected" | "auto_approved"
+  reason       String?  // rejection reason e.g. "user_not_approved", "batch_not_supported"
+  batch        Int?
+  branch       String?
+  createdAt    DateTime @default(now())
+
+  @@index([email])
+  @@index([outcome, createdAt])
+  @@index([createdAt])
+}
