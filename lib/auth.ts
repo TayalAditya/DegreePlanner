@@ -386,14 +386,32 @@ export const authOptions: NextAuthOptions = {
         }
       }
 
+      const logAttempt = async (outcome: string, reason?: string) => {
+        try {
+          await prisma.loginAttempt.create({
+            data: {
+              email: user.email!,
+              enrollmentId: approvedUser?.enrollmentId ?? (user.email!.split("@")[0].toUpperCase()),
+              name: user.name ?? approvedUser?.name ?? null,
+              outcome,
+              reason: reason ?? null,
+              batch: approvedUser?.batch ?? null,
+              branch: approvedUser?.branch ?? null,
+            },
+          });
+        } catch { /* non-fatal */ }
+      };
+
       if (!approvedUser) {
         console.log("❌ Login rejected: User not in approved list");
+        await logAttempt("rejected", "user_not_approved");
         return "/auth/error?error=user_not_approved";
       }
 
       // Batch validation
       if (approvedUser.batch && !SUPPORTED_BATCHES.has(approvedUser.batch)) {
         console.log("❌ Login rejected: Batch", approvedUser.batch, "not supported");
+        await logAttempt("rejected", "batch_not_supported");
         return "/auth/error?error=batch_not_supported";
       }
 
@@ -402,16 +420,19 @@ export const authOptions: NextAuthOptions = {
       const isB24 = approvedUser.batch === 2024 || /^B24\d+$/i.test(enrollmentId);
       if (isB24 && !B24_ALLOWED_BRANCHES.has(approvedUser.branch || "")) {
         console.log("❌ Login rejected: Branch", approvedUser.branch, "not allowed for B24");
+        await logAttempt("rejected", "branch_not_allowed");
         return "/auth/error?error=branch_not_allowed";
       }
 
       const isB22 = approvedUser.batch === 2022 || /^B22\d+$/i.test(enrollmentId);
       if (isB22 && !B22_ALLOWED_BRANCHES.has(approvedUser.branch || "")) {
         console.log("Login rejected: Branch", approvedUser.branch, "not allowed for B22");
+        await logAttempt("rejected", "branch_not_allowed");
         return "/auth/error?error=branch_not_allowed";
       }
 
       console.log("✅ signIn: User approved, allowing login");
+      await logAttempt("approved");
       return true;
     },
     async jwt({ token, user, account }) {
