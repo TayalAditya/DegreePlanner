@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { StatCard } from "@/components/StatCard";
+import { isDataScienceBranch } from "@/lib/branchInfo";
 import { formatCourseCode } from "@/lib/utils";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
@@ -90,7 +91,7 @@ type SchoolFilter = "all" | SchoolKey;
 
 const SCHOOL_META: Record<SchoolKey, { label: string; order: number; prefixes: string[] }> = {
   SCEE: {
-    label: "SCEE (CSE, DSE, EE, VL)",
+    label: "SCEE (CSE, DSE/DSAI, EE, VL)",
     order: 10,
     prefixes: ["CS", "DS", "EE", "VL", "MV", "EC", "ECE", "ET"],
   },
@@ -377,11 +378,11 @@ export default function CoursesPage() {
       if (match) return 2000 + parseInt(match[1], 10);
       return null;
     })();
-    const isBatch24 = inferredBatch === 2024;
+    const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
 
     if (normalizedCode === "IK593") return "FE";
     if (normalizedCode === "IC181") return "IKS";
-    if (normalizedCode === "IC182") return isBatch24 ? "IKS" : "IC";
+    if (normalizedCode === "IC182") return isBatch24Or25 ? "IKS" : "IC";
 
     // First try to get from branchMappings if available
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
@@ -414,7 +415,7 @@ export default function CoursesPage() {
     
     // Branch-specific course patterns
     if (user?.branch === "CSE" && code.startsWith("DS")) return applyMinorDeOverride("DE", enrollment);
-    if (user?.branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE", enrollment);
+    if (isDataScienceBranch(user?.branch) && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE", enrollment);
     
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("HS")) return "HSS";
@@ -505,7 +506,7 @@ export default function CoursesPage() {
     // Fallback heuristics (conservative)
     if (normalizedCode.startsWith("IC")) return "CORE";
     if (user?.branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
-    if (user?.branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
+    if (isDataScienceBranch(user?.branch) && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
     return "CORE";
   };
 

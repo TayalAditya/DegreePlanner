@@ -1,3 +1,6 @@
+import { getCurriculumBranchCode } from "@/lib/branchInfo";
+import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
+
 // Default curriculum for each branch (B23 batch, IIT Mandi)
 // IC course semester assignments confirmed by B23 students.
 // DC course semester assignments verified against docs/DC_Courses_Batch_2023_filled.xlsx.
@@ -650,6 +653,27 @@ const B24_IKS_IC182_SEM2: DefaultCourse = {
   category: "IKS",
   semester: 2,
 };
+const B25_IKS_IC182_SEM1: DefaultCourse = {
+  code: "IC182",
+  name: "History of Science and Technology",
+  credits: 3,
+  category: "IKS",
+  semester: 1,
+};
+const B25_IC114_SEM1: DefaultCourse = {
+  code: "IC114",
+  name: "Linear Algebra",
+  credits: 2,
+  category: "IC",
+  semester: 1,
+};
+const B25_IC113_SEM2: DefaultCourse = {
+  code: "IC113",
+  name: "Complex Variables and Vector Calculus",
+  credits: 2,
+  category: "IC",
+  semester: 2,
+};
 const B24_IC202P_SEM3: DefaultCourse = {
   code: "IC202P",
   name: "Design Practicum",
@@ -678,9 +702,20 @@ const B22_IC222P_SEM3: DefaultCourse = {
   category: "IC",
   semester: 3,
 };
+const B25_HSS_SEM1: DefaultCourse[] = [
+  { code: "HS-108", name: "Basic English for Engineers", credits: 3, category: "HSS", semester: 1, optional: true },
+  { code: "HS-112", name: "Japanese Language Class I", credits: 3, category: "HSS", semester: 1, optional: true },
+  { code: "HS-256", name: "Introduction to Spanish", credits: 3, category: "HSS", semester: 1, optional: true },
+  { code: "HS-342", name: "German I", credits: 3, category: "HSS", semester: 1, optional: true },
+];
 
 const normalizeCurriculumCode = (code: string) =>
   (code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+const addCourseIfMissing = (courses: DefaultCourse[], course: DefaultCourse) =>
+  courses.some((c) => normalizeCurriculumCode(c.code) === normalizeCurriculumCode(course.code))
+    ? courses
+    : [...courses, course];
 
 const applyBatchOverrides = (
   branch: string,
@@ -688,7 +723,9 @@ const applyBatchOverrides = (
   courses: DefaultCourse[],
   batch?: number | null
 ) => {
-  if (batch === 2024 && B24_BRANCH_OVERRIDES.has(branch)) {
+  const effectiveBranch = getCurriculumBranchCode(branch);
+
+  if (batch === 2024 && B24_BRANCH_OVERRIDES.has(effectiveBranch)) {
     switch (semester) {
       case 1: {
         // Batch-24: IC102P is compulsory in Sem-2 (not shown in Sem-1).
@@ -718,13 +755,13 @@ const applyBatchOverrides = (
         // Batch-24: EE Reverse Engineering code is EE223P (not placeholder EEXXXP).
         let updated = courses;
 
-        if (branch === "DSE" || branch === "EE") {
+        if (effectiveBranch === "DSE" || effectiveBranch === "EE") {
           updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "IC202P");
         }
-        if (branch === "DSE") {
+        if (effectiveBranch === "DSE") {
           updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "DS404");
         }
-        if (branch === "EE") {
+        if (effectiveBranch === "EE") {
           updated = updated.map((c) =>
             normalizeCurriculumCode(c.code) === "EEXXXP" ? { ...c, code: "EE223P" } : c
           );
@@ -732,6 +769,59 @@ const applyBatchOverrides = (
 
         const hasIc222p = updated.some((c) => normalizeCurriculumCode(c.code) === "IC222P");
         return hasIc222p ? updated : [B24_IC222P_SEM4, ...updated];
+      }
+
+      default:
+        return courses;
+    }
+  }
+
+  if (batch === 2025) {
+    const basketBranch = normalizeBranchForIcBasket(effectiveBranch);
+    const branchCompulsion = IC_BASKET_COMPULSIONS[basketBranch] || {};
+
+    switch (semester) {
+      case 1: {
+        let updated = courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return code !== "IC113" && code !== "IC140" && code !== "IC102P" && code !== "IC181";
+        });
+
+        updated = addCourseIfMissing(updated, B25_IC114_SEM1);
+        updated = addCourseIfMissing(updated, B25_IKS_IC182_SEM1);
+
+        if (branchCompulsion.ic1) {
+          const forcedIc1 = normalizeCurriculumCode(branchCompulsion.ic1);
+          updated = updated.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return !(c.category === "ICB" && ICB1_CODES.has(code) && code !== forcedIc1);
+          });
+        }
+
+        for (const hssCourse of B25_HSS_SEM1) {
+          updated = addCourseIfMissing(updated, hssCourse);
+        }
+
+        return updated;
+      }
+
+      case 2: {
+        let updated = courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return code !== "IC114" && code !== "IC181" && code !== "IC182" && code !== "IC222P";
+        });
+
+        updated = addCourseIfMissing(updated, B25_IC113_SEM2);
+
+        if (branchCompulsion.ic2) {
+          const forcedIc2 = normalizeCurriculumCode(branchCompulsion.ic2);
+          updated = updated.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return !(c.category === "ICB" && ICB2_CODES.has(code) && code !== forcedIc2);
+          });
+        }
+
+        return updated;
       }
 
       default:
@@ -768,8 +858,9 @@ const applyBatchOverrides = (
 };
 
 export function getDefaultCurriculum(branch: string, semester: number, batch?: number | null): DefaultCourse[] {
-  const key = `${branch}_${semester}`;
-  const courses = applyBatchOverrides(branch, semester, DEFAULT_CURRICULUM[key] || [], batch);
+  const effectiveBranch = getCurriculumBranchCode(branch);
+  const key = `${effectiveBranch}_${semester}`;
+  const courses = applyBatchOverrides(effectiveBranch, semester, DEFAULT_CURRICULUM[key] || [], batch);
   // Append optional HSS electives to semester 2 (Batch 2023 only)
   if (semester === 2 && (batch == null || batch === 2023)) {
     return [...courses, ...hssOptionalSem2];

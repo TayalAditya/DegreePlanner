@@ -16,6 +16,7 @@ import { ProgressChart } from "@/components/ProgressChart";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
+import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
 import { formatCourseCode } from "@/lib/utils";
 
@@ -227,35 +228,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   const mappingBranchAliases = useMemo(() => {
     const raw = userSettings.branch;
     if (!raw) return [];
-    const normalized = normalizeBranchForIcBasket(raw);
-    const aliases = new Set<string>([raw, normalized]);
-
-    if (normalized === "CSE" || raw === "CSE") aliases.add("CS");
-    if (normalized === "CS" || raw === "CS") aliases.add("CSE");
-
-    if (normalized === "DSE" || raw === "DSE") aliases.add("DS");
-    if (normalized === "DS" || raw === "DS") aliases.add("DSE");
-
-    if (normalized === "MSE" || raw === "MSE") aliases.add("MS");
-    if (normalized === "MS" || raw === "MS") aliases.add("MSE");
-
-    if (normalized === "BIO" || raw === "BIO") aliases.add("BE");
-    if (normalized === "BE" || raw === "BE") aliases.add("BIO");
-
-    if (normalized === "VLSI" || raw === "VLSI") {
-      aliases.add("VL");
-      aliases.add("MEVLSI");
-    }
-    if (normalized === "VL" || raw === "VL") {
-      aliases.add("VLSI");
-      aliases.add("MEVLSI");
-    }
-    if (normalized === "MEVLSI" || raw === "MEVLSI") {
-      aliases.add("VL");
-      aliases.add("VLSI");
-    }
-
-    return Array.from(aliases);
+    return getBranchCandidates(raw).filter((branch) => branch !== "COMMON");
   }, [userSettings.branch]);
 
   const pickRelevantBranchMapping = (
@@ -357,10 +330,10 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     }
 
     // Hard overrides (batch-sensitive)
-    const isBatch24 = inferredBatch === 2024;
+    const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
     if (normalizedCode === "IK593") return "FE";
     if (normalizedCode === "IC181") return "IKS";
-    if (normalizedCode === "IC182") return isBatch24 ? "IKS" : "IC";
+    if (normalizedCode === "IC182") return isBatch24Or25 ? "IKS" : "IC";
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && branch) {
       const mapping = pickRelevantBranchMapping(branch, enrollment.course.branchMappings);
@@ -386,7 +359,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     if (branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) {
       return applyMinorDeOverride("DE", enrollment);
     }
-    if (branch === "DSE" && (code.startsWith("DS") || code.startsWith("CS"))) {
+    if (isDataScienceBranch(branch) && (code.startsWith("DS") || code.startsWith("CS"))) {
       return applyMinorDeOverride("DE", enrollment);
     }
 

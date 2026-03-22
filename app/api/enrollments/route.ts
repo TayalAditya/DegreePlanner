@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { EnrollmentStatus, CourseType } from "@prisma/client";
 import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
 import { courseIdentityKey } from "@/lib/courseIdentity";
+import { getBranchCandidates } from "@/lib/branchInfo";
 import {
   canTakePassFailCourse,
   validateBranchSpecificCourse,
@@ -419,25 +420,7 @@ export async function POST(request: NextRequest) {
     // If student overrides the inferred course type, log it for admin review.
     // NOTE: This is not blocking logic, it's only an audit trail.
     if (user.branch && !isDpIstp && !isDpMtp) {
-      const candidates: string[] = [user.branch];
-      if (user.branch === "CSE") candidates.push("CS");
-      if (user.branch === "CS") candidates.push("CSE");
-      if (user.branch === "DSE") candidates.push("DS");
-      if (user.branch === "DS") candidates.push("DSE");
-      if (user.branch === "MSE") candidates.push("MS");
-      if (user.branch === "MS") candidates.push("MSE");
-      if (user.branch === "MEVLSI") candidates.push("VL", "VLSI");
-      if (user.branch === "VL") candidates.push("MEVLSI", "VLSI");
-      if (user.branch === "BSCS") candidates.push("BS", "CH");
-      if (user.branch === "BS") candidates.push("BSCS", "CH");
-      if (user.branch === "BE") candidates.push("BIO");
-      if (user.branch === "BIO") candidates.push("BE");
-      if (user.branch === "GE-MECH") candidates.push("GE");
-      if (user.branch === "GE-COMM") candidates.push("GE");
-      if (user.branch === "GE-ROBO") candidates.push("GE");
-      candidates.push("COMMON");
-
-      const uniqueCandidates = Array.from(new Set(candidates.filter(Boolean)));
+      const uniqueCandidates = Array.from(new Set(getBranchCandidates(user.branch).filter(Boolean)));
       const mappings = await prisma.courseBranchMapping.findMany({
         where: {
           courseId,

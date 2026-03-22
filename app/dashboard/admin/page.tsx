@@ -30,6 +30,7 @@ interface UserStat {
 const BRANCH_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
   CSE:    { bg: "bg-blue-500/10",    text: "text-blue-600 dark:text-blue-400",    dot: "bg-blue-500" },
   DSE:    { bg: "bg-cyan-500/10",    text: "text-cyan-600 dark:text-cyan-400",    dot: "bg-cyan-500" },
+  DSAI:   { bg: "bg-cyan-500/10",    text: "text-cyan-600 dark:text-cyan-400",    dot: "bg-cyan-500" },
   EE:     { bg: "bg-yellow-500/10",  text: "text-yellow-600 dark:text-yellow-400", dot: "bg-yellow-500" },
   ME:     { bg: "bg-orange-500/10",  text: "text-orange-600 dark:text-orange-400", dot: "bg-orange-500" },
   CE:     { bg: "bg-green-500/10",   text: "text-green-600 dark:text-green-400",  dot: "bg-green-500" },

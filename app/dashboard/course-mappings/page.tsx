@@ -25,6 +25,7 @@ interface CourseMapping {
 const BRANCHES = [
   { code: "CSE", name: "Computer Science & Engineering" },
   { code: "DSE", name: "Data Science & Engineering" },
+  { code: "DSAI", name: "Data Science & Artificial Intelligence" },
   { code: "EE", name: "Electrical Engineering" },
   { code: "ME", name: "Mechanical Engineering" },
   { code: "CE", name: "Civil Engineering" },

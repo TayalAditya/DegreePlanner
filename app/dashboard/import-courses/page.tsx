@@ -96,13 +96,13 @@ export default function ImportCoursesPage() {
 
     // Hard overrides (DB mappings can be stale):
     // - IC181 is IKS for all batches
-    // - IC182 is IKS only for Batch 2024
+    // - IC182 is IKS for Batch 2024/2025
     // - IK593 (Kulhad Economy) is a Free Elective for everyone
     typeMap.set("IC181", "IKS");
-    if (userBatch === 2024) {
+    if (userBatch === 2024 || userBatch === 2025) {
       typeMap.set("IC182", "IKS");
     } else {
-      // Prevent stale DB mappings from classifying IC182 as IKS for non-B24 batches.
+      // Prevent stale DB mappings from classifying IC182 as IKS for other batches.
       typeMap.set("IC182", "IC");
     }
     typeMap.set("IK593", "FE");
@@ -236,6 +236,7 @@ export default function ImportCoursesPage() {
     });
 
     const isBatch24 = userBatch === 2024;
+    const isBatch25 = userBatch === 2025;
     const isB24EligibleBranch = isBatch24 && ["CSE", "DSE", "EE", "MEVLSI", "MSE"].includes(effectiveBranch);
     const icb1Assigned = isB24EligibleBranch ? batch24Icb1Course : null;
     const ICB1_CODES = new Set(["IC131", "IC136", "IC230"]);
@@ -252,7 +253,9 @@ export default function ImportCoursesPage() {
     // ICB basket + mixed-sem courses start unchecked — user must pick manually
     const MANUAL_PICK_CODES = isBatch24
       ? ["IC140", "IC181", "IC182"]
-      : ["IC140", "IC102P", "IC181"];
+      : isBatch25
+        ? ["IC181", "IC182"]
+        : ["IC140", "IC102P", "IC181"];
     // ISTP/MTP courses
     const ISTP_CODES = ["DP 301P", "DP301P"];
     const MTP1_CODES = ["DP 498P", "DP498P"];
@@ -514,9 +517,12 @@ export default function ImportCoursesPage() {
           }
 
           const isBatch24 = userBatch === 2024;
+          const isBatch25 = userBatch === 2025;
           const crossSemesterExclusive = isBatch24
             ? ["IC140"]
-            : ["IC140", "IC102P", "IC181"];
+            : isBatch25
+              ? []
+              : ["IC140", "IC102P", "IC181"];
 
           // Mixed/paired courses: selecting in one semester deselects the same course in the other (when applicable)
           if (crossSemesterExclusive.includes(code) && c.code === code && c.semester !== semester) {
@@ -528,16 +534,7 @@ export default function ImportCoursesPage() {
             return { ...c, selected: false };
           }
 
-          if (!isBatch24) {
-            // IC140 ↔ IC102P pairing: always in opposite semesters (Batch 2023)
-            if (code === "IC140" || code === "IC102P") {
-              const paired = code === "IC140" ? "IC102P" : "IC140";
-              // Auto-select paired course in the OTHER semester
-              if (c.code === paired && c.semester !== semester) return { ...c, selected: true };
-              // Auto-deselect paired course in the SAME semester
-              if (c.code === paired && c.semester === semester) return { ...c, selected: false };
-            }
-          } else {
+          if (isBatch24) {
             // Batch 2024: IC102P is compulsory in Sem-2.
             // Sem-1 choice: IC140 vs IC181. Sem-2 choice: IC140 vs IC182.
             // (IC140 in Sem-1) ↔ (IC182 in Sem-2), and (IC181 in Sem-1) ↔ (IC140 in Sem-2).
@@ -560,6 +557,23 @@ export default function ImportCoursesPage() {
               if (c.code === "IC140" && c.semester === 2) return { ...c, selected: false };
               if (c.code === "IC181" && c.semester === 1) return { ...c, selected: false };
               if (c.code === "IC140" && c.semester === 1) return { ...c, selected: true };
+            }
+          } else if (isBatch25) {
+            // Batch 2025: Sem-1 offers a direct IC181 vs IC182 IKS choice.
+            if (code === "IC181" && c.code === "IC182" && c.semester === semester) {
+              return { ...c, selected: false };
+            }
+            if (code === "IC182" && c.code === "IC181" && c.semester === semester) {
+              return { ...c, selected: false };
+            }
+          } else {
+            // IC140 ↔ IC102P pairing: always in opposite semesters (Batch 2023)
+            if (code === "IC140" || code === "IC102P") {
+              const paired = code === "IC140" ? "IC102P" : "IC140";
+              // Auto-select paired course in the OTHER semester
+              if (c.code === paired && c.semester !== semester) return { ...c, selected: true };
+              // Auto-deselect paired course in the SAME semester
+              if (c.code === paired && c.semester === semester) return { ...c, selected: false };
             }
           }
         }
@@ -818,6 +832,7 @@ export default function ImportCoursesPage() {
             >
               <option value="CSE">CSE</option>
               <option value="DSE">DSE</option>
+              <option value="DSAI">DSAI</option>
               <option value="EE">EE</option>
               <option value="ME">ME</option>
               <option value="CE">CE</option>
@@ -1095,7 +1110,9 @@ export default function ImportCoursesPage() {
           <p className="text-foreground-secondary mt-2">
             {userBatch === 2024
               ? "Batch 2024: IC102P is compulsory in Semester 2. Choose IC140/IC181 in Semester 1 and IC140/IC182 in Semester 2 — selecting one will auto-pick the paired option. IC Basket courses allow only one selection per semester."
-              : "Selecting IC140 in a semester auto-checks IC102P in the other (they always pair across semesters). IC181 is semester-exclusive. IC Basket courses allow only one selection per semester."}
+              : userBatch === 2025
+                ? "Batch 2025: IC181 and IC182 are alternative IKS choices in Semester 1, so selecting one deselects the other. IC140 and IC102P are both part of Semester 2. IC Basket courses allow only one selection per semester."
+                : "Selecting IC140 in a semester auto-checks IC102P in the other (they always pair across semesters). IC181 is semester-exclusive. IC Basket courses allow only one selection per semester."}
           </p>
         </div>
       </div>

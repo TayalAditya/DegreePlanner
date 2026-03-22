@@ -3,9 +3,10 @@ import GoogleProvider from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import type { Adapter } from "next-auth/adapters";
+import { getDepartmentForBranch, getProgramLookupBranchCode, inferBranchFromProgram } from "@/lib/branchInfo";
 import { DOCS_ADMIN_ENROLLMENT_ID } from "@/lib/permissions";
 
-const SUPPORTED_BATCHES = new Set([2022, 2023, 2024]);
+const SUPPORTED_BATCHES = new Set([2022, 2023, 2024, 2025]);
 const B22_ALLOWED_BRANCHES = new Set(["CSE"]);
 const B24_ALLOWED_BRANCHES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "BioE"]);
 const ENROLLMENT_FALLBACK_ALLOWED_DOMAINS = new Set([
@@ -27,32 +28,16 @@ type Batch22Student = {
   department: string | null;
 };
 
-const departmentForBranch = (branch: string) => {
-  switch (branch) {
-    case "CSE":
-    case "DSE":
-    case "EE":
-    case "MEVLSI":
-      return "School of Computing & Electrical Engineering";
-    case "MSE":
-      return "School of Mechanical and Materials Engineering";
-    default:
-      return null;
-  }
-};
-
-const inferBranchFromProgram = (program: string) => {
-  const normalized = program.toLowerCase();
-  if (normalized.includes("computer science")) return "CSE";
-  if (normalized.includes("data science")) return "DSE";
-  if (normalized.includes("electrical")) return "EE";
-  if (normalized.includes("microelectronics") || normalized.includes("vlsi")) return "MEVLSI";
-  if (normalized.includes("materials science")) return "MSE";
-  return null;
+type Batch25Student = {
+  enrollmentId: string;
+  name: string;
+  branch: string;
+  department: string | null;
 };
 
 let batch24IndexPromise: Promise<Map<string, Batch24Student>> | null = null;
 let batch22IndexPromise: Promise<Map<string, Batch22Student>> | null = null;
+let batch25IndexPromise: Promise<Map<string, Batch25Student>> | null = null;
 
 const parseNameFromBatch22Segment = (segment: string) => {
   let s = String(segment || "").replace(/\s+/g, " ").trim();
@@ -113,7 +98,7 @@ const loadBatch22Index = async () => {
               enrollmentId,
               name,
               branch: "CSE",
-              department: departmentForBranch("CSE"),
+              department: getDepartmentForBranch("CSE"),
             });
           }
         }
@@ -172,7 +157,7 @@ const loadBatch24Index = async () => {
               enrollmentId,
               name,
               branch,
-              department: departmentForBranch(branch),
+              department: getDepartmentForBranch(branch),
             });
           }
         }
@@ -185,6 +170,49 @@ const loadBatch24Index = async () => {
     })();
   }
   return batch24IndexPromise;
+};
+
+const loadBatch25Index = async () => {
+  if (!batch25IndexPromise) {
+    batch25IndexPromise = (async () => {
+      try {
+        const path = await import("path");
+        const XLSX = await import("xlsx");
+
+        const xlsxPath = path.join(process.cwd(), "docs", "b25 students.xlsx");
+        const workbook = XLSX.readFile(xlsxPath);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false }) as any[][];
+
+        const index = new Map<string, Batch25Student>();
+        for (const row of rows.slice(1)) {
+          const enrollmentId = String(row[0] || "").trim().toUpperCase();
+          const name = String(row[1] || "").trim();
+          const program = String(row[2] || "").trim();
+          if (!/^B25\d+$/i.test(enrollmentId)) continue;
+
+          const branch = inferBranchFromProgram(program);
+          if (!branch) continue;
+
+          if (!index.has(enrollmentId)) {
+            index.set(enrollmentId, {
+              enrollmentId,
+              name,
+              branch,
+              department: getDepartmentForBranch(branch),
+            });
+          }
+        }
+
+        return index;
+      } catch (err) {
+        console.warn("Failed to load batch25 index:", err);
+        return new Map<string, Batch25Student>();
+      }
+    })();
+  }
+
+  return batch25IndexPromise;
 };
 
 const maybeAutoApproveBatch24 = async (email: string, enrollmentId: string) => {
@@ -237,6 +265,37 @@ const maybeAutoApproveBatch22Cse = async (email: string, enrollmentId: string) =
       branch: student.branch,
       batch: 2022,
       allowedPrograms: [student.branch],
+    },
+  });
+};
+
+const maybeAutoApproveBatch25 = async (email: string, enrollmentId: string) => {
+  const normalizedEnrollmentId = enrollmentId.toUpperCase();
+  const index = await loadBatch25Index();
+  const student = index.get(normalizedEnrollmentId);
+  const branch = student?.branch || null;
+  const department = student?.department || null;
+  const name = student?.name || null;
+  const allowedPrograms = branch ? [getProgramLookupBranchCode(branch)] : [];
+
+  return prisma.approvedUser.upsert({
+    where: { enrollmentId: normalizedEnrollmentId },
+    update: {
+      email,
+      name,
+      department,
+      branch,
+      batch: 2025,
+      allowedPrograms,
+    },
+    create: {
+      email,
+      enrollmentId: normalizedEnrollmentId,
+      name,
+      department,
+      branch,
+      batch: 2025,
+      allowedPrograms,
     },
   });
 };
@@ -302,7 +361,7 @@ export const authOptions: NextAuthOptions = {
         const [rawPrefix, rawDomain] = user.email.split("@");
         const emailPrefix = (rawPrefix || "").toUpperCase();
         const emailDomain = (rawDomain || "").toLowerCase();
-        const matches = emailPrefix.match(/^B(22|23|24)\d+$/i);
+        const matches = emailPrefix.match(/^B(22|23|24|25)\d+$/i);
         const canUseEnrollmentFallback =
           Boolean(matches) && ENROLLMENT_FALLBACK_ALLOWED_DOMAINS.has(emailDomain);
 
@@ -317,6 +376,8 @@ export const authOptions: NextAuthOptions = {
               where: { enrollmentId: emailPrefix },
               data: { email: user.email },
             });
+          } else if (/^B25\d+$/i.test(emailPrefix)) {
+            approvedUser = await maybeAutoApproveBatch25(user.email, emailPrefix);
           } else if (/^B24\d+$/i.test(emailPrefix)) {
             approvedUser = await maybeAutoApproveBatch24(user.email, emailPrefix);
           } else if (/^B22\d+$/i.test(emailPrefix)) {
@@ -409,9 +470,14 @@ export const authOptions: NextAuthOptions = {
                 });
                 
                 if (dbUser) {
-                  const program = await prisma.program.findUnique({ 
-                    where: { code: approvedUser.branch } 
+                  let program = await prisma.program.findUnique({
+                    where: { code: approvedUser.branch || "" },
                   });
+                  if (!program) {
+                    program = await prisma.program.findUnique({
+                      where: { code: getProgramLookupBranchCode(approvedUser.branch) },
+                    });
+                  }
                   
                   if (program) {
                     const alreadyEnrolled = await prisma.userProgram.findFirst({

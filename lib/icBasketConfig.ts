@@ -1,3 +1,5 @@
+import { normalizeBranchForIcBasket } from "@/lib/branchInfo";
+
 // Shared IC Basket configuration — single source of truth for
 // both the server-side credit calculator and the client-side ProgressChart.
 
@@ -22,13 +24,7 @@ export const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string 
   VLSI: {},
 };
 
-/** Normalizes branch aliases that share the same IC basket compulsion. */
-export const normalizeBranchForIcBasket = (branch?: string): string => {
-  const upper = String(branch || "").toUpperCase();
-  if (upper === "BE") return "BIO";
-  if (upper === "MEVLSI" || upper === "VL") return "VLSI";
-  return upper;
-};
+export { normalizeBranchForIcBasket };
 
 // ---------------------------------------------------------------------------
 // DE Basket configuration — branches that have named DE sub-baskets
