@@ -116,8 +116,6 @@ async function importUsers() {
       console.log(`Included ${batch25Users.length} Batch 25 students from docs/b25 students.xlsx\n`);
     }
 
-    await prisma.approvedUser.deleteMany({});
-    console.log("🗑️  Cleared existing\n");
 
     let successCount = 0;
     let errorCount = 0;
