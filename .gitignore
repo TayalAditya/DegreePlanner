@@ -61,3 +61,11 @@ tmp/
 # Internal docs
 *.md
 !README.md
+
+# Student data (sensitive - seed locally, never commit)
+scripts/seed-batch24.ts
+scripts/parse-b22cse.ts
+public/data/*.pdf
+public/data/*.xlsx
+.claude/
+report/

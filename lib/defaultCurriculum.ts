@@ -784,7 +784,7 @@ const applyBatchOverrides = (
       case 1: {
         let updated = courses.filter((c) => {
           const code = normalizeCurriculumCode(c.code);
-          return code !== "IC113" && code !== "IC140" && code !== "IC102P" && code !== "IC181";
+          return code !== "IC113" && code !== "IC140" && code !== "IC102P";
         });
 
         updated = addCourseIfMissing(updated, B25_IC114_SEM1);
