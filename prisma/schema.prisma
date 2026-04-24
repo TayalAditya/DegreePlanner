@@ -165,7 +165,7 @@ model Course {
   id              String   @id @default(cuid())
   code            String   @unique
   name            String
-  credits         Int
+  credits         Float
   department      String
   level           Int      // 100, 200, 300, 400 level
   description     String?
