@@ -85,6 +85,7 @@ type SchoolKey =
   | "SBS" // School of Bio Sciences
   | "SHSS" // School of Humanities & Social Sciences
   | "COMMON"
+  | "TUM" // TU Munich (Semester Exchange)
   | "OTHER";
 
 type SchoolFilter = "all" | SchoolKey;
@@ -103,6 +104,7 @@ const SCHOOL_META: Record<SchoolKey, { label: string; order: number; prefixes: s
   SBS: { label: "SBS (BE)", order: 70, prefixes: ["BE", "BY", "BT", "BS"] },
   SHSS: { label: "SHSS (HS)", order: 80, prefixes: ["HS", "MB"] },
   COMMON: { label: "Common (IC/IKS/DP)", order: 90, prefixes: ["IC", "IK", "IKS", "DP", "RM"] },
+  TUM: { label: "TU Munich (Semester Exchange)", order: 95, prefixes: ["IN"] },
   OTHER: { label: "Other", order: 99, prefixes: [] },
 };
 
