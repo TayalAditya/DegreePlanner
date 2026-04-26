@@ -4,7 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle, ChevronDown, Clock, Loader2, Target, Trash2 } from "lucide-react";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
-import { formatCourseCode } from "@/lib/utils";
+import {
+  addCredits,
+  formatCourseCode,
+  formatCredits,
+  minCredits,
+  subtractCredits,
+  sumCredits,
+} from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
@@ -242,7 +249,7 @@ export default function ProgressPage() {
       if (hssUsed) {
         const before = hssUsed.credits;
         if (before < HSS_CORE_CAP) {
-          hssUsed.credits = Math.min(HSS_CORE_CAP, before + credits);
+          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
           return "HSS";
         }
         return "FE";
@@ -484,23 +491,20 @@ export default function ProgressPage() {
 
     sortedCompleted.forEach((e) => {
       const category = getCourseCategory(e, icBasketUsed, hssUsed);
-      creditsByCategory[category] += e.course.credits;
+      creditsByCategory[category] = addCredits(creditsByCategory[category], e.course.credits);
     });
 
     sortedInProgress.forEach((e) => {
       const category = getCourseCategory(e, icBasketUsed, hssUsed);
-      creditsInProgressByCategory[category] += e.course.credits;
+      creditsInProgressByCategory[category] = addCredits(
+        creditsInProgressByCategory[category],
+        e.course.credits
+      );
     });
 
-    const totalCreditsEarned = completedEnrollments.reduce(
-      (sum, e) => sum + e.course.credits,
-      0
-    );
+    const totalCreditsEarned = sumCredits(completedEnrollments.map((e) => e.course.credits));
 
-    const totalCreditsInProgress = inProgressEnrollments.reduce(
-      (sum, e) => sum + e.course.credits,
-      0
-    );
+    const totalCreditsInProgress = sumCredits(inProgressEnrollments.map((e) => e.course.credits));
 
     const icCredits = programCredits.icCredits ?? 60;
     const icBasketRequired = 6;
@@ -580,12 +584,12 @@ export default function ProgressPage() {
     const semesterMap = new Map<number, { completed: number; inProgress: number }>();
     completedEnrollments.forEach((e) => {
       const cur = semesterMap.get(e.semester) || { completed: 0, inProgress: 0 };
-      semesterMap.set(e.semester, { ...cur, completed: cur.completed + e.course.credits });
+      semesterMap.set(e.semester, { ...cur, completed: addCredits(cur.completed, e.course.credits) });
     });
     if (includeCurrentSemesterCredits) {
       inProgressEnrollments.forEach((e) => {
         const cur = semesterMap.get(e.semester) || { completed: 0, inProgress: 0 };
-        semesterMap.set(e.semester, { ...cur, inProgress: cur.inProgress + e.course.credits });
+        semesterMap.set(e.semester, { ...cur, inProgress: addCredits(cur.inProgress, e.course.credits) });
       });
     }
 
@@ -655,12 +659,14 @@ export default function ProgressPage() {
     .map((s) => Number(s))
     .sort((a, b) => a - b);
   const latestSemester = semesters.length > 0 ? semesters[semesters.length - 1] : null;
-  const totalCountedCredits = Math.min(
+  const totalCountedCredits = minCredits(
     progress.totalCreditsRequired,
-    progress.totalCreditsEarned +
-      (includeCurrentSemesterCredits ? progress.totalCreditsInProgress : 0)
+    addCredits(
+      progress.totalCreditsEarned,
+      includeCurrentSemesterCredits ? progress.totalCreditsInProgress : 0
+    )
   );
-  const remainingCredits = Math.max(0, progress.totalCreditsRequired - totalCountedCredits);
+  const remainingCredits = Math.max(0, subtractCredits(progress.totalCreditsRequired, totalCountedCredits));
   const completionPercentage =
     progress.totalCreditsRequired > 0
       ? Math.round((totalCountedCredits / progress.totalCreditsRequired) * 100)
@@ -671,9 +677,9 @@ export default function ProgressPage() {
       const required = progress.creditsRequiredByCategory[category] ?? 0;
       const completed = progress.creditsByCategory[category] ?? 0;
       const inProgress = progress.creditsInProgressByCategory[category] ?? 0;
-      const countedRaw = completed + (includeCurrentSemesterCredits ? inProgress : 0);
-      const counted = required > 0 ? Math.min(required, countedRaw) : countedRaw;
-      const remaining = required > 0 ? Math.max(0, required - counted) : 0;
+      const countedRaw = addCredits(completed, includeCurrentSemesterCredits ? inProgress : 0);
+      const counted = required > 0 ? minCredits(required, countedRaw) : countedRaw;
+      const remaining = required > 0 ? Math.max(0, subtractCredits(required, counted)) : 0;
       const colors = categoryColors[category];
       const label = categoryLabels[category];
 
@@ -705,7 +711,7 @@ export default function ProgressPage() {
           <div>
             <h2 className="text-2xl font-bold text-foreground">Overall Progress</h2>
             <p className="text-foreground-secondary">
-              {totalCountedCredits} / {progress.totalCreditsRequired} credits
+              {formatCredits(totalCountedCredits)} / {formatCredits(progress.totalCreditsRequired)} credits
               {includeCurrentSemesterCredits ? " (incl. current semester)" : " completed"}
             </p>
           </div>
@@ -750,7 +756,7 @@ export default function ProgressPage() {
             <div>
               <p className="text-xs sm:text-sm text-foreground-secondary">Completed</p>
               <p className="text-xl sm:text-2xl font-bold text-foreground">
-                {progress.totalCreditsEarned}
+                {formatCredits(progress.totalCreditsEarned)}
               </p>
             </div>
           </div>
@@ -764,7 +770,7 @@ export default function ProgressPage() {
             <div>
               <p className="text-xs sm:text-sm text-foreground-secondary">In Progress</p>
               <p className="text-xl sm:text-2xl font-bold text-foreground">
-                {progress.totalCreditsInProgress}
+                {formatCredits(progress.totalCreditsInProgress)}
               </p>
             </div>
           </div>
@@ -783,7 +789,7 @@ export default function ProgressPage() {
             <div className="flex-1 min-w-0">
               <p className="text-xs sm:text-sm text-foreground-secondary">Remaining</p>
               <p className="text-xl sm:text-2xl font-bold text-foreground">
-                {remainingCredits}
+                {formatCredits(remainingCredits)}
               </p>
             </div>
             <ChevronDown
@@ -820,15 +826,15 @@ export default function ProgressPage() {
                       {r.label}
                     </p>
                     <p className="text-xs text-foreground-secondary mt-0.5">
-                      {r.counted} / {r.required} credits
+                      {formatCredits(r.counted)} / {formatCredits(r.required)} credits
                       {includeCurrentSemesterCredits && r.inProgress > 0 && (
-                        <span className="text-info"> (+{r.inProgress} in progress)</span>
+                        <span className="text-info"> (+{formatCredits(r.inProgress)} in progress)</span>
                       )}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-[11px] text-foreground-secondary">Remaining</p>
-                    <p className="text-sm font-semibold text-foreground">{r.remaining}</p>
+                    <p className="text-sm font-semibold text-foreground">{formatCredits(r.remaining)}</p>
                   </div>
                 </div>
                 <div className="mt-3 h-2 bg-border rounded-full overflow-hidden">
@@ -850,7 +856,7 @@ export default function ProgressPage() {
         <div className="space-y-5">
           {Object.entries(progress.creditsByCategory).map(([category, credits]) => {
             const inProgress = progress.creditsInProgressByCategory[category as keyof typeof progress.creditsInProgressByCategory];
-            const total = credits + inProgress;
+            const total = addCredits(credits, inProgress);
             const colors = categoryColors[category as keyof typeof categoryColors];
             const label = categoryLabels[category as keyof typeof categoryLabels];
             const required = progress.creditsRequiredByCategory[category as keyof typeof progress.creditsRequiredByCategory];
@@ -869,9 +875,9 @@ export default function ProgressPage() {
                     </span>
                   </div>
                   <span className="text-foreground font-bold sm:text-right">
-                    {credits}
-                    {inProgress > 0 && <span className="text-info"> (+{inProgress})</span>}
-                    {required > 0 ? `/${required}` : null}
+                    {formatCredits(credits)}
+                    {inProgress > 0 && <span className="text-info"> (+{formatCredits(inProgress)})</span>}
+                    {required > 0 ? `/${formatCredits(required)}` : null}
                   </span>
                 </div>
                 <div className="w-full bg-border rounded-full h-2.5 overflow-hidden">
@@ -911,13 +917,13 @@ export default function ProgressPage() {
           <div className="space-y-3">
             {semesters.map((sem) => {
               const courses = semesterCourses[sem] || [];
-              const completedCredits = courses
+              const completedCredits = sumCredits(courses
                 .filter((c) => c.status === "COMPLETED")
-                .reduce((sum, c) => sum + c.credits, 0);
-              const inProgressCredits = courses
+                .map((c) => c.credits));
+              const inProgressCredits = sumCredits(courses
                 .filter((c) => c.status === "IN_PROGRESS")
-                .reduce((sum, c) => sum + c.credits, 0);
-              const totalCredits = completedCredits + inProgressCredits;
+                .map((c) => c.credits));
+              const totalCredits = addCredits(completedCredits, inProgressCredits);
 
               return (
                 <details
@@ -973,7 +979,7 @@ export default function ProgressPage() {
                                 {c.name}
                               </td>
                               <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap">
-                                {c.credits}
+                                {formatCredits(c.credits)}
                               </td>
                               <td className="py-2 pr-4 whitespace-nowrap">
                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full ${statusBadge}`}>
@@ -1037,11 +1043,11 @@ export default function ProgressPage() {
                 >
                   <p className="text-sm text-foreground-secondary mb-1">Sem {semester}</p>
                   <p className={`text-2xl font-bold ${hasPending ? "text-info" : "text-primary"}`}>
-                    {credits + inProgressCredits}
+                    {formatCredits(addCredits(credits, inProgressCredits))}
                   </p>
                   {hasPending && credits > 0 && (
                     <p className="text-[10px] text-foreground-secondary mt-0.5">
-                      {credits} done + {inProgressCredits} wip
+                      {formatCredits(credits)} done + {formatCredits(inProgressCredits)} wip
                     </p>
                   )}
                   {hasPending && credits === 0 && (

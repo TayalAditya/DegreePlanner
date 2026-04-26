@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, Circle, AlertCircle } from "lucide-react";
+import { addCredits, formatCredits } from "@/lib/utils";
 
 interface CreditBreakdownCardProps {
   progress: any;
@@ -82,7 +83,7 @@ export function CreditBreakdownCard({
   const getStatusIcon = (completed: number, required: number, inProgress: number) => {
     if (completed >= required) {
       return <CheckCircle2 className="w-5 h-5 text-success" />;
-    } else if (completed + inProgress >= required) {
+    } else if (addCredits(completed, inProgress) >= required) {
       return <AlertCircle className="w-5 h-5 text-warning" />;
     }
     return <Circle className="w-5 h-5 text-foreground-muted" />;
@@ -117,11 +118,11 @@ export function CreditBreakdownCard({
                   </span>
                 </div>
                 <span className="text-xs sm:text-sm text-foreground-secondary flex-shrink-0">
-                  {category.completed} / {category.required}
+                  {formatCredits(category.completed)} / {formatCredits(category.required)}
                   {category.inProgress > 0 && (
                     <span className="text-warning">
                       {" "}
-                      (+{category.inProgress})
+                      (+{formatCredits(category.inProgress)})
                     </span>
                   )}
                 </span>
@@ -147,7 +148,7 @@ export function CreditBreakdownCard({
             Total Credits
           </span>
           <span className="text-xl sm:text-2xl font-bold text-primary">
-            {progress.completed.total} / {progress.required.total}
+            {formatCredits(progress.completed.total)} / {formatCredits(progress.required.total)}
           </span>
         </div>
       </div>

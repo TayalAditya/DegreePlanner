@@ -5,7 +5,13 @@ import { ChevronDown } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { getAllDefaultCourses, type DefaultCourse } from "@/lib/defaultCurriculum";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
-import { formatCourseCode } from "@/lib/utils";
+import {
+  addCredits,
+  formatCourseCode,
+  formatCredits,
+  minCredits,
+  subtractCredits,
+} from "@/lib/utils";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface ProgressChartProps {
@@ -188,12 +194,12 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     const completedTotal = Number(progress?.completed?.total || 0);
     const inProgressTotal = Number(progress?.inProgress?.total || 0);
 
-    const countedTotal = Math.min(
+    const countedTotal = minCredits(
       requiredTotal,
-      completedTotal + (includeCurrentSemesterCredits ? inProgressTotal : 0)
+      addCredits(completedTotal, includeCurrentSemesterCredits ? inProgressTotal : 0)
     );
 
-    const remainingTotal = Math.max(0, requiredTotal - countedTotal);
+    const remainingTotal = Math.max(0, subtractCredits(requiredTotal, countedTotal));
     const percentage =
       requiredTotal > 0 ? Math.round((countedTotal / requiredTotal) * 100) : 0;
 
@@ -299,7 +305,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
       if (hssUsed) {
         const before = hssUsed.credits;
         if (before < HSS_CORE_CAP) {
-          hssUsed.credits = Math.min(HSS_CORE_CAP, before + credits);
+          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
           return "HSS";
         }
         return "FE";
@@ -400,15 +406,15 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
     sortedEnrollments.forEach((e: any) => {
       const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
-      categoryCredits[category] += e.course?.credits || 0;
+      categoryCredits[category] = addCredits(categoryCredits[category], e.course?.credits || 0);
     });
 
     // DE overflow → FE: excess DE beyond requirement counts as Free Electives
     const requiredDE = Number(progress?.required?.de || 0);
     if (requiredDE > 0 && categoryCredits.DE > requiredDE) {
-      const overflow = categoryCredits.DE - requiredDE;
-      categoryCredits.DE -= overflow;
-      categoryCredits.FE = (categoryCredits.FE || 0) + overflow;
+      const overflow = subtractCredits(categoryCredits.DE, requiredDE);
+      categoryCredits.DE = subtractCredits(categoryCredits.DE, overflow);
+      categoryCredits.FE = addCredits(categoryCredits.FE || 0, overflow);
     }
   }
 
@@ -472,26 +478,26 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
     const add = (bucket: typeof completed, category: keyof typeof categoryCredits, credits: number) => {
       const c = Number(credits || 0);
-      bucket.total += c;
+      bucket.total = addCredits(bucket.total, c);
       switch (category) {
         case "IC":
         case "IC_BASKET":
         case "DC":
         case "HSS":
         case "IKS":
-          bucket.core += c;
+          bucket.core = addCredits(bucket.core, c);
           break;
         case "DE":
-          bucket.de += c;
+          bucket.de = addCredits(bucket.de, c);
           break;
         case "FE":
-          bucket.freeElective += c;
+          bucket.freeElective = addCredits(bucket.freeElective, c);
           break;
         case "MTP":
-          bucket.mtp += c;
+          bucket.mtp = addCredits(bucket.mtp, c);
           break;
         case "ISTP":
-          bucket.istp += c;
+          bucket.istp = addCredits(bucket.istp, c);
           break;
         default:
           break;
@@ -510,14 +516,14 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
     // DE overflow â†’ FE: excess DE beyond requirement counts as Free Electives
     if (requiredDE > 0) {
-      const completedOverflow = Math.max(0, completed.de - requiredDE);
-      completed.de -= completedOverflow;
-      completed.freeElective += completedOverflow;
+      const completedOverflow = Math.max(0, subtractCredits(completed.de, requiredDE));
+      completed.de = subtractCredits(completed.de, completedOverflow);
+      completed.freeElective = addCredits(completed.freeElective, completedOverflow);
 
-      const deStillNeeded = Math.max(0, requiredDE - completed.de);
-      const inProgressOverflow = Math.max(0, inProgress.de - deStillNeeded);
-      inProgress.de -= inProgressOverflow;
-      inProgress.freeElective += inProgressOverflow;
+      const deStillNeeded = Math.max(0, subtractCredits(requiredDE, completed.de));
+      const inProgressOverflow = Math.max(0, subtractCredits(inProgress.de, deStillNeeded));
+      inProgress.de = subtractCredits(inProgress.de, inProgressOverflow);
+      inProgress.freeElective = addCredits(inProgress.freeElective, inProgressOverflow);
     }
 
     return { completed, inProgress };
@@ -570,8 +576,8 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
         const req = Number(r.required || 0);
         const comp = Number(r.completed || 0);
         const prog = Number(r.inProgress || 0);
-        const counted = Math.min(req, comp + (includeCurrentSemesterCredits ? prog : 0));
-        const remaining = Math.max(0, req - counted);
+        const counted = minCredits(req, addCredits(comp, includeCurrentSemesterCredits ? prog : 0));
+        const remaining = Math.max(0, subtractCredits(req, counted));
         return { ...r, required: req, completed: comp, inProgress: prog, counted, remaining };
       })
       .filter((r) => r.required > 0);
@@ -699,7 +705,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
       <div className="mb-4 sm:mb-6">
         <div className="flex justify-between text-xs sm:text-sm text-foreground-secondary mb-2 sm:mb-3">
           <span className="font-medium">
-            {totals.countedTotal} / {totals.requiredTotal} credits
+            {formatCredits(totals.countedTotal)} / {formatCredits(totals.requiredTotal)} credits
             {includeCurrentSemesterCredits ? " (incl. current sem)" : ""}
           </span>
           <button
@@ -707,7 +713,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
             onClick={() => setRemainingOpen((v) => !v)}
             className="font-semibold text-foreground hover:text-primary transition-colors"
           >
-            {totals.remainingTotal} remaining
+            {formatCredits(totals.remainingTotal)} remaining
           </button>
         </div>
         <div className="w-full bg-background-secondary rounded-full h-3 sm:h-3.5 overflow-hidden">
@@ -739,15 +745,15 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
                   <div className="min-w-0">
                     <p className="font-semibold text-foreground">{r.label}</p>
                     <p className="text-foreground-secondary">
-                      {r.counted} / {r.required} credits
+                      {formatCredits(r.counted)} / {formatCredits(r.required)} credits
                       {r.inProgress > 0 && includeCurrentSemesterCredits && (
-                        <span className="text-yellow-600 dark:text-yellow-400"> (+{r.inProgress} in progress)</span>
+                        <span className="text-yellow-600 dark:text-yellow-400"> (+{formatCredits(r.inProgress)} in progress)</span>
                       )}
                     </p>
                   </div>
                   <div className="text-right flex-shrink-0">
                     <p className="text-foreground-secondary">Remaining</p>
-                    <p className="font-semibold text-foreground">{r.remaining}</p>
+                    <p className="font-semibold text-foreground">{formatCredits(r.remaining)}</p>
                   </div>
                 </div>
               </div>
@@ -816,7 +822,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
               key={key}
               className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-surface-hover text-foreground-secondary"
             >
-              {key}: {value}
+              {key}: {formatCredits(value)}
             </span>
           ))}
         </div>
@@ -838,7 +844,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
-            <Tooltip formatter={(value, name) => [`${value} credits`, name]} />
+            <Tooltip formatter={(value, name) => [`${formatCredits(Number(value))} credits`, name]} />
             <Legend
               iconType="circle"
               iconSize={8}
@@ -849,7 +855,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-xl font-bold text-foreground">{totals.percentage}%</span>
           <span className="text-xs text-foreground-secondary">
-            {totals.countedTotal} / {totals.requiredTotal}
+            {formatCredits(totals.countedTotal)} / {formatCredits(totals.requiredTotal)}
           </span>
         </div>
       </div>
@@ -929,7 +935,7 @@ function CourseList({
                   {formatCourseCode(c.code)}
                 </td>
                 <td className="py-2 pr-4 text-foreground-secondary">{c.name}</td>
-                <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap">{c.credits}</td>
+                <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap">{formatCredits(c.credits)}</td>
                 <td className="py-2 whitespace-nowrap">{badge(status)}</td>
               </tr>
             );
@@ -1039,7 +1045,7 @@ function ICBasketStatus({
                         <p className="font-semibold text-foreground">{formatCourseCode(o.code)}</p>
                         <p className="text-foreground-secondary">{o.name}</p>
                       </div>
-                      <p className="text-foreground font-semibold whitespace-nowrap">{o.credits} cr</p>
+                      <p className="text-foreground font-semibold whitespace-nowrap">{formatCredits(o.credits)} cr</p>
                     </div>
                   </div>
                 ))}
@@ -1140,7 +1146,7 @@ function DEBasketStatus({
                         <p className="text-xs font-semibold text-foreground">{formatCourseCode(o.code)}</p>
                         <p className="text-xs text-foreground-secondary">{o.name}</p>
                       </div>
-                      <p className="text-xs text-foreground font-semibold whitespace-nowrap">{o.credits} cr</p>
+                      <p className="text-xs text-foreground font-semibold whitespace-nowrap">{formatCredits(o.credits)} cr</p>
                     </div>
                   </div>
                 ))}
