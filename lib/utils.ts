@@ -124,13 +124,26 @@ export function formatFileSize(bytes: number): string {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 }
 
-const CREDIT_SCALE = 100;
+const CREDIT_SCALE = 300;
 
 export type CreditValue = number | string | null | undefined;
 
 export function toCreditUnits(value: CreditValue): number {
   const numeric = Number(value ?? 0);
   if (!Number.isFinite(numeric)) return 0;
+
+  const sign = numeric < 0 ? -1 : 1;
+  const absolute = Math.abs(numeric);
+  const whole = Math.trunc(absolute);
+  const cents = Math.round((absolute - whole) * 100);
+
+  if (cents === 33 || cents === 34) {
+    return sign * (whole * CREDIT_SCALE + CREDIT_SCALE / 3);
+  }
+
+  if (cents === 66 || cents === 67) {
+    return sign * (whole * CREDIT_SCALE + (2 * CREDIT_SCALE) / 3);
+  }
 
   return Math.round((numeric + Number.EPSILON) * CREDIT_SCALE);
 }
@@ -171,7 +184,7 @@ export function maxCredits(...values: CreditValue[]): number {
 
 // Format credit totals without exposing floating-point precision artifacts.
 export function formatCredits(value: number | string | null | undefined, maximumFractionDigits = 2): string {
-  const numeric = Number(value ?? 0);
+  const numeric = normalizeCredits(value);
   if (!Number.isFinite(numeric)) return "0";
 
   const digits = Math.max(0, maximumFractionDigits);
