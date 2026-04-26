@@ -3,7 +3,15 @@ import prisma from "@/lib/prisma";
 import { buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
 import { normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
-import { formatCourseCode } from "@/lib/utils";
+import {
+  addCredits,
+  formatCourseCode,
+  formatCredits,
+  maxCredits,
+  minCredits,
+  subtractCredits,
+  sumCredits,
+} from "@/lib/utils";
 
 export interface CreditBreakdown {
   core: number;
@@ -235,23 +243,23 @@ export class CreditCalculator {
     );
 
     // DE overflow → FE: excess DE credits beyond requirement count as Free Electives
-    const completedDeOverflow = Math.max(0, completed.de - deCredits);
-    completed.de -= completedDeOverflow;
-    completed.freeElective += completedDeOverflow;
+    const completedDeOverflow = Math.max(0, subtractCredits(completed.de, deCredits));
+    completed.de = subtractCredits(completed.de, completedDeOverflow);
+    completed.freeElective = addCredits(completed.freeElective, completedDeOverflow);
 
-    const deStillNeeded = Math.max(0, deCredits - completed.de);
-    const inProgressDeOverflow = Math.max(0, inProgress.de - deStillNeeded);
-    inProgress.de -= inProgressDeOverflow;
-    inProgress.freeElective += inProgressDeOverflow;
+    const deStillNeeded = Math.max(0, subtractCredits(deCredits, completed.de));
+    const inProgressDeOverflow = Math.max(0, subtractCredits(inProgress.de, deStillNeeded));
+    inProgress.de = subtractCredits(inProgress.de, inProgressDeOverflow);
+    inProgress.freeElective = addCredits(inProgress.freeElective, inProgressDeOverflow);
 
     const remaining: CreditBreakdown = {
-      core: Math.max(0, required.core - completed.core),
-      de: Math.max(0, required.de - completed.de),
-      pe: Math.max(0, required.pe - completed.pe),
-      freeElective: Math.max(0, required.freeElective - completed.freeElective),
-      mtp: Math.max(0, required.mtp - completed.mtp),
-      istp: Math.max(0, required.istp - completed.istp),
-      total: Math.max(0, required.total - completed.total),
+      core: Math.max(0, subtractCredits(required.core, completed.core)),
+      de: Math.max(0, subtractCredits(required.de, completed.de)),
+      pe: Math.max(0, subtractCredits(required.pe, completed.pe)),
+      freeElective: Math.max(0, subtractCredits(required.freeElective, completed.freeElective)),
+      mtp: Math.max(0, subtractCredits(required.mtp, completed.mtp)),
+      istp: Math.max(0, subtractCredits(required.istp, completed.istp)),
+      total: Math.max(0, subtractCredits(required.total, completed.total)),
     };
 
     const percentage =
@@ -303,9 +311,11 @@ export class CreditCalculator {
       majorCourseIds.has(e.courseId)
     );
 
-    const overlappingCredits = majorEnrollments
-      .filter((e: { courseId: string; course: { credits: number } }) => overlappingCourses.some((o: { courseId: string }) => o.courseId === e.courseId))
-      .reduce((sum: number, e: { course: { credits: number } }) => sum + e.course.credits, 0);
+    const overlappingCredits = sumCredits(
+      majorEnrollments
+        .filter((e: { courseId: string; course: { credits: number } }) => overlappingCourses.some((o: { courseId: string }) => o.courseId === e.courseId))
+        .map((e: { course: { credits: number } }) => e.course.credits)
+    );
 
     return {
       ...minorProgress,
@@ -346,12 +356,9 @@ export class CreditCalculator {
       },
     });
 
-    const creditsCompleted = enrollments
+    const creditsCompleted = sumCredits(enrollments
       .filter((e: { grade?: string | null }) => !e.grade || e.grade !== "F")
-      .reduce(
-        (sum: number, e: { course: { credits: number } }) => sum + e.course.credits,
-        0
-      );
+      .map((e: { course: { credits: number } }) => e.course.credits));
 
     // Get current semester
     const allEnrollments = await prisma.courseEnrollment.findMany({
@@ -369,7 +376,7 @@ export class CreditCalculator {
     ) {
       return {
         eligible: false,
-        reason: `Need ${program.minCreditsForMtp - creditsCompleted} more credits`,
+        reason: `Need ${formatCredits(subtractCredits(program.minCreditsForMtp, creditsCompleted))} more credits`,
         creditsCompleted,
         creditsRequired: program.minCreditsForMtp,
         semesterNumber: currentSemester,
@@ -477,15 +484,30 @@ export class CreditCalculator {
     let hssCreditsAccumulated = 0;
     const HSS_CORE_CAP = 12;
     const HSS_FE_CAP = 20;
+    const addBreakdownCredits = (key: keyof CreditBreakdown, credits: number) => {
+      breakdown[key] = addCredits(breakdown[key], credits);
+    };
+    const subtractBreakdownCredits = (key: keyof CreditBreakdown, credits: number) => {
+      breakdown[key] = subtractCredits(breakdown[key], credits);
+    };
     const addHssCredits = (credits: number) => {
       const prev = hssCreditsAccumulated;
-      hssCreditsAccumulated += credits;
-      const corePortion = Math.min(HSS_CORE_CAP, hssCreditsAccumulated) - Math.min(HSS_CORE_CAP, prev);
-      const fePortion = Math.max(0, Math.min(HSS_FE_CAP, hssCreditsAccumulated) - Math.max(HSS_CORE_CAP, prev));
-      const ignored = credits - corePortion - fePortion;
-      breakdown.core += corePortion;
-      breakdown.freeElective += fePortion;
-      breakdown.total -= ignored; // undo the total increment for credits that don't count
+      hssCreditsAccumulated = addCredits(hssCreditsAccumulated, credits);
+      const corePortion = subtractCredits(
+        minCredits(HSS_CORE_CAP, hssCreditsAccumulated),
+        minCredits(HSS_CORE_CAP, prev)
+      );
+      const fePortion = Math.max(
+        0,
+        subtractCredits(
+          minCredits(HSS_FE_CAP, hssCreditsAccumulated),
+          maxCredits(HSS_CORE_CAP, prev)
+        )
+      );
+      const ignored = subtractCredits(credits, corePortion, fePortion);
+      addBreakdownCredits("core", corePortion);
+      addBreakdownCredits("freeElective", fePortion);
+      subtractBreakdownCredits("total", ignored); // undo the total increment for credits that don't count
     };
 
     const shouldOverrideDeToFe = (courseCode: string): boolean => {
@@ -497,15 +519,15 @@ export class CreditCalculator {
 
     const addDeCredits = (credits: number, courseCode: string) => {
       if (shouldOverrideDeToFe(courseCode)) {
-        breakdown.freeElective += credits;
+        addBreakdownCredits("freeElective", credits);
       } else {
-        breakdown.de += credits;
+        addBreakdownCredits("de", credits);
       }
     };
 
     sortedEnrollments.forEach((enrollment) => {
       const credits = enrollment.course.credits;
-      breakdown.total += credits;
+      addBreakdownCredits("total", credits);
 
       const code = enrollment.course.code.toUpperCase();
       const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
@@ -519,25 +541,25 @@ export class CreditCalculator {
         const branchCompulsion = IC_BASKET_COMPULSIONS[basketBranch] || {};
         
         if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1.replace(/[^A-Z0-9]/g, "")) {
-          breakdown.core += credits;
+          addBreakdownCredits("core", credits);
           return;
         }
         
         if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2.replace(/[^A-Z0-9]/g, "")) {
-          breakdown.core += credits;
+          addBreakdownCredits("core", credits);
           return;
         }
         
         // No compulsion - first course counts as core (IC_BASKET)
         if (isICB1 && !branchCompulsion.ic1 && !icBasketUsed.ic1) {
           icBasketUsed.ic1 = true;
-          breakdown.core += credits;
+          addBreakdownCredits("core", credits);
           return;
         }
         
         if (isICB2 && !branchCompulsion.ic2 && !icBasketUsed.ic2) {
           icBasketUsed.ic2 = true;
-          breakdown.core += credits;
+          addBreakdownCredits("core", credits);
           return;
         }
         
@@ -545,11 +567,11 @@ export class CreditCalculator {
         // (e.g. IC-240 is ICB2 but mapped as DC for MSE)
         const basketFallbackCategory = pickBranchMappingCategory(enrollment.course.branchMappings, branch);
         if (basketFallbackCategory === "DC" || basketFallbackCategory === "IC" || basketFallbackCategory === "IC_BASKET") {
-          breakdown.core += credits;
+          addBreakdownCredits("core", credits);
         } else if (basketFallbackCategory === "DE") {
           addDeCredits(credits, enrollment.course.code);
         } else {
-          breakdown.freeElective += credits;
+          addBreakdownCredits("freeElective", credits);
         }
         return;
       }
@@ -565,7 +587,7 @@ export class CreditCalculator {
       if (mappedCategory) {
         // IK-xxx courses should not count towards IKS requirement.
         if (mappedCategory === "IKS" && isIkCourse) {
-          breakdown.freeElective += credits;
+          addBreakdownCredits("freeElective", credits);
           return;
         }
 
@@ -574,7 +596,7 @@ export class CreditCalculator {
           case "IC_BASKET":
           case "DC":
           case "IKS":
-            breakdown.core += credits;
+            addBreakdownCredits("core", credits);
             return;
           case "HSS":
             addHssCredits(credits);
@@ -583,43 +605,43 @@ export class CreditCalculator {
             addDeCredits(credits, enrollment.course.code);
             return;
           case "FE":
-            breakdown.freeElective += credits;
+            addBreakdownCredits("freeElective", credits);
             return;
           case "MTP":
-            breakdown.mtp += credits;
+            addBreakdownCredits("mtp", credits);
             return;
           case "ISTP":
-            breakdown.istp += credits;
+            addBreakdownCredits("istp", credits);
             return;
           case "INTERNSHIP":
           case "BACKLOG":
             break;
           case "NA":
-            breakdown.freeElective += credits;
+            addBreakdownCredits("freeElective", credits);
             return;
         }
       }
 
       if (isICB1 || isICB2) {
-        breakdown.core += credits;
+        addBreakdownCredits("core", credits);
         return;
       }
 
       // Apply prefix-based categorization (same as other components)
       if (normalizedCode === "IK593") {
-        breakdown.freeElective += credits;
+        addBreakdownCredits("freeElective", credits);
         return;
       }
       if (normalizedCode === "IC181" || normalizedCode === "IC182") {
-        breakdown.core += credits; // IKS
+        addBreakdownCredits("core", credits); // IKS
         return;
       }
       if (isIkCourse) {
-        breakdown.freeElective += credits;
+        addBreakdownCredits("freeElective", credits);
         return;
       }
       if (normalizedCode.startsWith("IC")) {
-        breakdown.core += credits;
+        addBreakdownCredits("core", credits);
         return;
       }
       if (normalizedCode.startsWith("HS")) {
@@ -629,19 +651,19 @@ export class CreditCalculator {
 
       // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
       if (normalizedCode === "DP301P") {
-        breakdown.istp += credits;
+        addBreakdownCredits("istp", credits);
         return;
       }
       if (normalizedCode === "DP498P" || normalizedCode === "DP499P") {
-        breakdown.mtp += credits;
+        addBreakdownCredits("mtp", credits);
         return;
       }
       if (normalizedCode.includes("MTP")) {
-        breakdown.mtp += credits;
+        addBreakdownCredits("mtp", credits);
         return;
       }
       if (normalizedCode.includes("ISTP")) {
-        breakdown.istp += credits;
+        addBreakdownCredits("istp", credits);
         return;
       }
 
@@ -659,32 +681,32 @@ export class CreditCalculator {
       // branch, the course is NOT part of their curriculum → Free Elective.
       const hasMappings = enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0;
       if (hasMappings) {
-        breakdown.freeElective += credits;
+        addBreakdownCredits("freeElective", credits);
         return;
       }
 
       // No branchMappings at all — fall back to courseType.
       switch (enrollment.courseType) {
         case CourseType.CORE:
-          breakdown.core += credits;
+          addBreakdownCredits("core", credits);
           break;
         case CourseType.DE:
           addDeCredits(credits, enrollment.course.code);
           break;
         case CourseType.PE:
-          breakdown.pe += credits;
+          addBreakdownCredits("pe", credits);
           break;
         case CourseType.FREE_ELECTIVE:
-          breakdown.freeElective += credits;
+          addBreakdownCredits("freeElective", credits);
           break;
         case CourseType.MTP:
-          breakdown.mtp += credits;
+          addBreakdownCredits("mtp", credits);
           break;
         case CourseType.ISTP:
-          breakdown.istp += credits;
+          addBreakdownCredits("istp", credits);
           break;
         default:
-          breakdown.freeElective += credits;
+          addBreakdownCredits("freeElective", credits);
       }
     });
 

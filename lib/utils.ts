@@ -124,6 +124,67 @@ export function formatFileSize(bytes: number): string {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 }
 
+const CREDIT_SCALE = 100;
+
+export type CreditValue = number | string | null | undefined;
+
+export function toCreditUnits(value: CreditValue): number {
+  const numeric = Number(value ?? 0);
+  if (!Number.isFinite(numeric)) return 0;
+
+  return Math.round((numeric + Number.EPSILON) * CREDIT_SCALE);
+}
+
+export function fromCreditUnits(units: number): number {
+  const numeric = Number(units || 0);
+  if (!Number.isFinite(numeric)) return 0;
+
+  return numeric / CREDIT_SCALE;
+}
+
+export function normalizeCredits(value: CreditValue): number {
+  return fromCreditUnits(toCreditUnits(value));
+}
+
+export function sumCredits(values: CreditValue[]): number {
+  return fromCreditUnits(values.reduce<number>((sum, value) => sum + toCreditUnits(value), 0));
+}
+
+export function addCredits(...values: CreditValue[]): number {
+  return sumCredits(values);
+}
+
+export function subtractCredits(value: CreditValue, ...subtract: CreditValue[]): number {
+  const units = toCreditUnits(value) - subtract.reduce<number>((sum, item) => sum + toCreditUnits(item), 0);
+  return fromCreditUnits(units);
+}
+
+export function minCredits(...values: CreditValue[]): number {
+  if (values.length === 0) return 0;
+  return fromCreditUnits(Math.min(...values.map(toCreditUnits)));
+}
+
+export function maxCredits(...values: CreditValue[]): number {
+  if (values.length === 0) return 0;
+  return fromCreditUnits(Math.max(...values.map(toCreditUnits)));
+}
+
+// Format credit totals without exposing floating-point precision artifacts.
+export function formatCredits(value: number | string | null | undefined, maximumFractionDigits = 2): string {
+  const numeric = Number(value ?? 0);
+  if (!Number.isFinite(numeric)) return "0";
+
+  const digits = Math.max(0, maximumFractionDigits);
+  const factor = 10 ** digits;
+  const rounded = Math.round((numeric + Number.EPSILON) * factor) / factor;
+  const normalized = Object.is(rounded, -0) ? 0 : rounded;
+
+  const fixed = normalized.toFixed(digits);
+  if (digits === 0) return fixed;
+
+  return fixed.replace(/(\.\d*?[1-9])0+$/, "$1").replace(/\.0+$/, "");
+}
+
 // Format date for display
 export function formatDate(date: Date | string, options?: Intl.DateTimeFormatOptions): string {
   const d = typeof date === "string" ? new Date(date) : date;

@@ -6,7 +6,7 @@ import { ProgressChart } from "@/components/ProgressChart";
 import { MinorPlannerCard } from "@/components/MinorPlannerCard";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useMinorPlannerSelection } from "@/lib/minorPlannerClient";
-import { formatCourseCode } from "@/lib/utils";
+import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
 
 interface Program {
   id: string;
@@ -367,8 +367,8 @@ export default function ProgramsPage() {
       const required = Number(progressData?.required?.[key] ?? 0);
       const completed = Number(progressData?.completed?.[key] ?? 0);
       const inProgress = Number(progressData?.inProgress?.[key] ?? 0);
-      const value = completed + (includeCurrentSemesterCredits ? inProgress : 0);
-      return Math.min(required, value);
+      const value = addCredits(completed, includeCurrentSemesterCredits ? inProgress : 0);
+      return minCredits(required, value);
     };
 
     return {
@@ -501,7 +501,7 @@ export default function ProgramsPage() {
                       <p className="text-sm font-semibold text-foreground">Total Required</p>
                     </div>
                     <p className="text-xl font-bold text-primary">
-                      {primaryProgram.program.totalCreditsRequired} cr
+                      {formatCredits(primaryProgram.program.totalCreditsRequired)} cr
                     </p>
                   </div>
 
@@ -511,7 +511,7 @@ export default function ProgramsPage() {
                       <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">Core Courses</p>
                       {progressData && (
                         <p className="text-xs text-foreground-secondary">
-                          {displayProgress?.core ?? progressData.completed.core} / {progressData.required.core} cr
+                          {formatCredits(displayProgress?.core ?? progressData.completed.core)} / {formatCredits(progressData.required.core)} cr
                           {includeCurrentSemesterCredits ? " (incl. current sem)" : ""}
                         </p>
                       )}
@@ -521,7 +521,7 @@ export default function ProgramsPage() {
                         <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">IC</p>
                         <p className="text-xs text-foreground-secondary mb-1">Institutional Core</p>
                         <p className="text-2xl font-bold text-foreground">
-                          {primaryProgram.program.icCredits}
+                          {formatCredits(primaryProgram.program.icCredits)}
                           <span className="text-xs font-normal text-foreground-secondary ml-1">cr</span>
                         </p>
                       </div>
@@ -529,7 +529,7 @@ export default function ProgramsPage() {
                         <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">DC</p>
                         <p className="text-xs text-foreground-secondary mb-1">Discipline Core</p>
                         <p className="text-2xl font-bold text-foreground">
-                          {primaryProgram.program.dcCredits}
+                          {formatCredits(primaryProgram.program.dcCredits)}
                           <span className="text-xs font-normal text-foreground-secondary ml-1">cr</span>
                         </p>
                       </div>
@@ -553,8 +553,8 @@ export default function ProgramsPage() {
                       {progressData ? (
                         <>
                           <p className="text-xl font-bold text-foreground">
-                            {displayProgress?.de ?? progressData.completed.de}
-                            <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.de} cr</span>
+                            {formatCredits(displayProgress?.de ?? progressData.completed.de)}
+                            <span className="text-xs font-normal text-foreground-secondary"> / {formatCredits(progressData.required.de)} cr</span>
                           </p>
                           {progressData.required.de > 0 && (
                             <div className="mt-2 h-1 bg-emerald-500/20 rounded-full overflow-hidden">
@@ -563,7 +563,7 @@ export default function ProgramsPage() {
                           )}
                         </>
                       ) : (
-                        <p className="text-xl font-bold text-foreground">{primaryProgram.program.deCredits}<span className="text-xs font-normal text-foreground-secondary ml-1">cr</span></p>
+                        <p className="text-xl font-bold text-foreground">{formatCredits(primaryProgram.program.deCredits)}<span className="text-xs font-normal text-foreground-secondary ml-1">cr</span></p>
                       )}
                     </div>
 
@@ -574,8 +574,8 @@ export default function ProgramsPage() {
                       {progressData ? (
                         <>
                           <p className="text-xl font-bold text-foreground">
-                            {displayProgress?.freeElective ?? progressData.completed.freeElective}
-                            <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.freeElective} cr</span>
+                            {formatCredits(displayProgress?.freeElective ?? progressData.completed.freeElective)}
+                            <span className="text-xs font-normal text-foreground-secondary"> / {formatCredits(progressData.required.freeElective)} cr</span>
                           </p>
                           {progressData.required.freeElective > 0 && (
                             <div className="mt-2 h-1 bg-purple-500/20 rounded-full overflow-hidden">
@@ -584,7 +584,7 @@ export default function ProgramsPage() {
                           )}
                         </>
                       ) : (
-                        <p className="text-xl font-bold text-foreground">{primaryProgram.program.feCredits}<span className="text-xs font-normal text-foreground-secondary ml-1">cr</span></p>
+                        <p className="text-xl font-bold text-foreground">{formatCredits(primaryProgram.program.feCredits)}<span className="text-xs font-normal text-foreground-secondary ml-1">cr</span></p>
                       )}
                     </div>
 
@@ -594,8 +594,8 @@ export default function ProgramsPage() {
                         <p className="text-[11px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">MTP</p>
                         <p className="text-xs text-foreground-secondary mb-2">Major Tech Project</p>
                         <p className="text-xl font-bold text-foreground">
-                          {displayProgress?.mtp ?? progressData.completed.mtp}
-                          <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.mtp} cr</span>
+                          {formatCredits(displayProgress?.mtp ?? progressData.completed.mtp)}
+                          <span className="text-xs font-normal text-foreground-secondary"> / {formatCredits(progressData.required.mtp)} cr</span>
                         </p>
                         <div className="mt-2 h-1 bg-orange-500/20 rounded-full overflow-hidden">
                           <div className="h-full bg-orange-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.mtp ?? progressData.completed.mtp) / progressData.required.mtp) * 100)}%` }} />
@@ -609,8 +609,8 @@ export default function ProgramsPage() {
                         <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">ISTP</p>
                         <p className="text-xs text-foreground-secondary mb-2">Socio-Tech Practicum</p>
                         <p className="text-xl font-bold text-foreground">
-                          {displayProgress?.istp ?? progressData.completed.istp}
-                          <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.istp} cr</span>
+                          {formatCredits(displayProgress?.istp ?? progressData.completed.istp)}
+                          <span className="text-xs font-normal text-foreground-secondary"> / {formatCredits(progressData.required.istp)} cr</span>
                         </p>
                         <div className="mt-2 h-1 bg-rose-500/20 rounded-full overflow-hidden">
                           <div className="h-full bg-rose-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.istp ?? progressData.completed.istp) / progressData.required.istp) * 100)}%` }} />
@@ -624,8 +624,8 @@ export default function ProgramsPage() {
                         <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Research</p>
                         <p className="text-xs text-foreground-secondary mb-2">Research Credits</p>
                         <p className="text-xl font-bold text-foreground">
-                          {displayProgress?.pe ?? progressData.completed.pe}
-                          <span className="text-xs font-normal text-foreground-secondary"> / {progressData.required.pe} cr</span>
+                          {formatCredits(displayProgress?.pe ?? progressData.completed.pe)}
+                          <span className="text-xs font-normal text-foreground-secondary"> / {formatCredits(progressData.required.pe)} cr</span>
                         </p>
                         <div className="mt-2 h-1 bg-amber-500/20 rounded-full overflow-hidden">
                           <div className="h-full bg-amber-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, progressData.required.pe > 0 ? ((displayProgress?.pe ?? progressData.completed.pe) / progressData.required.pe) * 100 : 0)}%` }} />
@@ -839,7 +839,7 @@ export default function ProgramsPage() {
                     <div className="space-y-3">
                       {semesters.map((sem) => {
                         const courses = semesterCourses[sem] || [];
-                        const credits = courses.reduce((sum, e) => sum + (e.course?.credits || 0), 0);
+                        const credits = sumCredits(courses.map((e) => e.course?.credits || 0));
 
                         return (
                           <details
@@ -851,7 +851,7 @@ export default function ProgramsPage() {
                               <div className="min-w-0">
                                 <p className="font-semibold text-foreground">Semester {sem}</p>
                                 <p className="text-xs text-foreground-secondary">
-                                  {courses.length} courses • {credits} credits
+                                  {courses.length} courses • {formatCredits(credits)} credits
                                 </p>
                               </div>
                               <ChevronDown className="w-4 h-4 text-foreground-secondary transition-transform duration-200 group-open:rotate-180" />
@@ -877,7 +877,7 @@ export default function ProgramsPage() {
                                         {e.course?.name}
                                       </td>
                                       <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap">
-                                        {e.course?.credits || 0}
+                                        {formatCredits(e.course?.credits || 0)}
                                       </td>
                                       <td className="py-2 whitespace-nowrap">
                                         {e.status === "IN_PROGRESS" ? (
