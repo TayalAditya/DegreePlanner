@@ -253,7 +253,8 @@ export default function CoursesPage() {
     const matchesSearch =
       !searchLower ||
       normalizeCourseCodeForSearch(course.code).includes(searchNormalized) ||
-      course.name.toLowerCase().includes(searchLower);
+      course.name.toLowerCase().includes(searchLower) ||
+      course.department.toLowerCase().includes(searchLower);
     const matchesDept = selectedDept === "all" || getCourseSchoolKey(course) === selectedDept;
     return matchesSearch && matchesDept;
   });

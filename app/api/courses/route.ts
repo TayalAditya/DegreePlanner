@@ -140,10 +140,13 @@ export async function GET(req: NextRequest) {
     const bestByKey = new Map<string, (typeof courses)[number]>();
     for (const course of courses) {
       const key = courseIdentityKey(course.code);
-      if (!keyPattern.test(key)) continue;
-      const existing = bestByKey.get(key);
+      const isStandardCode = keyPattern.test(key);
+      const bucketKey = isStandardCode
+        ? `standard:${key}`
+        : `external:${course.code.trim().toUpperCase()}`;
+      const existing = bestByKey.get(bucketKey);
       if (!existing || scoreCode(course.code) > scoreCode(existing.code)) {
-        bestByKey.set(key, course);
+        bestByKey.set(bucketKey, course);
       }
     }
 
