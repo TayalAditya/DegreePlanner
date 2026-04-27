@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { X, AlertCircle, CheckCircle2, Search } from "lucide-react";
 import { DetectedCourse, normalizeCourseCode } from "@/lib/parseTranscript";
 import { courseIdentityKey } from "@/lib/courseIdentity";
-import { formatCourseCode } from "@/lib/utils";
+import { formatCourseCode, formatCredits } from "@/lib/utils";
 
 interface CatalogCourse {
   id: string;
@@ -296,7 +296,7 @@ export function OcrConfirmModal({
                       <option value="">— No match —</option>
                       {catalogCourses.map((c) => (
                         <option key={c.id} value={c.id}>
-                          {formatCourseCode(c.code)} — {c.name} ({c.credits} cr)
+                          {formatCourseCode(c.code)} — {c.name} ({formatCredits(c.credits)} cr)
                         </option>
                       ))}
                     </select>

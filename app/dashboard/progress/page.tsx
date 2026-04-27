@@ -935,11 +935,11 @@ export default function ProgressPage() {
                     <div className="min-w-0">
                       <p className="font-semibold text-foreground">Semester {sem}</p>
                       <p className="text-xs text-foreground-secondary">
-                        {courses.length} courses • {completedCredits}
+                        {courses.length} courses • {formatCredits(completedCredits)}
                         {inProgressCredits > 0 ? (
-                          <span className="text-info"> (+{inProgressCredits})</span>
+                          <span className="text-info"> (+{formatCredits(inProgressCredits)})</span>
                         ) : null}{" "}
-                        credits{inProgressCredits > 0 ? ` • ${totalCredits} total` : ""}
+                        credits{inProgressCredits > 0 ? ` • ${formatCredits(totalCredits)} total` : ""}
                       </p>
                     </div>
                     <ChevronDown className="w-4 h-4 text-foreground-secondary transition-transform duration-200 group-open:rotate-180" />

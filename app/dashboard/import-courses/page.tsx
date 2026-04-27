@@ -19,7 +19,7 @@ import {
 import { getAllDefaultCourses, DefaultCourse } from "@/lib/defaultCurriculum";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
-import { formatCourseCode } from "@/lib/utils";
+import { addCredits, formatCourseCode, formatCredits } from "@/lib/utils";
 import { OcrConfirmModal, ConfirmRow } from "@/components/OcrConfirmModal";
 import { parseTranscriptText, normalizeCourseCode, DetectedCourse } from "@/lib/parseTranscript";
 import { courseIdentityKey } from "@/lib/courseIdentity";
@@ -764,7 +764,7 @@ export default function ImportCoursesPage() {
   const selectedCount = courses.filter((c) => c.selected).length;
   const totalCredits = courses
     .filter((c) => c.selected)
-    .reduce((sum, c) => sum + c.credits, 0);
+    .reduce((sum, c) => addCredits(sum, c.credits), 0);
 
   // Pending keys = courses already in the current in-memory list (not yet imported)
   const pendingKeys = new Set(
@@ -1066,7 +1066,7 @@ export default function ImportCoursesPage() {
                     </p>
                   </div>
                   <p className="text-xs sm:text-sm text-foreground-secondary mt-1">
-                    {course.credits} credits • {course.department}
+                    {formatCredits(course.credits)} credits • {course.department}
                   </p>
                 </div>
                 <button
@@ -1089,7 +1089,7 @@ export default function ImportCoursesPage() {
         </div>
         <div className="bg-surface p-4 rounded-xl border border-border">
           <div className="text-sm text-foreground-secondary mb-1">Total Credits</div>
-          <div className="text-3xl font-bold text-accent">{totalCredits}</div>
+          <div className="text-3xl font-bold text-accent">{formatCredits(totalCredits)}</div>
         </div>
         <div className="bg-surface p-4 rounded-xl border border-border">
           <div className="text-sm text-foreground-secondary mb-1">Semesters</div>
@@ -1124,7 +1124,7 @@ export default function ImportCoursesPage() {
             <div className="text-white">
               <p className="text-sm opacity-90">Ready to import</p>
               <p className="font-bold text-lg">
-                {selectedCount} courses • {totalCredits} credits
+                {selectedCount} courses • {formatCredits(totalCredits)} credits
               </p>
             </div>
             <button
@@ -1158,7 +1158,7 @@ export default function ImportCoursesPage() {
             const selectedInSem = semCourses.filter((c) => c.selected).length;
             const creditsInSem = semCourses
               .filter((c) => c.selected)
-              .reduce((sum, c) => sum + c.credits, 0);
+              .reduce((sum, c) => addCredits(sum, c.credits), 0);
             const isExpanded = expandedSemesters.includes(sem);
 
             return (
@@ -1186,7 +1186,7 @@ export default function ImportCoursesPage() {
                     <div className="min-w-0">
                       <h3 className="font-semibold text-lg">Semester {sem}</h3>
                       <p className="text-sm text-foreground-secondary">
-                        {selectedInSem} of {semCourses.length} courses • {creditsInSem} credits
+                        {selectedInSem} of {semCourses.length} courses • {formatCredits(creditsInSem)} credits
                       </p>
                     </div>
                   </div>
@@ -1245,7 +1245,7 @@ export default function ImportCoursesPage() {
                                 {course.category === "ICB" ? "IC Basket" : course.category}
                               </span>
                               <span className="text-xs text-foreground-secondary">
-                                {course.credits} credits
+                                {formatCredits(course.credits)} credits
                               </span>
                               {course.tag && (
                                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 font-medium">

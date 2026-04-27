@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, GraduationCap } from "lucide-react";
 import { MINORS, type MinorDefinition, type MinorRequirementGroup } from "@/lib/minors";
 import { MINOR_PLANNER_STORAGE_KEYS } from "@/lib/minorPlannerClient";
-import { formatCourseCode } from "@/lib/utils";
+import { addCredits, formatCourseCode, formatCredits } from "@/lib/utils";
 
 type EnrollmentLike = {
   status: string;
@@ -135,10 +135,10 @@ function computeMinorProgress(
       .slice(0, remainingSlots);
 
     const countedCompletedCredits = countedCompletedCodes.reduce((sum, c) => {
-      return sum + (courseStateByCode.get(c)?.credits ?? 0);
+      return addCredits(sum, courseStateByCode.get(c)?.credits ?? 0);
     }, 0);
     const countedInProgressCredits = countedInProgressCodes.reduce((sum, c) => {
-      return sum + (courseStateByCode.get(c)?.credits ?? 0);
+      return addCredits(sum, courseStateByCode.get(c)?.credits ?? 0);
     }, 0);
 
     return {
@@ -174,11 +174,11 @@ function computeMinorProgress(
   const remainingCourses = Math.max(0, requiredCourses - coveredCourses);
 
   const countedCompletedCredits = completionGroups.reduce(
-    (sum, g) => sum + g.countedCompletedCredits,
+    (sum, g) => addCredits(sum, g.countedCompletedCredits),
     0
   );
   const countedInProgressCredits = completionGroups.reduce(
-    (sum, g) => sum + g.countedInProgressCredits,
+    (sum, g) => addCredits(sum, g.countedInProgressCredits),
     0
   );
 
@@ -601,7 +601,7 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
                                      {c.code}{" "}
                                      <span className="text-[11px] font-semibold text-foreground-secondary">
                                        {statusLabel}
-                                       {c.credits ? ` · ${c.credits} cr` : ""}
+                                      {c.credits ? ` · ${formatCredits(c.credits)} cr` : ""}
                                      </span>
                                    </p>
                                     {c.name ? (
@@ -667,14 +667,14 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
                           <div className="mt-3 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-foreground-secondary">
                             Counted credits:{" "}
                             <span className="font-semibold text-foreground">
-                              {progress.countedCompletedCredits + progress.countedInProgressCredits}
+                              {formatCredits(addCredits(progress.countedCompletedCredits, progress.countedInProgressCredits))}
                             </span>
                             {progress.minor.totalCreditsRequired ? (
                               <>
                                 {" "}
                                 {"\u2022"} Required:{" "}
                                 <span className="font-semibold text-foreground">
-                                  {progress.minor.totalCreditsRequired}
+                                  {formatCredits(progress.minor.totalCreditsRequired)}
                                 </span>
                               </>
                             ) : null}

@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { addCredits, formatCredits, sumCredits } from "@/lib/utils";
 
 /**
  * Pass/Fail course constraints:
@@ -38,11 +39,11 @@ export async function canTakePassFailCourse(
   }
 
   // Check total P/F credits
-  const newTotal = user.totalPassFailCredits + credits;
+  const newTotal = addCredits(user.totalPassFailCredits, credits);
   if (newTotal > PASS_FAIL_LIMITS.TOTAL_CREDITS) {
     return {
       allowed: false,
-      reason: `Cannot exceed ${PASS_FAIL_LIMITS.TOTAL_CREDITS} total P/F credits. Currently at ${user.totalPassFailCredits}, requesting ${credits} more.`,
+      reason: `Cannot exceed ${formatCredits(PASS_FAIL_LIMITS.TOTAL_CREDITS)} total P/F credits. Currently at ${formatCredits(user.totalPassFailCredits)}, requesting ${formatCredits(credits)} more.`,
     };
   }
 
@@ -58,16 +59,13 @@ export async function canTakePassFailCourse(
     },
   });
 
-  const currentSemesterPF = semesterEnrollments.reduce(
-    (sum, e) => sum + e.course.credits,
-    0
-  );
-  const newSemesterTotal = currentSemesterPF + credits;
+  const currentSemesterPF = sumCredits(semesterEnrollments.map((e) => e.course.credits));
+  const newSemesterTotal = addCredits(currentSemesterPF, credits);
 
   if (newSemesterTotal > PASS_FAIL_LIMITS.PER_SEMESTER_CREDITS) {
     return {
       allowed: false,
-      reason: `Cannot exceed ${PASS_FAIL_LIMITS.PER_SEMESTER_CREDITS} P/F credits per semester. Currently at ${currentSemesterPF} in semester ${semester}, requesting ${credits} more.`,
+      reason: `Cannot exceed ${formatCredits(PASS_FAIL_LIMITS.PER_SEMESTER_CREDITS)} P/F credits per semester. Currently at ${formatCredits(currentSemesterPF)} in semester ${semester}, requesting ${formatCredits(credits)} more.`,
     };
   }
 

@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, CheckCircle2, Clock, LogIn, ShieldCheck, ShieldX,
 } from "lucide-react";
 import { UserProgramModal } from "@/components/UserProgramModal";
+import { addCredits, formatCredits } from "@/lib/utils";
 
 interface SemesterStat {
   semester: number;
@@ -305,8 +306,8 @@ export default function AdminPage() {
     });
   }, [users, search, branchFilter]);
 
-  const totalCompleted = filtered.reduce((s, u) => s + u.completedCredits, 0);
-  const avgCredits = filtered.length > 0 ? Math.round(totalCompleted / filtered.length) : 0;
+  const totalCompleted = filtered.reduce((s, u) => addCredits(s, u.completedCredits), 0);
+  const avgCredits = filtered.length > 0 ? totalCompleted / filtered.length : 0;
 
   if (error) {
     return (
@@ -381,13 +382,13 @@ export default function AdminPage() {
           <div className="flex items-center gap-1.5 text-xs text-foreground-secondary">
             <CheckCircle2 className="w-3.5 h-3.5 text-success" /> Done Cr
           </div>
-          <p className="text-2xl font-bold text-success">{totalCompleted}</p>
+          <p className="text-2xl font-bold text-success">{formatCredits(totalCompleted)}</p>
         </div>
         <div className="bg-surface border border-border rounded-xl p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs text-foreground-secondary">
             <TrendingUp className="w-3.5 h-3.5 text-info" /> Avg/User
           </div>
-          <p className="text-2xl font-bold text-info">{avgCredits}</p>
+          <p className="text-2xl font-bold text-info">{formatCredits(avgCredits)}</p>
         </div>
       </div>
 
@@ -468,10 +469,10 @@ export default function AdminPage() {
                         <BranchBadge branch={user.branch} />
                       </td>
                       <td className="px-4 py-3 text-center font-bold text-success">
-                        {user.completedCredits}
+                        {formatCredits(user.completedCredits)}
                       </td>
                       <td className="px-4 py-3 text-center font-medium text-info">
-                        {user.inProgressCredits || "—"}
+                        {user.inProgressCredits ? formatCredits(user.inProgressCredits) : "—"}
                       </td>
                       {semColumns.map((s) => {
                         const sem = semMap[s];
@@ -479,7 +480,7 @@ export default function AdminPage() {
                           <td key={s} className="px-3 py-3 text-center">
                             {sem ? (
                               <div className="flex flex-col items-center leading-none">
-                                <span className="text-foreground font-semibold">{sem.credits}</span>
+                                <span className="text-foreground font-semibold">{formatCredits(sem.credits)}</span>
                                 <span className="text-[10px] text-foreground-secondary/70">{sem.courses}c</span>
                               </div>
                             ) : (
@@ -525,9 +526,9 @@ export default function AdminPage() {
                       <p className="text-xs text-foreground-secondary">{user.enrollmentId}</p>
                     </div>
                     <div className="flex flex-col items-end gap-0.5 flex-shrink-0 mr-1">
-                      <span className="text-sm font-bold text-success">{user.completedCredits} cr</span>
+                      <span className="text-sm font-bold text-success">{formatCredits(user.completedCredits)} cr</span>
                       {user.inProgressCredits > 0 && (
-                        <span className="text-xs text-info">{user.inProgressCredits} wip</span>
+                        <span className="text-xs text-info">{formatCredits(user.inProgressCredits)} wip</span>
                       )}
                     </div>
                     {isExpanded ? (
@@ -542,11 +543,11 @@ export default function AdminPage() {
                       <div className="flex gap-4 text-sm">
                         <div>
                           <p className="text-xs text-foreground-secondary">Completed</p>
-                          <p className="font-bold text-success">{user.completedCredits} cr</p>
+                          <p className="font-bold text-success">{formatCredits(user.completedCredits)} cr</p>
                         </div>
                         <div>
                           <p className="text-xs text-foreground-secondary">In Progress</p>
-                          <p className="font-bold text-info">{user.inProgressCredits || 0} cr</p>
+                          <p className="font-bold text-info">{formatCredits(user.inProgressCredits || 0)} cr</p>
                         </div>
                         <div>
                           <p className="text-xs text-foreground-secondary">Courses</p>
@@ -561,7 +562,7 @@ export default function AdminPage() {
                             {user.semesterBreakdown.map((s) => (
                               <div key={s.semester} className="bg-surface border border-border rounded-lg p-2 text-center">
                                 <p className="text-[10px] text-foreground-secondary font-medium">Sem {s.semester}</p>
-                                <p className="text-sm font-bold text-foreground">{s.credits}</p>
+                                <p className="text-sm font-bold text-foreground">{formatCredits(s.credits)}</p>
                                 <p className="text-[10px] text-foreground-secondary">{s.courses}c</p>
                               </div>
                             ))}

@@ -935,7 +935,7 @@ export default function ProgramsPage() {
                       <div>
                         <p className="text-sm text-foreground-secondary">Total Credits</p>
                         <p className="text-lg font-bold text-foreground">
-                          {userProgram.program.totalCreditsRequired}
+                          {formatCredits(userProgram.program.totalCreditsRequired)}
                         </p>
                       </div>
                       <div>

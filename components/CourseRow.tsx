@@ -1,6 +1,7 @@
 "use client";
 
 import { ReactNode } from "react";
+import { formatCredits } from "@/lib/utils";
 
 interface CourseRowProps {
   code: string;
@@ -69,7 +70,7 @@ export function CourseRow({
       </td>
       {credits !== undefined && (
         <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap font-medium text-xs sm:text-sm">
-          {credits}
+          {formatCredits(credits)}
         </td>
       )}
       {status && (

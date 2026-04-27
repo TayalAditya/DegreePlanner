@@ -19,7 +19,7 @@ import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { StatCard } from "@/components/StatCard";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
-import { formatCourseCode } from "@/lib/utils";
+import { addCredits, formatCourseCode, formatCredits, subtractCredits, sumCredits } from "@/lib/utils";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
 interface Course {
@@ -316,11 +316,11 @@ export default function CoursesPage() {
 
   const totalCreditsCompleted = enrollments
     .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
-    .reduce((sum, e) => sum + e.course.credits, 0);
+    .reduce((sum, e) => addCredits(sum, e.course.credits), 0);
 
   const totalCreditsInProgress = enrollments
     .filter((e) => e.status === "IN_PROGRESS" || e.status === "ENROLLED")
-    .reduce((sum, e) => sum + e.course.credits, 0);
+    .reduce((sum, e) => addCredits(sum, e.course.credits), 0);
 
   const maxPassFailCredits = 9;
   const passFailUsed = user?.totalPassFailCredits ?? 0;
@@ -471,14 +471,14 @@ export default function CoursesPage() {
     .forEach((e) => {
       const category = getCourseCategory(e);
       if (category in creditsByCategory) {
-        creditsByCategory[category] += e.course.credits;
+        creditsByCategory[category] = addCredits(creditsByCategory[category], e.course.credits);
       }
     });
 
   // Calculate HSS credits for smart type detection
   const hssCreditsCompleted = enrollments
     .filter((e) => e.course.code.startsWith("HS-") && e.status === "COMPLETED")
-    .reduce((sum, e) => sum + e.course.credits, 0);
+    .reduce((sum, e) => addCredits(sum, e.course.credits), 0);
 
   const determineCourseType = (course: Course): string => {
     const code = course.code.toUpperCase();
@@ -655,7 +655,7 @@ export default function CoursesPage() {
         <StatCard
           icon={<Award className="w-full h-full" />}
           label="Completed"
-          value={totalCreditsCompleted}
+          value={formatCredits(totalCreditsCompleted)}
           sublabel="Credits earned"
           valueColor="text-success"
           iconBg="bg-success/10"
@@ -667,7 +667,7 @@ export default function CoursesPage() {
         <StatCard
           icon={<Clock className="w-full h-full" />}
           label="In Progress"
-          value={totalCreditsInProgress}
+          value={formatCredits(totalCreditsInProgress)}
           sublabel="Credits current"
           valueColor="text-info"
           iconBg="bg-info/10"
@@ -717,7 +717,7 @@ export default function CoursesPage() {
                         {labels[category]}
                       </span>
                     </div>
-                    <p className={`text-2xl font-bold ${colors.text}`}>{credits}</p>
+                    <p className={`text-2xl font-bold ${colors.text}`}>{formatCredits(credits)}</p>
                     <p className="text-xs text-foreground-secondary mt-1">credits</p>
                   </div>
                 );
@@ -792,7 +792,7 @@ export default function CoursesPage() {
                   .sort((a, b) => a - b)
                   .map((semNum) => {
                     const semesterEnrollments = enrollments.filter(e => e.semester === semNum);
-                    const semCredits = semesterEnrollments.reduce((sum, e) => sum + e.course.credits, 0);
+                    const semCredits = sumCredits(semesterEnrollments.map((e) => e.course.credits));
                     
                     return (
                       <div key={semNum} className="space-y-3">
@@ -805,7 +805,7 @@ export default function CoursesPage() {
                               {semesterEnrollments.length} courses
                             </span>
                             <span className="px-4 py-1.5 bg-primary text-white rounded-full font-bold text-sm">
-                              {semCredits} Credits
+                              {formatCredits(semCredits)} Credits
                             </span>
                           </div>
                         </div>
@@ -827,7 +827,7 @@ export default function CoursesPage() {
                                       {formatCourseCode(enrollment.course.code)}
                                     </h3>
                                     <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-semibold rounded-full border border-primary/20">
-                                      {enrollment.course.credits} Cr
+                                      {formatCredits(enrollment.course.credits)} Cr
                                     </span>
                                     <span
                                       className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${
@@ -961,7 +961,7 @@ export default function CoursesPage() {
                               )}
                             </div>
                             <span className="px-3 py-1 bg-primary/10 text-primary text-sm font-semibold rounded-full border border-primary/20 whitespace-nowrap">
-                              {course.credits} Cr
+                              {formatCredits(course.credits)} Cr
                             </span>
                           </div>
 
@@ -1109,7 +1109,7 @@ export default function CoursesPage() {
                                             )}
                                           </div>
                                           <span className="px-2.5 py-1 bg-primary/10 text-primary text-xs font-semibold rounded-full border border-primary/20 whitespace-nowrap">
-                                            {course.credits} Cr
+                                            {formatCredits(course.credits)} Cr
                                           </span>
                                         </div>
 
@@ -1229,7 +1229,7 @@ export default function CoursesPage() {
                     Credits
                   </p>
                   <p className="text-2xl font-bold text-primary">
-                    {selectedCourse.credits}
+                    {formatCredits(selectedCourse.credits)}
                   </p>
                 </div>
                 <div className="bg-surface-hover rounded-lg p-4">
@@ -1338,7 +1338,7 @@ export default function CoursesPage() {
                   <p className="text-foreground-secondary">{addingCourse.name}</p>
                   <div className="flex gap-2 mt-2">
                     <span className="px-2 py-1 bg-primary/10 text-primary text-sm font-semibold rounded">
-                      {addingCourse.credits} Credits
+                      {formatCredits(addingCourse.credits)} Credits
                     </span>
                     <span className="px-2 py-1 bg-surface text-foreground-secondary text-sm rounded">
                       {addingCourse.department}
@@ -1500,7 +1500,7 @@ export default function CoursesPage() {
                       <>
                         {addingCourse.code.startsWith("HS-") ? (
                           hssCreditsCompleted < 12 ? (
-                            <span className="text-success">→ Will be marked as HSS/Core ({12 - hssCreditsCompleted} credits remaining)</span>
+                            <span className="text-success">→ Will be marked as HSS/Core ({formatCredits(subtractCredits(12, hssCreditsCompleted))} credits remaining)</span>
                           ) : (
                             <span className="text-info">→ Will be marked as Free Elective (HSS limit reached)</span>
                           )
