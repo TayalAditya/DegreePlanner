@@ -305,28 +305,23 @@ export function isOnline(): boolean {
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-// Format course code consistently (e.g., IC123 or IC-123 → IC-123)
+// Format standard IIT course codes consistently, while preserving external codes.
 export function formatCourseCode(code: string): string {
-  if (!code) return "";
+  const raw = String(code ?? "").trim();
+  if (!raw) return "";
   
   // Normalise common practicum/lab suffix: "XY123(P)" -> "XY123P"
-  const cleaned = code
+  const cleaned = raw
     .toUpperCase()
+    .replace(/\u00a0/g, " ")
     .replace(/(\d{3}[A-Z]?)\s*\(\s*P\s*\)/gi, "$1P");
 
-  // Remove any existing hyphens and spaces
   const normalized = cleaned.replace(/[\s-]/g, "");
-  
-  // Find where the letters end and numbers begin
-  let i = 0;
-  while (i < normalized.length && /[A-Z]/.test(normalized[i])) {
-    i++;
+  const standard = normalized.match(/^([A-Z]{2,4})(\d{3,4}[A-Z]?)$/);
+
+  if (standard) {
+    return `${standard[1]}-${standard[2]}`;
   }
-  
-  // If we have both letters and numbers, format as ABC-123
-  if (i > 0 && i < normalized.length) {
-    return normalized.slice(0, i) + "-" + normalized.slice(i);
-  }
-  
-  return normalized;
+
+  return cleaned.replace(/\s*-\s*/g, "-").replace(/\s+/g, " ");
 }
