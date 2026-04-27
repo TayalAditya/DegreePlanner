@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCredits } from "@/lib/utils";
+
 interface CategoryBadgeProps {
   category: string;
   credits?: number;
@@ -46,7 +48,7 @@ export function CategoryBadge({
       </span>
       {credits !== undefined && (
         <span className="text-xs text-foreground-secondary whitespace-nowrap">
-          {credits}cr{count !== undefined ? ` (${count})` : ""}
+          {formatCredits(credits)}cr{count !== undefined ? ` (${count})` : ""}
         </span>
       )}
     </span>

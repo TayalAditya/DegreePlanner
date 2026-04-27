@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { formatCredits } from "@/lib/utils";
 
 interface MTPStatusCardProps {
   mtpEligibility: any;
@@ -53,9 +54,9 @@ export function MTPStatusCard({
               <div className="space-y-2">
                 <p className="text-sm text-foreground-secondary">{eligibility.reason}</p>
                 <div className="text-xs text-foreground-secondary space-y-1">
-                  <p>Credits completed: {eligibility.creditsCompleted}</p>
+                  <p>Credits completed: {formatCredits(eligibility.creditsCompleted)}</p>
                   {eligibility.creditsRequired && (
-                    <p>Credits required: {eligibility.creditsRequired}</p>
+                    <p>Credits required: {formatCredits(eligibility.creditsRequired)}</p>
                   )}
                   <p>Current semester: {eligibility.semesterNumber}</p>
                   {eligibility.minSemesterRequired && (

@@ -18,7 +18,7 @@ import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
-import { formatCourseCode } from "@/lib/utils";
+import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
 
 interface Program {
   id: string;
@@ -321,7 +321,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       if (hssUsed) {
         const before = hssUsed.credits;
         if (before < HSS_CORE_CAP) {
-          hssUsed.credits = Math.min(HSS_CORE_CAP, before + credits);
+          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
           return "HSS";
         }
         return "FE";
@@ -545,7 +545,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                           <Award className="w-3 h-3" /> Total Credits
                         </p>
                         <p className="text-xl font-bold text-foreground">
-                          {primaryProgram.program.totalCreditsRequired}
+                          {formatCredits(primaryProgram.program.totalCreditsRequired)}
                         </p>
                       </div>
                       <div className="bg-surface/50 rounded-lg p-3 border border-border">
@@ -630,10 +630,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                         <div className="space-y-2">
                           {semesters.map((sem) => {
                             const courses = semesterCourses[sem] || [];
-                            const credits = courses.reduce(
-                              (sum, e) => sum + (e.course?.credits || 0),
-                              0
-                            );
+                            const credits = sumCredits(courses.map((e) => e.course?.credits || 0));
                             return (
                               <details
                                 key={sem}
@@ -644,7 +641,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                   <div className="min-w-0">
                                     <p className="font-semibold text-foreground">Semester {sem}</p>
                                     <p className="text-xs text-foreground-secondary">
-                                      {courses.length} courses • {credits} credits
+                                      {courses.length} courses • {formatCredits(credits)} credits
                                     </p>
                                   </div>
                                   <ChevronDown className="w-4 h-4 shrink-0 text-foreground-secondary transition-transform duration-200 group-open:rotate-180" />
@@ -681,7 +678,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                               {e.course?.name}
                                             </td>
                                             <td className="py-2 pr-4 text-right text-foreground">
-                                              {e.course?.credits || 0}
+                                              {formatCredits(e.course?.credits || 0)}
                                             </td>
                                             <td className="py-2 pr-4 whitespace-nowrap">
                                               {e.status === "IN_PROGRESS" ? (
@@ -759,7 +756,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                           <div>
                             <p className="text-foreground-secondary">Total Credits</p>
                             <p className="font-bold text-foreground">
-                              {up.program.totalCreditsRequired}
+                              {formatCredits(up.program.totalCreditsRequired)}
                             </p>
                           </div>
                           <div>

@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { addCredits } from "@/lib/utils";
 import { NextResponse } from "next/server";
 
 export async function GET() {
@@ -56,12 +57,12 @@ export async function GET() {
       const sem = e.semester || 0;
       if (!semMap[sem]) semMap[sem] = { courses: 0, credits: 0 };
       semMap[sem].courses++;
-      semMap[sem].credits += e.course.credits;
+      semMap[sem].credits = addCredits(semMap[sem].credits, e.course.credits);
 
       if (e.status === "COMPLETED" && e.grade !== "F") {
-        completedCredits += e.course.credits;
+        completedCredits = addCredits(completedCredits, e.course.credits);
       } else if (e.status === "IN_PROGRESS") {
-        inProgressCredits += e.course.credits;
+        inProgressCredits = addCredits(inProgressCredits, e.course.credits);
       }
     });
 

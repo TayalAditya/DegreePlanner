@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { useConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./ToastProvider";
-import { formatCourseCode } from "@/lib/utils";
+import { formatCourseCode, formatCredits } from "@/lib/utils";
 import { downloadICS } from "@/lib/icsGenerator";
 
 interface TimetableViewProps {
@@ -2096,7 +2096,7 @@ function TimetableEntryModal({
                         </option>
                         {courses.map((c) => (
                           <option key={c.id} value={c.id}>
-                            {formatCourseCode(c.code)} — {c.name} ({c.credits} cr)
+                            {formatCourseCode(c.code)} — {c.name} ({formatCredits(c.credits)} cr)
                           </option>
                         ))}
                       </>

@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
-import { formatCourseCode } from "@/lib/utils";
+import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
@@ -212,7 +212,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       if (hssUsed) {
         const before = hssUsed.credits;
         if (before < HSS_CORE_CAP) {
-          hssUsed.credits = Math.min(HSS_CORE_CAP, before + credits);
+          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
           return "HSS";
         }
         return "FE";
@@ -303,15 +303,14 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       const category = e.category as keyof typeof categoryLabels;
       const credits = e.course?.credits || 0;
       const existing = acc[category] || { credits: 0, count: 0 };
-      acc[category] = { credits: existing.credits + credits, count: existing.count + 1 };
+      acc[category] = { credits: addCredits(existing.credits, credits), count: existing.count + 1 };
       return acc;
     },
     {}
   );
 
-  const currentSemesterTotalCredits = currentSemesterCourses.reduce(
-    (sum: number, e: any) => sum + (e.course?.credits || 0),
-    0
+  const currentSemesterTotalCredits = sumCredits(
+    currentSemesterCourses.map((e: any) => e.course?.credits || 0)
   );
 
   const icBasketUsedForSemesterStats = { ic1: false, ic2: false };
@@ -337,8 +336,8 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       hssUsedForSemesterStats.credits = 0;
     }
     const category = getCourseCategory(e, icBasketUsedForSemesterStats, hssUsedForSemesterStats);
-    acc[sem][category] = (acc[sem][category] || 0) + (e.course?.credits || 0);
-    acc[sem].total += e.course?.credits || 0;
+    acc[sem][category] = addCredits(acc[sem][category] || 0, e.course?.credits || 0);
+    acc[sem].total = addCredits(acc[sem].total, e.course?.credits || 0);
     return acc;
   }, {});
 
@@ -380,7 +379,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
               <p className="text-sm text-foreground-secondary">
                 Semester <span className="font-semibold text-foreground">{currentSemester}</span> •{" "}
                 <span className="font-semibold text-foreground">{currentSemesterCourses.length}</span> courses •{" "}
-                <span className="font-semibold text-foreground">{currentSemesterTotalCredits}</span> credits
+                <span className="font-semibold text-foreground">{formatCredits(currentSemesterTotalCredits)}</span> credits
               </p>
               <a
                 href="/dashboard/progress"
@@ -404,7 +403,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
                     >
                       <span className={`font-semibold text-xs ${colors.text} truncate`}>{key}</span>
                       <span className="text-xs text-foreground-secondary whitespace-nowrap">
-                        {meta.credits}cr ({meta.count})
+                        {formatCredits(meta.credits)}cr ({meta.count})
                       </span>
                     </span>
                   );
@@ -434,7 +433,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
                           {e.course?.name}
                         </td>
                         <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap">
-                          {e.course?.credits || 0}
+                          {formatCredits(e.course?.credits || 0)}
                         </td>
                         <td className="py-2 whitespace-nowrap">
                           <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}>
@@ -484,7 +483,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
               >
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-semibold text-foreground">Semester {sem.semester}</p>
-                  <span className="text-sm font-semibold text-primary">{sem.total} credits</span>
+                  <span className="text-sm font-semibold text-primary">{formatCredits(sem.total)} credits</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-foreground-secondary">
                   <span>IC: {sem.IC}</span>
