@@ -85,6 +85,80 @@ async function main() {
     console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → CSE:DE`);
   }
 
+  // TU Darmstadt semester exchange courses.
+  // These count as DE for DSE/DSAI students. For other branches, the app treats
+  // courses with non-matching branch mappings as Free Electives.
+  const tuDarmstadtCourses = [
+    {
+      code: "20-00-0157-iv",
+      name: "Computer Vision I",
+      credits: 4,
+    },
+    {
+      code: "20-00-0040-iv",
+      name: "Computer Graphics I",
+      credits: 4,
+    },
+    {
+      code: "20-00-1233-iv",
+      name: "Introduction to Large Language Models",
+      credits: 4,
+    },
+    {
+      code: "20-00-0449-iv",
+      name: "Probabilistic Graphical Models",
+      credits: 4,
+    },
+    {
+      code: "18-sc-2050",
+      name: "Introduction to Scientific Computing in C++",
+      credits: 3,
+    },
+  ];
+
+  const tuDarmstadtDescription =
+    "Available via Semester Exchange (TU Darmstadt) only. Counts as DE for DSE/DSAI students.";
+
+  for (const c of tuDarmstadtCourses) {
+    const course = await prisma.course.upsert({
+      where: { code: c.code },
+      update: {
+        name: c.name,
+        credits: c.credits,
+        department: "TU Darmstadt (Semester Exchange)",
+        level: 300,
+        description: tuDarmstadtDescription,
+        offeredInFall: true,
+        offeredInSpring: true,
+        isActive: true,
+      },
+      create: {
+        code: c.code,
+        name: c.name,
+        credits: c.credits,
+        department: "TU Darmstadt (Semester Exchange)",
+        level: 300,
+        description: tuDarmstadtDescription,
+        offeredInFall: true,
+        offeredInSpring: true,
+        isActive: true,
+      },
+    });
+
+    await prisma.courseBranchMapping.upsert({
+      where: { courseId_branch: { courseId: course.id, branch: "DSE" } },
+      update: { courseCategory: CourseCategoryType.DE, isRequired: false },
+      create: {
+        courseId: course.id,
+        branch: "DSE",
+        courseCategory: CourseCategoryType.DE,
+        isRequired: false,
+      },
+    });
+
+    console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) -> DSE:DE`);
+  }
+
   console.log("\nDone!");
 }
 

@@ -18,7 +18,7 @@ import {
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { StatCard } from "@/components/StatCard";
-import { isDataScienceBranch } from "@/lib/branchInfo";
+import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { formatCourseCode } from "@/lib/utils";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
@@ -86,6 +86,7 @@ type SchoolKey =
   | "SHSS" // School of Humanities & Social Sciences
   | "COMMON"
   | "TUM" // TU Munich (Semester Exchange)
+  | "TUD" // TU Darmstadt (Semester Exchange)
   | "OTHER";
 
 type SchoolFilter = "all" | SchoolKey;
@@ -105,6 +106,7 @@ const SCHOOL_META: Record<SchoolKey, { label: string; order: number; prefixes: s
   SHSS: { label: "SHSS (HS)", order: 80, prefixes: ["HS", "MB"] },
   COMMON: { label: "Common (IC/IKS/DP)", order: 90, prefixes: ["IC", "IK", "IKS", "DP", "RM"] },
   TUM: { label: "TU Munich (Semester Exchange)", order: 95, prefixes: ["IN"] },
+  TUD: { label: "TU Darmstadt (Semester Exchange)", order: 96, prefixes: [] },
   OTHER: { label: "Other", order: 99, prefixes: [] },
 };
 
@@ -119,13 +121,16 @@ function getCoursePrefix(code: string): string {
 }
 
 function getCourseSchoolKey(course: Pick<Course, "code" | "department">): SchoolKey {
+  const dept = String(course.department ?? "").toLowerCase();
+  if (dept.includes("tu darmstadt")) return "TUD";
+  if (dept.includes("tu munich")) return "TUM";
+
   const prefix = getCoursePrefix(course.code);
   for (const key of SCHOOL_ORDER) {
     const meta = SCHOOL_META[key];
     if (meta.prefixes.includes(prefix)) return key;
   }
 
-  const dept = String(course.department ?? "").toLowerCase();
   if (dept.includes("humanities")) return "SHSS";
   if (dept.includes("comput") || dept.includes("electrical") || dept.includes("vlsi")) return "SCEE";
   if (dept.includes("mathemat") || dept.includes("statistical")) return "SMSS";
@@ -388,10 +393,10 @@ export default function CoursesPage() {
 
     // First try to get from branchMappings if available
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
-      const mappingBranch = user.branch === "CSE" ? "CS" : user.branch;
-      const mapping = enrollment.course.branchMappings.find(
-        (m) => m.branch === mappingBranch || m.branch === "COMMON"
-      ) || (user.branch === "GE"
+      const branchCandidates = getBranchCandidates(user.branch);
+      const mapping = branchCandidates
+        .map((branch) => enrollment.course.branchMappings?.find((m) => m.branch === branch))
+        .find(Boolean) || (user.branch === "GE"
         ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
         : undefined);
 
@@ -405,6 +410,10 @@ export default function CoursesPage() {
         }
         return applyMinorDeOverride(mapping.courseCategory, enrollment);
       }
+
+      // Course has branch mappings, but none apply to this branch. Treat it as FE
+      // so exchange courses mapped as DE for one branch do not become core elsewhere.
+      return "FE";
     }
 
     if (isIkCourse) return "FE";
