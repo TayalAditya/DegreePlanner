@@ -43,17 +43,24 @@ export interface MTPEligibility {
   minSemesterRequired?: number;
 }
 
-function pickBranchMappingCategory(
-  mappings: Array<{ courseCategory: string; branch: string }> | undefined,
+interface BranchMapping {
+  courseCategory: string;
+  branch: string;
+  splitCategory?: string | null;
+  splitAmount?: number | null;
+}
+
+function pickBranchMapping(
+  mappings: BranchMapping[] | undefined,
   branch?: string
-): string | undefined {
+): BranchMapping | undefined {
   if (!mappings || mappings.length === 0) return undefined;
 
   const normalizedBranch = normalizeBranchCode(branch);
   const candidates = getBranchCandidates(normalizedBranch);
   const candidateOrder = new Map<string, number>(candidates.map((br, idx) => [br, idx]));
 
-  let best: { courseCategory: string; branch: string } | undefined;
+  let best: BranchMapping | undefined;
   let bestIdx = Number.POSITIVE_INFINITY;
 
   for (const m of mappings) {
@@ -76,7 +83,14 @@ function pickBranchMappingCategory(
     }
   }
 
-  return best?.courseCategory;
+  return best;
+}
+
+function pickBranchMappingCategory(
+  mappings: BranchMapping[] | undefined,
+  branch?: string
+): string | undefined {
+  return pickBranchMapping(mappings, branch)?.courseCategory;
 }
 
 export class CreditCalculator {
@@ -110,6 +124,8 @@ export class CreditCalculator {
               select: {
                 courseCategory: true,
                 branch: true,
+                splitCategory: true,
+                splitAmount: true,
               },
             },
           },
@@ -432,10 +448,10 @@ export class CreditCalculator {
 
   private calculateCreditsByType(
     enrollments: Array<{
-      course: { 
-        credits: number; 
+      course: {
+        credits: number;
         code: string;
-        branchMappings?: Array<{ courseCategory: string; branch: string }>;
+        branchMappings?: BranchMapping[];
       };
       courseType: CourseType;
       grade?: string | null;
@@ -582,12 +598,35 @@ export class CreditCalculator {
         return;
       }
 
-      const mappedCategory = pickBranchMappingCategory(enrollment.course.branchMappings, branch);
+      const matchedMapping = pickBranchMapping(enrollment.course.branchMappings, branch);
+      const mappedCategory = matchedMapping?.courseCategory;
 
       if (mappedCategory) {
         // IK-xxx courses should not count towards IKS requirement.
         if (mappedCategory === "IKS" && isIkCourse) {
           addBreakdownCredits("freeElective", credits);
+          return;
+        }
+
+        // Split credit handling: e.g. IN2406 counts 3cr as DC and 1cr as FE
+        const splitCat = matchedMapping?.splitCategory;
+        const splitAmt = matchedMapping?.splitAmount;
+        if (splitCat && splitAmt != null && splitAmt > 0) {
+          const mainCredits = subtractCredits(credits, splitAmt);
+          const applyCategory = (cat: string, amt: number) => {
+            switch (cat) {
+              case "IC": case "IC_BASKET": case "DC": case "IKS":
+                addBreakdownCredits("core", amt); break;
+              case "HSS": addHssCredits(amt); break;
+              case "DE": addDeCredits(amt, enrollment.course.code); break;
+              case "FE": addBreakdownCredits("freeElective", amt); break;
+              case "MTP": addBreakdownCredits("mtp", amt); break;
+              case "ISTP": addBreakdownCredits("istp", amt); break;
+              default: addBreakdownCredits("freeElective", amt);
+            }
+          };
+          applyCategory(mappedCategory, mainCredits);
+          applyCategory(splitCat, splitAmt);
           return;
         }
 

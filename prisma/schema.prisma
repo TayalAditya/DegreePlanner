@@ -238,18 +238,22 @@ enum CourseType {
 
 // Course-Branch Mapping for curriculum management
 model CourseBranchMapping {
-  id              String             @id @default(cuid())
+  id              String              @id @default(cuid())
   courseId        String
-  branch          String             // Branch code (CSE, EE, ME, etc.)
-  courseCategory  CourseCategoryType // IC, IC-BASKET, DC, DE, FE, HSS, IKS
-  isRequired      Boolean            @default(false)
-  semester        Int?               // Recommended semester for this branch
-  
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  
-  course          Course             @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  
+  branch          String              // Branch code (CSE, EE, ME, etc.)
+  courseCategory  CourseCategoryType  // IC, IC-BASKET, DC, DE, FE, HSS, IKS
+  isRequired      Boolean             @default(false)
+  semester        Int?                // Recommended semester for this branch
+  // Split credit support: some courses count partially toward two categories.
+  // splitAmount credits go to splitCategory; remaining go to courseCategory.
+  splitCategory   CourseCategoryType?
+  splitAmount     Float?
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  course          Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
   @@unique([courseId, branch])
   @@index([courseId])
   @@index([branch])

@@ -46,7 +46,7 @@ export async function GET(
           course: {
             include: {
               branchMappings: {
-                select: { courseCategory: true, branch: true },
+                select: { courseCategory: true, branch: true, splitCategory: true, splitAmount: true },
               },
             },
           },

@@ -159,6 +159,105 @@ async function main() {
     console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) -> DSE:DE`);
   }
 
+  // ─── Additional TU Munich courses ──────────────────────────────────────────
+  const tumExtra = [
+    { code: "IN2375", name: "Computer Vision III: Detection, Segmentation, and Tracking", credits: 4 },
+    { code: "IN2106", name: "Master-Praktikum", credits: 6.66 },
+    { code: "IN2339", name: "Data Analysis and Visualization in R", credits: 4 },
+  ];
+
+  for (const c of tumExtra) {
+    const course = await prisma.course.upsert({
+      where: { code: c.code },
+      update: {},
+      create: {
+        code: c.code,
+        name: c.name,
+        credits: c.credits,
+        department: "TU Munich (Semester Exchange)",
+        level: 300,
+        description: semexDescription,
+        offeredInFall: true,
+        offeredInSpring: true,
+        isActive: true,
+      },
+    });
+
+    await prisma.courseBranchMapping.upsert({
+      where: { courseId_branch: { courseId: course.id, branch: "CSE" } },
+      update: {},
+      create: {
+        courseId: course.id,
+        branch: "CSE",
+        courseCategory: CourseCategoryType.DE,
+        isRequired: false,
+      },
+    });
+
+    console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → CSE:DE`);
+  }
+
+  // ─── MGT001348: Innovation Sprint (TU Munich, FE for CSE) ───────────────────
+  // MGT prefix → no auto prefix-routing to TUM; set department explicitly.
+  const innovationSprint = await prisma.course.upsert({
+    where: { code: "MGT001348" },
+    update: {},
+    create: {
+      code: "MGT001348",
+      name: "Innovation Sprint",
+      credits: 4,
+      department: "TU Munich (Semester Exchange)",
+      level: 300,
+      description: semexDescription,
+      offeredInFall: true,
+      offeredInSpring: true,
+      isActive: true,
+    },
+  });
+
+  await prisma.courseBranchMapping.upsert({
+    where: { courseId_branch: { courseId: innovationSprint.id, branch: "CSE" } },
+    update: {},
+    create: {
+      courseId: innovationSprint.id,
+      branch: "CSE",
+      courseCategory: CourseCategoryType.FE,
+      isRequired: false,
+    },
+  });
+  console.log("✓ MGT001348 Innovation Sprint (4 cr) → CSE:FE");
+
+  // ─── IN2406: Fundamentals of Artificial Intelligence (split: 3cr DC + 1cr FE) ─
+  const in2406 = await prisma.course.upsert({
+    where: { code: "IN2406" },
+    update: {},
+    create: {
+      code: "IN2406",
+      name: "Fundamentals of Artificial Intelligence",
+      credits: 4,
+      department: "TU Munich (Semester Exchange)",
+      level: 300,
+      description: `${semexDescription} Credits split: 3 cr count as DC, 1 cr counts as FE.`,
+      offeredInFall: true,
+      offeredInSpring: true,
+      isActive: true,
+    },
+  });
+
+  await prisma.courseBranchMapping.upsert({
+    where: { courseId_branch: { courseId: in2406.id, branch: "CSE" } },
+    update: { splitCategory: CourseCategoryType.FE, splitAmount: 1 },
+    create: {
+      courseId: in2406.id,
+      branch: "CSE",
+      courseCategory: CourseCategoryType.DC,
+      isRequired: false,
+      splitCategory: CourseCategoryType.FE,
+      splitAmount: 1,
+    },
+  });
+  console.log("✓ IN2406 Fundamentals of Artificial Intelligence (4 cr) → CSE: 3cr DC + 1cr FE");
+
   console.log("\nDone!");
 }
 

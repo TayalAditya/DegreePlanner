@@ -49,6 +49,8 @@ export async function GET(request: NextRequest) {
               select: {
                 courseCategory: true,
                 branch: true,
+                splitCategory: true,
+                splitAmount: true,
               },
             },
           },
