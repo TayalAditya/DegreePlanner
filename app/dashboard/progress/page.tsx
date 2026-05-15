@@ -32,6 +32,8 @@ interface Enrollment {
     branchMappings?: {
       courseCategory: string;
       branch: string;
+      splitCategory?: string | null;
+      splitAmount?: number | null;
     }[];
   };
 }
@@ -489,18 +491,28 @@ export default function ProgressPage() {
       ISTP: 0,
     };
 
-    sortedCompleted.forEach((e) => {
-      const category = getCourseCategory(e, icBasketUsed, hssUsed);
-      creditsByCategory[category] = addCredits(creditsByCategory[category], e.course.credits);
-    });
+    const accumulateSplitAware = (
+      map: Record<string, number>,
+      e: Enrollment,
+      icBkt?: any,
+      hssU?: { credits: number }
+    ) => {
+      const mapping = pickRelevantBranchMapping(user?.branch, e.course.branchMappings);
+      if (mapping?.splitCategory && mapping.splitAmount != null && mapping.splitAmount > 0) {
+        const mainCr = subtractCredits(e.course.credits, mapping.splitAmount);
+        const mainCat = mapping.courseCategory in map ? mapping.courseCategory : "FE";
+        const splitCat = mapping.splitCategory in map ? mapping.splitCategory : "FE";
+        map[mainCat] = addCredits(map[mainCat], mainCr);
+        map[splitCat] = addCredits(map[splitCat], mapping.splitAmount);
+        return;
+      }
+      const category = getCourseCategory(e, icBkt, hssU);
+      map[category] = addCredits(map[category], e.course.credits);
+    };
 
-    sortedInProgress.forEach((e) => {
-      const category = getCourseCategory(e, icBasketUsed, hssUsed);
-      creditsInProgressByCategory[category] = addCredits(
-        creditsInProgressByCategory[category],
-        e.course.credits
-      );
-    });
+    sortedCompleted.forEach((e) => accumulateSplitAware(creditsByCategory, e, icBasketUsed, hssUsed));
+
+    sortedInProgress.forEach((e) => accumulateSplitAware(creditsInProgressByCategory, e));
 
     const totalCreditsEarned = sumCredits(completedEnrollments.map((e) => e.course.credits));
 

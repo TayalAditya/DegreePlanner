@@ -49,6 +49,8 @@ interface Enrollment {
     branchMappings?: {
       courseCategory: string;
       branch: string;
+      splitCategory?: string | null;
+      splitAmount?: number | null;
     }[];
   };
 }
@@ -470,6 +472,21 @@ export default function CoursesPage() {
   enrollments
     .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
     .forEach((e) => {
+      // Check for split-credit mapping before using getCourseCategory
+      if (user?.branch && e.course.branchMappings && e.course.branchMappings.length > 0) {
+        const branchCandidates = getBranchCandidates(user.branch);
+        const mapping = branchCandidates
+          .map((b) => e.course.branchMappings?.find((m) => m.branch === b))
+          .find(Boolean);
+        if (mapping?.splitCategory && mapping?.splitAmount != null && mapping.splitAmount > 0) {
+          const mainCr = subtractCredits(e.course.credits, mapping.splitAmount);
+          const mainCat = mapping.courseCategory in creditsByCategory ? mapping.courseCategory : "FE";
+          const splitCat = mapping.splitCategory in creditsByCategory ? mapping.splitCategory : "FE";
+          creditsByCategory[mainCat] = addCredits(creditsByCategory[mainCat], mainCr);
+          creditsByCategory[splitCat] = addCredits(creditsByCategory[splitCat], mapping.splitAmount);
+          return;
+        }
+      }
       const category = getCourseCategory(e);
       if (category in creditsByCategory) {
         creditsByCategory[category] = addCredits(creditsByCategory[category], e.course.credits);
