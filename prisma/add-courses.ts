@@ -164,6 +164,7 @@ async function main() {
     { code: "IN2375", name: "Computer Vision III: Detection, Segmentation, and Tracking", credits: 4 },
     { code: "IN2106", name: "Master-Praktikum", credits: 6.66 },
     { code: "IN2339", name: "Data Analysis and Visualization in R", credits: 4 },
+    { code: "IN2379", name: "Advanced Data Handling and Visualization Techniques", credits: 4 },
   ];
 
   for (const c of tumExtra) {
