@@ -259,6 +259,55 @@ async function main() {
   });
   console.log("✓ IN2406 Fundamentals of Artificial Intelligence (4 cr) → CSE: 3cr DC + 1cr FE");
 
+  // ─── TU Darmstadt – MSE Semester Exchange courses ────────────────────────
+  const tuDarmstadtMSEDescription =
+    "Available via Semester Exchange (TU Darmstadt) only. Can be taken in Semester 5, 6, or 7.";
+
+  const tumMSECourses: {
+    code: string;
+    name: string;
+    credits: number;
+    category: CourseCategoryType;
+  }[] = [
+    { code: "41-12-2182-ku", name: "German Intensive Basic Course III/IV b", credits: 4,    category: CourseCategoryType.HSS },
+    { code: "16-08-5120",    name: "High Temperature Materials Behaviour",    credits: 4,    category: CourseCategoryType.FE  },
+    { code: "11-01-7562",    name: "Computational Materials Science",         credits: 3.33, category: CourseCategoryType.DC  },
+    { code: "11-01-7301",    name: "Electrochemistry for Energy Applications II: Devices and Technology", credits: 2.67, category: CourseCategoryType.DE },
+    { code: "11-01-2009",    name: "Concepts in Materials Physics",           credits: 4,    category: CourseCategoryType.DE  },
+    { code: "11-01-4105",    name: "Surfaces and Interfaces",                 credits: 3.33, category: CourseCategoryType.DE  },
+  ];
+
+  for (const c of tumMSECourses) {
+    const course = await prisma.course.upsert({
+      where: { code: c.code },
+      update: {},
+      create: {
+        code: c.code,
+        name: c.name,
+        credits: c.credits,
+        department: "TU Darmstadt (Semester Exchange)",
+        level: 300,
+        description: tuDarmstadtMSEDescription,
+        offeredInFall: true,
+        offeredInSpring: true,
+        isActive: true,
+      },
+    });
+
+    await prisma.courseBranchMapping.upsert({
+      where: { courseId_branch: { courseId: course.id, branch: "MSE" } },
+      update: { courseCategory: c.category, isRequired: false },
+      create: {
+        courseId: course.id,
+        branch: "MSE",
+        courseCategory: c.category,
+        isRequired: false,
+      },
+    });
+
+    console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → MSE:${c.category}`);
+  }
+
   console.log("\nDone!");
 }
 
