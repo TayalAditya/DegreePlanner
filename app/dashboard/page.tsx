@@ -21,13 +21,8 @@ import {
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ preview?: string }>;
-}) {
+export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
-  const params = await searchParams;
   const firstName = session?.user?.name?.split(" ")[0] || "there";
 
   // Fetch stats directly from DB — no self-fetch
@@ -88,11 +83,13 @@ export default async function DashboardPage({
   
   const batchYear = inferBatchYear(session?.user?.batch, session?.user?.enrollmentId);
   const academicState = batchYear ? inferAcademicState(batchYear) : null;
-  const isAdmin = session?.user?.role === "ADMIN";
-  const previewPreReg = isAdmin && params?.preview === "pre_reg";
-  const isPreReg = previewPreReg || academicState?.phase === "PRE_REGISTRATION";
-  const upcomingSemester = previewPreReg
-    ? (academicState?.currentSemester ?? 1) + 1
+  const enrollmentId = (session?.user?.enrollmentId || "").toUpperCase();
+  // B23243 (admin) sees the pre-registration banner as a permanent preview
+  // so they can verify how it looks before it goes live in mid-June.
+  const isAdminPreview = enrollmentId === "B23243";
+  const isPreReg = isAdminPreview || academicState?.phase === "PRE_REGISTRATION";
+  const upcomingSemester = isAdminPreview && academicState?.phase !== "PRE_REGISTRATION"
+    ? (academicState?.currentSemester ?? 6) + 1
     : (academicState?.upcomingSemester ?? null);
 
   const quickActions = [
