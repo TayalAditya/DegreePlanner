@@ -5,17 +5,19 @@ import { DashboardOverview } from "@/components/DashboardOverview";
 import Link from "next/link";
 import { TimeGreeting } from "@/components/TimeGreeting";
 import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
-import { 
-  BookOpen, 
-  GraduationCap, 
-  Calendar, 
+import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
+import {
+  BookOpen,
+  GraduationCap,
+  Calendar,
   TrendingUp,
   Award,
   Target,
   Sparkles,
   ArrowRight,
   Clock,
-  CheckCircle
+  CheckCircle,
+  CalendarCheck,
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 
@@ -79,6 +81,11 @@ export default async function DashboardPage() {
     }
   }
   
+  const batchYear = inferBatchYear(session?.user?.batch, session?.user?.enrollmentId);
+  const academicState = batchYear ? inferAcademicState(batchYear) : null;
+  const isPreReg = academicState?.phase === "PRE_REGISTRATION";
+  const upcomingSemester = academicState?.upcomingSemester ?? null;
+
   const quickActions = [
     {
       title: "Browse Courses",
@@ -158,6 +165,37 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Pre-Registration Banner */}
+      {isPreReg && upcomingSemester && (
+        <div className="relative overflow-hidden rounded-2xl border border-success/30 bg-success/5 shadow-sm">
+          <div
+            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-success/10 via-transparent to-info/5"
+            aria-hidden="true"
+          />
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4 p-5 sm:p-6">
+            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-success/15 flex items-center justify-center">
+              <CalendarCheck className="w-5 h-5 text-success" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-success">
+                Pre-Registration Open — Semester {upcomingSemester}
+              </p>
+              <p className="mt-0.5 text-sm text-foreground-secondary">
+                Your Semester {upcomingSemester - 1} courses have been marked complete. You can now
+                add courses for the upcoming Fall semester.
+              </p>
+            </div>
+            <a
+              href="/dashboard/courses"
+              className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-success text-white text-sm font-medium hover:bg-success/90 transition-colors"
+            >
+              Browse Courses
+              <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Quick Stats */}
       <div>

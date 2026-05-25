@@ -1,24 +1,34 @@
-export type AcademicPhase = "SPRING" | "FALL" | "BREAK";
+// IIT Mandi academic calendar:
+// - Jan–May   : Spring (even semester)
+// - Jun 1–14  : Break  (grace period, no auto-sync)
+// - Jun 15–Jul: Pre-registration (Spring marked complete, Fall pre-reg opens)
+// - Aug–Dec   : Fall   (odd semester)
+export type AcademicPhase = "SPRING" | "FALL" | "BREAK" | "PRE_REGISTRATION";
 
 export type AcademicState = {
   currentSemester: number;
   phase: AcademicPhase;
   isInSession: boolean;
+  // During PRE_REGISTRATION this is the upcoming Fall semester number.
+  // During BREAK it is the just-completed Spring semester number.
+  upcomingSemester?: number;
 };
 
 const clampSemester = (semester: number) => Math.min(8, Math.max(1, Math.trunc(semester)));
 
-const getIndiaMonthYear = (date: Date) => {
+const getIndiaDate = (date: Date) => {
   const parts = new Intl.DateTimeFormat("en-IN", {
     timeZone: "Asia/Kolkata",
     year: "numeric",
     month: "numeric",
+    day: "numeric",
   }).formatToParts(date);
 
   const month = Number(parts.find((p) => p.type === "month")?.value);
   const year = Number(parts.find((p) => p.type === "year")?.value);
+  const day = Number(parts.find((p) => p.type === "day")?.value);
 
-  return { month, year };
+  return { month, year, day };
 };
 
 export const inferBatchYear = (
@@ -34,14 +44,11 @@ export const inferBatchYear = (
   return null;
 };
 
-// IIT Mandi (as used in this app):
-// - Odd semester runs Aug–Dec
-// - Even semester runs Jan–May
-// - Jun–Jul is the break window
 export const inferAcademicState = (batchYear: number, now: Date = new Date()): AcademicState => {
-  const { month, year } = getIndiaMonthYear(now);
+  const { month, year, day } = getIndiaDate(now);
   const yearsElapsed = year - batchYear;
 
+  // Jan–May: Spring semester in session
   if (month >= 1 && month <= 5) {
     return {
       currentSemester: clampSemester(yearsElapsed * 2),
@@ -50,18 +57,34 @@ export const inferAcademicState = (batchYear: number, now: Date = new Date()): A
     };
   }
 
-  if (month >= 8 && month <= 12) {
+  // Jun 1–14: Short break window, no auto-sync (results not yet finalised)
+  if (month === 6 && day <= 14) {
     return {
-      currentSemester: clampSemester(yearsElapsed * 2 + 1),
-      phase: "FALL",
-      isInSession: true,
+      currentSemester: clampSemester(yearsElapsed * 2),
+      phase: "BREAK",
+      isInSession: false,
+      upcomingSemester: clampSemester(yearsElapsed * 2 + 1),
     };
   }
 
+  // Jun 15–Jul 31: Pre-registration for upcoming Fall semester.
+  // currentSemester is set to the upcoming Fall semester so that the sync
+  // auto-completes all Spring (< upcoming Fall) enrollments and keeps any
+  // pre-registered Fall courses as IN_PROGRESS.
+  if ((month === 6 && day >= 15) || month === 7) {
+    const upcomingFall = clampSemester(yearsElapsed * 2 + 1);
+    return {
+      currentSemester: upcomingFall,
+      phase: "PRE_REGISTRATION",
+      isInSession: true,
+      upcomingSemester: upcomingFall,
+    };
+  }
+
+  // Aug–Dec: Fall semester in session
   return {
-    currentSemester: clampSemester(yearsElapsed * 2),
-    phase: "BREAK",
-    isInSession: false,
+    currentSemester: clampSemester(yearsElapsed * 2 + 1),
+    phase: "FALL",
+    isInSession: true,
   };
 };
-
