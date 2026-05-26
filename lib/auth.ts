@@ -310,7 +310,10 @@ export const authOptions: NextAuthOptions = {
       authorization: {
         params: {
           access_type: "offline",
-          prompt: "consent",
+          // No `prompt: "consent"` — Google only shows the consent screen on first
+          // authorization. Subsequent logins are silent / show account picker only.
+          // We already capture refresh_token on first consent (signIn callback persists
+          // it to the Account row), so we don't need to force re-consent each time.
           scope: "openid email profile https://www.googleapis.com/auth/calendar.events",
         },
       },
