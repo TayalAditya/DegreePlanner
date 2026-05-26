@@ -40,6 +40,7 @@ interface Enrollment {
   status: string;
   grade?: string | null;
   programId?: string | null;
+  isInternship?: boolean;
   course: {
     code: string;
     name: string;
@@ -604,13 +605,23 @@ export default function ProgramsPage() {
                               <div className="h-full bg-purple-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.freeElective ?? progressData.completed.freeElective) / progressData.required.freeElective) * 100)}%` }} />
                             </div>
                           )}
-                          {/* P/F sub-line — max 9 cr, always shown so students know the bucket */}
-                          <div className="mt-2 flex items-center justify-between text-xs">
-                            <span className="text-foreground-secondary">P/F credits</span>
-                            <span className={(userSettings?.totalPassFailCredits ?? 0) >= 9 ? "font-medium text-success" : "text-foreground-secondary"}>
-                              {formatCredits(userSettings?.totalPassFailCredits ?? 0)} / 9 cr{(userSettings?.totalPassFailCredits ?? 0) >= 9 ? " ✓" : ""}
-                            </span>
-                          </div>
+                          {/* P/F sub-line — calculated live from enrollments (max 9 cr) */}
+                          {(() => {
+                            const pfCr = enrollments
+                              .filter(e =>
+                                (e.isInternship || /39[69]P$/i.test(e.course.code)) &&
+                                (e.status === "COMPLETED" || e.status === "IN_PROGRESS")
+                              )
+                              .reduce((sum, e) => sum + (e.course.credits || 0), 0);
+                            return (
+                              <div className="mt-2 flex items-center justify-between text-xs">
+                                <span className="text-foreground-secondary">P/F credits</span>
+                                <span className={pfCr >= 9 ? "font-medium text-success" : "text-foreground-secondary"}>
+                                  {formatCredits(pfCr)} / 9 cr{pfCr >= 9 ? " ✓" : ""}
+                                </span>
+                              </div>
+                            );
+                          })()}
                         </>
                       ) : (
                         <p className="text-xl font-bold text-foreground">{formatCredits(primaryProgram.program.feCredits)}<span className="text-xs font-normal text-foreground-secondary ml-1">cr</span></p>
