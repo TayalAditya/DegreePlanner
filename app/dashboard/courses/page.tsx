@@ -45,6 +45,7 @@ interface Enrollment {
   grade?: string;
   courseType?: "CORE" | "DE" | "FREE_ELECTIVE" | "PE" | "MTP" | "ISTP";
   courseId: string;
+  isInternship?: boolean;
   course: Course & {
     branchMappings?: {
       courseCategory: string;
@@ -375,6 +376,9 @@ export default function CoursesPage() {
 
   // Calculate credits by category
   const getCourseCategory = (enrollment: Enrollment): string => {
+    // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
+    if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
+
     const code = enrollment.course.code.toUpperCase();
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     const isIkCourse = /^IK\d/.test(normalizedCode);

@@ -456,6 +456,7 @@ export class CreditCalculator {
       courseType: CourseType;
       grade?: string | null;
       semester?: number;
+      isInternship?: boolean;
     }>,
     branch?: string,
     minorDeToFeCourseCodes?: Set<string>
@@ -544,6 +545,12 @@ export class CreditCalculator {
     sortedEnrollments.forEach((enrollment) => {
       const credits = enrollment.course.credits;
       addBreakdownCredits("total", credits);
+
+      // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
+      if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) {
+        addBreakdownCredits("freeElective", credits);
+        return;
+      }
 
       const code = enrollment.course.code.toUpperCase();
       const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
@@ -653,6 +660,8 @@ export class CreditCalculator {
             addBreakdownCredits("istp", credits);
             return;
           case "INTERNSHIP":
+            addBreakdownCredits("freeElective", credits);
+            return;
           case "BACKLOG":
             break;
           case "NA":

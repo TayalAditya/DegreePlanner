@@ -59,6 +59,7 @@ interface UserSettings {
   doingMTP?: boolean;
   doingMTP2?: boolean;
   doingISTP?: boolean;
+  totalPassFailCredits?: number;
 }
 
 const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
@@ -193,9 +194,11 @@ export default function ProgramsPage() {
           setProgressError("Failed to load program progress");
         }
 
+        let enrollmentsData: Enrollment[] = [];
         if (enrollmentsRes.ok) {
           const data = await enrollmentsRes.json();
-          setEnrollments(Array.isArray(data) ? data : []);
+          enrollmentsData = Array.isArray(data) ? data : [];
+          setEnrollments(enrollmentsData);
         }
 
         if (userRes.ok) {
@@ -205,7 +208,26 @@ export default function ProgramsPage() {
           const mtp2 = (data?.doingMTP2 ?? mtp1) && mtp1;
           setDoingMTP1(mtp1);
           setDoingMTP2(mtp2);
-          setDoingISTP(data?.doingISTP ?? true);
+          const doingISTPFromServer = data?.doingISTP ?? true;
+          setDoingISTP(doingISTPFromServer);
+
+          // Auto-drop ISTP if student is in/past sem 6 but never registered DP-301P
+          if (doingISTPFromServer && enrollmentsData.length > 0) {
+            const maxSem = Math.max(...enrollmentsData.map((e) => e.semester));
+            const hasIstpEnrollment = enrollmentsData.some((e) => {
+              const normalized = e.course.code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+              return normalized === "DP301P" || normalized.includes("ISTP");
+            });
+            if (maxSem >= 6 && !hasIstpEnrollment) {
+              setDoingISTP(false);
+              // Silent update — no confirmation dialog, no toast
+              fetch("/api/user/settings", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ doingISTP: false }),
+              }).catch(console.error);
+            }
+          }
         }
       } catch (error) {
         console.error("Failed to load program progress:", error);
@@ -582,6 +604,13 @@ export default function ProgramsPage() {
                               <div className="h-full bg-purple-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.freeElective ?? progressData.completed.freeElective) / progressData.required.freeElective) * 100)}%` }} />
                             </div>
                           )}
+                          {/* P/F sub-line — max 9 cr, always shown so students know the bucket */}
+                          <div className="mt-2 flex items-center justify-between text-xs">
+                            <span className="text-foreground-secondary">P/F credits</span>
+                            <span className={(userSettings?.totalPassFailCredits ?? 0) >= 9 ? "font-medium text-success" : "text-foreground-secondary"}>
+                              {formatCredits(userSettings?.totalPassFailCredits ?? 0)} / 9 cr{(userSettings?.totalPassFailCredits ?? 0) >= 9 ? " ✓" : ""}
+                            </span>
+                          </div>
                         </>
                       ) : (
                         <p className="text-xl font-bold text-foreground">{formatCredits(primaryProgram.program.feCredits)}<span className="text-xs font-normal text-foreground-secondary ml-1">cr</span></p>
