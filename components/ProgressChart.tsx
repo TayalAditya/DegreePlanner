@@ -226,6 +226,9 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
   };
 
   const getCourseCategory = (enrollment: any, icBasketUsed?: any, branch?: string, hssUsed?: { credits: number }): keyof typeof categoryCredits => {
+    // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
+    if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course?.code ?? "")) return "FE";
+
     const applyMinorDeOverride = (category: keyof typeof categoryCredits): keyof typeof categoryCredits => {
       if (category !== "DE") return category;
       const courseCode = formatCourseCode(enrollment.course?.code ?? "");
