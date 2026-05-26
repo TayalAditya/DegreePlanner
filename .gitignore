@@ -62,6 +62,12 @@ tmp/
 *.md
 !README.md
 
+# Orphaned root scripts (one-off, not needed in repo)
+fix-hs-mappings.ts
+START_HERE.sh
+setup.ps1
+curriculum-data.txt
+
 # Student data (sensitive - seed locally, never commit)
 scripts/seed-batch24.ts
 scripts/parse-b22cse.ts
