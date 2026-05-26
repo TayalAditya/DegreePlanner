@@ -291,7 +291,13 @@ export default function ImportCoursesPage() {
           course.category === "ICB" &&
           course.semester === 1 &&
           normalize(course.code) === normalize(icb1Assigned);
-        // B24 CE: IC240 is the only ICB2 option in Sem 2 — auto-select it.
+        // B24 CE: IC230 (ICB1) and IC240 (ICB2) are forced single options — auto-select both,
+        // regardless of PDF parsing (which fails for impersonation IDs like "B24ACADSEC").
+        const isForcedIcb1ForB24CE =
+          isB24CE &&
+          course.category === "ICB" &&
+          course.semester === 1 &&
+          normalize(course.code) === normalize("IC230");
         const isForcedIcb2ForB24CE =
           isB24CE &&
           course.category === "ICB" &&
@@ -306,6 +312,7 @@ export default function ImportCoursesPage() {
           ...course,
           selected:
             isAssignedIcb1 ||
+            isForcedIcb1ForB24CE ||
             isForcedIcb2ForB24CE ||
             autoSelected ||
             isMTP1 ||
