@@ -154,6 +154,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     icBasketUsed?: { ic1: boolean; ic2: boolean },
     hssUsed?: { credits: number }
   ): keyof typeof categoryLabels => {
+    // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
+    if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course?.code ?? "")) return "FE";
+
     const applyMinorDeOverride = (category: keyof typeof categoryLabels): keyof typeof categoryLabels => {
       if (category !== "DE") return category;
       const code = formatCourseCode(enrollment.course?.code ?? "");

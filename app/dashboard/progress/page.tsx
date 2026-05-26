@@ -24,6 +24,7 @@ interface Enrollment {
   courseType: string;
   status: string;
   grade?: string;
+  isInternship?: boolean;
   course: {
     code: string;
     name: string;
@@ -200,6 +201,9 @@ export default function ProgressPage() {
   };
 
   const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any, hssUsed?: { credits: number }): CourseCategory => {
+    // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
+    if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
+
     const code = enrollment.course.code.toUpperCase();
     const normalizedCode = normalizeCode(code);
     const isICB1 = ICB1_CODES.has(normalizedCode);

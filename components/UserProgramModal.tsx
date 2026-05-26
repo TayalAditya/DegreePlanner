@@ -53,6 +53,7 @@ interface Enrollment {
   status: string;
   grade?: string | null;
   programId?: string | null;
+  isInternship?: boolean;
   course: {
     code: string;
     name: string;
@@ -260,6 +261,9 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     icBasketUsed?: ICBasketUsed,
     hssUsed?: { credits: number }
   ): CourseCategory => {
+    // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
+    if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
+
     const branch = userSettings.branch;
     const code = enrollment.course.code.toUpperCase();
     const normalizedCode = normalizeCode(code);
