@@ -237,7 +237,7 @@ export default function ImportCoursesPage() {
 
     const isBatch24 = userBatch === 2024;
     const isBatch25 = userBatch === 2025;
-    const isB24EligibleBranch = isBatch24 && ["CSE", "DSE", "EE", "MEVLSI", "MSE"].includes(effectiveBranch);
+    const isB24EligibleBranch = isBatch24 && ["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE"].includes(effectiveBranch);
     const icb1Assigned = isB24EligibleBranch ? batch24Icb1Course : null;
     const ICB1_CODES = new Set(["IC131", "IC136", "IC230"]);
 

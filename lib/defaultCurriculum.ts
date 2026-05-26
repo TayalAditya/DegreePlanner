@@ -645,7 +645,7 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   BSCS_7: bscsSem7, BSCS_8: bscsSem8,
 };
 
-const B24_BRANCH_OVERRIDES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE"]);
+const B24_BRANCH_OVERRIDES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE"]);
 const B24_IKS_IC182_SEM2: DefaultCourse = {
   code: "IC182",
   name: "Indian Knowledge Systems (Alt)",
@@ -709,6 +709,14 @@ const B25_HSS_SEM1: DefaultCourse[] = [
   { code: "HS-342", name: "German I", credits: 3, category: "HSS", semester: 1, optional: true },
 ];
 
+// ─── B24 CE course constants ──────────────────────────────────────────────────
+const B24_CE_CE202_SEM2: DefaultCourse  = { code: "CE202",  name: "Introduction to Civil Engineering",         credits: 1, category: "DC", semester: 2 };
+const B24_CE_CE310_SEM3: DefaultCourse  = { code: "CE310",  name: "Strength of Materials and Structures",      credits: 3, category: "DC", semester: 3 };
+const B24_CE_CE310P_SEM3: DefaultCourse = { code: "CE310P", name: "Strength of Materials and Structures Lab",  credits: 1, category: "DC", semester: 3 };
+const B24_CE_CE203P_SEM3: DefaultCourse = { code: "CE203P", name: "Building Materials Lab",                    credits: 1, category: "DC", semester: 3 };
+const B24_CE_CE311_SEM4: DefaultCourse  = { code: "CE311",  name: "Geotechnical Engineering I",                credits: 3, category: "DC", semester: 4 };
+const B24_CE_CE311P_SEM4: DefaultCourse = { code: "CE311P", name: "Geotechnical Engineering Laboratory",       credits: 1, category: "DC", semester: 4 };
+
 const normalizeCurriculumCode = (code: string) =>
   (code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
@@ -729,10 +737,28 @@ const applyBatchOverrides = (
     switch (semester) {
       case 1: {
         // Batch-24: IC102P is compulsory in Sem-2 (not shown in Sem-1).
-        return courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC102P");
+        let updated = courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC102P");
+        if (effectiveBranch === "CE") {
+          // Batch-24 CE: IC140 moves to Sem-2 as compulsory; ICB1 pruned to only IC230 (EVS).
+          updated = updated.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return code !== "IC140" && code !== "IC131" && code !== "IC136";
+          });
+        }
+        return updated;
       }
 
       case 2: {
+        if (effectiveBranch === "CE") {
+          // Batch-24 CE: IC222P moves to Sem-4; IC102P/IC181 not here; IC182 added (same as other B24 branches).
+          // ICB2 pruned to only IC240 (RBD); CE202 (Intro to Civil Engg) added as DC.
+          let filtered = courses.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return !["IC222P", "IC102P", "IC181", "IC121", "IC241", "IC253"].includes(code);
+          });
+          filtered = addCourseIfMissing(filtered, B24_IKS_IC182_SEM2);
+          return addCourseIfMissing(filtered, B24_CE_CE202_SEM2);
+        }
         // Batch-24: Sem-1 choice IC140/IC181, Sem-2 choice IC140/IC182. So IC181 not shown in Sem-2; add IC182.
         // Batch-24: Physics Practicum (IC222P) is in Sem-4 (not Sem-2).
         const filtered = courses.filter((c) => {
@@ -744,6 +770,23 @@ const applyBatchOverrides = (
       }
 
       case 3: {
+        if (effectiveBranch === "CE") {
+          // Batch-24 CE: CE202 moved to Sem-2; CE301/CE301P/CE354P renumbered to CE310/CE310P/CE203P.
+          // CE203 renamed to "Civil Engineering Materials".
+          let updated = courses.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return !["CE202", "CE301", "CE301P", "CE354P"].includes(code);
+          });
+          updated = updated.map((c) =>
+            normalizeCurriculumCode(c.code) === "CE203"
+              ? { ...c, name: "Civil Engineering Materials" }
+              : c
+          );
+          updated = addCourseIfMissing(updated, B24_CE_CE310_SEM3);
+          updated = addCourseIfMissing(updated, B24_CE_CE310P_SEM3);
+          updated = addCourseIfMissing(updated, B24_CE_CE203P_SEM3);
+          return updated;
+        }
         // Batch-24: Design Practicum (IC202P) is in Sem-3 for all allowed B24 branches.
         const hasIc202p = courses.some((c) => normalizeCurriculumCode(c.code) === "IC202P");
         return hasIc202p ? courses : [B24_IC202P_SEM3, ...courses];
@@ -765,6 +808,15 @@ const applyBatchOverrides = (
           updated = updated.map((c) =>
             normalizeCurriculumCode(c.code) === "EEXXXP" ? { ...c, code: "EE223P" } : c
           );
+        }
+        if (effectiveBranch === "CE") {
+          // Batch-24 CE: CE302/CE302P renumbered to CE311/CE311P.
+          updated = updated.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return code !== "CE302" && code !== "CE302P";
+          });
+          updated = addCourseIfMissing(updated, B24_CE_CE311_SEM4);
+          updated = addCourseIfMissing(updated, B24_CE_CE311P_SEM4);
         }
 
         const hasIc222p = updated.some((c) => normalizeCurriculumCode(c.code) === "IC222P");
