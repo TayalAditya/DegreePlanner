@@ -1,11 +1,16 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LogIn, Shield } from "lucide-react";
 
 export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Clear acad-sec session flag so the branch/batch selector always shows on next login
+    sessionStorage.removeItem("acadSecSetup");
+  }, []);
 
   const handleSignIn = async () => {
     setIsLoading(true);
