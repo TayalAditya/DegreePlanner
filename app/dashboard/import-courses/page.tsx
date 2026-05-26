@@ -238,6 +238,7 @@ export default function ImportCoursesPage() {
     const isBatch24 = userBatch === 2024;
     const isBatch25 = userBatch === 2025;
     const isB24EligibleBranch = isBatch24 && ["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE"].includes(effectiveBranch);
+    const isB24CE = isBatch24 && effectiveBranch === "CE";
     const icb1Assigned = isB24EligibleBranch ? batch24Icb1Course : null;
     const ICB1_CODES = new Set(["IC131", "IC136", "IC230"]);
 
@@ -250,9 +251,10 @@ export default function ImportCoursesPage() {
         : resolvedCourses;
     // Normalize course codes to match enrollment keys
     const normalize = (code: string) => normalizeCourseCode(code);
-    // ICB basket + mixed-sem courses start unchecked — user must pick manually
+    // ICB basket + mixed-sem courses start unchecked — user must pick manually.
+    // B24 CE: IC140 is compulsory in Sem 2 (not a mixed-group choice), so don't include it here.
     const MANUAL_PICK_CODES = isBatch24
-      ? ["IC140", "IC181", "IC182"]
+      ? (isB24CE ? ["IC181", "IC182"] : ["IC140", "IC181", "IC182"])
       : isBatch25
         ? ["IC181", "IC182"]
         : ["IC140", "IC102P", "IC181"];
@@ -289,6 +291,12 @@ export default function ImportCoursesPage() {
           course.category === "ICB" &&
           course.semester === 1 &&
           normalize(course.code) === normalize(icb1Assigned);
+        // B24 CE: IC240 is the only ICB2 option in Sem 2 — auto-select it.
+        const isForcedIcb2ForB24CE =
+          isB24CE &&
+          course.category === "ICB" &&
+          course.semester === 2 &&
+          normalize(course.code) === normalize("IC240");
         const autoSelected =
           course.category !== "ICB" &&
           !MANUAL_PICK_CODES.includes(course.code) &&
@@ -298,6 +306,7 @@ export default function ImportCoursesPage() {
           ...course,
           selected:
             isAssignedIcb1 ||
+            isForcedIcb2ForB24CE ||
             autoSelected ||
             isMTP1 ||
             isMTP2,
