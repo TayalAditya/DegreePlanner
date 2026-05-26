@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { DashboardNav } from "@/components/DashboardNav";
 import { RouteTransition } from "@/components/RouteTransition";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { AcadSecGate } from "@/components/AcadSecGate";
 
 export default async function DashboardLayout({
   children,
@@ -35,22 +36,24 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background-secondary to-background">
-      <DashboardNav user={session.user} />
-      <div className="flex flex-col min-h-screen">
-        <div className="flex-1 min-w-0 flex flex-col lg:ml-64 xl:ml-72">
-          <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
-            <RouteTransition>{children}</RouteTransition>
-          </main>
-          <footer className="border-t border-border bg-surface/40 backdrop-blur-sm">
-            <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-5 text-center text-sm text-foreground-secondary">
-              Degree Planner · Built by{" "}
-              <span className="font-semibold text-foreground">Aditya Tayal</span>
-            </div>
-          </footer>
+    <AcadSecGate>
+      <div className="min-h-screen bg-gradient-to-b from-background-secondary to-background">
+        <DashboardNav user={session.user} />
+        <div className="flex flex-col min-h-screen">
+          <div className="flex-1 min-w-0 flex flex-col lg:ml-64 xl:ml-72">
+            <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+              <RouteTransition>{children}</RouteTransition>
+            </main>
+            <footer className="border-t border-border bg-surface/40 backdrop-blur-sm">
+              <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-5 text-center text-sm text-foreground-secondary">
+                Degree Planner · Built by{" "}
+                <span className="font-semibold text-foreground">Aditya Tayal</span>
+              </div>
+            </footer>
+          </div>
         </div>
+        <ScrollToTop />
       </div>
-      <ScrollToTop />
-    </div>
+    </AcadSecGate>
   );
 }
