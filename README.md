@@ -1,36 +1,39 @@
 # PlanMyDegree
 
-A degree planning tool built for IIT Mandi students. One place for credits, timetable, academic progress, MTP/ISTP eligibility, and everything else that usually requires four portals and a spreadsheet.
+Degree planner for IIT Mandi students. Tracks credits, timetable, MTP/ISTP eligibility, semester exchange courses, and internship credits without juggling four portals and a spreadsheet.
 
 Live at **[planmydegree.app](https://planmydegree.app)**
 
-Currently available for UG Batch 23 and select branches of Batch 22 and Batch 24.
+---
+
+## Supported Batches
+
+| Batch | Branches |
+|---|---|
+| B22 | CSE |
+| B23 | All branches |
+| B24 | CSE, DSE, EE, MEVLSI, MSE, BioE, CE |
+| B25 | All branches |
+
+Sign in with your institute Google account (`@students.iitmandi.ac.in`).
 
 ---
 
 ## Features
 
-**Credit Tracking**
-- Auto-calculates credits across IC, IC Basket, DC, DE, FE, HSS, IKS, MTP, and ISTP
-- Real-time MTP and ISTP eligibility based on your enrollment history
-- Visual progress breakdown by category
+**Credit tracking:** auto-calculates IC, IC Basket, DC, DE, FE, HSS, IKS, MTP, and ISTP credits from your enrollments. Shows real-time MTP and ISTP eligibility, P/F credit usage against the 9-credit cap, and internship credits (XX-399P / XX-396P) correctly routed as FE.
 
-**Timetable**
-- Weekly timetable with venue and timing
-- Conflict detection before it becomes a problem
-- Share your timetable with batchmates
-- Export to calendar
+**Courses:** add courses semester-wise, set grades and enrollment status, and get recommendations based on what's still pending. Includes semester exchange courses for TU Munich, TU Darmstadt, and others. Bulk enrollment via the Import Courses page.
 
-**Courses**
-- Semester-wise course management
-- Smart recommendations based on pending requirements
-- Tracks enrollment status, grades, and credit types
+**Programs:** tracks degree requirements per branch, shows how far along you are in each credit category, and flags when you hit ISTP or MTP eligibility. Pre-registration banner shows up when registration is approaching.
 
-**Other**
-- Document management (forms, certificates, transcripts)
-- Mobile-responsive and PWA-ready — works offline
-- Dark and light modes, 4 colour themes
-- Google OAuth with institute email validation
+**Timetable:** weekly schedule with venue and timing. Detects conflicts before you finalize.
+
+**Academics:** reference page covering the credits policy, exchange programs, internships, honours, and minors. Saves the back-and-forth with the academic section.
+
+**Documents:** upload and organize forms, certificates, and transcripts.
+
+Works on mobile, installable as a PWA, and has offline support. Dark and light modes with 4 colour themes.
 
 ---
 
@@ -41,37 +44,39 @@ Currently available for UG Batch 23 and select branches of Batch 22 and Batch 24
 | Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS |
 | Backend | Next.js API Routes |
 | Database | PostgreSQL + Prisma ORM |
-| Auth | NextAuth.js (Google Provider) |
+| Auth | NextAuth.js (Google OAuth) |
 | Data Fetching | TanStack React Query |
 | Charts | Recharts |
 
 ---
 
-## Getting Started
+## Running Locally
 
 ```bash
-# Install dependencies
 npm install
-
-# Copy environment variables
 cp .env.example .env
 ```
 
-Fill in `.env` with your database URL and Google OAuth credentials, then:
+Fill in `.env`:
+
+```
+DATABASE_URL=
+NEXTAUTH_SECRET=
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+NEXTAUTH_URL=http://localhost:3000
+```
+
+Then:
 
 ```bash
-# Generate Prisma client and push schema
 npx prisma generate
 npx prisma db push
-
-# Seed initial data (optional)
-npx prisma db seed
-
-# Start dev server
+npx prisma db seed   # optional — seeds programs and course data
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
@@ -79,19 +84,20 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ```
 app/
-├── api/               # API routes (auth, courses, timetable, documents, etc.)
-├── auth/              # Sign-in and error pages
-├── dashboard/         # Protected pages (courses, progress, timetable, settings)
-└── layout.tsx
+  api/                route handlers (auth, courses, timetable, documents, ...)
+  auth/               sign-in and error pages
+  dashboard/
+    courses/          semester-wise course management
+    programs/         degree programs and credit requirements
+    progress/         credit breakdown and charts
+    timetable/        weekly schedule
+    import-courses/   bulk enrollment
+    academics/        exchange, internships, honours info
+    documents/        forms and transcripts
+    settings/         user preferences
 
-components/            # Reusable React components
-lib/                   # Business logic, credit calculator, validation, utils
-prisma/                # Schema and seed data
-public/                # Static assets, service worker, PWA manifest
+components/           shared React components
+lib/                  credit calculator, auth config, validation, utilities
+prisma/               schema and seed scripts
+public/               service worker, PWA manifest, static assets
 ```
-
----
-
-## License
-
-MIT
