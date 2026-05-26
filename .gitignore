@@ -67,5 +67,6 @@ scripts/seed-batch24.ts
 scripts/parse-b22cse.ts
 public/data/*.pdf
 public/data/*.xlsx
+public/data/*.csv
 .claude/
 report/
