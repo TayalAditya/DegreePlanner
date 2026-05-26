@@ -575,6 +575,19 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                         <p className="text-xl font-bold text-foreground">
                           {primaryProgram.program.feCredits}
                         </p>
+                        {(() => {
+                          const pfCr = enrollments
+                            .filter(e =>
+                              (e.isInternship || /39[69]P$/i.test(e.course.code)) &&
+                              (e.status === "COMPLETED" || e.status === "IN_PROGRESS")
+                            )
+                            .reduce((sum, e) => sum + (e.course.credits || 0), 0);
+                          return pfCr > 0 ? (
+                            <p className={`text-xs mt-1 ${pfCr >= 9 ? "text-success font-medium" : "text-foreground-secondary"}`}>
+                              P/F: {pfCr} / 9 cr{pfCr >= 9 ? " ✓" : ""}
+                            </p>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
 
