@@ -496,6 +496,29 @@ const geMechSem8: DefaultCourse[] = [
   ...mtpSem8,
 ];
 
+// ── GE sub-branch: Fintech (B24 unofficial track) ──
+// Sem 1-2 use the common GE base (geSem1 + geRaiSem2) and get transformed by B24 overrides.
+// Sem 5-8 deferred; Sem 6/7/8 inherit ISTP/MTP slots.
+const geFinSem3: DefaultCourse[] = [
+  ...icSem3,
+  { code: "EE261", name: "Electrical Systems Around Us",       credits: 3, category: "DC", semester: 3 },
+  { code: "DS201", name: "Data Handling and Visualisation",    credits: 3, category: "DC", semester: 3 },
+  { code: "ME206", name: "Mechanics of Solids",                credits: 3, category: "DC", semester: 3 },
+  // Pick any 2 of the next 3 — shown optional so student manually checks the two they took.
+  { code: "ME212", name: "Product Manufacturing Technology",   credits: 3, category: "DC", semester: 3, optional: true },
+  { code: "IC241", name: "Material Science for Engineers",     credits: 3, category: "DC", semester: 3, optional: true },
+  { code: "EE203", name: "Network Theory",                     credits: 3, category: "DC", semester: 3, optional: true },
+];
+const geFinSem4: DefaultCourse[] = [
+  { code: "IC222P", name: "Physics Practicum",                       credits: 2, category: "IC", semester: 4 },
+  { code: "IC253",  name: "Programming and Data Structures",         credits: 3, category: "DC", semester: 4 },
+  { code: "DS313",  name: "Statistical Foundations of Data Science", credits: 4, category: "DC", semester: 4 },
+  { code: "DS412",  name: "Matrix Computations for Data Science",    credits: 4, category: "DC", semester: 4 },
+  { code: "MA546",  name: "Introduction to Quantitative Finance",    credits: 4, category: "DC", semester: 4 },
+  { code: "CS671",  name: "Deep Learning and Applications",          credits: 4, category: "DC", semester: 4 },
+  { code: "MA653P", name: "Computational Financial Modelling Lab",   credits: 1, category: "DC", semester: 4, optional: true },
+];
+
 // ─── MEVLSI  (DC = 54 cr | both IC baskets: free choice) ─────────────────────
 const mevlsiSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
 const mevlsiSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
@@ -618,22 +641,28 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   MSE_1: mseSem1, MSE_2: mseSem2, MSE_3: mseSem3,
   MSE_4: mseSem4, MSE_5: mseSem5, MSE_6: mseSem6, MSE_7: mseSem7, MSE_8: mseSem8,
 
-  // GE – Robotics & AI (default / backward compat)
+  // GE – Robotics & AI (default for plain "GE" branch — backward compat for B23 students)
   GE_1: geSem1, GE_2: geRaiSem2, GE_3: geRaiSem3,
   GE_4: geRaiSem4, GE_5: geRaiSem5, GE_6: geRaiSem6,
   GE_7: geRaiSem7, GE_8: geRaiSem8,
-  // GE – Robotics & AI (explicit key)
-  GERAI_1: geSem1, GERAI_2: geRaiSem2, GERAI_3: geRaiSem3,
-  GERAI_4: geRaiSem4, GERAI_5: geRaiSem5, GERAI_6: geRaiSem6,
-  GERAI_7: geRaiSem7, GERAI_8: geRaiSem8,
-  // GE – Communication Engineering
-  GECE_1: geSem1, GECE_2: geCeSem2, GECE_3: geCeSem3,
-  GECE_4: geCeSem4, GECE_5: geCeSem5, GECE_6: geCeSem6,
-  GECE_7: geCeSem7, GECE_8: geCeSem8,
-  // GE – Mechatronics
-  GEMECH_1: geSem1, GEMECH_2: geMechSem2, GEMECH_3: geMechSem3,
-  GEMECH_4: geMechSem4, GEMECH_5: geMechSem5, GEMECH_6: geMechSem6,
-  GEMECH_7: geMechSem7, GEMECH_8: geMechSem8,
+  // GE – Robotics & AI (canonical key from normalizeBranchCode: GERAI → GE-ROBO)
+  "GE-ROBO_1": geSem1, "GE-ROBO_2": geRaiSem2, "GE-ROBO_3": geRaiSem3,
+  "GE-ROBO_4": geRaiSem4, "GE-ROBO_5": geRaiSem5, "GE-ROBO_6": geRaiSem6,
+  "GE-ROBO_7": geRaiSem7, "GE-ROBO_8": geRaiSem8,
+  // GE – Communication Engineering (canonical: GECE → GE-COMM)
+  "GE-COMM_1": geSem1, "GE-COMM_2": geCeSem2, "GE-COMM_3": geCeSem3,
+  "GE-COMM_4": geCeSem4, "GE-COMM_5": geCeSem5, "GE-COMM_6": geCeSem6,
+  "GE-COMM_7": geCeSem7, "GE-COMM_8": geCeSem8,
+  // GE – Mechatronics (canonical: GEMECH → GE-MECH)
+  "GE-MECH_1": geSem1, "GE-MECH_2": geMechSem2, "GE-MECH_3": geMechSem3,
+  "GE-MECH_4": geMechSem4, "GE-MECH_5": geMechSem5, "GE-MECH_6": geMechSem6,
+  "GE-MECH_7": geMechSem7, "GE-MECH_8": geMechSem8,
+  // GE – Fintech (new, B24 unofficial track; Sem 1-2 use common GE base + B24 override;
+  // Sem 5-8 deferred — only ISTP/MTP slots).
+  "GE-FIN_1": geSem1, "GE-FIN_2": geRaiSem2, "GE-FIN_3": geFinSem3,
+  "GE-FIN_4": geFinSem4, "GE-FIN_5": [], "GE-FIN_6": [...istpSem6],
+  "GE-FIN_7": [...mtpSem7],
+  "GE-FIN_8": [{ code: "GE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 }, ...mtpSem8],
 
   // MEVLSI
   MEVLSI_1: mevlsiSem1, MEVLSI_2: mevlsiSem2, MEVLSI_3: mevlsiSem3,
@@ -645,7 +674,8 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   BSCS_7: bscsSem7, BSCS_8: bscsSem8,
 };
 
-const B24_BRANCH_OVERRIDES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE"]);
+const B24_BRANCH_OVERRIDES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE", "GE-ROBO", "GE-MECH", "GE-COMM", "GE-FIN"]);
+const B24_GE_SUBBRANCHES = new Set(["GE-ROBO", "GE-MECH", "GE-COMM", "GE-FIN"]);
 const B24_IKS_IC182_SEM2: DefaultCourse = {
   code: "IC182",
   name: "Indian Knowledge Systems (Alt)",
@@ -831,10 +861,10 @@ const applyBatchOverrides = (
   if (batch === 2024 && effectiveBranch === "EP") {
     switch (semester) {
       case 1: {
-        // B24 EP: FDP (IC102P) not run; IC140 (Graphics) moved to Sem-2 only.
+        // B24 EP: FDP (IC102P) not run; IC140 (Graphics) moved to Sem-2 only; ICB1 forced to IC230.
         return courses.filter((c) => {
           const code = normalizeCurriculumCode(c.code);
-          return code !== "IC102P" && code !== "IC140";
+          return !["IC102P", "IC140", "IC131", "IC136"].includes(code);
         });
       }
 
