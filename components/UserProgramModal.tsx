@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Loader2,
   Trash2,
+  Plus,
 } from "lucide-react";
 import { ProgressChart } from "@/components/ProgressChart";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
@@ -102,9 +103,20 @@ const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: st
   ISTP: { bg: "bg-accent/10", text: "text-accent" },
 };
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export function UserProgramModal({ userId, userName, onClose }: UserProgramModalProps) {
   const [view, setView] = useState<"progress" | "programs">("progress");
   const [deletingEnrollmentId, setDeletingEnrollmentId] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState({
+    courseCode: "",
+    semester: "1",
+    year: String(CURRENT_YEAR),
+    term: "AUTUMN",
+    status: "COMPLETED",
+    grade: "",
+  });
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
@@ -173,6 +185,36 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       setDeletingEnrollmentId(null);
       queryClient.invalidateQueries({ queryKey: ["admin-user-programs", userId] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+  });
+
+  const addEnrollmentMutation = useMutation({
+    mutationFn: async (form: typeof addForm) => {
+      const res = await fetch(`/api/admin/users/${userId}/enrollments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseCode: form.courseCode.trim(),
+          semester: Number(form.semester),
+          year: Number(form.year),
+          term: form.term,
+          status: form.status,
+          grade: form.status === "COMPLETED" && form.grade ? form.grade.toUpperCase() : null,
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error || "Failed to add course");
+      return body;
+    },
+    onSuccess: () => {
+      showToast("success", "Course added");
+      setShowAddForm(false);
+      setAddForm({ courseCode: "", semester: "1", year: String(CURRENT_YEAR), term: "AUTUMN", status: "COMPLETED", grade: "" });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-programs", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (err) => {
+      showToast("error", err instanceof Error ? err.message : "Failed to add course");
     },
   });
 
@@ -636,10 +678,115 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                     )}
 
                     <div className="bg-surface rounded-lg border border-border p-4">
-                      <h4 className="font-semibold text-foreground mb-1">Credits Counted (Courses)</h4>
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-semibold text-foreground">Credits Counted (Courses)</h4>
+                        <button
+                          type="button"
+                          onClick={() => setShowAddForm((v) => !v)}
+                          className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Add Course
+                        </button>
+                      </div>
                       <p className="text-xs text-foreground-secondary mb-3">
                         Collapsed by semester.
                       </p>
+
+                      {showAddForm && (
+                        <form
+                          onSubmit={(e) => { e.preventDefault(); addEnrollmentMutation.mutate(addForm); }}
+                          className="mb-4 p-3 rounded-lg border border-border bg-background-secondary space-y-3"
+                        >
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            <div className="col-span-2 sm:col-span-1">
+                              <label className="block text-xs text-foreground-secondary mb-1">Course Code</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. CS-301"
+                                value={addForm.courseCode}
+                                onChange={(e) => setAddForm((f) => ({ ...f, courseCode: e.target.value }))}
+                                className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-foreground-secondary mb-1">Semester</label>
+                              <select
+                                value={addForm.semester}
+                                onChange={(e) => setAddForm((f) => ({ ...f, semester: e.target.value }))}
+                                className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              >
+                                {[1,2,3,4,5,6,7,8].map((s) => <option key={s} value={s}>Sem {s}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-foreground-secondary mb-1">Year</label>
+                              <input
+                                type="number"
+                                value={addForm.year}
+                                onChange={(e) => setAddForm((f) => ({ ...f, year: e.target.value }))}
+                                className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                min={2020}
+                                max={2035}
+                                required
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-foreground-secondary mb-1">Term</label>
+                              <select
+                                value={addForm.term}
+                                onChange={(e) => setAddForm((f) => ({ ...f, term: e.target.value }))}
+                                className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              >
+                                <option value="AUTUMN">Autumn</option>
+                                <option value="SPRING">Spring</option>
+                                <option value="SUMMER">Summer</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-foreground-secondary mb-1">Status</label>
+                              <select
+                                value={addForm.status}
+                                onChange={(e) => setAddForm((f) => ({ ...f, status: e.target.value, grade: "" }))}
+                                className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              >
+                                <option value="COMPLETED">Completed</option>
+                                <option value="IN_PROGRESS">In Progress</option>
+                              </select>
+                            </div>
+                            {addForm.status === "COMPLETED" && (
+                              <div>
+                                <label className="block text-xs text-foreground-secondary mb-1">Grade</label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. A, B+"
+                                  value={addForm.grade}
+                                  onChange={(e) => setAddForm((f) => ({ ...f, grade: e.target.value }))}
+                                  className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setShowAddForm(false)}
+                              className="px-3 py-1.5 text-sm rounded-lg border border-border text-foreground-secondary hover:bg-surface-hover transition-colors"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={addEnrollmentMutation.isPending}
+                              className="px-3 py-1.5 text-sm rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center gap-1.5"
+                            >
+                              {addEnrollmentMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                              Add
+                            </button>
+                          </div>
+                        </form>
+                      )}
 
                       {semesters.length === 0 ? (
                         <p className="text-sm text-foreground-secondary">No courses yet.</p>
