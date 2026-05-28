@@ -828,6 +828,40 @@ const applyBatchOverrides = (
     }
   }
 
+  if (batch === 2024 && effectiveBranch === "EP") {
+    switch (semester) {
+      case 1: {
+        // B24 EP: FDP (IC102P) not run; IC140 (Graphics) moved to Sem-2 only.
+        return courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return code !== "IC102P" && code !== "IC140";
+        });
+      }
+
+      case 2: {
+        // B24 EP: IC102P dropped; IC222P → Sem-4; IKS IC181 → IC182; IC-II forced to IC121.
+        const updated = courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return !["IC102P", "IC222P", "IC181", "IC240", "IC241", "IC253"].includes(code);
+        });
+        return addCourseIfMissing(updated, B24_IKS_IC182_SEM2);
+      }
+
+      case 4: {
+        // B24 EP: Design Practicum (IC202P) dropped; IC222P moved here; Reverse Engineering code EPXXX → EP201.
+        const updated = courses
+          .filter((c) => normalizeCurriculumCode(c.code) !== "IC202P")
+          .map((c) =>
+            normalizeCurriculumCode(c.code) === "EPXXX" ? { ...c, code: "EP201" } : c
+          );
+        return addCourseIfMissing(updated, B24_IC222P_SEM4);
+      }
+
+      default:
+        return courses;
+    }
+  }
+
   if (batch === 2025) {
     const basketBranch = normalizeBranchForIcBasket(effectiveBranch);
     const branchCompulsion = IC_BASKET_COMPULSIONS[basketBranch] || {};
