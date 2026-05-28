@@ -757,6 +757,14 @@ const B24_GE_ME100_SEM4: DefaultCourse = { code: "ME100", name: "Reverse Enginee
 const B24_EE_EE210P_SEM3: DefaultCourse = { code: "EE210P", name: "Digital Systems Design Practicum", credits: 1, category: "DC", semester: 3 };
 const B24_EE_EE261P_SEM3: DefaultCourse = { code: "EE261P", name: "Electrical Systems Around Us Lab",  credits: 2, category: "DC", semester: 3 };
 
+// ─── B24 ME course constants ──────────────────────────────────────────────────
+const B24_ME_ME206_SEM3: DefaultCourse = { code: "ME206", name: "Mechanics of Solids",          credits: 3, category: "DC", semester: 3 };
+const B24_ME_ME100_SEM4: DefaultCourse = { code: "ME100", name: "Reverse Engineering",          credits: 1, category: "DC", semester: 4 };
+const B24_ME_ME205_SEM4: DefaultCourse = { code: "ME205", name: "Machine Drawing",              credits: 3, category: "DC", semester: 4 };
+const B24_ME_ME215_SEM4: DefaultCourse = { code: "ME215", name: "Manufacturing Engineering 1",  credits: 3, category: "DC", semester: 4 };
+const B24_ME_ME310_SEM5: DefaultCourse = { code: "ME310", name: "System Dynamics and Control",   credits: 3, category: "DC", semester: 5 };
+const B24_ME_ME309_SEM5: DefaultCourse = { code: "ME309", name: "Theory of Machines",            credits: 4, category: "DC", semester: 5 };
+
 const normalizeCurriculumCode = (code: string) =>
   (code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
@@ -910,6 +918,61 @@ const applyBatchOverrides = (
             normalizeCurriculumCode(c.code) === "EPXXX" ? { ...c, code: "EP201" } : c
           );
         return addCourseIfMissing(updated, B24_IC222P_SEM4);
+      }
+
+      default:
+        return courses;
+    }
+  }
+
+  if (batch === 2024 && effectiveBranch === "ME") {
+    switch (semester) {
+      case 1: {
+        // B24 ME: FDP (IC102P) → Sem-2; IKS IC181 → IC182 (Sem-2). IC140 (Graphics) stays Sem-1.
+        return courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return code !== "IC102P" && code !== "IC181";
+        });
+      }
+
+      case 2: {
+        // B24 ME: IC222P → Sem-4; IC140 locked to Sem-1; IKS IC181 → IC182; IC-II forced to IC240.
+        // IC102P (FDP) stays here as the Sem-2 elective-basket course.
+        const updated = courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return !["IC222P", "IC140", "IC181", "IC121", "IC253"].includes(code);
+        });
+        return addCourseIfMissing(updated, B24_IKS_IC182_SEM2);
+      }
+
+      case 3: {
+        // B24 ME: ME206 ← Sem-4 and IC202P ← Sem-4; ME100/ME205/ME308 → Sem-4; ME310 → Sem-5.
+        let updated = courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return !["ME100", "ME205", "ME308", "ME310"].includes(code);
+        });
+        updated = addCourseIfMissing(updated, B24_ME_ME206_SEM3);
+        updated = addCourseIfMissing(updated, B24_IC202P_SEM3);
+        return updated;
+      }
+
+      case 4: {
+        // B24 ME: ME206 → Sem-3, IC202P → Sem-3, ME309 → Sem-5; IC222P moved here.
+        // Add ME100, ME205 (← Sem-3) and ME215 (← ME308, renumbered).
+        let updated = courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return !["ME206", "ME309", "IC202P"].includes(code);
+        });
+        updated = addCourseIfMissing(updated, B24_ME_ME100_SEM4);
+        updated = addCourseIfMissing(updated, B24_ME_ME205_SEM4);
+        updated = addCourseIfMissing(updated, B24_ME_ME215_SEM4);
+        return addCourseIfMissing(updated, B24_IC222P_SEM4);
+      }
+
+      case 5: {
+        // B24 ME: ME310 (System Dynamics) and ME309 (Theory of Machines) pushed here from Sem-3/Sem-4.
+        const withSysDyn = addCourseIfMissing(courses, B24_ME_ME310_SEM5);
+        return addCourseIfMissing(withSysDyn, B24_ME_ME309_SEM5);
       }
 
       default:
