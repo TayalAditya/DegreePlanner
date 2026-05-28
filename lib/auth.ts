@@ -8,7 +8,7 @@ import { DOCS_ADMIN_ENROLLMENT_ID } from "@/lib/permissions";
 
 const SUPPORTED_BATCHES = new Set([2022, 2023, 2024, 2025]);
 const B22_ALLOWED_BRANCHES = new Set(["CSE"]);
-const B24_ALLOWED_BRANCHES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "BioE", "CE", "EP"]);
+const B24_ALLOWED_BRANCHES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "BioE", "CE", "EP", "GE"]);
 const ENROLLMENT_FALLBACK_ALLOWED_DOMAINS = new Set([
   "students.iitmandi.ac.in",
   "iitmandi.ac.in",

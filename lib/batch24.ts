@@ -11,7 +11,7 @@ export type Batch24Student = {
   icb1Course: string | null;
 };
 
-const B24_ALLOWED_BRANCHES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE"]);
+const B24_ALLOWED_BRANCHES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE", "GE"]);
 
 const departmentForBranch = (branch: string) => {
   switch (branch) {
@@ -21,6 +21,7 @@ const departmentForBranch = (branch: string) => {
     case "MEVLSI":
       return "School of Computing & Electrical Engineering";
     case "MSE":
+    case "GE":
       return "School of Mechanical and Materials Engineering";
     case "CE":
       return "School of Civil and Environmental Engineering";
@@ -38,6 +39,7 @@ const inferBranchFromProgram = (program: string) => {
     return "MEVLSI";
   if (normalized.includes("materials science")) return "MSE";
   if (normalized.includes("civil")) return "CE";
+  if (normalized.includes("general engineering")) return "GE";
   return null;
 };
 
