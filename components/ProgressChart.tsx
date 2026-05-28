@@ -408,8 +408,17 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     const hssUsed = { credits: 0 };
 
     sortedEnrollments.forEach((e: any) => {
+      const hssBefore = hssUsed.credits;
       const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
-      categoryCredits[category] = addCredits(categoryCredits[category], e.course?.credits || 0);
+      const credits = e.course?.credits || 0;
+      if (category === "HSS") {
+        const actualHss = subtractCredits(hssUsed.credits, hssBefore);
+        categoryCredits.HSS = addCredits(categoryCredits.HSS, actualHss);
+        const feOverflow = subtractCredits(credits, actualHss);
+        if (feOverflow > 0) categoryCredits.FE = addCredits(categoryCredits.FE, feOverflow);
+      } else {
+        categoryCredits[category] = addCredits(categoryCredits[category], credits);
+      }
     });
 
     // DE overflow → FE: excess DE beyond requirement counts as Free Electives
@@ -508,13 +517,31 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     };
 
     completedEnrollments.forEach((e: any) => {
+      const hssBefore = hssUsed.credits;
       const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
-      add(completed, category, e.course?.credits || 0);
+      const credits = e.course?.credits || 0;
+      if (category === "HSS") {
+        const actualHss = subtractCredits(hssUsed.credits, hssBefore);
+        add(completed, "HSS", actualHss);
+        const feOverflow = subtractCredits(credits, actualHss);
+        if (feOverflow > 0) add(completed, "FE", feOverflow);
+      } else {
+        add(completed, category, credits);
+      }
     });
 
     inProgressEnrollments.forEach((e: any) => {
+      const hssBefore = hssUsed.credits;
       const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
-      add(inProgress, category, e.course?.credits || 0);
+      const credits = e.course?.credits || 0;
+      if (category === "HSS") {
+        const actualHss = subtractCredits(hssUsed.credits, hssBefore);
+        add(inProgress, "HSS", actualHss);
+        const feOverflow = subtractCredits(credits, actualHss);
+        if (feOverflow > 0) add(inProgress, "FE", feOverflow);
+      } else {
+        add(inProgress, category, credits);
+      }
     });
 
     // DE overflow â†’ FE: excess DE beyond requirement counts as Free Electives
