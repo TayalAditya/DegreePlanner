@@ -290,7 +290,14 @@ export default function ProgressPage() {
         if (mapping.courseCategory === "IKS" && isIkCourse) {
           return "FE";
         }
-        return applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
+        const resolvedCat = applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
+        // Apply HSS cap for non-HS-prefix courses mapped to HSS (e.g. German intensive courses)
+        if (resolvedCat === "HSS" && hssUsed) {
+          const before = hssUsed.credits;
+          if (before >= HSS_CORE_CAP) return "FE";
+          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
+        }
+        return resolvedCat;
       }
     }
 
@@ -510,13 +517,21 @@ export default function ProgressPage() {
         map[splitCat] = addCredits(map[splitCat], mapping.splitAmount);
         return;
       }
+      const hssBefore = hssU?.credits ?? 0;
       const category = getCourseCategory(e, icBkt, hssU);
-      map[category] = addCredits(map[category], e.course.credits);
+      const hssAfter = hssU?.credits ?? hssBefore;
+      const hssPortionUsed = subtractCredits(hssAfter, hssBefore);
+      if (category === "HSS" && hssPortionUsed < e.course.credits) {
+        map["HSS"] = addCredits(map["HSS"] ?? 0, hssPortionUsed);
+        map["FE"] = addCredits(map["FE"] ?? 0, subtractCredits(e.course.credits, hssPortionUsed));
+      } else {
+        map[category] = addCredits(map[category], e.course.credits);
+      }
     };
 
     sortedCompleted.forEach((e) => accumulateSplitAware(creditsByCategory, e, icBasketUsed, hssUsed));
 
-    sortedInProgress.forEach((e) => accumulateSplitAware(creditsInProgressByCategory, e));
+    sortedInProgress.forEach((e) => accumulateSplitAware(creditsInProgressByCategory, e, undefined, hssUsed));
 
     const totalCreditsEarned = sumCredits(completedEnrollments.map((e) => e.course.credits));
 
@@ -653,16 +668,27 @@ export default function ProgressPage() {
   const hssUsedForDisplay = { credits: 0 };
 
   const semesterCourses = sortedActiveEnrollments
-    .map((e) => ({
-      id: e.id,
-      semester: e.semester,
-      code: formatCourseCode(e.course.code),
-      name: e.course.name,
-      credits: e.course.credits,
-      status: e.status,
-      grade: e.grade,
-      category: getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay),
-    }))
+    .map((e) => {
+      const hssBefore = hssUsedForDisplay.credits;
+      const category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
+      const hssAfter = hssUsedForDisplay.credits;
+      const hssPortionUsed = subtractCredits(hssAfter, hssBefore);
+      const splitCredits = category === "HSS" && hssPortionUsed < e.course.credits
+        ? subtractCredits(e.course.credits, hssPortionUsed)
+        : undefined;
+      return {
+        id: e.id,
+        semester: e.semester,
+        code: formatCourseCode(e.course.code),
+        name: e.course.name,
+        credits: e.course.credits,
+        status: e.status,
+        grade: e.grade,
+        category,
+        splitCategory: splitCredits !== undefined ? ("FE" as const) : undefined,
+        splitCredits,
+      };
+    })
     .reduce<Record<number, any[]>>((acc, course) => {
       const sem = course.semester || 0;
       const list = acc[sem] || [];
@@ -1003,9 +1029,25 @@ export default function ProgressPage() {
                                 </span>
                               </td>
                               <td className="py-2 whitespace-nowrap">
-                                <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}>
-                                  <span className={`font-semibold ${colors.text}`}>{label}</span>
-                                </span>
+                                {c.splitCategory ? (
+                                  <span className="inline-flex items-center gap-1">
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full border border-border ${categoryColors.HSS.bg}`}>
+                                      <span className={`font-semibold text-xs ${categoryColors.HSS.text}`}>
+                                        HSS ({formatCredits(subtractCredits(c.credits, c.splitCredits ?? 0))})
+                                      </span>
+                                    </span>
+                                    <span className="text-foreground-secondary text-xs">&amp;</span>
+                                    <span className={`inline-flex items-center px-2 py-1 rounded-full border border-border ${categoryColors.FE.bg}`}>
+                                      <span className={`font-semibold text-xs ${categoryColors.FE.text}`}>
+                                        FE ({formatCredits(c.splitCredits ?? 0)})
+                                      </span>
+                                    </span>
+                                  </span>
+                                ) : (
+                                  <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}>
+                                    <span className={`font-semibold ${colors.text}`}>{label}</span>
+                                  </span>
+                                )}
                               </td>
                               <td className="py-2 text-right whitespace-nowrap">
                                 <button
