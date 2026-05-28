@@ -9,6 +9,7 @@ import { DOCS_ADMIN_ENROLLMENT_ID } from "@/lib/permissions";
 const SUPPORTED_BATCHES = new Set([2022, 2023, 2024, 2025]);
 const B22_ALLOWED_BRANCHES = new Set(["CSE"]);
 const B24_ALLOWED_BRANCHES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "BioE", "CE", "EP", "GE", "ME"]);
+const ACAD_SEC_EMAIL = "academic_secretary@students.iitmandi.ac.in";
 const ENROLLMENT_FALLBACK_ALLOWED_DOMAINS = new Set([
   "students.iitmandi.ac.in",
   "iitmandi.ac.in",
@@ -418,17 +419,21 @@ export const authOptions: NextAuthOptions = {
         return "/auth/error?error=batch_not_supported";
       }
 
-      // Branch validation (batch-specific): allow only selected branches for B24
+      // Branch validation (batch-specific): allow only selected branches for B24/B22.
+      // Acad secretary is exempt — they use impersonation to preview any branch/batch
+      // and must never lock themselves out by picking an unimplemented combo.
       const enrollmentId = (approvedUser.enrollmentId || "").toUpperCase();
+      const isAcadSec = user.email === ACAD_SEC_EMAIL;
+
       const isB24 = approvedUser.batch === 2024 || /^B24\d+$/i.test(enrollmentId);
-      if (isB24 && !B24_ALLOWED_BRANCHES.has(approvedUser.branch || "")) {
+      if (!isAcadSec && isB24 && !B24_ALLOWED_BRANCHES.has(approvedUser.branch || "")) {
         console.log("❌ Login rejected: Branch", approvedUser.branch, "not allowed for B24");
         await logAttempt("rejected", "branch_not_allowed");
         return "/auth/error?error=branch_not_allowed";
       }
 
       const isB22 = approvedUser.batch === 2022 || /^B22\d+$/i.test(enrollmentId);
-      if (isB22 && !B22_ALLOWED_BRANCHES.has(approvedUser.branch || "")) {
+      if (!isAcadSec && isB22 && !B22_ALLOWED_BRANCHES.has(approvedUser.branch || "")) {
         console.log("Login rejected: Branch", approvedUser.branch, "not allowed for B22");
         await logAttempt("rejected", "branch_not_allowed");
         return "/auth/error?error=branch_not_allowed";
