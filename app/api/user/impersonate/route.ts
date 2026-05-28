@@ -48,8 +48,10 @@ export async function POST(request: NextRequest) {
   }).catch(() => {}); // non-fatal if not found
 
   // 4. Find the correct Program for this branch
-  //    BSCS is the only BS branch; all others are BTech
-  const programCode = branch; // Program.code matches branch code (e.g. "CSE", "BSCS")
+  //    BSCS is the only BS branch; all others are BTech.
+  //    GE sub-branches (GE-ROBO/GE-MECH/GE-COMM/GE-FIN) all use the single "GE" program;
+  //    sub-branch is captured in User.branch for curriculum lookup.
+  const programCode = branch.startsWith("GE-") ? "GE" : branch;
   const program = await prisma.program.findFirst({
     where: { code: programCode },
   });

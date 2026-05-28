@@ -26,6 +26,7 @@ const BRANCHES = [
   { code: "GE-MECH", name: "General Engineering (Mechatronics)",     type: "BTech" },
   { code: "GE-COMM", name: "General Engineering (Comm. Technology)", type: "BTech" },
   { code: "GE-ROBO", name: "General Engineering (AI & Robotics)",    type: "BTech" },
+  { code: "GE-FIN",  name: "General Engineering (Fintech)",          type: "BTech" },
   { code: "BSCS",    name: "Chemical Sciences",                      type: "BS"    },
 ];
 

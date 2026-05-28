@@ -239,6 +239,9 @@ export default function ImportCoursesPage() {
     const isBatch25 = userBatch === 2025;
     const isB24EligibleBranch = isBatch24 && ["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE"].includes(effectiveBranch);
     const isB24CE = isBatch24 && effectiveBranch === "CE";
+    // B24 GE sub-branches share the same Sem 1-2 IC pattern as CE (IC230/IC240 forced, IC182 IKS in Sem 2)
+    // — but IC140 stays compulsory in Sem 1 (unlike CE where it moves to Sem 2).
+    const isB24GE = isBatch24 && (effectiveBranch === "GE-ROBO" || effectiveBranch === "GE-MECH" || effectiveBranch === "GE-COMM" || effectiveBranch === "GE-FIN");
     const icb1Assigned = isB24EligibleBranch ? batch24Icb1Course : null;
     const ICB1_CODES = new Set(["IC131", "IC136", "IC230"]);
 
@@ -253,8 +256,9 @@ export default function ImportCoursesPage() {
     const normalize = (code: string) => normalizeCourseCode(code);
     // ICB basket + mixed-sem courses start unchecked — user must pick manually.
     // B24 CE: IC140 is compulsory in Sem 2 (not a mixed-group choice), so don't include it here.
+    // B24 GE: IC140 is compulsory in Sem 1, IC102P compulsory in Sem 2 — also exclude from manual.
     const MANUAL_PICK_CODES = isBatch24
-      ? (isB24CE ? ["IC181", "IC182"] : ["IC140", "IC181", "IC182"])
+      ? (isB24CE || isB24GE ? ["IC181", "IC182"] : ["IC140", "IC181", "IC182"])
       : isBatch25
         ? ["IC181", "IC182"]
         : ["IC140", "IC102P", "IC181"];
@@ -291,15 +295,15 @@ export default function ImportCoursesPage() {
           course.category === "ICB" &&
           course.semester === 1 &&
           normalize(course.code) === normalize(icb1Assigned);
-        // B24 CE: IC230 (ICB1) and IC240 (ICB2) are forced single options — auto-select both,
+        // B24 CE/GE: IC230 (ICB1) and IC240 (ICB2) are forced single options — auto-select both,
         // regardless of PDF parsing (which fails for impersonation IDs like "B24ACADSEC").
-        const isForcedIcb1ForB24CE =
-          isB24CE &&
+        const isForcedIcb1B24CEOrGE =
+          (isB24CE || isB24GE) &&
           course.category === "ICB" &&
           course.semester === 1 &&
           normalize(course.code) === normalize("IC230");
-        const isForcedIcb2ForB24CE =
-          isB24CE &&
+        const isForcedIcb2B24CEOrGE =
+          (isB24CE || isB24GE) &&
           course.category === "ICB" &&
           course.semester === 2 &&
           normalize(course.code) === normalize("IC240");
@@ -312,8 +316,8 @@ export default function ImportCoursesPage() {
           ...course,
           selected:
             isAssignedIcb1 ||
-            isForcedIcb1ForB24CE ||
-            isForcedIcb2ForB24CE ||
+            isForcedIcb1B24CEOrGE ||
+            isForcedIcb2B24CEOrGE ||
             autoSelected ||
             isMTP1 ||
             isMTP2,
@@ -877,6 +881,7 @@ export default function ImportCoursesPage() {
                 <option value="GERAI">Robotics &amp; AI</option>
                 <option value="GECE">Communication Engineering</option>
                 <option value="GEMECH">Mechatronics</option>
+                <option value="GEFIN">Fintech (unofficial)</option>
               </select>
             </div>
           )}

@@ -674,7 +674,7 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   BSCS_7: bscsSem7, BSCS_8: bscsSem8,
 };
 
-const B24_BRANCH_OVERRIDES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE", "GE-ROBO", "GE-MECH", "GE-COMM", "GE-FIN"]);
+const B24_BRANCH_OVERRIDES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE"]);
 const B24_GE_SUBBRANCHES = new Set(["GE-ROBO", "GE-MECH", "GE-COMM", "GE-FIN"]);
 const B24_IKS_IC182_SEM2: DefaultCourse = {
   code: "IC182",
@@ -746,6 +746,12 @@ const B24_CE_CE310P_SEM3: DefaultCourse = { code: "CE310P", name: "Strength of M
 const B24_CE_CE203P_SEM3: DefaultCourse = { code: "CE203P", name: "Building Materials Lab",                    credits: 1, category: "DC", semester: 3 };
 const B24_CE_CE311_SEM4: DefaultCourse  = { code: "CE311",  name: "Geotechnical Engineering I",                credits: 3, category: "DC", semester: 4 };
 const B24_CE_CE311P_SEM4: DefaultCourse = { code: "CE311P", name: "Geotechnical Engineering Laboratory",       credits: 1, category: "DC", semester: 4 };
+
+// ─── B24 GE course constants ──────────────────────────────────────────────────
+const B24_GE_ME206_SEM3: DefaultCourse = { code: "ME206", name: "Mechanics of Solids",            credits: 3, category: "DC", semester: 3 };
+const B24_GE_EE203_SEM3: DefaultCourse = { code: "EE203", name: "Network Theory",                 credits: 3, category: "DC", semester: 3 };
+const B24_GE_EE260_SEM3: DefaultCourse = { code: "EE260", name: "Signals and Systems",            credits: 3, category: "DC", semester: 3 };
+const B24_GE_ME100_SEM4: DefaultCourse = { code: "ME100", name: "Reverse Engineering",            credits: 1, category: "DC", semester: 4 };
 
 const normalizeCurriculumCode = (code: string) =>
   (code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -885,6 +891,68 @@ const applyBatchOverrides = (
             normalizeCurriculumCode(c.code) === "EPXXX" ? { ...c, code: "EP201" } : c
           );
         return addCourseIfMissing(updated, B24_IC222P_SEM4);
+      }
+
+      default:
+        return courses;
+    }
+  }
+
+  if (batch === 2024 && B24_GE_SUBBRANCHES.has(effectiveBranch)) {
+    switch (semester) {
+      case 1: {
+        // B24 GE (all sub-branches): IC102P → Sem-2; IKS IC181 → IC182 (Sem-2 only);
+        // ICB1 pruned to only IC230 (EVS). IC140 (Graphics) stays in Sem-1.
+        return courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return !["IC102P", "IC181", "IC131", "IC136"].includes(code);
+        });
+      }
+
+      case 2: {
+        // B24 GE: IC222P → Sem-4; IC140 (in Sem-1) removed; IC181 → IC182; ICB2 pruned to IC240.
+        // IC102P (Foundations of Design Practicum) is compulsory in Sem-2 — stays.
+        let updated = courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return !["IC222P", "IC140", "IC181", "IC121", "IC241", "IC253"].includes(code);
+        });
+        updated = addCourseIfMissing(updated, B24_IKS_IC182_SEM2);
+        return updated;
+      }
+
+      case 3: {
+        if (effectiveBranch === "GE-ROBO") {
+          // B24 GE-ROBO: IC241 (Material Science) → ME206 (Mechanics of Solids).
+          let updated = courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC241");
+          updated = addCourseIfMissing(updated, B24_GE_ME206_SEM3);
+          return updated;
+        }
+        if (effectiveBranch === "GE-MECH") {
+          // B24 GE-MECH: add ME206, EE203, EE260 (additional DC for Mechatronics & AI).
+          let updated = courses;
+          updated = addCourseIfMissing(updated, B24_GE_ME206_SEM3);
+          updated = addCourseIfMissing(updated, B24_GE_EE203_SEM3);
+          updated = addCourseIfMissing(updated, B24_GE_EE260_SEM3);
+          return updated;
+        }
+        // GE-FIN: base curriculum (geFinSem3) is already B24-final. Return as-is.
+        // GE-COMM: no B24 logic (no student); return B23 base.
+        return courses;
+      }
+
+      case 4: {
+        if (effectiveBranch === "GE-ROBO") {
+          // B24 GE-ROBO: add IC222P (moved from Sem-2) and ME100 (Reverse Engineering).
+          let updated = addCourseIfMissing(courses, B24_IC222P_SEM4);
+          updated = addCourseIfMissing(updated, B24_GE_ME100_SEM4);
+          return updated;
+        }
+        if (effectiveBranch === "GE-MECH") {
+          // B24 GE-MECH: add IC222P (moved from Sem-2). ME100 already in geMechSem4 base.
+          return addCourseIfMissing(courses, B24_IC222P_SEM4);
+        }
+        // GE-FIN: base curriculum (geFinSem4) already includes IC222P. Return as-is.
+        return courses;
       }
 
       default:

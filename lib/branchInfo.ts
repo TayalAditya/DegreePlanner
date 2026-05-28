@@ -7,6 +7,7 @@ export function normalizeBranchCode(branch?: string | null): string {
   if (b === "GERAI") return "GE-ROBO";
   if (b === "GECE") return "GE-COMM";
   if (b === "GEMECH") return "GE-MECH";
+  if (b === "GEFIN" || b === "GEFINTECH") return "GE-FIN";
 
   return b;
 }
@@ -49,7 +50,7 @@ export function getBranchCandidates(branch?: string | null): string[] {
   if (b === "BE") candidates.push("BIO");
   if (b === "BIO") candidates.push("BE");
 
-  if (b === "GE-MECH" || b === "GE-COMM" || b === "GE-ROBO" || b.startsWith("GE-")) {
+  if (b === "GE-MECH" || b === "GE-COMM" || b === "GE-ROBO" || b === "GE-FIN" || b.startsWith("GE-")) {
     candidates.push("GE");
   }
 
