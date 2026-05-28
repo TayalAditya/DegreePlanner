@@ -79,7 +79,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
   return (
     <>
       {/* Desktop & Mobile: Top Navbar */}
-      <nav className="bg-surface/90 border-b border-border/60 no-print sticky top-0 z-50 backdrop-blur-md h-16 shadow-sm">
+      <nav className="bg-surface border-b border-border/60 no-print sticky top-0 z-50 h-16 shadow-sm">
         <div className="flex h-full items-center justify-between px-4 sm:px-6">
           {/* Left: Logo */}
           <Link
@@ -215,7 +215,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
       )}
 
       {/* Desktop: Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface/90 border-r border-border/60 no-print fixed top-16 left-0 h-[calc(100vh-4rem)] backdrop-blur-md overflow-y-auto z-40 shadow-sm">
+      <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface border-r border-border/60 no-print fixed top-16 left-0 h-[calc(100vh-4rem)] overflow-y-auto z-40 shadow-sm">
         <LayoutGroup id="dashboard-nav-desktop">
           <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-hide">
             <div className="px-1">

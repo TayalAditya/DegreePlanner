@@ -955,7 +955,7 @@ export default function CoursesPage() {
                 {searchLower ? (
                   <div className="grid gap-3">
                     {filteredCourses.map((course) => (
-                      <motion.div
+                      <div
                         key={course.id}
                         role="button"
                         tabIndex={0}
@@ -966,8 +966,7 @@ export default function CoursesPage() {
                             setSelectedCourse(course);
                           }
                         }}
-                        whileHover={{ scale: 1.01 }}
-                        className="group relative overflow-hidden bg-surface rounded-lg border border-border p-5 hover:border-primary hover:shadow-xl transition-all text-left cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                        className="group relative overflow-hidden bg-surface rounded-lg border border-border p-5 hover:border-primary hover:shadow-xl hover:scale-[1.01] transition-all text-left cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         <div className="relative z-10">
@@ -1038,7 +1037,7 @@ export default function CoursesPage() {
                             </div>
                           </div>
                         </div>
-                      </motion.div>
+                      </div>
                     ))}
                   </div>
                 ) : (
@@ -1103,7 +1102,7 @@ export default function CoursesPage() {
                               >
                                 <div className="border-t border-border p-4 space-y-3">
                                   {visibleCourses.map((course) => (
-                                    <motion.div
+                                    <div
                                       key={course.id}
                                       role="button"
                                       tabIndex={0}
@@ -1114,8 +1113,7 @@ export default function CoursesPage() {
                                           setSelectedCourse(course);
                                         }
                                       }}
-                                      whileHover={{ scale: 1.01 }}
-                                      className="group relative overflow-hidden bg-card rounded-lg border border-border p-4 hover:border-primary hover:shadow-lg transition-all text-left w-full cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                                      className="group relative overflow-hidden bg-card rounded-lg border border-border p-4 hover:border-primary hover:shadow-lg hover:scale-[1.01] transition-all text-left w-full cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
                                     >
                                       <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                                       <div className="relative z-10">
@@ -1175,7 +1173,7 @@ export default function CoursesPage() {
                                           </div>
                                         </div>
                                       </div>
-                                    </motion.div>
+                                    </div>
                                   ))}
 
                                   {visibleCount < courses.length && (
