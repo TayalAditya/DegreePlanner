@@ -753,6 +753,10 @@ const B24_GE_EE203_SEM3: DefaultCourse = { code: "EE203", name: "Network Theory"
 const B24_GE_EE260_SEM3: DefaultCourse = { code: "EE260", name: "Signals and Systems",            credits: 3, category: "DC", semester: 3 };
 const B24_GE_ME100_SEM4: DefaultCourse = { code: "ME100", name: "Reverse Engineering",            credits: 1, category: "DC", semester: 4 };
 
+// ─── B24 EE course constants ──────────────────────────────────────────────────
+const B24_EE_EE210P_SEM3: DefaultCourse = { code: "EE210P", name: "Digital Systems Design Practicum", credits: 1, category: "DC", semester: 3 };
+const B24_EE_EE261P_SEM3: DefaultCourse = { code: "EE261P", name: "Electrical Systems Around Us Lab",  credits: 2, category: "DC", semester: 3 };
+
 const normalizeCurriculumCode = (code: string) =>
   (code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 
@@ -823,9 +827,19 @@ const applyBatchOverrides = (
           updated = addCourseIfMissing(updated, B24_CE_CE203P_SEM3);
           return updated;
         }
+        let updated = courses;
+        if (effectiveBranch === "EE") {
+          // B24 EE: split combined theory+lab DCs — EE210 4→3 (+EE210P 1), EE261 5→3 (+EE261P 2).
+          updated = updated.map((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return code === "EE210" || code === "EE261" ? { ...c, credits: 3 } : c;
+          });
+          updated = addCourseIfMissing(updated, B24_EE_EE210P_SEM3);
+          updated = addCourseIfMissing(updated, B24_EE_EE261P_SEM3);
+        }
         // Batch-24: Design Practicum (IC202P) is in Sem-3 for all allowed B24 branches.
-        const hasIc202p = courses.some((c) => normalizeCurriculumCode(c.code) === "IC202P");
-        return hasIc202p ? courses : [B24_IC202P_SEM3, ...courses];
+        const hasIc202p = updated.some((c) => normalizeCurriculumCode(c.code) === "IC202P");
+        return hasIc202p ? updated : [B24_IC202P_SEM3, ...updated];
       }
 
       case 4: {
@@ -841,9 +855,14 @@ const applyBatchOverrides = (
           updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "DS404");
         }
         if (effectiveBranch === "EE") {
-          updated = updated.map((c) =>
-            normalizeCurriculumCode(c.code) === "EEXXXP" ? { ...c, code: "EE223P" } : c
-          );
+          // B24 EE: RE placeholder → EE223P; EE202→EE205, EE304→EE316.
+          updated = updated.map((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            if (code === "EEXXXP") return { ...c, code: "EE223P" };
+            if (code === "EE202") return { ...c, code: "EE205", name: "Electromagnetics and Wave Propagation" };
+            if (code === "EE304") return { ...c, code: "EE316" };
+            return c;
+          });
         }
         if (effectiveBranch === "CE") {
           // Batch-24 CE: CE302/CE302P renumbered to CE311/CE311P.
