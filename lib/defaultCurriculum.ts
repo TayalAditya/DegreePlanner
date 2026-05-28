@@ -753,6 +753,12 @@ const B24_GE_EE203_SEM3: DefaultCourse = { code: "EE203", name: "Network Theory"
 const B24_GE_EE260_SEM3: DefaultCourse = { code: "EE260", name: "Signals and Systems",            credits: 3, category: "DC", semester: 3 };
 const B24_GE_ME100_SEM4: DefaultCourse = { code: "ME100", name: "Reverse Engineering",            credits: 1, category: "DC", semester: 4 };
 
+// ─── B24 MNC course constants ─────────────────────────────────────────────────
+// FDP (IC102P) is replaced by MA120 (Computing Systems & Databases) for B24 MNC.
+const B24_MNC_MA120_SEM2: DefaultCourse = { code: "MA120", name: "Introduction to Computing Systems and Databases", credits: 4, category: "DC", semester: 2 };
+// CS214 moves from Sem 3 (B23) to Sem 4 for B24 MNC.
+const B24_MNC_CS214_SEM4: DefaultCourse = { code: "CS214", name: "Computer Organization", credits: 4, category: "DC", semester: 4 };
+
 // ─── B24 EE course constants ──────────────────────────────────────────────────
 const B24_EE_EE210P_SEM3: DefaultCourse = { code: "EE210P", name: "Digital Systems Design Practicum", credits: 1, category: "DC", semester: 3 };
 const B24_EE_EE261P_SEM3: DefaultCourse = { code: "EE261P", name: "Electrical Systems Around Us Lab",  credits: 2, category: "DC", semester: 3 };
@@ -918,6 +924,46 @@ const applyBatchOverrides = (
             normalizeCurriculumCode(c.code) === "EPXXX" ? { ...c, code: "EP201" } : c
           );
         return addCourseIfMissing(updated, B24_IC222P_SEM4);
+      }
+
+      default:
+        return courses;
+    }
+  }
+
+  if (batch === 2024 && effectiveBranch === "MNC") {
+    switch (semester) {
+      case 1: {
+        // B24 MNC: FDP (IC102P) replaced by MA120 in Sem-2 (drop here); IC140 → Sem-2;
+        // ICB1 forced to IC136 (drop IC131, IC230); IC181 (IKS) stays in Sem-1.
+        return courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return !["IC102P", "IC140", "IC131", "IC230"].includes(code);
+        });
+      }
+
+      case 2: {
+        // B24 MNC: FDP (IC102P) replaced by MA120 (DC); IC222P → Sem-4; IC181 (in Sem-1);
+        // ICB2 forced to IC253 (drop IC121, IC240, IC241); IC140 (Graphics) here.
+        let updated = courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return !["IC102P", "IC222P", "IC181", "IC121", "IC240", "IC241"].includes(code);
+        });
+        updated = addCourseIfMissing(updated, B24_MNC_MA120_SEM2);
+        return updated;
+      }
+
+      case 3: {
+        // B24 MNC: CS214 moves to Sem-4.
+        return courses.filter((c) => normalizeCurriculumCode(c.code) !== "CS214");
+      }
+
+      case 4: {
+        // B24 MNC: CS304 deferred (likely Sem-5+); add CS214 (from Sem-3) and IC222P (from Sem-2).
+        let updated = courses.filter((c) => normalizeCurriculumCode(c.code) !== "CS304");
+        updated = addCourseIfMissing(updated, B24_MNC_CS214_SEM4);
+        updated = addCourseIfMissing(updated, B24_IC222P_SEM4);
+        return updated;
       }
 
       default:
