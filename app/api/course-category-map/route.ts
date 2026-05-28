@@ -42,18 +42,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "branch is required" }, { status: 400 });
   }
 
-  // Students should only fetch their own branch (or a GE specialization under GE).
-  if (session.user.role !== "ADMIN") {
-    const userBranch = normalizeBranchCode(session.user.branch || "");
-    if (userBranch && requestedBranch !== userBranch) {
-      const allowed = new Set(getBranchCandidates(userBranch));
-      const isGeSubBranch = userBranch === "GE" && requestedBranch.startsWith("GE-");
-      if (!allowed.has(requestedBranch) && !isGeSubBranch) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-    }
-  }
-
   const candidates = getBranchCandidates(requestedBranch);
   const candidateOrder = new Map<string, number>(candidates.map((b, idx) => [b, idx]));
 
