@@ -19,7 +19,7 @@ import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
-import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
+import { addCredits, formatCourseCode, formatCredits, minCredits, subtractCredits, sumCredits } from "@/lib/utils";
 
 interface Program {
   id: string;
@@ -425,7 +425,14 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
         if (mapping.courseCategory === "IKS" && isIkCourse) {
           return "FE";
         }
-        return applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
+        const resolvedCat = applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
+        // Apply HSS cap for non-HS-prefix courses mapped to HSS (e.g. German intensive courses)
+        if (resolvedCat === "HSS" && hssUsed) {
+          const before = hssUsed.credits;
+          if (before >= HSS_CORE_CAP) return "FE";
+          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
+        }
+        return resolvedCat;
       }
 
       // Mappings exist but none matched this student's branch → FE
@@ -491,10 +498,17 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
 
   const icBasketUsedForDisplay: ICBasketUsed = { ic1: false, ic2: false };
   const hssUsedForDisplay = { credits: 0 };
-  const categorizedById = new Map<string, CourseCategory>();
+  const categorizedById = new Map<string, { category: CourseCategory; splitCredits?: number }>();
 
   sortedVisibleEnrollments.forEach((e) => {
-    categorizedById.set(e.id, getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay));
+    const hssBefore = hssUsedForDisplay.credits;
+    const category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
+    const hssAfter = hssUsedForDisplay.credits;
+    const hssPortionUsed = subtractCredits(hssAfter, hssBefore);
+    const splitCredits = category === "HSS" && hssPortionUsed < (e.course.credits || 0)
+      ? subtractCredits(e.course.credits || 0, hssPortionUsed)
+      : undefined;
+    categorizedById.set(e.id, { category, splitCredits });
   });
 
   const semesterCourses: Record<number, Enrollment[]> = sortedVisibleEnrollments.reduce(
@@ -839,8 +853,8 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                     </thead>
                                     <tbody>
                                       {courses.map((e) => {
-                                        const category: CourseCategory =
-                                          categorizedById.get(e.id) ?? "FE";
+                                        const { category, splitCredits } =
+                                          categorizedById.get(e.id) ?? { category: "FE" as CourseCategory };
                                         const colors = categoryColors[category];
                                         const label = categoryLabels[category];
 
@@ -870,13 +884,25 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                               )}
                                             </td>
                                             <td className="py-2 pr-4 whitespace-nowrap">
-                                              <span
-                                                className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}
-                                              >
-                                                <span className={`font-semibold ${colors.text}`}>
-                                                  {label}
+                                              {splitCredits !== undefined ? (
+                                                <span className="inline-flex items-center gap-1">
+                                                  <span className={`inline-flex items-center px-2 py-1 rounded-full border border-border ${categoryColors.HSS.bg}`}>
+                                                    <span className={`font-semibold text-xs ${categoryColors.HSS.text}`}>
+                                                      HSS ({formatCredits(subtractCredits(e.course.credits || 0, splitCredits))})
+                                                    </span>
+                                                  </span>
+                                                  <span className="text-foreground-secondary text-xs">&amp;</span>
+                                                  <span className={`inline-flex items-center px-2 py-1 rounded-full border border-border ${categoryColors.FE.bg}`}>
+                                                    <span className={`font-semibold text-xs ${categoryColors.FE.text}`}>
+                                                      FE ({formatCredits(splitCredits)})
+                                                    </span>
+                                                  </span>
                                                 </span>
-                                              </span>
+                                              ) : (
+                                                <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}>
+                                                  <span className={`font-semibold ${colors.text}`}>{label}</span>
+                                                </span>
+                                              )}
                                             </td>
                                             <td className="py-2 text-right whitespace-nowrap">
                                               <button
