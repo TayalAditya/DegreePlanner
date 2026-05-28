@@ -480,6 +480,7 @@ export class CreditCalculator {
       CS:  { ic2: "IC253" },
       CSE: { ic2: "IC253" },
       DSE: { ic2: "IC253" },
+      DSAI: { ic2: "IC253" }, // shares DSE's IC-basket compulsion
       EP:  { ic1: "IC230", ic2: "IC121" },
       ME:  { ic2: "IC240" },
       CH:  { ic1: "IC131", ic2: "IC121" },

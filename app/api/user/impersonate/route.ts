@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 
 const ACAD_SEC_EMAIL = "academic_secretary@students.iitmandi.ac.in";
 
@@ -51,7 +52,8 @@ export async function POST(request: NextRequest) {
   //    BSCS is the only BS branch; all others are BTech.
   //    GE sub-branches (GE-ROBO/GE-MECH/GE-COMM/GE-FIN) all use the single "GE" program;
   //    sub-branch is captured in User.branch for curriculum lookup.
-  const programCode = branch.startsWith("GE-") ? "GE" : branch;
+  //    DSAI shares the DSE program record (getProgramLookupBranchCode maps it).
+  const programCode = branch.startsWith("GE-") ? "GE" : getProgramLookupBranchCode(branch);
   const program = await prisma.program.findFirst({
     where: { code: programCode },
   });

@@ -13,13 +13,19 @@ export function normalizeBranchCode(branch?: string | null): string {
 }
 
 export function getCurriculumBranchCode(branch?: string | null): string {
-  const normalized = normalizeBranchCode(branch);
-  if (normalized === "DSAI") return "DSE";
-  return normalized;
+  // DSAI (B25+) is a first-class branch with its own DSAI_* curriculum keys.
+  // Those keys currently reference the same course arrays as DSE_* (the two
+  // share an identical catalogue today), so resolving DSAI to itself — rather
+  // than aliasing to DSE — lets a single semester diverge later (e.g. the known
+  // B25 Sem-3 swap) without disturbing DSE.
+  return normalizeBranchCode(branch);
 }
 
 export function getProgramLookupBranchCode(branch?: string | null): string {
   const normalized = normalizeBranchCode(branch);
+  // DSAI students are attached to the DSE degree-program record (no separate
+  // DSAI Program row is seeded — the program of study is identical). Keep this
+  // alias even though curriculum resolution is now DSAI-native.
   if (normalized === "DSAI") return "DSE";
   return normalized;
 }
@@ -117,11 +123,4 @@ export function inferBranchFromProgram(program?: string | null): string | null {
   if (normalized.includes("bio engineering") || normalized.includes("bioengineering")) return "BE";
   if (normalized.includes("chemical sciences") || /\bbscs\b/.test(normalized)) return "BSCS";
   return null;
-}
-
-export function getDisplayBranchCode(branch?: string | null, batch?: number | null): string {
-  const normalized = normalizeBranchCode(branch);
-  if (!normalized) return "";
-  if (normalized === "DSE" && batch === 2025) return "DSAI";
-  return normalized;
 }

@@ -612,6 +612,15 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   DSE_4: dseSem4, DSE_5: dseSem5, DSE_6: dseSem6,
   DSE_7: dseSem7, DSE_8: dseSem8,
 
+  // DSAI (B25+) — first-class branch that currently shares DSE's discipline
+  // curriculum. These reference the same arrays as DSE_* (NOT copies), so DSE
+  // edits propagate automatically. When DSAI diverges (e.g. the known B25 Sem-3
+  // swap), point only the affected semester at its own array — the rest stay
+  // shared.
+  DSAI_1: dseSem1, DSAI_2: dseSem2, DSAI_3: dseSem3,
+  DSAI_4: dseSem4, DSAI_5: dseSem5, DSAI_6: dseSem6,
+  DSAI_7: dseSem7, DSAI_8: dseSem8,
+
   // EE
   EE_1: eeSem1, EE_2: eeSem2, EE_3: eeSem3,
   EE_4: eeSem4, EE_5: eeSem5, EE_6: eeSem6, EE_7: eeSem7, EE_8: eeSem8,

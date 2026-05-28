@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { courseIdentityKey } from "@/lib/courseIdentity";
+import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { EnrollmentStatus } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
@@ -55,7 +56,7 @@ export async function POST(req: NextRequest) {
       console.log(`Auto-enrolling user in ${user.branch} program...`);
 
       const program = await prisma.program.findUnique({
-        where: { code: user.branch },
+        where: { code: getProgramLookupBranchCode(user.branch) },
       });
 
       if (program) {

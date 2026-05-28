@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 import { EnrollmentStatus, CourseType } from "@prisma/client";
 import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
 import { courseIdentityKey } from "@/lib/courseIdentity";
-import { getBranchCandidates } from "@/lib/branchInfo";
+import { getBranchCandidates, getProgramLookupBranchCode } from "@/lib/branchInfo";
 import {
   canTakePassFailCourse,
   validateBranchSpecificCourse,
@@ -161,8 +161,9 @@ export async function POST(request: NextRequest) {
     let finalProgramId = programId || user.programs[0]?.programId || null;
 
     if (!finalProgramId && user.branch) {
+      // DSAI shares the DSE degree-program record (no separate DSAI Program row).
       const program = await prisma.program.findUnique({
-        where: { code: user.branch },
+        where: { code: getProgramLookupBranchCode(user.branch) },
       });
 
       if (program) {

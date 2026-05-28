@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { CourseType, EnrollmentStatus, Term } from "@prisma/client";
 
 // Odd semesters start in fall, even in spring
@@ -75,7 +76,7 @@ export async function POST(
 
   let finalProgramId = user.programs[0]?.programId ?? null;
   if (!finalProgramId && user.branch) {
-    const program = await prisma.program.findUnique({ where: { code: user.branch } });
+    const program = await prisma.program.findUnique({ where: { code: getProgramLookupBranchCode(user.branch) } });
     if (program) {
       const up = await prisma.userProgram.create({
         data: { userId, programId: program.id, programType: "MAJOR", isPrimary: true, startSemester: 1, status: "ACTIVE" },
