@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   X,
   GraduationCap,
@@ -105,6 +105,14 @@ const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: st
 
 const CURRENT_YEAR = new Date().getFullYear();
 
+interface CourseSearchResult {
+  id: string;
+  code: string;
+  name: string;
+  credits: number;
+  department?: string;
+}
+
 export function UserProgramModal({ userId, userName, onClose }: UserProgramModalProps) {
   const [view, setView] = useState<"progress" | "programs">("progress");
   const [deletingEnrollmentId, setDeletingEnrollmentId] = useState<string | null>(null);
@@ -117,6 +125,12 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     status: "COMPLETED",
     grade: "",
   });
+  const [courseSearch, setCourseSearch] = useState("");
+  const [courseResults, setCourseResults] = useState<CourseSearchResult[]>([]);
+  const [showCourseDropdown, setShowCourseDropdown] = useState(false);
+  const [courseSearchLoading, setCourseSearchLoading] = useState(false);
+  const courseSearchRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
@@ -210,6 +224,8 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       showToast("success", "Course added");
       setShowAddForm(false);
       setAddForm({ courseCode: "", semester: "1", year: String(CURRENT_YEAR), term: "AUTUMN", status: "COMPLETED", grade: "" });
+      setCourseSearch("");
+      setCourseResults([]);
       queryClient.invalidateQueries({ queryKey: ["admin-user-programs", userId] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
@@ -230,6 +246,36 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     if (!ok) return;
     deleteEnrollmentMutation.mutate(enrollment.id);
   };
+
+  // Course search debounce
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!courseSearch.trim()) { setCourseResults([]); setShowCourseDropdown(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      setCourseSearchLoading(true);
+      try {
+        const res = await fetch(`/api/courses?search=${encodeURIComponent(courseSearch)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setCourseResults((data.courses ?? data).slice(0, 8));
+          setShowCourseDropdown(true);
+        }
+      } finally {
+        setCourseSearchLoading(false);
+      }
+    }, 250);
+  }, [courseSearch]);
+
+  // Close course dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (courseSearchRef.current && !courseSearchRef.current.contains(e.target as Node)) {
+        setShowCourseDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   // Escape key to close
   useEffect(() => {
@@ -699,16 +745,48 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                           className="mb-4 p-3 rounded-lg border border-border bg-background-secondary space-y-3"
                         >
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                            <div className="col-span-2 sm:col-span-1">
-                              <label className="block text-xs text-foreground-secondary mb-1">Course Code</label>
-                              <input
-                                type="text"
-                                placeholder="e.g. CS-301"
-                                value={addForm.courseCode}
-                                onChange={(e) => setAddForm((f) => ({ ...f, courseCode: e.target.value }))}
-                                className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                required
-                              />
+                            <div className="col-span-2 sm:col-span-3" ref={courseSearchRef}>
+                              <label className="block text-xs text-foreground-secondary mb-1">Course</label>
+                              <div className="relative">
+                                <input
+                                  type="text"
+                                  placeholder="Search by code or name..."
+                                  value={courseSearch || (addForm.courseCode ? `${addForm.courseCode}` : "")}
+                                  onChange={(e) => {
+                                    setCourseSearch(e.target.value);
+                                    setAddForm((f) => ({ ...f, courseCode: "" }));
+                                  }}
+                                  onFocus={() => courseResults.length > 0 && setShowCourseDropdown(true)}
+                                  className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                  required={!addForm.courseCode}
+                                />
+                                {courseSearchLoading && (
+                                  <Loader2 className="absolute right-2.5 top-2 w-4 h-4 animate-spin text-foreground-secondary" />
+                                )}
+                                {showCourseDropdown && courseResults.length > 0 && (
+                                  <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-surface border border-border rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                                    {courseResults.map((c) => (
+                                      <button
+                                        key={c.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setAddForm((f) => ({ ...f, courseCode: c.code }));
+                                          setCourseSearch(`${c.code} — ${c.name}`);
+                                          setShowCourseDropdown(false);
+                                        }}
+                                        className="w-full text-left px-3 py-2 hover:bg-surface-hover transition-colors border-b border-border/50 last:border-0"
+                                      >
+                                        <span className="font-semibold text-foreground text-xs">{formatCourseCode(c.code)}</span>
+                                        <span className="text-foreground-secondary text-xs ml-2">{c.name}</span>
+                                        <span className="float-right text-foreground-secondary text-xs">{c.credits} cr</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              {addForm.courseCode && (
+                                <p className="text-xs text-success mt-0.5">Selected: {formatCourseCode(addForm.courseCode)}</p>
+                              )}
                             </div>
                             <div>
                               <label className="block text-xs text-foreground-secondary mb-1">Semester</label>
@@ -771,7 +849,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                           <div className="flex gap-2 justify-end">
                             <button
                               type="button"
-                              onClick={() => setShowAddForm(false)}
+                              onClick={() => { setShowAddForm(false); setCourseSearch(""); setCourseResults([]); }}
                               className="px-3 py-1.5 text-sm rounded-lg border border-border text-foreground-secondary hover:bg-surface-hover transition-colors"
                             >
                               Cancel
