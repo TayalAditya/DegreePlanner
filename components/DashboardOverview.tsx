@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import Link from "next/link";
 import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
 import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
@@ -350,6 +351,29 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
 
   return (
     <div className="space-y-6">
+
+      {/* B24 GE: prompt to choose specialization (still on plain "GE") */}
+      {userSettings?.batch === 2024 && userSettings?.branch === "GE" && (
+        <div className="bg-warning/10 border border-warning/30 rounded-xl p-4 sm:p-5 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-foreground">
+              Choose your General Engineering specialization
+            </p>
+            <p className="text-sm text-foreground-secondary mt-1">
+              Pick AI &amp; Robotics, Mechatronics &amp; AI, Communications Technology, or stay on
+              Open Specialization. This sets your Discipline Core / Elective tracking — you can
+              change it later.
+            </p>
+            <Link
+              href="/dashboard/settings"
+              className="inline-block mt-2 text-sm font-medium text-primary hover:underline"
+            >
+              Set specialization →
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Current Semester */}
       <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">

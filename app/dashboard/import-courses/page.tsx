@@ -52,7 +52,7 @@ export default function ImportCoursesPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
   const [branch, setBranch] = useState("CSE");
-  const [geSubBranch, setGeSubBranch] = useState("GERAI");
+  const [geSubBranch, setGeSubBranch] = useState("GE-ROBO");
   const [userBatch, setUserBatch] = useState<number | null>(null);
   const [batch24Icb1Course, setBatch24Icb1Course] = useState<string | null>(null);
   const [currentSemester, setCurrentSemester] = useState(6);
@@ -80,7 +80,7 @@ export default function ImportCoursesPage() {
   const [dbCourseTypeMap, setDbCourseTypeMap] = useState<Map<string, string>>(new Map());
 
   // Course type map for OCR modal — derived from the branch curriculum
-  const effectiveBranch = branch === "GE" ? geSubBranch : branch;
+  const effectiveBranch = (branch === "GE" || branch.startsWith("GE-")) ? geSubBranch : branch;
   const { courseTypeMap, dcPrefixes } = useMemo(() => {
     const typeMap = new Map<string, string>();
     const prefixes = new Set<string>();
@@ -161,7 +161,14 @@ export default function ImportCoursesPage() {
       const res = await fetch("/api/user/settings");
       if (res.ok) {
         const data = await res.json();
-        if (data.branch) setBranch(data.branch);
+        if (data.branch) {
+          setBranch(data.branch);
+          // GE-family: seed the sub-branch picker from the persisted specialization
+          // ("GE" = Open, "GE-ROBO" etc. = named track) so it reflects their choice.
+          if (data.branch === "GE" || String(data.branch).startsWith("GE-")) {
+            setGeSubBranch(data.branch);
+          }
+        }
         const inferredBatch = inferBatchYear(data.batch, data.enrollmentId);
         setUserBatch(typeof data.batch === "number" ? data.batch : inferredBatch);
         setBatch24Icb1Course(
@@ -222,7 +229,7 @@ export default function ImportCoursesPage() {
   };
 
   const loadDefaultCourses = () => {
-    const effectiveBranch = branch === "GE" ? geSubBranch : branch;
+    const effectiveBranch = (branch === "GE" || branch.startsWith("GE-")) ? geSubBranch : branch;
     const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester, userBatch);
     const normalizeCatalog = (code: string) => normalizeCourseCode(code);
     const resolvedCourses = defaultCourses.map((course) => {
@@ -643,6 +650,36 @@ export default function ImportCoursesPage() {
     );
   };
 
+  const handleGeSpecChange = async (newSpec: string) => {
+    if (newSpec === geSubBranch && newSpec === branch) return;
+    // Persist the chosen specialization to the user's branch (GE-family is changeable).
+    const ok = await confirm({
+      title: "Set your GE specialization?",
+      message:
+        "This updates which courses count as Discipline Core / Discipline Elective and your " +
+        "credit requirements. You can change it again later.",
+      confirmText: "Save specialization",
+      cancelText: "Cancel",
+    });
+    if (!ok) return;
+    setGeSubBranch(newSpec);
+    setBranch(newSpec);
+    try {
+      const res = await fetch("/api/user/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ branch: newSpec }),
+      });
+      if (res.ok) {
+        showToast("success", "Specialization saved.");
+      } else {
+        showToast("error", "Could not save specialization.");
+      }
+    } catch {
+      showToast("error", "Could not save specialization.");
+    }
+  };
+
   const handleReset = async () => {
     const ok = await confirm({
       title: "Delete all enrolled courses?",
@@ -844,7 +881,7 @@ export default function ImportCoursesPage() {
           <div>
             <label className="block text-sm font-medium mb-2">Branch</label>
             <select
-              value={branch}
+              value={(branch === "GE" || branch.startsWith("GE-")) ? "GE" : branch}
               onChange={(e) => setBranch(e.target.value)}
               disabled={branch !== ""}
               className="w-full px-3 py-2 rounded-lg border bg-background disabled:opacity-60 disabled:cursor-not-allowed"
@@ -870,19 +907,23 @@ export default function ImportCoursesPage() {
               </p>
             )}
           </div>
-          {branch === "GE" && (
+          {(branch === "GE" || branch.startsWith("GE-")) && (
             <div>
-              <label className="block text-sm font-medium mb-2">GE Sub-Branch</label>
+              <label className="block text-sm font-medium mb-2">GE Specialization</label>
               <select
                 value={geSubBranch}
-                onChange={(e) => setGeSubBranch(e.target.value)}
+                onChange={(e) => handleGeSpecChange(e.target.value)}
                 className="w-full px-3 py-2 rounded-lg border bg-background"
               >
-                <option value="GERAI">Robotics &amp; AI</option>
-                <option value="GECE">Communication Engineering</option>
-                <option value="GEMECH">Mechatronics</option>
-                <option value="GEFIN">Fintech (unofficial)</option>
+                <option value="GE">Open Specialization</option>
+                <option value="GE-ROBO">AI &amp; Robotics</option>
+                <option value="GE-MECH">Mechatronics &amp; AI</option>
+                <option value="GE-COMM">Communications Technology</option>
+                <option value="GE-FIN">Fintech (unofficial)</option>
               </select>
+              <p className="text-xs text-foreground-secondary mt-1">
+                Saved to your profile — changes your DC/DE tracking.
+              </p>
             </div>
           )}
           <div>

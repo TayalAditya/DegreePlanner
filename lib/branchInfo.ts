@@ -27,6 +27,9 @@ export function getProgramLookupBranchCode(branch?: string | null): string {
   // DSAI Program row is seeded — the program of study is identical). Keep this
   // alias even though curriculum resolution is now DSAI-native.
   if (normalized === "DSAI") return "DSE";
+  // GE specialisations (GE-ROBO/GE-MECH/GE-COMM/GE-FIN) all attach to the single
+  // "GE" degree-program record; the specialisation lives in User.branch.
+  if (normalized.startsWith("GE-")) return "GE";
   return normalized;
 }
 

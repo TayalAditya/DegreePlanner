@@ -72,6 +72,27 @@ export function SettingsForm({ user }: SettingsFormProps) {
     updateMutation.mutate(formData);
   };
 
+  const isGeFamily = (b: string) => b === "GE" || b.startsWith("GE-");
+
+  const GE_SPECIALIZATIONS = [
+    { code: "GE", label: "Open Specialization (no named track)" },
+    { code: "GE-ROBO", label: "AI & Robotics" },
+    { code: "GE-MECH", label: "Mechatronics & AI" },
+    { code: "GE-COMM", label: "Communications Technology" },
+    { code: "GE-FIN", label: "Fintech (under development)" },
+  ];
+
+  const handleSpecChange = (newBranch: string) => {
+    if (newBranch === formData.branch) return;
+    const ok = window.confirm(
+      "Changing your General Engineering specialization updates which courses count as " +
+        "Discipline Core / Discipline Elective and your credit requirements. Continue?"
+    );
+    if (!ok) return;
+    setFormData({ ...formData, branch: newBranch });
+    updateMutation.mutate({ ...formData, branch: newBranch });
+  };
+
   return (
     <div className="max-w-2xl mx-auto w-full">
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -234,6 +255,33 @@ export function SettingsForm({ user }: SettingsFormProps) {
                 </div>
               )}
             </div>
+
+            {/* GE Specialization selector — editable, only for GE-family students */}
+            {isGeFamily(formData.branch) && (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    GE Specialization
+                  </div>
+                </label>
+                <select
+                  value={formData.branch}
+                  onChange={(e) => handleSpecChange(e.target.value)}
+                  className="w-full px-4 py-2 border border-border rounded-md bg-surface text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+                >
+                  {GE_SPECIALIZATIONS.map((s) => (
+                    <option key={s.code} value={s.code}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-2 text-xs text-foreground-secondary">
+                  You can change this until you finalize your specialization. Open Specialization
+                  has no Discipline Electives — its DE credits merge into Free Electives.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

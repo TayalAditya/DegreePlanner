@@ -163,6 +163,15 @@ export class CreditCalculator {
     let mtpCredits = mtpCreditsFull;
     let istpCredits = istpCreditsFull;
 
+    // GE Open Specialisation (plain "GE") merges the DE pool into Free Electives:
+    // DC 36 + DE 0 + FE 52. Named GE tracks (GE-ROBO/MECH/COMM/FIN) keep the
+    // program's DE 30 / FE 22 (they share the single "GE" program record).
+    if (user?.branch === "GE") {
+      const mergedFe = program.deCredits + program.feCredits; // 30 + 22 = 52
+      deCredits = 0;
+      feCredits = mergedFe;
+    }
+
     if (!isBSProgram) {
       const inferredBatch = (() => {
         if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;

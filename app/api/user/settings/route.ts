@@ -69,8 +69,18 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Prevent branch changes if branch is already set
-    if (branch && currentUser.branch && currentUser.branch !== branch) {
+    // GE students may switch freely between GE-family specialisations (Open ↔ named tracks);
+    // every other branch stays locked once set.
+    const isGeFamily = (b?: string | null) =>
+      b === "GE" || (typeof b === "string" && b.startsWith("GE-"));
+
+    // Prevent branch changes if branch is already set (except GE-family ↔ GE-family).
+    if (
+      branch &&
+      currentUser.branch &&
+      currentUser.branch !== branch &&
+      !(isGeFamily(currentUser.branch) && isGeFamily(branch))
+    ) {
       return NextResponse.json(
         { error: "Cannot change branch after it has been set" },
         { status: 403 }
@@ -81,7 +91,8 @@ export async function PATCH(req: NextRequest) {
     if (branch) {
       const validBranches = [
         "CSE", "DSE", "DSAI", "EE", "ME", "CE", "BE",
-        "EP", "MNC", "MSE", "GE", "MEVLSI", "BSCS"
+        "EP", "MNC", "MSE", "GE", "MEVLSI", "BSCS",
+        "GE-ROBO", "GE-MECH", "GE-COMM", "GE-FIN",
       ];
       if (!validBranches.includes(branch)) {
         return NextResponse.json(
