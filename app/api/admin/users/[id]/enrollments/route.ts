@@ -2,7 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { CourseType, EnrollmentStatus } from "@prisma/client";
+import { CourseType, EnrollmentStatus, Term } from "@prisma/client";
+
+// Odd semesters start in fall, even in spring
+function termFromSemester(sem: number): Term {
+  return sem % 2 === 1 ? Term.FALL : Term.SPRING;
+}
+
+// Infer academic year from semester and current date
+function yearFromSemester(sem: number): number {
+  const now = new Date();
+  const month = now.getMonth(); // 0-indexed
+  // Fall term starts ~Aug; spring term starts ~Jan
+  if (sem % 2 === 1) {
+    // Fall: if we're past July, it's this year; otherwise last year
+    return month >= 7 ? now.getFullYear() : now.getFullYear() - 1;
+  } else {
+    // Spring: always current year
+    return now.getFullYear();
+  }
+}
 
 export async function POST(
   request: NextRequest,
@@ -15,11 +34,15 @@ export async function POST(
   }
 
   const { id: userId } = await params;
-  const { courseCode, semester, year, term, status, grade, courseType } = await request.json();
+  const { courseCode, semester } = await request.json();
 
-  if (!courseCode || !semester || !year || !term) {
-    return NextResponse.json({ error: "courseCode, semester, year, term are required" }, { status: 400 });
+  if (!courseCode || !semester) {
+    return NextResponse.json({ error: "courseCode and semester are required" }, { status: 400 });
   }
+
+  const semNum = Number(semester);
+  const term = termFromSemester(semNum);
+  const year = yearFromSemester(semNum);
 
   const course = await prisma.course.findFirst({
     where: { code: { equals: courseCode.trim(), mode: "insensitive" } },
@@ -43,7 +66,7 @@ export async function POST(
   }
 
   const existing = await prisma.courseEnrollment.findUnique({
-    where: { userId_courseId_semester_year_term: { userId, courseId: course.id, semester: Number(semester), year: Number(year), term } },
+    where: { userId_courseId_semester_year_term: { userId, courseId: course.id, semester: semNum, year, term } },
   });
 
   if (existing) {
@@ -61,27 +84,33 @@ export async function POST(
     }
   }
 
-  const finalCourseType: CourseType =
-    courseType && Object.values(CourseType).includes(courseType) ? courseType : CourseType.CORE;
-
-  const finalStatus: EnrollmentStatus =
-    status && Object.values(EnrollmentStatus).includes(status)
-      ? status
-      : grade
-        ? EnrollmentStatus.COMPLETED
-        : EnrollmentStatus.IN_PROGRESS;
+  // Auto-detect courseType from branch mapping
+  let finalCourseType: CourseType = CourseType.CORE;
+  if (user.branch) {
+    const mapping = await prisma.courseBranchMapping.findFirst({
+      where: { courseId: course.id, branch: user.branch },
+      select: { courseCategory: true },
+    });
+    if (mapping) {
+      const cat = mapping.courseCategory;
+      if (cat === "DE") finalCourseType = CourseType["DE"];
+      else if (cat === "FE" || cat === "NA" || cat === "INTERNSHIP") finalCourseType = CourseType["FREE_ELECTIVE"];
+      else if (cat === "MTP") finalCourseType = CourseType["MTP"];
+      else if (cat === "ISTP") finalCourseType = CourseType["ISTP"];
+    }
+  }
 
   const enrollment = await prisma.courseEnrollment.create({
     data: {
       userId,
       courseId: course.id,
-      semester: Number(semester),
-      year: Number(year),
+      semester: semNum,
+      year,
       term,
       courseType: finalCourseType,
       programId: finalProgramId,
-      status: finalStatus,
-      grade: grade || null,
+      status: EnrollmentStatus.IN_PROGRESS,
+      grade: null,
       isPassFail: false,
       passFailCredits: 0,
       isInternship: false,
