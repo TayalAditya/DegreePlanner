@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { courseIdentityKey } from "@/lib/courseIdentity";
 import { getProgramLookupBranchCode } from "@/lib/branchInfo";
+import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { EnrollmentStatus } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
@@ -205,7 +206,7 @@ export async function POST(req: NextRequest) {
         };
 
         const rawType = (enrollment as any).courseType as string;
-        const courseType = categoryToCourseType[rawType] ?? "CORE";
+        let courseType = categoryToCourseType[rawType] ?? "CORE";
 
         const codeCandidates = buildCodeCandidates(courseCode);
         const course = await prisma.course.findFirst({
@@ -251,6 +252,8 @@ export async function POST(req: NextRequest) {
           grade ? "COMPLETED" : isPastSemester ? "COMPLETED" : "IN_PROGRESS";
 
         const normalizedCode = normalizeCourseCode(course.code);
+        const specialDpCourseType = getSpecialDpCourseType(normalizedCode);
+        if (specialDpCourseType) courseType = specialDpCourseType;
         await maybeEnableProjectPrefsForCourse(normalizedCode);
 
         if (existingInSameSemester) {

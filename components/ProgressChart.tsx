@@ -13,6 +13,7 @@ import {
   subtractCredits,
 } from "@/lib/utils";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
+import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 
 interface ProgressChartProps {
   progress: any;
@@ -353,11 +354,8 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
     if (normalizedCode.startsWith("IC")) return "IC";
 
-    // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
-    if (normalizedCode === "DP301P") return "ISTP";
-    if (normalizedCode === "DP498P" || normalizedCode === "DP499P") return "MTP";
-    if (normalizedCode.includes("MTP")) return "MTP";
-    if (normalizedCode.includes("ISTP")) return "ISTP";
+    const specialDpCategory = getSpecialDpCategory(normalizedCode);
+    if (specialDpCategory) return specialDpCategory;
 
     // No branchMappings at all — fall back to courseType
     if (enrollment.courseType === "DE") return applyMinorDeOverride("DE");

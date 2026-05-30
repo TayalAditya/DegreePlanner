@@ -19,6 +19,7 @@ import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
+import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { addCredits, formatCourseCode, formatCredits, minCredits, subtractCredits, sumCredits } from "@/lib/utils";
 
 interface Program {
@@ -452,11 +453,8 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
 
     if (normalizedCode.startsWith("IC")) return "IC";
 
-    // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
-    if (normalizedCode === "DP301P") return "ISTP";
-    if (normalizedCode === "DP498P" || normalizedCode === "DP499P") return "MTP";
-    if (normalizedCode.includes("MTP")) return "MTP";
-    if (normalizedCode.includes("ISTP")) return "ISTP";
+    const specialDpCategory = getSpecialDpCategory(normalizedCode);
+    if (specialDpCategory) return specialDpCategory;
 
     switch (enrollment.courseType) {
       case "DE":

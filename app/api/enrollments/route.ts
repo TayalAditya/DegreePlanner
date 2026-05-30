@@ -6,6 +6,7 @@ import { EnrollmentStatus, CourseType } from "@prisma/client";
 import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
 import { courseIdentityKey } from "@/lib/courseIdentity";
 import { getBranchCandidates, getProgramLookupBranchCode } from "@/lib/branchInfo";
+import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import {
   canTakePassFailCourse,
   validateBranchSpecificCourse,
@@ -271,9 +272,11 @@ export async function POST(request: NextRequest) {
         ? (courseType as CourseType)
         : CourseType.FREE_ELECTIVE;
 
-    // Special DP codes (always treated as ISTP/MTP)
+    // Special DP codes override user-provided/imported category guesses.
     if (isDpIstp) finalCourseType = CourseType.ISTP;
     if (isDpMtp) finalCourseType = CourseType.MTP;
+    const specialDpCourseType = getSpecialDpCourseType(normalizedCourseCode);
+    if (specialDpCourseType) finalCourseType = specialDpCourseType as CourseType;
 
     const finalIsPassFail =
       finalCourseType === CourseType.FREE_ELECTIVE ? Boolean(isPassFail) : false;

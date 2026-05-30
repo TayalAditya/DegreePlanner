@@ -16,6 +16,7 @@ import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBask
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
+import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 
 interface Enrollment {
   id: string;
@@ -314,11 +315,8 @@ export default function ProgressPage() {
 
     if (normalizedCode.startsWith("IC")) return "IC";
 
-    // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
-    if (normalizedCode === "DP301P") return "ISTP";
-    if (normalizedCode === "DP498P" || normalizedCode === "DP499P") return "MTP";
-    if (normalizedCode.includes("MTP")) return "MTP";
-    if (normalizedCode.includes("ISTP")) return "ISTP";
+    const specialDpCategory = getSpecialDpCategory(normalizedCode);
+    if (specialDpCategory) return specialDpCategory;
 
     switch (enrollment.courseType) {
       case "DE":

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getProgramLookupBranchCode } from "@/lib/branchInfo";
+import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { CourseType, EnrollmentStatus, Term } from "@prisma/client";
 
 // Odd semesters start in fall, even in spring
@@ -100,6 +101,8 @@ export async function POST(
       else if (cat === "ISTP") finalCourseType = CourseType["ISTP"];
     }
   }
+  const specialDpCourseType = getSpecialDpCourseType(course.code);
+  if (specialDpCourseType) finalCourseType = specialDpCourseType as CourseType;
 
   const enrollment = await prisma.courseEnrollment.create({
     data: {

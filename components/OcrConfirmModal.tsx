@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { X, AlertCircle, CheckCircle2, Search } from "lucide-react";
 import { DetectedCourse, normalizeCourseCode } from "@/lib/parseTranscript";
 import { courseIdentityKey } from "@/lib/courseIdentity";
+import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { formatCourseCode, formatCredits } from "@/lib/utils";
 
 interface CatalogCourse {
@@ -73,7 +74,8 @@ function resolveCourseType(
   // Fallback for courses not in curriculum (electives, cross-branch, etc.)
   if (p.startsWith("IC")) return "IC";
   if (p.startsWith("HS")) return "HSS";
-  if (p.startsWith("DP")) return p.includes("301") ? "ISTP" : "MTP";
+  const specialDpCategory = getSpecialDpCategory(p);
+  if (specialDpCategory) return specialDpCategory;
   // Same-department prefix but not a required course → Departmental Elective
   const prefix = /^([A-Z]+)/.exec(p)?.[1] ?? "";
   if (prefix && dcPrefixes.has(prefix)) return "DE";

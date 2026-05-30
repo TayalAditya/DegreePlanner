@@ -1,4 +1,5 @@
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
+import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { addCredits, formatCourseCode, minCredits, subtractCredits } from "@/lib/utils";
 
 type CategoryKey = "IC" | "IC_BASKET" | "DC" | "DE" | "FE" | "HSS" | "IKS" | "MTP" | "ISTP";
@@ -218,10 +219,9 @@ export function computeEnrollmentCreditBreakdown({
 
     if (isIkCourse) return "FE";
     if (normalizedCode.startsWith("IC")) return "IC";
-    if (normalizedCode === "DP301P") return "ISTP";
-    if (normalizedCode === "DP498P" || normalizedCode === "DP499P") return "MTP";
-    if (normalizedCode.includes("MTP")) return "MTP";
-    if (normalizedCode.includes("ISTP")) return "ISTP";
+
+    const specialDpCategory = getSpecialDpCategory(normalizedCode);
+    if (specialDpCategory) return specialDpCategory;
 
     if (enrollment.courseType === "DE") return applyMinorDeOverride(enrollment, "DE");
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";

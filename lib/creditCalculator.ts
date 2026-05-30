@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
 import { normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
+import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import {
   addCredits,
   formatCourseCode,
@@ -707,21 +708,17 @@ export class CreditCalculator {
         return;
       }
 
-      // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
-      if (normalizedCode === "DP301P") {
+      const specialDpCategory = getSpecialDpCategory(normalizedCode);
+      if (specialDpCategory === "FE") {
+        addBreakdownCredits("freeElective", credits);
+        return;
+      }
+      if (specialDpCategory === "ISTP") {
         addBreakdownCredits("istp", credits);
         return;
       }
-      if (normalizedCode === "DP498P" || normalizedCode === "DP499P") {
+      if (specialDpCategory === "MTP") {
         addBreakdownCredits("mtp", credits);
-        return;
-      }
-      if (normalizedCode.includes("MTP")) {
-        addBreakdownCredits("mtp", credits);
-        return;
-      }
-      if (normalizedCode.includes("ISTP")) {
-        addBreakdownCredits("istp", credits);
         return;
       }
 

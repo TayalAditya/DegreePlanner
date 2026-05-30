@@ -19,6 +19,7 @@ import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { StatCard } from "@/components/StatCard";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
+import { getSpecialDpCategory, getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { addCredits, formatCourseCode, formatCredits, subtractCredits, sumCredits } from "@/lib/utils";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 
@@ -439,11 +440,8 @@ export default function CoursesPage() {
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("HS")) return "HSS";
 
-    // Special DP codes (ISTP/MTP don't contain "ISTP"/"MTP" in the code)
-    if (normalizedCode === "DP301P") return "ISTP";
-    if (normalizedCode === "DP498P" || normalizedCode === "DP499P") return "MTP";
-    if (normalizedCode.includes("MTP")) return "MTP";
-    if (normalizedCode.includes("ISTP")) return "ISTP";
+    const specialDpCategory = getSpecialDpCategory(normalizedCode);
+    if (specialDpCategory) return specialDpCategory;
 
     // Fallback to courseType mapping
     switch (enrollment.courseType) {
@@ -507,9 +505,8 @@ export default function CoursesPage() {
     const code = course.code.toUpperCase();
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
 
-    // Special DP codes
-    if (normalizedCode === "DP301P") return "ISTP";
-    if (normalizedCode === "DP498P" || normalizedCode === "DP499P") return "MTP";
+    const specialDpCourseType = getSpecialDpCourseType(normalizedCode);
+    if (specialDpCourseType) return specialDpCourseType;
     
     // HSS courses (HS-xxx)
     if (code.startsWith("HS-")) {
