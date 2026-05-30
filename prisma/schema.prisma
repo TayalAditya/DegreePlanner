@@ -358,6 +358,7 @@ enum EnrollmentStatus {
   COMPLETED
   DROPPED
   FAILED
+  AUDIT
 }
 
 // Approved users list (from Excel)

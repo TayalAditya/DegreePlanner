@@ -161,6 +161,7 @@ export default function CoursesPage() {
   const [grade, setGrade] = useState<string>("");
   const [courseType, setCourseType] = useState<string>("AUTO");
   const [isPassFail, setIsPassFail] = useState(false);
+  const [isAudit, setIsAudit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [expandedDepartments, setExpandedDepartments] = useState<string[]>([]);
   const [departmentVisibleCounts, setDepartmentVisibleCounts] = useState<Record<string, number>>({});
@@ -583,7 +584,7 @@ export default function CoursesPage() {
         finalCourseType = determineCourseType(addingCourse);
       }
 
-      const status = grade ? "COMPLETED" : semNum < 6 ? "COMPLETED" : "IN_PROGRESS";
+      const status = isAudit ? "AUDIT" : grade ? "COMPLETED" : semNum < 6 ? "COMPLETED" : "IN_PROGRESS";
 
       console.log("Frontend: Adding course to semester", semNum, "with status", status);
 
@@ -596,15 +597,16 @@ export default function CoursesPage() {
           year: courseYear,
           term,
           courseType: finalCourseType,
-          grade: grade || undefined,
+          grade: isAudit ? undefined : (grade || undefined),
           status,
-          isPassFail: isPassFail && finalCourseType === "FREE_ELECTIVE",
+          isPassFail: !isAudit && isPassFail && finalCourseType === "FREE_ELECTIVE",
         }),
       });
 
       if (response.ok) {
         showToast("success", "Course added successfully!");
         setAddingCourse(null);
+        setIsAudit(false);
         await loadData();
       } else {
         const error = await response.json();
@@ -855,10 +857,12 @@ export default function CoursesPage() {
                                       className={`px-1.5 py-0.5 text-[10px] font-semibold rounded-full ${
                                         enrollment.status === "COMPLETED"
                                           ? "bg-success/10 text-success border border-success/30"
-                                          : "bg-info/10 text-info border border-info/30"
+                                          : enrollment.status === "AUDIT"
+                                            ? "bg-foreground-muted/10 text-foreground-muted border border-foreground-muted/30"
+                                            : "bg-info/10 text-info border border-info/30"
                                       }`}
                                     >
-                                      {enrollment.status}
+                                      {enrollment.status === "AUDIT" ? "Audit" : enrollment.status}
                                     </span>
                                   </div>
                                   <p className="text-foreground font-medium mb-2 text-sm">
@@ -1474,7 +1478,8 @@ export default function CoursesPage() {
                   <select
                     value={grade}
                     onChange={(e) => setGrade(e.target.value)}
-                    className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
+                    disabled={isAudit}
+                    className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="">No grade yet</option>
                     <option value="A+">A+</option>
@@ -1541,29 +1546,56 @@ export default function CoursesPage() {
                   const canUsePF = isFE && passFailRemaining > 0;
 
                   return (
-                    <div className="p-4 bg-surface-hover rounded-lg border border-border">
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-medium text-foreground">Pass/Fail (P/F)</p>
-                          <p className="text-xs text-foreground-secondary">
-                            You can take up to {maxPassFailCredits} P/F credits. Remaining: {passFailRemaining}.
-                          </p>
-                          {!isFE && (
-                            <p className="text-xs text-foreground-secondary mt-1">Only Free Electives can be taken as P/F.</p>
-                          )}
+                    <>
+                      <div className="p-4 bg-surface-hover rounded-lg border border-border">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Pass/Fail (P/F)</p>
+                            <p className="text-xs text-foreground-secondary">
+                              You can take up to {maxPassFailCredits} P/F credits. Remaining: {passFailRemaining}.
+                            </p>
+                            {!isFE && (
+                              <p className="text-xs text-foreground-secondary mt-1">Only Free Electives can be taken as P/F.</p>
+                            )}
+                          </div>
+                          <label className="inline-flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isPassFail}
+                              onChange={(e) => setIsPassFail(e.target.checked)}
+                              disabled={!canUsePF || isAudit}
+                              className="h-4 w-4"
+                            />
+                            <span className="text-sm text-foreground">Take as P/F</span>
+                          </label>
                         </div>
-                        <label className="inline-flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={isPassFail}
-                            onChange={(e) => setIsPassFail(e.target.checked)}
-                            disabled={!canUsePF}
-                            className="h-4 w-4"
-                          />
-                          <span className="text-sm text-foreground">Take as P/F</span>
-                        </label>
                       </div>
-                    </div>
+                      <div className="p-4 bg-surface-hover rounded-lg border border-border">
+                        <div className="flex items-center justify-between gap-4">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Audit</p>
+                            <p className="text-xs text-foreground-secondary">
+                              Attended but not credited — appears in transcript with 0 counted credits.
+                            </p>
+                          </div>
+                          <label className="inline-flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isAudit}
+                              onChange={(e) => {
+                                setIsAudit(e.target.checked);
+                                if (e.target.checked) {
+                                  setIsPassFail(false);
+                                  setGrade("");
+                                }
+                              }}
+                              className="h-4 w-4"
+                            />
+                            <span className="text-sm text-foreground">Take as Audit</span>
+                          </label>
+                        </div>
+                      </div>
+                    </>
                   );
                 })()}
               </div>

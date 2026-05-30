@@ -89,6 +89,7 @@ const categoryLabels = {
   IKS: "Indian Knowledge System",
   MTP: "Major Technical Project",
   ISTP: "Interactive Socio-Technical Practicum",
+  AUDIT: "Audit (NC)",
 };
 
 const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: string }> = {
@@ -101,6 +102,7 @@ const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: st
   IKS: { bg: "bg-warning/10", text: "text-warning" },
   MTP: { bg: "bg-error/10", text: "text-error" },
   ISTP: { bg: "bg-accent/10", text: "text-accent" },
+  AUDIT: { bg: "bg-foreground-muted/10", text: "text-foreground-muted" },
 };
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -491,6 +493,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   const visibleEnrollments = programEnrollments.filter(
     (e) =>
       e.status === "IN_PROGRESS" ||
+      e.status === "AUDIT" ||
       (e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
   );
 
@@ -501,6 +504,10 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   const categorizedById = new Map<string, { category: CourseCategory; splitCredits?: number }>();
 
   sortedVisibleEnrollments.forEach((e) => {
+    if (e.status === "AUDIT") {
+      categorizedById.set(e.id, { category: "AUDIT" as CourseCategory, splitCredits: undefined });
+      return;
+    }
     const hssBefore = hssUsedForDisplay.credits;
     const category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
     const hssAfter = hssUsedForDisplay.credits;
@@ -869,13 +876,17 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                             <td className="py-2 pr-4 text-foreground-secondary">
                                               {e.course?.name}
                                             </td>
-                                            <td className="py-2 pr-4 text-right text-foreground">
+                                            <td className={`py-2 pr-4 text-right ${e.status === "AUDIT" ? "text-foreground-muted line-through" : "text-foreground"}`}>
                                               {formatCredits(e.course?.credits || 0)}
                                             </td>
                                             <td className="py-2 pr-4 whitespace-nowrap">
                                               {e.status === "IN_PROGRESS" ? (
                                                 <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 text-xs font-semibold whitespace-nowrap">
                                                   In Progress
+                                                </span>
+                                              ) : e.status === "AUDIT" ? (
+                                                <span className="px-2 py-0.5 rounded-full bg-foreground-muted/10 text-foreground-muted text-xs font-semibold whitespace-nowrap">
+                                                  Audit
                                                 </span>
                                               ) : (
                                                 <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-xs font-semibold whitespace-nowrap">

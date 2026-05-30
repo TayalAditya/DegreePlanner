@@ -107,6 +107,7 @@ const categoryColors = {
   IKS: { bg: "bg-warning/10", text: "text-warning", bar: "bg-warning" },
   MTP: { bg: "bg-error/10", text: "text-error", bar: "bg-error" },
   ISTP: { bg: "bg-accent/10", text: "text-accent", bar: "bg-accent" },
+  AUDIT: { bg: "bg-foreground-muted/10", text: "text-foreground-muted", bar: "bg-foreground-muted" },
 };
 
 const categoryLabels = {
@@ -119,6 +120,7 @@ const categoryLabels = {
   IKS: "Indian Knowledge System",
   MTP: "Major Technical Project",
   ISTP: "Interactive Socio-Technical Practicum",
+  AUDIT: "Audit (NC)",
 };
 
 
@@ -655,7 +657,8 @@ export default function ProgressPage() {
   const activeEnrollments = enrollments.filter(
     (e) =>
       (e.status === "COMPLETED" && (!e.grade || e.grade !== "F")) ||
-      e.status === "IN_PROGRESS"
+      e.status === "IN_PROGRESS" ||
+      e.status === "AUDIT"
   );
 
   const sortedActiveEnrollments = [...activeEnrollments].sort(
@@ -669,6 +672,20 @@ export default function ProgressPage() {
 
   const semesterCourses = sortedActiveEnrollments
     .map((e) => {
+      if (e.status === "AUDIT") {
+        return {
+          id: e.id,
+          semester: e.semester,
+          code: formatCourseCode(e.course.code),
+          name: e.course.name,
+          credits: e.course.credits,
+          status: e.status,
+          grade: e.grade,
+          category: "AUDIT" as CourseCategory,
+          splitCategory: undefined as undefined,
+          splitCredits: undefined as undefined,
+        };
+      }
       const hssBefore = hssUsedForDisplay.credits;
       const category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
       const hssAfter = hssUsedForDisplay.credits;
@@ -715,6 +732,7 @@ export default function ProgressPage() {
       : 0;
 
   const remainingBreakdown = (Object.keys(categoryLabels) as CourseCategory[])
+    .filter((c) => c !== "AUDIT")
     .map((category) => {
       const required = progress.creditsRequiredByCategory[category] ?? 0;
       const completed = progress.creditsByCategory[category] ?? 0;
@@ -1006,11 +1024,15 @@ export default function ProgressPage() {
                           const statusBadge =
                             c.status === "COMPLETED"
                               ? "bg-success/10 text-success"
-                              : "bg-info/10 text-info";
+                              : c.status === "AUDIT"
+                                ? "bg-foreground-muted/10 text-foreground-muted"
+                                : "bg-info/10 text-info";
                           const statusText =
                             c.status === "COMPLETED"
                               ? `Completed${c.grade ? ` (${c.grade})` : ""}`
-                              : "In Progress";
+                              : c.status === "AUDIT"
+                                ? "Audit"
+                                : "In Progress";
 
                           return (
                             <tr key={c.id} className="border-b border-border/60 last:border-0">
@@ -1020,7 +1042,7 @@ export default function ProgressPage() {
                               <td className="py-2 pr-4 text-foreground-secondary">
                                 {c.name}
                               </td>
-                              <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap">
+                              <td className={`py-2 pr-4 text-right whitespace-nowrap ${c.status === "AUDIT" ? "text-foreground-muted line-through" : "text-foreground"}`}>
                                 {formatCredits(c.credits)}
                               </td>
                               <td className="py-2 pr-4 whitespace-nowrap">
