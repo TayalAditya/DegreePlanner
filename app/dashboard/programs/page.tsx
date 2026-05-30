@@ -5,7 +5,8 @@ import { GraduationCap, Award, BookOpen, Target, ChevronDown, AlertCircle } from
 import { ProgressChart } from "@/components/ProgressChart";
 import { MinorPlannerCard } from "@/components/MinorPlannerCard";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
-import { useMinorPlannerSelection } from "@/lib/minorPlannerClient";
+import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
+import { computeEnrollmentCreditBreakdown } from "@/lib/progressCreditBreakdown";
 import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
 
 interface Program {
@@ -146,6 +147,29 @@ export default function ProgramsPage() {
     return codes.join(",");
   }, [minorPlanner.enabled, minorPlanner.countedCourseCodes]);
 
+  const nonMgmtMinorCourseCodes = useMemo(() => {
+    if (!minorPlanner.enabled) return new Set<string>();
+    const eligible = buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
+    if (!minorPlanner.countedCourseCodesConfigured) return eligible;
+
+    const selected = new Set(
+      (minorPlanner.countedCourseCodes ?? [])
+        .map((code) => formatCourseCode(String(code ?? "")))
+        .filter(Boolean)
+    );
+
+    const out = new Set<string>();
+    selected.forEach((code) => {
+      if (eligible.has(code)) out.add(code);
+    });
+    return out;
+  }, [
+    minorPlanner.enabled,
+    minorPlanner.codes,
+    minorPlanner.countedCourseCodes,
+    minorPlanner.countedCourseCodesConfigured,
+  ]);
+
   useEffect(() => {
     fetchPrograms();
   }, []);
@@ -165,6 +189,11 @@ export default function ProgramsPage() {
   };
 
   const primaryProgram = userPrograms.find((p) => p.isPrimary);
+  const programEnrollments = primaryProgram?.program?.id
+    ? enrollments.filter(
+        (e) => e.programId === primaryProgram.program.id || e.programId == null
+      )
+    : enrollments;
 
   useEffect(() => {
     if (!primaryProgram?.program?.id) return;
@@ -386,6 +415,15 @@ export default function ProgramsPage() {
   const displayProgress = useMemo(() => {
     if (!progressData) return null;
 
+    const enrollmentBreakdown = computeEnrollmentCreditBreakdown({
+      enrollments: programEnrollments,
+      userBranch: userSettings?.branch,
+      userBatch: inferredBatch,
+      requiredDE: Number(progressData?.required?.de ?? 0),
+      includeCurrentSemesterCredits,
+      nonMgmtMinorCourseCodes,
+    });
+
     const counted = (key: string) => {
       const required = Number(progressData?.required?.[key] ?? 0);
       const completed = Number(progressData?.completed?.[key] ?? 0);
@@ -394,15 +432,29 @@ export default function ProgramsPage() {
       return minCredits(required, value);
     };
 
+    const countedFromEnrollments = (key: keyof typeof enrollmentBreakdown.counted, required: number) =>
+      minCredits(required, Number(enrollmentBreakdown.counted[key] ?? 0));
+
     return {
-      core: counted("core"),
-      de: counted("de"),
-      freeElective: counted("freeElective"),
-      mtp: counted("mtp"),
-      istp: counted("istp"),
+      institutionalCore: countedFromEnrollments("institutionalCore", primaryProgram?.program.icCredits ?? 0),
+      dc: countedFromEnrollments("dc", primaryProgram?.program.dcCredits ?? 0),
+      core: countedFromEnrollments("core", Number(progressData?.required?.core ?? 0)),
+      de: countedFromEnrollments("de", Number(progressData?.required?.de ?? 0)),
+      freeElective: countedFromEnrollments("freeElective", Number(progressData?.required?.freeElective ?? 0)),
+      mtp: countedFromEnrollments("mtp", Number(progressData?.required?.mtp ?? 0)),
+      istp: countedFromEnrollments("istp", Number(progressData?.required?.istp ?? 0)),
       pe: counted("pe"),
     };
-  }, [progressData, includeCurrentSemesterCredits]);
+  }, [
+    progressData,
+    programEnrollments,
+    userSettings?.branch,
+    inferredBatch,
+    includeCurrentSemesterCredits,
+    nonMgmtMinorCourseCodes,
+    primaryProgram?.program.icCredits,
+    primaryProgram?.program.dcCredits,
+  ]);
 
   if (loading) {
     return (
@@ -413,12 +465,6 @@ export default function ProgramsPage() {
   }
 
   const secondaryPrograms = userPrograms.filter((p) => !p.isPrimary);
-
-  const programEnrollments = primaryProgram?.program?.id
-    ? enrollments.filter(
-        (e) => e.programId === primaryProgram.program.id || e.programId == null
-      )
-    : enrollments;
 
   const visibleEnrollments = programEnrollments.filter(
     (e) =>
@@ -544,16 +590,38 @@ export default function ProgramsPage() {
                         <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">IC</p>
                         <p className="text-xs text-foreground-secondary mb-1">Institutional Core</p>
                         <p className="text-2xl font-bold text-foreground">
-                          {formatCredits(primaryProgram.program.icCredits)}
-                          <span className="text-xs font-normal text-foreground-secondary ml-1">cr</span>
+                          {progressData ? (
+                            <>
+                              {formatCredits(displayProgress?.institutionalCore ?? 0)}
+                              <span className="text-xs font-normal text-foreground-secondary ml-1">
+                                / {formatCredits(primaryProgram.program.icCredits)} cr
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              {formatCredits(primaryProgram.program.icCredits)}
+                              <span className="text-xs font-normal text-foreground-secondary ml-1">cr</span>
+                            </>
+                          )}
                         </p>
                       </div>
                       <div className="bg-indigo-500/10 rounded-lg p-3 border border-indigo-500/20">
                         <p className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">DC</p>
                         <p className="text-xs text-foreground-secondary mb-1">Discipline Core</p>
                         <p className="text-2xl font-bold text-foreground">
-                          {formatCredits(primaryProgram.program.dcCredits)}
-                          <span className="text-xs font-normal text-foreground-secondary ml-1">cr</span>
+                          {progressData ? (
+                            <>
+                              {formatCredits(displayProgress?.dc ?? 0)}
+                              <span className="text-xs font-normal text-foreground-secondary ml-1">
+                                / {formatCredits(primaryProgram.program.dcCredits)} cr
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              {formatCredits(primaryProgram.program.dcCredits)}
+                              <span className="text-xs font-normal text-foreground-secondary ml-1">cr</span>
+                            </>
+                          )}
                         </p>
                       </div>
                     </div>
