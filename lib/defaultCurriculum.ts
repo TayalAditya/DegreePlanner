@@ -765,8 +765,9 @@ const B24_GE_ME100_SEM4: DefaultCourse = { code: "ME100", name: "Reverse Enginee
 // ─── B24 MNC course constants ─────────────────────────────────────────────────
 // FDP (IC102P) is replaced by MA120 (Computing Systems & Databases) for B24 MNC.
 const B24_MNC_MA120_SEM2: DefaultCourse = { code: "MA120", name: "Introduction to Computing Systems and Databases", credits: 4, category: "DC", semester: 2 };
-// CS214 moves from Sem 3 (B23) to Sem 4 for B24 MNC.
-const B24_MNC_CS214_SEM4: DefaultCourse = { code: "CS214", name: "Computer Organization", credits: 4, category: "DC", semester: 4 };
+// B23's CS214 (4cr Computer Organization) is split for B24 MNC into CS201 theory (3cr) + CS201P lab (1cr).
+const B24_MNC_CS201_SEM4: DefaultCourse  = { code: "CS201",  name: "Computer Organization",            credits: 3, category: "DC", semester: 4 };
+const B24_MNC_CS201P_SEM4: DefaultCourse = { code: "CS201P", name: "Computer Organization Laboratory", credits: 1, category: "DC", semester: 4 };
 
 // ─── B24 EE course constants ──────────────────────────────────────────────────
 const B24_EE_EE210P_SEM3: DefaultCourse = { code: "EE210P", name: "Digital Systems Design Practicum", credits: 1, category: "DC", semester: 3 };
@@ -968,9 +969,11 @@ const applyBatchOverrides = (
       }
 
       case 4: {
-        // B24 MNC: CS304 deferred (likely Sem-5+); add CS214 (from Sem-3) and IC222P (from Sem-2).
+        // B24 MNC: CS304 deferred (likely Sem-5+); B23's CS214 is split into CS201 theory +
+        // CS201P lab (3cr + 1cr = 4cr, matches B23 CS214 total). IC222P moves from Sem-2.
         let updated = courses.filter((c) => normalizeCurriculumCode(c.code) !== "CS304");
-        updated = addCourseIfMissing(updated, B24_MNC_CS214_SEM4);
+        updated = addCourseIfMissing(updated, B24_MNC_CS201_SEM4);
+        updated = addCourseIfMissing(updated, B24_MNC_CS201P_SEM4);
         updated = addCourseIfMissing(updated, B24_IC222P_SEM4);
         return updated;
       }
