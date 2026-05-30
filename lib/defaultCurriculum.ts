@@ -762,6 +762,9 @@ const B24_GE_EE203_SEM3: DefaultCourse = { code: "EE203", name: "Network Theory"
 const B24_GE_EE260_SEM3: DefaultCourse = { code: "EE260", name: "Signals and Systems",            credits: 3, category: "DC", semester: 3 };
 const B24_GE_ME100_SEM4: DefaultCourse = { code: "ME100", name: "Reverse Engineering",            credits: 1, category: "DC", semester: 4 };
 
+// ─── B24 BSCS course constants ────────────────────────────────────────────────
+const B24_BSCS_CY200_SEM2: DefaultCourse = { code: "CY200", name: "Foundations and Applications of Chemistry", credits: 3, category: "DC", semester: 2 };
+
 // ─── B24 MNC course constants ─────────────────────────────────────────────────
 // FDP (IC102P) is replaced by MA120 (Computing Systems & Databases) for B24 MNC.
 const B24_MNC_MA120_SEM2: DefaultCourse = { code: "MA120", name: "Introduction to Computing Systems and Databases", credits: 4, category: "DC", semester: 2 };
@@ -1093,6 +1096,39 @@ const applyBatchOverrides = (
         }
         // GE-FIN: base curriculum (geFinSem4) already includes IC222P. Return as-is.
         return courses;
+      }
+
+      default:
+        return courses;
+    }
+  }
+
+  if (batch === 2024 && effectiveBranch === "BSCS") {
+    switch (semester) {
+      case 1: {
+        // B24 BSCS: IC102P (FDP) dropped — replaced credit-wise by CY200 in Sem-2.
+        // IC152, IC181 unchanged; no IC182 in Sem-2 (unlike BTech B24 branches).
+        return courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC102P");
+      }
+
+      case 2: {
+        // B24 BSCS: IC102P/IC181 (mixed) and IC222P dropped; IC222P moves to Sem-4.
+        // CY200 (Foundations and Applications of Chemistry, DC) added.
+        // IC252 stays as IC. No IC182 IKS replacement for BSCS.
+        const updated = courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return !["IC102P", "IC181", "IC222P"].includes(code);
+        });
+        return addCourseIfMissing(updated, B24_BSCS_CY200_SEM2);
+      }
+
+      case 4: {
+        // B24 BSCS: IC202P (Design Practicum) reclassified from IC → FE;
+        // IC222P (Physics Practicum) moves here from Sem-2.
+        const updated = courses.map((c) =>
+          normalizeCurriculumCode(c.code) === "IC202P" ? { ...c, category: "FE" as const } : c
+        );
+        return addCourseIfMissing(updated, B24_IC222P_SEM4);
       }
 
       default:
