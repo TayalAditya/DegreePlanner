@@ -502,7 +502,7 @@ export default function ProgramsPage() {
                         role="switch"
                         aria-checked={includeCurrentSemesterCredits}
                         onClick={() => setIncludeCurrentSemesterCredits((v) => !v)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full border border-border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+                        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
                           includeCurrentSemesterCredits ? "bg-primary" : "bg-border"
                         }`}
                       >

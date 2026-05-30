@@ -704,19 +704,19 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
   return (
     <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4 sm:mb-6">
-        <h3 className="text-lg font-semibold text-foreground">
+      <div className="flex min-w-0 flex-col gap-3 mb-4 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
+        <h3 className="min-w-0 text-lg font-semibold text-foreground sm:pr-4">
           {progress.programName} Progress
         </h3>
-        <div className="flex items-center justify-between sm:justify-end gap-4">
-          <span className="text-2xl font-bold text-primary">{totals.percentage}%</span>
-          <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-4">
+          <span className="flex-none text-2xl font-bold text-primary">{totals.percentage}%</span>
+          <div className="flex min-w-0 flex-none items-center gap-2">
             <button
               type="button"
               role="switch"
               aria-checked={includeCurrentSemesterCredits}
               onClick={() => setIncludeCurrentSemesterCredits((v) => !v)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full border border-border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
                 includeCurrentSemesterCredits ? "bg-primary" : "bg-border"
               }`}
             >
@@ -727,7 +727,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
                 }`}
               />
             </button>
-            <span className="text-xs text-foreground-secondary">Include current sem</span>
+            <span className="max-w-20 text-xs leading-tight text-foreground-secondary">Include current sem</span>
           </div>
         </div>
       </div>
