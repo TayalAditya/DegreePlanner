@@ -693,13 +693,16 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
 
                             <div className="px-3 pb-3 space-y-2">
                               {progress.groups.map((g) => {
-                                const completedCount = Math.min(
-                                  g.group.requiredCount,
-                                  g.countedCompletedCodes.length
-                                );
+                                const displayedCompletedCodes = g.group.countsTowardMinor
+                                  ? g.countedCompletedCodes
+                                  : g.completedCodes;
+                                const displayedInProgressCodes = g.group.countsTowardMinor
+                                  ? g.countedInProgressCodes
+                                  : g.inProgressCodes;
+                                const completedCount = Math.min(g.group.requiredCount, displayedCompletedCodes.length);
                                 const inProgressCount = Math.min(
                                   g.group.requiredCount - completedCount,
-                                  g.countedInProgressCodes.length
+                                  displayedInProgressCodes.length
                                 );
                                 const covered = completedCount + inProgressCount;
                                 const remaining = Math.max(0, g.group.requiredCount - covered);
