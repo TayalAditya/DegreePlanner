@@ -1,79 +1,110 @@
-// One-shot end-of-Spring-2026 transition.
+// One-shot end-of-Spring transition.
 //
 // For every user with a known batch year, mark every IN_PROGRESS enrollment with
-// semester ≤ their current Spring semester as COMPLETED ("pass" the courses they
-// were enrolled in this term). Future-sem IN_PROGRESS rows (pre-registrations
-// for Fall) are left alone.
-//
-// Current Spring sem = clamp(1..8, (2026 - batchYear) * 2)
-//   B22 → 8  (caps, stays 8 after Aug per min(8, current+1))
-//   B23 → 6  (→ 7 in Fall)
-//   B24 → 4  (→ 5 in Fall)
-//   B25 → 2  (→ 3 in Fall)
-// The displayed "current semester" auto-advances when academicCalendar enters
-// PRE_REGISTRATION (Jun 15) / FALL (Aug) — no code change needed for that.
+// semester <= their current Spring semester as COMPLETED. Future-semester
+// IN_PROGRESS rows, such as Fall pre-registrations, are left alone.
 
 import { PrismaClient, EnrollmentStatus } from "@prisma/client";
-import { inferBatchYear } from "@/lib/academicCalendar";
 
 const prisma = new PrismaClient();
-
 const NOW = new Date();
+const TRANSITION_YEAR = NOW.getFullYear();
 
-const clampSem = (s: number) => Math.min(8, Math.max(1, Math.trunc(s)));
+type BreakdownRow = {
+  batch_year: number;
+  spring_sem: number;
+  users: number;
+  due_in_progress: number;
+};
+
+type CountRow = {
+  count: number;
+};
+
+const dueEnrollmentsCte = (transitionYear: number) => prisma.$queryRaw<BreakdownRow[]>`
+  WITH user_batches AS (
+    SELECT id,
+           COALESCE(batch, 2000 + substring("enrollmentId" from '^B([0-9]{2})')::int) AS batch_year
+    FROM "User"
+  ), due AS (
+    SELECT ub.batch_year, ub.id AS user_id, ce.id AS enrollment_id
+    FROM user_batches ub
+    JOIN "CourseEnrollment" ce ON ce."userId" = ub.id
+    WHERE ub.batch_year IS NOT NULL
+      AND ce.status = ${EnrollmentStatus.IN_PROGRESS}::"EnrollmentStatus"
+      AND ce.semester <= LEAST(8, GREATEST(1, (${transitionYear} - ub.batch_year) * 2))
+  )
+  SELECT batch_year::int,
+         LEAST(8, GREATEST(1, (${transitionYear} - batch_year) * 2))::int AS spring_sem,
+         COUNT(DISTINCT user_id)::int AS users,
+         COUNT(enrollment_id)::int AS due_in_progress
+  FROM due
+  GROUP BY batch_year
+  ORDER BY batch_year
+`;
+
+async function countDue(transitionYear: number) {
+  const rows = await prisma.$queryRaw<CountRow[]>`
+    WITH user_batches AS (
+      SELECT id,
+             COALESCE(batch, 2000 + substring("enrollmentId" from '^B([0-9]{2})')::int) AS batch_year
+      FROM "User"
+    ), due AS (
+      SELECT ce.id
+      FROM user_batches ub
+      JOIN "CourseEnrollment" ce ON ce."userId" = ub.id
+      WHERE ub.batch_year IS NOT NULL
+        AND ce.status = ${EnrollmentStatus.IN_PROGRESS}::"EnrollmentStatus"
+        AND ce.semester <= LEAST(8, GREATEST(1, (${transitionYear} - ub.batch_year) * 2))
+    )
+    SELECT COUNT(*)::int AS count FROM due
+  `;
+
+  return rows[0]?.count ?? 0;
+}
 
 async function main() {
-  const users = await prisma.user.findMany({
-    select: { id: true, enrollmentId: true, batch: true, branch: true, name: true },
-  });
+  console.log(`Processing end-of-Spring transition for ${TRANSITION_YEAR}...`);
 
-  console.log(`Processing ${users.length} users (now = ${NOW.toISOString()})...`);
+  const breakdown = await dueEnrollmentsCte(TRANSITION_YEAR);
+  const before = await countDue(TRANSITION_YEAR);
 
-  const stats: Record<
-    string,
-    { users: number; updated: number; springSem: number }
-  > = {};
-  let totalUpdated = 0;
-  let skippedNoBatch = 0;
-
-  for (const u of users) {
-    const batchYear = inferBatchYear(u.batch, u.enrollmentId);
-    if (!batchYear) {
-      skippedNoBatch++;
-      continue;
+  if (breakdown.length > 0) {
+    console.log("\nDue IN_PROGRESS rows before update:");
+    for (const row of breakdown) {
+      const key = `B${String(row.batch_year).slice(-2)}`;
+      const nextSem = Math.min(8, row.spring_sem + 1);
+      console.log(
+        `  ${key}: ${row.users.toString().padStart(3)} users | sem ${row.spring_sem} -> ${nextSem} (next) | ${row.due_in_progress} enrollments`
+      );
     }
-
-    const yearsElapsed = NOW.getFullYear() - batchYear;
-    const currentSpringSem = clampSem(yearsElapsed * 2);
-
-    const result = await prisma.courseEnrollment.updateMany({
-      where: {
-        userId: u.id,
-        status: EnrollmentStatus.IN_PROGRESS,
-        semester: { lte: currentSpringSem },
-      },
-      data: { status: EnrollmentStatus.COMPLETED },
-    });
-
-    const key = `B${String(batchYear).slice(-2)}`;
-    if (!stats[key]) stats[key] = { users: 0, updated: 0, springSem: currentSpringSem };
-    stats[key].users++;
-    stats[key].updated += result.count;
-    totalUpdated += result.count;
   }
 
-  console.log("\nPer-batch breakdown:");
-  for (const k of Object.keys(stats).sort()) {
-    const s = stats[k];
-    const nextSem = Math.min(8, s.springSem + 1);
-    console.log(
-      `  ${k}: ${s.users.toString().padStart(3)} users | sem ${s.springSem} → ${nextSem} (next) | ${s.updated} enrollments COMPLETED`
-    );
-  }
-  console.log(`\nTotal IN_PROGRESS → COMPLETED: ${totalUpdated}`);
-  if (skippedNoBatch > 0) {
-    console.log(`Skipped (no batch info): ${skippedNoBatch}`);
-  }
+  const updated = await prisma.$executeRaw`
+    WITH user_batches AS (
+      SELECT id,
+             COALESCE(batch, 2000 + substring("enrollmentId" from '^B([0-9]{2})')::int) AS batch_year
+      FROM "User"
+    ), due AS (
+      SELECT ce.id
+      FROM user_batches ub
+      JOIN "CourseEnrollment" ce ON ce."userId" = ub.id
+      WHERE ub.batch_year IS NOT NULL
+        AND ce.status = ${EnrollmentStatus.IN_PROGRESS}::"EnrollmentStatus"
+        AND ce.semester <= LEAST(8, GREATEST(1, (${TRANSITION_YEAR} - ub.batch_year) * 2))
+    )
+    UPDATE "CourseEnrollment" ce
+    SET status = ${EnrollmentStatus.COMPLETED}::"EnrollmentStatus",
+        "updatedAt" = now()
+    FROM due
+    WHERE ce.id = due.id
+  `;
+
+  const after = await countDue(TRANSITION_YEAR);
+
+  console.log(`\nTotal due before: ${before}`);
+  console.log(`Updated to COMPLETED: ${updated}`);
+  console.log(`Remaining due IN_PROGRESS: ${after}`);
 }
 
 main()

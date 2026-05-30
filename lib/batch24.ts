@@ -11,7 +11,7 @@ export type Batch24Student = {
   icb1Course: string | null;
 };
 
-const B24_ALLOWED_BRANCHES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE", "GE", "MNC", "ME"]);
+const B24_ALLOWED_BRANCHES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE", "GE", "MNC", "ME", "BSCS"]);
 
 const departmentForBranch = (branch: string) => {
   switch (branch) {
@@ -28,6 +28,8 @@ const departmentForBranch = (branch: string) => {
       return "School of Civil and Environmental Engineering";
     case "MNC":
       return "School of Mathematical and Statistical Sciences";
+    case "BSCS":
+      return "School of Chemical Sciences";
     default:
       return null;
   }
@@ -45,6 +47,7 @@ const inferBranchFromProgram = (program: string) => {
   if (normalized.includes("general engineering")) return "GE";
   if (normalized.includes("mathematics and computing")) return "MNC";
   if (normalized.includes("mechanical")) return "ME";
+  if (normalized.includes("chemical sciences")) return "BSCS";
   return null;
 };
 
@@ -132,4 +135,3 @@ export const getBatch24Icb1Course = async (enrollmentId: string) => {
   const entry = await getBatch24Entry(enrollmentId);
   return entry?.icb1Course ?? null;
 };
-

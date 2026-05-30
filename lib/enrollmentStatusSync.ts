@@ -32,7 +32,7 @@ export const syncEnrollmentStatusesForUser = async (
 
   const currentSemester = state.currentSemester;
 
-  const [gradeMarkedCompleted, pastSemMarkedCompleted, currentSemReopened] = await prisma.$transaction([
+  const [gradeMarkedCompleted, pastSemMarkedCompleted] = await prisma.$transaction([
     prisma.courseEnrollment.updateMany({
       where: {
         userId,
@@ -50,19 +50,10 @@ export const syncEnrollmentStatusesForUser = async (
       },
       data: { status: EnrollmentStatus.COMPLETED },
     }),
-    prisma.courseEnrollment.updateMany({
-      where: {
-        userId,
-        status: EnrollmentStatus.COMPLETED,
-        grade: null,
-        semester: currentSemester,
-      },
-      data: { status: EnrollmentStatus.IN_PROGRESS },
-    }),
   ]);
 
   const updatedCount =
-    gradeMarkedCompleted.count + pastSemMarkedCompleted.count + currentSemReopened.count;
+    gradeMarkedCompleted.count + pastSemMarkedCompleted.count;
 
   return {
     didSync: updatedCount > 0,
@@ -71,4 +62,3 @@ export const syncEnrollmentStatusesForUser = async (
     updatedCount,
   };
 };
-

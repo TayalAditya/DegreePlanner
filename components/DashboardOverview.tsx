@@ -59,6 +59,15 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     },
   });
 
+  const { data: academicState } = useQuery({
+    queryKey: ["academic-state"],
+    queryFn: async () => {
+      const res = await fetch("/api/academic-state");
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
   const allEnrollments = enrollments || [];
   const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
@@ -100,7 +109,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       : 0;
 
   const currentSemester =
-    latestInProgressSemester > 0
+    typeof academicState?.currentSemester === "number"
+      ? academicState.currentSemester
+      : latestInProgressSemester > 0
       ? latestInProgressSemester
       : latestAnySemester > 0
         ? latestAnySemester

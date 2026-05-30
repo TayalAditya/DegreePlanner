@@ -1,7 +1,6 @@
 // IIT Mandi academic calendar:
-// - Jan–May   : Spring (even semester)
-// - Jun 1–14  : Break  (grace period, no auto-sync)
-// - Jun 15–Jul: Pre-registration (Spring marked complete, Fall pre-reg opens)
+// - Jan–May 29: Spring (even semester)
+// - May 30–Jul: Pre-registration (Spring marked complete, Fall pre-reg opens)
 // - Aug–Dec   : Fall   (odd semester)
 export type AcademicPhase = "SPRING" | "FALL" | "BREAK" | "PRE_REGISTRATION";
 
@@ -48,8 +47,8 @@ export const inferAcademicState = (batchYear: number, now: Date = new Date()): A
   const { month, year, day } = getIndiaDate(now);
   const yearsElapsed = year - batchYear;
 
-  // Jan–May: Spring semester in session
-  if (month >= 1 && month <= 5) {
+  // Jan-May 29: Spring semester in session
+  if (month >= 1 && (month < 5 || (month === 5 && day < 30))) {
     return {
       currentSemester: clampSemester(yearsElapsed * 2),
       phase: "SPRING",
@@ -57,21 +56,11 @@ export const inferAcademicState = (batchYear: number, now: Date = new Date()): A
     };
   }
 
-  // Jun 1–14: Short break window, no auto-sync (results not yet finalised)
-  if (month === 6 && day <= 14) {
-    return {
-      currentSemester: clampSemester(yearsElapsed * 2),
-      phase: "BREAK",
-      isInSession: false,
-      upcomingSemester: clampSemester(yearsElapsed * 2 + 1),
-    };
-  }
-
-  // Jun 15–Jul 31: Pre-registration for upcoming Fall semester.
+  // May 30-Jul 31: Pre-registration for upcoming Fall semester.
   // currentSemester is set to the upcoming Fall semester so that the sync
   // auto-completes all Spring (< upcoming Fall) enrollments and keeps any
   // pre-registered Fall courses as IN_PROGRESS.
-  if ((month === 6 && day >= 15) || month === 7) {
+  if ((month === 5 && day >= 30) || month === 6 || month === 7) {
     const upcomingFall = clampSemester(yearsElapsed * 2 + 1);
     return {
       currentSemester: upcomingFall,

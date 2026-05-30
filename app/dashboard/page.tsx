@@ -24,6 +24,8 @@ import { StatCard } from "@/components/StatCard";
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   const firstName = session?.user?.name?.split(" ")[0] || "there";
+  const batchYear = inferBatchYear(session?.user?.batch, session?.user?.enrollmentId);
+  const academicState = batchYear ? inferAcademicState(batchYear) : null;
 
   // Fetch stats directly from DB — no self-fetch
   let currentSemester = 1;
@@ -55,7 +57,9 @@ export default async function DashboardPage() {
       ]);
 
       const inProgress = enrollments.filter((e) => e.status === "IN_PROGRESS");
-      if (inProgress.length > 0) {
+      if (academicState?.currentSemester) {
+        currentSemester = academicState.currentSemester;
+      } else if (inProgress.length > 0) {
         currentSemester = Math.max(...inProgress.map((e) => e.semester || 0));
       } else {
         const sems = enrollments.map((e) => e.semester || 0).filter(Boolean);
@@ -81,8 +85,6 @@ export default async function DashboardPage() {
     }
   }
   
-  const batchYear = inferBatchYear(session?.user?.batch, session?.user?.enrollmentId);
-  const academicState = batchYear ? inferAcademicState(batchYear) : null;
   const enrollmentId = (session?.user?.enrollmentId || "").toUpperCase();
   // B23243 (admin) sees the pre-registration banner as a permanent preview
   // so they can verify how it looks before it goes live in mid-June.
