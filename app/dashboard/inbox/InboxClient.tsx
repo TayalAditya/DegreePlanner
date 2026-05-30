@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, ClipboardList, Loader2, RefreshCw, Trash2 } from "lucide-react";
 
+import { SupportTicketAttachments, type SupportTicketAttachment } from "@/components/SupportTicketAttachments";
 import { useToast } from "@/components/ToastProvider";
 
 type SupportTicketType = "CONTACT" | "SUGGESTION" | "ISSUE" | "FEEDBACK";
@@ -16,6 +17,7 @@ type SupportTicketAdmin = {
   pageUrl?: string | null;
   status: SupportTicketStatus;
   adminNote?: string | null;
+  attachments?: SupportTicketAttachment[];
   createdAt: string;
   updatedAt: string;
   user: {
@@ -265,6 +267,7 @@ export default function InboxClient() {
                   <div className="rounded-xl border border-border bg-background p-4">
                     <p className="text-xs font-semibold text-foreground">Message</p>
                     <p className="text-sm text-foreground-secondary mt-2 whitespace-pre-wrap">{t.message}</p>
+                    <SupportTicketAttachments attachments={t.attachments} />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

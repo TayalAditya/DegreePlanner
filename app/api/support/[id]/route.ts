@@ -44,6 +44,7 @@ export async function PATCH(
         ...(parsed.data.adminNote !== undefined && { adminNote: parsed.data.adminNote }),
       },
       include: {
+        attachments: { orderBy: { createdAt: "asc" } },
         user: { select: { name: true, email: true, enrollmentId: true } },
       },
     });

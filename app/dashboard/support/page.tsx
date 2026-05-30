@@ -2,10 +2,24 @@
 
 import type { ComponentType } from "react";
 import { useEffect, useMemo, useState } from "react";
-import { Bug, Lightbulb, Mail, MessageCircle, Send, Trash2 } from "lucide-react";
+import { Bug, ImageIcon, Lightbulb, Mail, MessageCircle, Send, Trash2, X } from "lucide-react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 
+import { SupportTicketAttachments, type SupportTicketAttachment } from "@/components/SupportTicketAttachments";
 import { useToast } from "@/components/ToastProvider";
+
+const MAX_ATTACHMENTS = 3;
+const MAX_ATTACHMENT_BYTES = 1024 * 1024;
+const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+
+type PendingAttachment = {
+  id: string;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  dataUrl: string;
+};
 
 type SupportTicket = {
   id: string;
@@ -15,6 +29,7 @@ type SupportTicket = {
   pageUrl?: string | null;
   status: "OPEN" | "IN_REVIEW" | "RESOLVED" | "CLOSED";
   adminNote?: string | null;
+  attachments?: SupportTicketAttachment[];
   createdAt: string;
   updatedAt: string;
 };
@@ -31,6 +46,23 @@ const TYPE_OPTIONS: Array<{
   { value: "FEEDBACK", label: "Feedback", description: "Share thoughts on the app", icon: MessageCircle },
 ];
 
+function readImageAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") resolve(reader.result);
+      else reject(new Error("Could not read image"));
+    };
+    reader.onerror = () => reject(reader.error || new Error("Could not read image"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function SupportPage() {
   const { showToast } = useToast();
   const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "";
@@ -43,6 +75,7 @@ export default function SupportPage() {
   const [type, setType] = useState<SupportTicket["type"]>("ISSUE");
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
+  const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
 
   const typeMeta = useMemo(() => TYPE_OPTIONS.find((t) => t.value === type), [type]);
 
@@ -90,6 +123,56 @@ export default function SupportPage() {
     }
   }, [searchParams]);
 
+  const addAttachments = async (files: FileList | null) => {
+    const selectedFiles = Array.from(files || []);
+    if (selectedFiles.length === 0) return;
+
+    const remainingSlots = MAX_ATTACHMENTS - attachments.length;
+    if (remainingSlots <= 0) {
+      showToast("warning", `You can attach up to ${MAX_ATTACHMENTS} images`);
+      return;
+    }
+
+    const acceptedFiles = selectedFiles.slice(0, remainingSlots);
+    if (selectedFiles.length > remainingSlots) {
+      showToast("warning", `Only ${remainingSlots} more image${remainingSlots === 1 ? "" : "s"} can be added`);
+    }
+
+    const nextAttachments: PendingAttachment[] = [];
+
+    for (const file of acceptedFiles) {
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        showToast("warning", `${file.name} is not a supported image type`);
+        continue;
+      }
+
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        showToast("warning", `${file.name} is larger than 1 MB`);
+        continue;
+      }
+
+      try {
+        const dataUrl = await readImageAsDataUrl(file);
+        nextAttachments.push({
+          id:
+            typeof crypto !== "undefined" && "randomUUID" in crypto
+              ? crypto.randomUUID()
+              : `${Date.now()}-${Math.random()}`,
+          fileName: file.name || "image",
+          mimeType: file.type,
+          fileSize: file.size,
+          dataUrl,
+        });
+      } catch {
+        showToast("error", `Could not read ${file.name}`);
+      }
+    }
+
+    if (nextAttachments.length > 0) {
+      setAttachments((current) => [...current, ...nextAttachments]);
+    }
+  };
+
   const submit = async () => {
     const trimmedSubject = subject.trim();
     const trimmedMessage = message.trim();
@@ -113,6 +196,12 @@ export default function SupportPage() {
           subject: trimmedSubject,
           message: trimmedMessage,
           pageUrl: typeof window !== "undefined" ? window.location.pathname : undefined,
+          attachments: attachments.map(({ fileName, mimeType, fileSize, dataUrl }) => ({
+            fileName,
+            mimeType,
+            fileSize,
+            dataUrl,
+          })),
         }),
       });
 
@@ -125,6 +214,7 @@ export default function SupportPage() {
       showToast("success", "Sent! We’ll review it soon.");
       setSubject("");
       setMessage("");
+      setAttachments([]);
       await loadTickets();
     } catch (error) {
       console.error(error);
@@ -204,6 +294,68 @@ export default function SupportPage() {
               />
             </div>
 
+            <div>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <label className="block text-sm font-medium text-foreground">Images</label>
+                <span className="text-xs text-foreground-secondary">Optional</span>
+              </div>
+              <label
+                className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-3 text-sm transition-colors ${
+                  attachments.length >= MAX_ATTACHMENTS
+                    ? "border-border bg-background-secondary text-foreground-secondary cursor-not-allowed"
+                    : "border-border bg-background text-foreground-secondary hover:border-primary/50 hover:text-foreground"
+                }`}
+              >
+                <ImageIcon className="w-4 h-4" />
+                <span>Attach screenshots</span>
+                <input
+                  type="file"
+                  accept={ALLOWED_IMAGE_TYPES.join(",")}
+                  multiple
+                  disabled={attachments.length >= MAX_ATTACHMENTS}
+                  onChange={(e) => {
+                    addAttachments(e.target.files);
+                    e.currentTarget.value = "";
+                  }}
+                  className="sr-only"
+                />
+              </label>
+              <p className="mt-1 text-xs text-foreground-secondary">
+                {attachments.length}/{MAX_ATTACHMENTS} images • PNG, JPG, WebP, GIF • max 1 MB each
+              </p>
+
+              {attachments.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {attachments.map((attachment) => (
+                    <div key={attachment.id} className="relative overflow-hidden rounded-lg border border-border bg-background">
+                      <div className="relative aspect-video bg-background-secondary">
+                        <Image
+                          src={attachment.dataUrl}
+                          alt={attachment.fileName}
+                          fill
+                          sizes="(max-width: 640px) 50vw, 240px"
+                          unoptimized
+                          className="object-cover"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAttachments((current) => current.filter((item) => item.id !== attachment.id))}
+                        className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white hover:bg-black"
+                        title="Remove image"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      <div className="px-2 py-1.5">
+                        <p className="truncate text-[11px] font-semibold text-foreground">{attachment.fileName}</p>
+                        <p className="text-[10px] text-foreground-secondary">{formatFileSize(attachment.fileSize)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button
               type="button"
               onClick={submit}
@@ -261,6 +413,7 @@ export default function SupportPage() {
                     )}
                   </div>
                   <p className="text-sm text-foreground mt-3 whitespace-pre-wrap">{t.message}</p>
+                  <SupportTicketAttachments attachments={t.attachments} />
                   {t.adminNote && (
                     <div className="mt-3 rounded-lg border border-border bg-surface p-3">
                       <p className="text-xs font-semibold text-foreground">Admin note</p>

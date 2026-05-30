@@ -507,11 +507,26 @@ model SupportTicket {
   updatedAt   DateTime            @updatedAt
 
   user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments SupportTicketAttachment[]
 
   @@index([userId])
   @@index([type])
   @@index([status])
   @@index([createdAt])
+}
+
+model SupportTicketAttachment {
+  id        String        @id @default(cuid())
+  ticketId  String
+  fileName  String
+  mimeType  String
+  fileSize  Int
+  dataUrl   String        @db.Text
+  createdAt DateTime      @default(now())
+
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
 }
 
 enum SupportTicketType {
