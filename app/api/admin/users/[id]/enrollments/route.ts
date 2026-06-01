@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
+import { inferBatchYear } from "@/lib/academicCalendar";
 import { CourseType, EnrollmentStatus, Term } from "@prisma/client";
 
 // Odd semesters start in fall, even in spring
@@ -11,18 +12,11 @@ function termFromSemester(sem: number): Term {
   return sem % 2 === 1 ? Term.FALL : Term.SPRING;
 }
 
-// Infer academic year from semester and current date
-function yearFromSemester(sem: number): number {
-  const now = new Date();
-  const month = now.getMonth(); // 0-indexed
-  // Fall term starts ~Aug; spring term starts ~Jan
-  if (sem % 2 === 1) {
-    // Fall: if we're past July, it's this year; otherwise last year
-    return month >= 7 ? now.getFullYear() : now.getFullYear() - 1;
-  } else {
-    // Spring: always current year
-    return now.getFullYear();
-  }
+// Academic year from the student's batch + semester, matching the bulk/dashboard
+// paths: Fall (odd) opens the academic year, Spring (even) is the next calendar
+// year → year = batchYear + floor(semester / 2).
+function yearFromSemester(sem: number, batchYear: number): number {
+  return batchYear + Math.floor(sem / 2);
 }
 
 export async function POST(
@@ -44,7 +38,6 @@ export async function POST(
 
   const semNum = Number(semester);
   const term = termFromSemester(semNum);
-  const year = yearFromSemester(semNum);
 
   const course = await prisma.course.findFirst({
     where: { code: { equals: courseCode.trim(), mode: "insensitive" } },
@@ -59,6 +52,8 @@ export async function POST(
     where: { id: userId },
     select: {
       branch: true,
+      batch: true,
+      enrollmentId: true,
       programs: { where: { isPrimary: true }, select: { programId: true } },
     },
   });
@@ -66,6 +61,15 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
+
+  const batchYear = inferBatchYear(user.batch, user.enrollmentId);
+  if (!batchYear) {
+    return NextResponse.json(
+      { error: "Cannot determine the student's batch year; set their batch or enrollment ID first" },
+      { status: 400 }
+    );
+  }
+  const year = yearFromSemester(semNum, batchYear);
 
   const existing = await prisma.courseEnrollment.findUnique({
     where: { userId_courseId_semester_year_term: { userId, courseId: course.id, semester: semNum, year, term } },

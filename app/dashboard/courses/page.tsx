@@ -569,11 +569,12 @@ export default function CoursesPage() {
       const semNum = parseInt(semester);
       const batchYear = inferBatchYear();
       const term = semNum % 2 === 1 ? "FALL" : "SPRING";
-      
-      // Calculate year based on semester
-      // Sem 1-2: batch year, Sem 3-4: batch year + 1, Sem 5-6: batch year + 2, etc.
-      const yearOffset = Math.floor((semNum - 1) / 2);
-      const courseYear = batchYear + yearOffset;
+
+      // Calculate year based on semester.
+      // Fall (odd) opens the academic year, Spring (even) is the next calendar year:
+      // Sem 1 = batchYear (FALL), Sem 2 = batchYear+1 (SPRING), Sem 3 = batchYear+1 (FALL),
+      // Sem 4 = batchYear+2 (SPRING), ... → year = batchYear + floor(semester / 2).
+      const courseYear = batchYear + Math.floor(semNum / 2);
       
       // Determine final course type
       let finalCourseType = courseType;

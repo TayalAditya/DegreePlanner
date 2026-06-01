@@ -240,10 +240,12 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Determine correct academic year from batch + semester number
-        // Sem 1 = FALL batchYear, Sem 2 = SPRING batchYear+1, Sem 3 = FALL batchYear+1 ...
+        // Determine correct academic year from batch + semester number.
+        // Fall (odd) opens the academic year, Spring (even) is the next calendar year:
+        //   Sem 1 = FALL batchYear, Sem 2 = SPRING batchYear+1, Sem 3 = FALL batchYear+1,
+        //   Sem 4 = SPRING batchYear+2, ... → year = batchYear + floor(semester / 2).
         const batchYear = inferBatchYear(user.batch, user.enrollmentId);
-        const semYear = batchYear + Math.floor((semester - 1) / 2);
+        const semYear = batchYear + Math.floor(semester / 2);
         const term = semester % 2 === 1 ? "FALL" : "SPRING";
 
         // Past semesters are COMPLETED; current sem depends on whether grade given

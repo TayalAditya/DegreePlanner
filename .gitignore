@@ -76,3 +76,6 @@ public/data/*.xlsx
 public/data/*.csv
 .claude/
 report/
+
+# Migration backups (production data dumps - keep locally for rollback, never commit)
+scripts/backups/
