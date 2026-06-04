@@ -148,6 +148,45 @@ const dseSem8: DefaultCourse[] = [
   ...mtpSem8,
 ];
 
+// ─── DSAI (B25+) – standalone curriculum, diverges significantly from DSE ─────
+// DC = 31 cr. Key differences from DSE:
+//   DS313 + DS412 → Sem 3 (DSE has them in Sem 4); DS301/DS201/DS404 dropped;
+//   DS411 renamed "Optimization for ML"; CS305→CS362; DS413 renamed "Fundamentals of ML";
+//   DS417 (Deep Learning) + DS418 (Gen AI) new in Sem 6.
+//   ISTP (DP301P) remains as an ISTP basket entry (optional, not a required DC).
+//   Sem 1-2 IC course differences handled in applyBatchOverrides (batch 2025, DSAI).
+const dsaiSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
+const dsaiSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
+const dsaiSem3: DefaultCourse[] = [
+  ...icSem3WithoutIC202P,
+  { code: "CS213", name: "Reverse Engineering",                  credits: 1, category: "DC", semester: 3 },
+  { code: "DS313", name: "Probability Theory and Statistics",    credits: 4, category: "DC", semester: 3 },
+  { code: "DS412", name: "Matrix Computations for Data Science", credits: 4, category: "DC", semester: 3 },
+];
+const dsaiSem4: DefaultCourse[] = [
+  { code: "IC202P", name: "Design Practicum",                      credits: 3, category: "IC", semester: 4 },
+  { code: "DS411",  name: "Optimization for Machine Learning",     credits: 4, category: "DC", semester: 4 },
+  { code: "DS302",  name: "Computing Systems for Data Processing", credits: 3, category: "DC", semester: 4 },
+];
+const dsaiSem5: DefaultCourse[] = [
+  { code: "DS413", name: "Fundamentals of Machine Learning", credits: 4, category: "DC", semester: 5 },
+  { code: "CS305", name: "Artificial Intelligence",          credits: 3, category: "DC", semester: 5 },
+];
+const dsaiSem6: DefaultCourse[] = [
+  { code: "DS417", name: "Deep Learning",                 credits: 4, category: "DC", semester: 6 },
+  { code: "DS418", name: "Introduction to Generative AI", credits: 4, category: "DC", semester: 6 },
+  // ISTP is an optional basket for DSAI B25 — skipping it adds +4 FE credits instead.
+  { code: "DP 301P", name: "Interdisciplinary Socio-Technical Practicum", credits: 4, category: "ISTP", semester: 6, optional: true },
+];
+const dsaiSem7: DefaultCourse[] = [
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 7 },
+  ...mtpSem7,
+];
+const dsaiSem8: DefaultCourse[] = [
+  { code: "DS010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
+
 // ─── EE  (DC = 52 cr | both IC baskets: free choice) ─────────────────────────
 const eeSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
 const eeSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
@@ -612,14 +651,11 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   DSE_4: dseSem4, DSE_5: dseSem5, DSE_6: dseSem6,
   DSE_7: dseSem7, DSE_8: dseSem8,
 
-  // DSAI (B25+) — first-class branch that currently shares DSE's discipline
-  // curriculum. These reference the same arrays as DSE_* (NOT copies), so DSE
-  // edits propagate automatically. When DSAI diverges (e.g. the known B25 Sem-3
-  // swap), point only the affected semester at its own array — the rest stay
-  // shared.
-  DSAI_1: dseSem1, DSAI_2: dseSem2, DSAI_3: dseSem3,
-  DSAI_4: dseSem4, DSAI_5: dseSem5, DSAI_6: dseSem6,
-  DSAI_7: dseSem7, DSAI_8: dseSem8,
+  // DSAI (B25+) — standalone curriculum, fully diverged from DSE.
+  // Uses dedicated dsaiSem* arrays; see the DSAI section above for the full diff.
+  DSAI_1: dsaiSem1, DSAI_2: dsaiSem2, DSAI_3: dsaiSem3,
+  DSAI_4: dsaiSem4, DSAI_5: dsaiSem5, DSAI_6: dsaiSem6,
+  DSAI_7: dsaiSem7, DSAI_8: dsaiSem8,
 
   // EE
   EE_1: eeSem1, EE_2: eeSem2, EE_3: eeSem3,
@@ -771,6 +807,12 @@ const B24_MNC_MA120_SEM2: DefaultCourse = { code: "MA120", name: "Introduction t
 // B23's CS214 (4cr Computer Organization) is split for B24 MNC into CS201 theory (3cr) + CS201P lab (1cr).
 const B24_MNC_CS201_SEM4: DefaultCourse  = { code: "CS201",  name: "Computer Organization",            credits: 3, category: "DC", semester: 4 };
 const B24_MNC_CS201P_SEM4: DefaultCourse = { code: "CS201P", name: "Computer Organization Laboratory", credits: 1, category: "DC", semester: 4 };
+
+// ─── DSAI B25 constants ───────────────────────────────────────────────────────
+// IC221P is the Physics Practicum code for DSAI B25 (3cr, different from IC222P 2cr used by other branches).
+const DSAI_B25_IC221P_SEM2: DefaultCourse = { code: "IC221P", name: "Physics Practicum",                 credits: 3, category: "IC", semester: 2 };
+// IC253 counts as IC for DSAI B25 in Sem 2 (Programming and Data Structures moved from Sem 4).
+const DSAI_B25_IC253_SEM2: DefaultCourse  = { code: "IC253",  name: "Programming and Data Structures",  credits: 3, category: "IC", semester: 2 };
 
 // ─── B24 EE course constants ──────────────────────────────────────────────────
 const B24_EE_EE210P_SEM3: DefaultCourse = { code: "EE210P", name: "Digital Systems Design Practicum", credits: 1, category: "DC", semester: 3 };
@@ -1136,6 +1178,34 @@ const applyBatchOverrides = (
     }
   }
 
+  // ── DSAI B25: handled before the generic B25 block so it returns early ──────
+  if (batch === 2025 && effectiveBranch === "DSAI") {
+    switch (semester) {
+      case 1: {
+        // DSAI B25 Sem 1: IC113 stays here (unlike general B25 which swaps IC113↔IC114).
+        // IC181 (old IKS) removed; IC182 (History of Science & Technology) added.
+        // IC102P stays — half the batch does FDP here, half does IKS (they swap in Sem 2).
+        let updated = courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC181");
+        return addCourseIfMissing(updated, B25_IKS_IC182_SEM1);
+      }
+      case 2: {
+        // DSAI B25 Sem 2: IC114 stays here (not in Sem 1 like general B25).
+        // IC222P replaced by IC221P (3cr); IC140 and IKS variants not in Sem 2;
+        // IC253 (Programming & Data Structures) classified as IC for DSAI.
+        let updated = courses.filter((c) => {
+          const code = normalizeCurriculumCode(c.code);
+          return !["IC140", "IC181", "IC182", "IC222P"].includes(code);
+        });
+        updated = addCourseIfMissing(updated, DSAI_B25_IC221P_SEM2);
+        updated = addCourseIfMissing(updated, DSAI_B25_IC253_SEM2);
+        return updated;
+      }
+      default:
+        // Sems 3-8 are correct in the dedicated dsaiSem* arrays; no further overrides needed.
+        return courses;
+    }
+  }
+
   if (batch === 2025) {
     const basketBranch = normalizeBranchForIcBasket(effectiveBranch);
     const branchCompulsion = IC_BASKET_COMPULSIONS[basketBranch] || {};
@@ -1181,7 +1251,127 @@ const applyBatchOverrides = (
           });
         }
 
+        // B25 inherits B24 DC additions in Sem 2 (DC courses only, no IC changes).
+        if (effectiveBranch === "MNC") {
+          updated = addCourseIfMissing(updated, B24_MNC_MA120_SEM2);
+        }
+        if (effectiveBranch === "BSCS") {
+          updated = addCourseIfMissing(updated, B24_BSCS_CY200_SEM2);
+        }
+
         return updated;
+      }
+
+      case 3: {
+        // B25 inherits B24's DC restructuring in Sem 3 (IC course moves excluded).
+        let updated = courses;
+        if (effectiveBranch === "EE") {
+          // EE210 4cr → 3cr + EE210P 1cr lab; EE261 5cr → 3cr + EE261P 2cr lab.
+          updated = updated.map((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return code === "EE210" || code === "EE261" ? { ...c, credits: 3 } : c;
+          });
+          updated = addCourseIfMissing(updated, B24_EE_EE210P_SEM3);
+          updated = addCourseIfMissing(updated, B24_EE_EE261P_SEM3);
+        }
+        if (effectiveBranch === "MNC") {
+          // CS214 (Computer Organization) deferred to Sem 4 where it's split into CS201+CS201P.
+          updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "CS214");
+        }
+        if (effectiveBranch === "CE") {
+          // CE301/CE301P/CE354P renumbered to CE310/CE310P/CE203P; CE202 moved to Sem 2.
+          updated = updated.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return !["CE202", "CE301", "CE301P", "CE354P"].includes(code);
+          });
+          updated = updated.map((c) =>
+            normalizeCurriculumCode(c.code) === "CE203" ? { ...c, name: "Civil Engineering Materials" } : c
+          );
+          updated = addCourseIfMissing(updated, B24_CE_CE310_SEM3);
+          updated = addCourseIfMissing(updated, B24_CE_CE310P_SEM3);
+          updated = addCourseIfMissing(updated, B24_CE_CE203P_SEM3);
+        }
+        if (effectiveBranch === "ME") {
+          // ME100/ME205/ME308/ME310 move to Sem 4/5; ME206 added here.
+          updated = updated.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return !["ME100", "ME205", "ME308", "ME310"].includes(code);
+          });
+          updated = addCourseIfMissing(updated, B24_ME_ME206_SEM3);
+        }
+        if (effectiveBranch === "GE-ROBO") {
+          // IC241 (Material Science) replaced by ME206 (Mechanics of Solids).
+          updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "IC241");
+          updated = addCourseIfMissing(updated, B24_GE_ME206_SEM3);
+        }
+        if (effectiveBranch === "GE-MECH") {
+          updated = addCourseIfMissing(updated, B24_GE_ME206_SEM3);
+          updated = addCourseIfMissing(updated, B24_GE_EE203_SEM3);
+          updated = addCourseIfMissing(updated, B24_GE_EE260_SEM3);
+        }
+        return updated;
+      }
+
+      case 4: {
+        // B25 inherits B24's DC restructuring in Sem 4 (IC202P and IC222P moves excluded).
+        let updated = courses;
+        if (effectiveBranch === "DSE") {
+          // DS404 (Information Security) removed from DSE Sem 4 (same as B24).
+          updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "DS404");
+        }
+        if (effectiveBranch === "EE") {
+          // EE202 → EE205 (Electromagnetics and Wave Propagation); EE304 → EE316.
+          updated = updated.map((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            if (code === "EE202") return { ...c, code: "EE205", name: "Electromagnetics and Wave Propagation" };
+            if (code === "EE304") return { ...c, code: "EE316" };
+            return c;
+          });
+        }
+        if (effectiveBranch === "EP") {
+          // Reverse Engineering placeholder EPXXX → EP201.
+          updated = updated.map((c) =>
+            normalizeCurriculumCode(c.code) === "EPXXX" ? { ...c, code: "EP201" } : c
+          );
+        }
+        if (effectiveBranch === "CE") {
+          // CE302/CE302P renumbered to CE311/CE311P.
+          updated = updated.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return code !== "CE302" && code !== "CE302P";
+          });
+          updated = addCourseIfMissing(updated, B24_CE_CE311_SEM4);
+          updated = addCourseIfMissing(updated, B24_CE_CE311P_SEM4);
+        }
+        if (effectiveBranch === "MNC") {
+          // CS304 deferred; CS214 split into CS201 (3cr theory) + CS201P (1cr lab).
+          updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "CS304");
+          updated = addCourseIfMissing(updated, B24_MNC_CS201_SEM4);
+          updated = addCourseIfMissing(updated, B24_MNC_CS201P_SEM4);
+        }
+        if (effectiveBranch === "ME") {
+          // ME206 moved to Sem 3; ME309 moved to Sem 5; ME100/ME205/ME215 added.
+          updated = updated.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return !["ME206", "ME309"].includes(code);
+          });
+          updated = addCourseIfMissing(updated, B24_ME_ME100_SEM4);
+          updated = addCourseIfMissing(updated, B24_ME_ME205_SEM4);
+          updated = addCourseIfMissing(updated, B24_ME_ME215_SEM4);
+        }
+        if (effectiveBranch === "GE-ROBO") {
+          updated = addCourseIfMissing(updated, B24_GE_ME100_SEM4);
+        }
+        return updated;
+      }
+
+      case 5: {
+        // B25 ME inherits ME310 (System Dynamics) and ME309 (Theory of Machines) pushed from Sem 3/4.
+        if (effectiveBranch === "ME") {
+          const withSysDyn = addCourseIfMissing(courses, B24_ME_ME310_SEM5);
+          return addCourseIfMissing(withSysDyn, B24_ME_ME309_SEM5);
+        }
+        return courses;
       }
 
       default:

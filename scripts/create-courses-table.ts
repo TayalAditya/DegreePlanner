@@ -112,11 +112,15 @@ const courses: CourseMapping[] = [
   { code: 'DS201', name: 'Data Handling and Vizualisation', credits: 3, branches: { 'DSE': 'DC', 'GE': 'DC' } },
   { code: 'DS411', name: 'Optimization for Data Science', credits: 4, branches: { 'DSE': 'DC' } },
   { code: 'DS301', name: 'Mathematical Foundations of Data Science', credits: 4, branches: { 'DSE': 'DC' } },
-  { code: 'DS302', name: 'Computing Systems for Data Processing', credits: 3, branches: { 'DSE': 'DC' } },
-  { code: 'DS412', name: 'Matrix Computations for Data Science', credits: 4, branches: { 'DSE': 'DC' } },
-  { code: 'DS313', name: 'Statistical Foundations of Data Science', credits: 4, branches: { 'DSE': 'DC' } },
-  { code: 'DS413', name: 'Introduction to Statistical Learning', credits: 4, branches: { 'DSE': 'DC' } },
+  { code: 'DS302', name: 'Computing Systems for Data Processing', credits: 3, branches: { 'DSE': 'DC', 'DSAI': 'DC' } },
+  { code: 'DS412', name: 'Matrix Computations for Data Science', credits: 4, branches: { 'DSE': 'DC', 'DSAI': 'DC' } },
+  { code: 'DS313', name: 'Statistical Foundations of Data Science', credits: 4, branches: { 'DSE': 'DC', 'DSAI': 'DC' } },
+  { code: 'DS413', name: 'Introduction to Statistical Learning', credits: 4, branches: { 'DSE': 'DC', 'DSAI': 'DC' } },
   { code: 'DS404', name: 'Information Security and Privacy', credits: 3, branches: { 'DSE': 'DC', 'GE-COMM': 'DC' } },
+  // DSAI B25-only courses
+  { code: 'DS417', name: 'Deep Learning', credits: 4, branches: { 'DSAI': 'DC' } },
+  { code: 'DS418', name: 'Introduction to Generative AI', credits: 4, branches: { 'DSAI': 'DC' } },
+  // CS305 (Artificial Intelligence) already exists; just maps to DSAI:DC via CourseBranchMapping.
 
   // Electrical Engineering - Discipline Core
   { code: 'EE261', name: 'Electrical Systems Around Us', credits: 5, branches: { 'EE': 'DC', 'GE': 'DC', 'GE-COMM': 'DC', 'GE-MECH': 'DC' } },

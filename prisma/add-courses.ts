@@ -72,7 +72,7 @@ async function main() {
 
     // Map as DE for CSE branch
     await prisma.courseBranchMapping.upsert({
-      where: { courseId_branch: { courseId: course.id, branch: "CSE" } },
+      where: { courseId_branch_batch: { courseId: course.id, branch: "CSE", batch: "" } },
       update: {},
       create: {
         courseId: course.id,
@@ -146,7 +146,7 @@ async function main() {
     });
 
     await prisma.courseBranchMapping.upsert({
-      where: { courseId_branch: { courseId: course.id, branch: "DSE" } },
+      where: { courseId_branch_batch: { courseId: course.id, branch: "DSE", batch: "" } },
       update: { courseCategory: CourseCategoryType.DE, isRequired: false },
       create: {
         courseId: course.id,
@@ -185,7 +185,7 @@ async function main() {
     });
 
     await prisma.courseBranchMapping.upsert({
-      where: { courseId_branch: { courseId: course.id, branch: "CSE" } },
+      where: { courseId_branch_batch: { courseId: course.id, branch: "CSE", batch: "" } },
       update: {},
       create: {
         courseId: course.id,
@@ -217,7 +217,7 @@ async function main() {
   });
 
   await prisma.courseBranchMapping.upsert({
-    where: { courseId_branch: { courseId: innovationSprint.id, branch: "CSE" } },
+    where: { courseId_branch_batch: { courseId: innovationSprint.id, branch: "CSE", batch: "" } },
     update: {},
     create: {
       courseId: innovationSprint.id,
@@ -246,7 +246,7 @@ async function main() {
   });
 
   await prisma.courseBranchMapping.upsert({
-    where: { courseId_branch: { courseId: in2406.id, branch: "CSE" } },
+    where: { courseId_branch_batch: { courseId: in2406.id, branch: "CSE", batch: "" } },
     update: { splitCategory: CourseCategoryType.FE, splitAmount: 1 },
     create: {
       courseId: in2406.id,
@@ -295,7 +295,7 @@ async function main() {
     });
 
     await prisma.courseBranchMapping.upsert({
-      where: { courseId_branch: { courseId: course.id, branch: "MSE" } },
+      where: { courseId_branch_batch: { courseId: course.id, branch: "MSE", batch: "" } },
       update: { courseCategory: c.category, isRequired: false },
       create: {
         courseId: course.id,
@@ -306,6 +306,55 @@ async function main() {
     });
 
     console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → MSE:${c.category}`);
+  }
+
+  // ─── DSAI B25 new courses ─────────────────────────────────────────────────
+  // CS305 (Artificial Intelligence) already in DB — only DS417/DS418 are new.
+  const dsaiB25Courses = [
+    { code: "DS417", name: "Deep Learning",                 credits: 4 },
+    { code: "DS418", name: "Introduction to Generative AI", credits: 4 },
+  ];
+
+  for (const c of dsaiB25Courses) {
+    const course = await prisma.course.upsert({
+      where: { code: c.code },
+      update: { name: c.name, credits: c.credits },
+      create: {
+        code: c.code,
+        name: c.name,
+        credits: c.credits,
+        department: "School of Computing & Electrical Engineering",
+        level: parseInt(c.code.replace(/\D/g, "").slice(0, 3)) || 400,
+        offeredInFall: true,
+        offeredInSpring: true,
+        isActive: true,
+      },
+    });
+
+    await prisma.courseBranchMapping.upsert({
+      where: { courseId_branch_batch: { courseId: course.id, branch: "DSAI", batch: "" } },
+      update: { courseCategory: CourseCategoryType.DC },
+      create: {
+        courseId: course.id,
+        branch: "DSAI",
+        batch: "",
+        courseCategory: CourseCategoryType.DC,
+        isRequired: true,
+      },
+    });
+
+    console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → DSAI:DC`);
+  }
+
+  // CS305 already exists — just ensure DSAI:DC mapping is present.
+  const cs305 = await prisma.course.findUnique({ where: { code: "CS305" } });
+  if (cs305) {
+    await prisma.courseBranchMapping.upsert({
+      where: { courseId_branch_batch: { courseId: cs305.id, branch: "DSAI", batch: "" } },
+      update: { courseCategory: CourseCategoryType.DC },
+      create: { courseId: cs305.id, branch: "DSAI", batch: "", courseCategory: CourseCategoryType.DC, isRequired: true },
+    });
+    console.log("✓ CS305 Artificial Intelligence → DSAI:DC");
   }
 
   console.log("\nDone!");
