@@ -159,6 +159,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    // ── Pre-registration gate ─────────────────────────────────────────────────
+    // Sem 3 (B25), Sem 5 (B24), Sem 7 (B23) open for registration on July 15 2026.
+    const PRE_REG_OPEN = new Date("2026-07-15T00:00:00+05:30");
+    const isPreRegLocked = new Date() < PRE_REG_OPEN;
+    if (isPreRegLocked && term === "FALL" && year === 2026) {
+      const batch = session.user.batch;
+      const lockedSem =
+        batch === 2025 ? 3 : batch === 2024 ? 5 : batch === 2023 ? 7 : null;
+      if (lockedSem !== null && Number(semester) === lockedSem) {
+        return NextResponse.json(
+          {
+            error: `Semester ${lockedSem} registration opens on 15 July 2026. Pre-registration will be available from that date.`,
+          },
+          { status: 403 }
+        );
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     // If no programId provided, use user's primary program (or auto-enroll based on branch)
     let finalProgramId = programId || user.programs[0]?.programId || null;
 
