@@ -194,7 +194,8 @@ model Course {
   timetableEntries TimetableEntry[]
   branchMappings  CourseBranchMapping[]
   courseSuggestions CourseSuggestion[]
-  
+  offerings        CourseOffering[]
+
   @@index([code])
   @@index([department])
 }
@@ -606,6 +607,34 @@ model Notification {
 
   @@index([userId, isRead])
   @@index([userId, createdAt])
+}
+
+// Pre-registration course offerings (admin uploads per semester)
+model CourseOffering {
+  id               String              @id @default(cuid())
+  courseId         String?             // null if course not yet in catalog
+  courseCode       String
+  courseName       String
+  instructor       String?
+  school           String?             // e.g. "SCEE", "SMSS" — used for FE grouping
+  branches         String[]            // ["CSE","EE"] or ["ALL"]
+  eligibleSems     Int[]               // [5, 7] — which student sems can take it
+  slots            String?             // "A1+TA1"
+  ltpc             String?             // "3-1-0-4"
+  credits          Float
+  categoryOverride CourseCategoryType? // fallback if no branchMapping / standalone course
+  curriculumLink   String?
+  offeringSemester Int                 // 7
+  offeringYear     Int                 // 2026
+  isActive         Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  course           Course?             @relation(fields: [courseId], references: [id])
+
+  @@unique([courseCode, offeringSemester, offeringYear])
+  @@index([offeringSemester, offeringYear])
+  @@index([courseId])
 }
 
 // Login attempt log — tracks every Google OAuth attempt (approved or rejected)

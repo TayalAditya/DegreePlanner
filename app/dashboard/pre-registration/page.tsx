@@ -1,0 +1,574 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight } from "lucide-react";
+import { useToast } from "@/components/ToastProvider";
+import { formatCredits } from "@/lib/utils";
+
+interface Offering {
+  id: string;
+  courseId: string | null;
+  courseCode: string;
+  courseName: string;
+  instructor: string | null;
+  school: string | null;
+  slots: string | null;
+  ltpc: string | null;
+  credits: number;
+  curriculumLink: string | null;
+  resolvedCategory: string;
+  isCompulsory: boolean;
+  completedInSemester: number | null;
+  alreadyAdded: boolean;
+}
+
+interface ApiResponse {
+  offeringSemester: number;
+  offeringYear: number;
+  term: string;
+  creditLimit: number;
+  registrationOpensAt: string | null;
+  offerings: Offering[];
+}
+
+const CATEGORY_LABEL: Record<string, string> = {
+  IC: "IC", IC_BASKET: "IC", DC: "DC", DE: "DE",
+  HSS: "HSS", IKS: "IKS", FE: "FE", MTP: "MTP", ISTP: "ISTP",
+};
+
+const CATEGORY_COLOR: Record<string, string> = {
+  DC: "bg-primary/10 text-primary border-primary/20",
+  IC: "bg-info/10 text-info border-info/20",
+  IC_BASKET: "bg-info/10 text-info border-info/20",
+  DE: "bg-secondary/10 text-secondary border-secondary/20",
+  HSS: "bg-warning/10 text-warning border-warning/20",
+  IKS: "bg-warning/10 text-warning border-warning/20",
+  FE: "bg-success/10 text-success border-success/20",
+  MTP: "bg-error/10 text-error border-error/20",
+  ISTP: "bg-accent/10 text-accent border-accent/20",
+};
+
+// Parse slot string into individual tokens e.g. "A1+TA1" → ["A1","TA1"]
+function parseSlots(slots: string | null): string[] {
+  if (!slots) return [];
+  return slots.split("+").map((s) => s.trim()).filter(Boolean);
+}
+
+function slotsClash(a: string | null, b: string | null): boolean {
+  const sa = new Set(parseSlots(a));
+  return parseSlots(b).some((t) => sa.has(t));
+}
+
+function CourseCard({
+  offering, checked, disabled, onToggle, clashWith, isCompulsory,
+}: {
+  offering: Offering;
+  checked: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+  clashWith?: string;
+  isCompulsory?: boolean;
+}) {
+  const isCompleted = offering.completedInSemester !== null;
+  const catColor = CATEGORY_COLOR[offering.resolvedCategory] ?? "bg-surface-secondary text-foreground-secondary";
+  const catLabel = CATEGORY_LABEL[offering.resolvedCategory] ?? offering.resolvedCategory;
+
+  return (
+    <label
+      className={`flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer
+        ${isCompleted ? "opacity-50 cursor-default" : ""}
+        ${clashWith ? "border-error/30 bg-error/5" : checked ? "border-primary/30 bg-primary/5" : "border-border bg-surface hover:border-border-hover"}
+      `}
+      onClick={isCompleted ? undefined : onToggle}
+    >
+      {/* Checkbox */}
+      <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors
+        ${isCompleted || disabled ? "border-border bg-background-secondary cursor-not-allowed" :
+          checked ? "border-primary bg-primary" : "border-border bg-background"}`}
+      >
+        {(checked || isCompulsory) && (
+          <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+            <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        )}
+        {clashWith && !checked && <Lock className="w-2.5 h-2.5 text-error" />}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`font-mono text-xs font-semibold text-foreground-secondary ${isCompleted ? "line-through" : ""}`}>
+            {offering.courseCode}
+          </span>
+          <span className={`px-1.5 py-0.5 text-xs font-medium rounded border ${catColor}`}>{catLabel}</span>
+          {isCompleted && (
+            <span className="px-1.5 py-0.5 text-xs rounded bg-success/10 text-success border border-success/20 flex items-center gap-1">
+              <CheckCircle className="w-3 h-3" />
+              Sem {offering.completedInSemester}
+            </span>
+          )}
+          {offering.alreadyAdded && !isCompleted && (
+            <span className="px-1.5 py-0.5 text-xs rounded bg-info/10 text-info border border-info/20">In Plan</span>
+          )}
+        </div>
+
+        <p className={`mt-0.5 text-sm font-medium text-foreground ${isCompleted ? "line-through" : ""}`}>
+          {offering.courseName}
+        </p>
+
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-foreground-secondary">
+          {offering.instructor && <span>{offering.instructor}</span>}
+          {offering.slots && <span className="font-mono">{offering.slots}</span>}
+          {offering.ltpc && <span>{offering.ltpc}</span>}
+          <span className="font-medium">{formatCredits(offering.credits)} cr</span>
+        </div>
+
+        {clashWith && (
+          <p className="mt-1 text-xs text-error flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            Slot clash with {clashWith}
+          </p>
+        )}
+
+        {offering.curriculumLink && (
+          <a
+            href={offering.curriculumLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+          >
+            Curriculum <ExternalLink className="w-3 h-3" />
+          </a>
+        )}
+      </div>
+    </label>
+  );
+}
+
+function Section({ title, count, children, defaultOpen = true }: {
+  title: string; count: number; children: React.ReactNode; defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between py-2 text-left"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-foreground">{title}</span>
+          <span className="text-xs text-foreground-secondary bg-surface-secondary px-1.5 py-0.5 rounded-full">{count}</span>
+        </div>
+        {open ? <ChevronDown className="w-4 h-4 text-foreground-secondary" /> : <ChevronRight className="w-4 h-4 text-foreground-secondary" />}
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="space-y-2 pb-2">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export default function PreRegistrationPage() {
+  const [data, setData] = useState<ApiResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [adding, setAdding] = useState(false);
+  const [showApprovalWarning, setShowApprovalWarning] = useState(false);
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    fetch("/api/pre-registration")
+      .then((r) => r.json())
+      .then((d) => {
+        setData(d);
+        // Auto-select already-added courses
+        const autoSelected = new Set<string>(
+          d.offerings?.filter((o: Offering) => o.alreadyAdded && !o.isCompulsory).map((o: Offering) => o.id) ?? []
+        );
+        setSelected(autoSelected);
+      })
+      .catch(() => showToast("error", "Failed to load offerings"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Compulsory course slots (blocked)
+  const compulsorySlots = useMemo(() => {
+    const s = new Set<string>();
+    data?.offerings.filter((o) => o.isCompulsory).forEach((o) => parseSlots(o.slots).forEach((t) => s.add(t)));
+    return s;
+  }, [data]);
+
+  // Selected optional course slots (for inter-optional clash detection)
+  const selectedSlots = useMemo(() => {
+    const map = new Map<string, string>(); // slot → courseCode
+    data?.offerings.filter((o) => selected.has(o.id)).forEach((o) =>
+      parseSlots(o.slots).forEach((t) => map.set(t, o.courseCode))
+    );
+    return map;
+  }, [data, selected]);
+
+  // For each offering, find what it clashes with
+  const clashMap = useMemo(() => {
+    const map = new Map<string, string>(); // offeringId → clashing course code
+    if (!data) return map;
+    for (const o of data.offerings) {
+      if (o.isCompulsory) continue;
+      for (const slot of parseSlots(o.slots)) {
+        if (compulsorySlots.has(slot)) {
+          // Find which compulsory course owns this slot
+          const comp = data.offerings.find(
+            (c) => c.isCompulsory && parseSlots(c.slots).includes(slot)
+          );
+          map.set(o.id, comp?.courseCode ?? "a compulsory course");
+          break;
+        }
+      }
+    }
+    return map;
+  }, [data, compulsorySlots]);
+
+  // Detect inter-optional clashes (two selected optional courses clash)
+  const interClashMap = useMemo(() => {
+    const map = new Map<string, string>(); // offeringId → clashing courseCode
+    if (!data) return map;
+    const selectedList = data.offerings.filter((o) => selected.has(o.id));
+    for (const a of selectedList) {
+      for (const b of selectedList) {
+        if (a.id === b.id) continue;
+        if (slotsClash(a.slots, b.slots) && !map.has(a.id)) {
+          map.set(a.id, b.courseCode);
+        }
+      }
+    }
+    return map;
+  }, [data, selected]);
+
+  const totalCredits = useMemo(() => {
+    if (!data) return 0;
+    let total = 0;
+    for (const o of data.offerings) {
+      if (o.isCompulsory || selected.has(o.id)) total += o.credits;
+    }
+    return total;
+  }, [data, selected]);
+
+  const handleToggle = (offering: Offering) => {
+    if (offering.isCompulsory || offering.completedInSemester !== null) return;
+    if (clashMap.has(offering.id)) return; // core clash — cannot select
+
+    const next = new Set(selected);
+    if (next.has(offering.id)) {
+      next.delete(offering.id);
+    } else {
+      next.add(offering.id);
+      // Credit limit check
+      const newTotal = totalCredits + offering.credits;
+      if (data && newTotal > data.creditLimit) setShowApprovalWarning(true);
+    }
+    setSelected(next);
+  };
+
+  const handleAddToSchedule = async () => {
+    if (!data) return;
+    if (data.registrationOpensAt) {
+      const opens = new Date(data.registrationOpensAt);
+      showToast("error", `Registration opens on ${opens.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}`);
+      return;
+    }
+
+    const toAdd = data.offerings.filter(
+      (o) => (o.isCompulsory || selected.has(o.id)) && !o.alreadyAdded && !o.completedInSemester
+    );
+    if (toAdd.length === 0) { showToast("info", "Nothing new to add"); return; }
+    if (!toAdd.every((o) => o.courseId)) {
+      showToast("error", "Some courses are not yet in the catalog. Contact admin.");
+      return;
+    }
+
+    setAdding(true);
+    let added = 0, failed = 0;
+    for (const o of toAdd) {
+      try {
+        const res = await fetch("/api/enrollments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            courseId: o.courseId,
+            semester: data.offeringSemester,
+            year: data.offeringYear,
+            term: data.term,
+            courseType: "AUTO",
+            status: "IN_PROGRESS",
+          }),
+        });
+        if (res.ok) added++;
+        else {
+          const err = await res.json();
+          if (res.status === 409) { /* already enrolled, skip silently */ }
+          else { failed++; showToast("error", `${o.courseCode}: ${err.error ?? "Failed"}`); }
+        }
+      } catch { failed++; }
+    }
+    setAdding(false);
+    if (added > 0) showToast("success", `${added} course${added > 1 ? "s" : ""} added to your plan`);
+    if (failed === 0 && added > 0) {
+      // Refresh
+      setTimeout(() => window.location.reload(), 800);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="animate-spin rounded-full w-8 h-8 border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!data || data.offerings.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto py-16 text-center space-y-3">
+        <BookOpen className="w-10 h-10 text-foreground-secondary mx-auto" />
+        <p className="text-lg font-medium text-foreground">No offerings yet</p>
+        <p className="text-sm text-foreground-secondary">
+          Course offerings for Semester {data?.offeringSemester ?? "—"} haven&apos;t been uploaded yet. Check back soon.
+        </p>
+      </div>
+    );
+  }
+
+  const compulsory = data.offerings.filter((o) => o.isCompulsory);
+  const de = data.offerings.filter((o) => !o.isCompulsory && o.resolvedCategory === "DE" && !clashMap.has(o.id));
+  const hss = data.offerings.filter((o) => !o.isCompulsory && ["HSS", "IKS"].includes(o.resolvedCategory) && !clashMap.has(o.id));
+  const fe = data.offerings.filter((o) => !o.isCompulsory && o.resolvedCategory === "FE" && !clashMap.has(o.id));
+  const coreClash = data.offerings.filter((o) => !o.isCompulsory && clashMap.has(o.id));
+
+  // Group FE by school
+  const feBySchool = fe.reduce<Record<string, Offering[]>>((acc, o) => {
+    const key = o.school ?? "Other";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(o);
+    return acc;
+  }, {});
+
+  const creditLimit = data.creditLimit;
+  const creditPct = Math.min(100, (totalCredits / creditLimit) * 100);
+  const overLimit = totalCredits > creditLimit;
+  const registrationLocked = !!data.registrationOpensAt;
+
+  const selectedCount = selected.size + compulsory.filter((o) => !o.completedInSemester).length;
+
+  return (
+    <div className="max-w-3xl mx-auto space-y-6 pb-24">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">
+          Semester {data.offeringSemester} Registration
+        </h1>
+        <p className="mt-1 text-sm text-foreground-secondary">
+          {data.term} {data.offeringYear} · Select your courses for the upcoming semester
+        </p>
+      </div>
+
+      {/* Registration lock banner */}
+      {registrationLocked && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-warning/30 bg-warning/5">
+          <Lock className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-warning">Registration not yet open</p>
+            <p className="text-xs text-foreground-secondary mt-0.5">
+              You can browse and plan your selection. Registration opens on{" "}
+              <strong>{new Date(data.registrationOpensAt!).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}</strong>.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Credit counter */}
+      <div className="p-4 rounded-xl border border-border bg-surface">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-foreground">Credits Selected</span>
+          <span className={`text-sm font-semibold ${overLimit ? "text-error" : "text-foreground"}`}>
+            {formatCredits(totalCredits)} / {creditLimit} cr
+          </span>
+        </div>
+        <div className="h-2 rounded-full bg-background-secondary overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${overLimit ? "bg-error" : "bg-primary"}`}
+            style={{ width: `${creditPct}%` }}
+          />
+        </div>
+        {overLimit && (
+          <p className="mt-2 text-xs text-error flex items-center gap-1">
+            <Info className="w-3 h-3" />
+            Exceeds {creditLimit} cr limit — additional courses require Academic Affairs approval
+          </p>
+        )}
+      </div>
+
+      {/* Approval warning popup */}
+      <AnimatePresence>
+        {showApprovalWarning && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="flex items-start gap-3 p-4 rounded-xl border border-warning/40 bg-warning/8"
+          >
+            <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-warning">Credit limit exceeded</p>
+              <p className="text-xs text-foreground-secondary mt-0.5">
+                Taking more than {creditLimit} credits requires approval from the Academic Affairs Office.
+              </p>
+            </div>
+            <button onClick={() => setShowApprovalWarning(false)} className="text-foreground-secondary hover:text-foreground text-lg leading-none">×</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Compulsory */}
+      {compulsory.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface overflow-hidden">
+          <div className="px-4 py-3 border-b border-border bg-primary/5">
+            <p className="text-sm font-semibold text-foreground">Compulsory — IC & DC</p>
+            <p className="text-xs text-foreground-secondary">Auto-selected, cannot be removed</p>
+          </div>
+          <div className="p-4 space-y-2">
+            {compulsory.map((o) => (
+              <CourseCard
+                key={o.id}
+                offering={o}
+                checked={true}
+                disabled={true}
+                onToggle={() => {}}
+                isCompulsory={true}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* DE */}
+      {de.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface overflow-hidden">
+          <div className="px-4 py-3 border-b border-border">
+            <Section title="Discipline Electives" count={de.length} defaultOpen={true}>
+              {de.map((o) => (
+                <CourseCard
+                  key={o.id}
+                  offering={o}
+                  checked={selected.has(o.id)}
+                  disabled={false}
+                  onToggle={() => handleToggle(o)}
+                  clashWith={interClashMap.get(o.id)}
+                />
+              ))}
+            </Section>
+          </div>
+        </div>
+      )}
+
+      {/* HSS */}
+      {hss.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface overflow-hidden">
+          <div className="px-4 py-3 border-b border-border">
+            <Section title="Humanities & Social Sciences" count={hss.length} defaultOpen={true}>
+              {hss.map((o) => (
+                <CourseCard
+                  key={o.id}
+                  offering={o}
+                  checked={selected.has(o.id)}
+                  disabled={false}
+                  onToggle={() => handleToggle(o)}
+                />
+              ))}
+            </Section>
+          </div>
+        </div>
+      )}
+
+      {/* FE by school */}
+      {fe.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface overflow-hidden">
+          <div className="px-4 pt-3 pb-0 border-b border-border">
+            <p className="text-sm font-semibold text-foreground pb-3">Free Electives</p>
+          </div>
+          {Object.entries(feBySchool).map(([school, courses]) => (
+            <div key={school} className="px-4 py-3 border-b border-border last:border-0">
+              <Section title={school} count={courses.length} defaultOpen={false}>
+                {courses.map((o) => (
+                  <CourseCard
+                    key={o.id}
+                    offering={o}
+                    checked={selected.has(o.id)}
+                    disabled={false}
+                    onToggle={() => handleToggle(o)}
+                  />
+                ))}
+              </Section>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Core Clash */}
+      {coreClash.length > 0 && (
+        <div className="rounded-xl border border-error/20 bg-surface overflow-hidden">
+          <div className="px-4 py-3 border-b border-error/20 bg-error/5">
+            <p className="text-sm font-semibold text-error">Core Clash — Cannot Register</p>
+            <p className="text-xs text-foreground-secondary">These courses conflict with your compulsory courses</p>
+          </div>
+          <div className="p-4 space-y-2 opacity-60">
+            {coreClash.map((o) => (
+              <CourseCard
+                key={o.id}
+                offering={o}
+                checked={false}
+                disabled={true}
+                onToggle={() => {}}
+                clashWith={clashMap.get(o.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sticky bottom bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          <p className="text-sm text-foreground-secondary">
+            <span className="font-semibold text-foreground">{selectedCount}</span> course{selectedCount !== 1 ? "s" : ""} ·{" "}
+            <span className={overLimit ? "text-error font-semibold" : ""}>{formatCredits(totalCredits)} cr</span>
+          </p>
+          <button
+            onClick={handleAddToSchedule}
+            disabled={adding || selectedCount === 0}
+            className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium
+              hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          >
+            {adding ? (
+              <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Adding...</>
+            ) : registrationLocked ? (
+              <><Lock className="w-4 h-4" /> Registration Locked</>
+            ) : (
+              "Add to Schedule"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

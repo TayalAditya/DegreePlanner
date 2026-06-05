@@ -20,7 +20,8 @@ import {
   LifeBuoy,
   Inbox,
   Users,
-  Megaphone
+  Megaphone,
+  CalendarCheck,
 } from "lucide-react";
 import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
@@ -47,6 +48,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
     { name: "Import Courses", href: "/dashboard/import-courses", icon: Download },
     { name: "Courses", href: "/dashboard/courses", icon: BookOpen },
     { name: "Programs", href: "/dashboard/programs", icon: GraduationCap },
+    { name: "Registration", href: "/dashboard/pre-registration", icon: CalendarCheck },
     { name: "Timetable", href: "/dashboard/timetable", icon: Calendar },
     { name: "Progress", href: "/dashboard/progress", icon: BarChart3 },
     { name: "Documents", href: "/dashboard/documents", icon: FileText },
@@ -58,6 +60,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
   const adminNavigation = [
     { name: "Users", href: "/dashboard/admin", icon: Users },
     { name: "Announcements", href: "/dashboard/admin/announcements", icon: Megaphone },
+    { name: "Pre-Reg Upload", href: "/dashboard/admin/pre-registration", icon: CalendarCheck },
     { name: "Course Mappings", href: "/dashboard/course-mappings", icon: GitBranch },
     { name: "Inbox", href: "/dashboard/inbox", icon: Inbox },
   ];
