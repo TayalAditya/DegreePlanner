@@ -40,12 +40,12 @@ async function main() {
     },
     {
       code: "IN0012",
-      name: "Bachelor Practical Course",
-      credits: 6.66,
+      name: "Bachelor Practical Course Projects in Natural Language Processing",
+      credits: 6.67,
     },
     {
       code: "IN2107",
-      name: "Master-Seminar: Advanced Seminar Course",
+      name: "Foundations and Applications of Graph Neural Networks",
       credits: 3.33,
     },
   ];
@@ -56,7 +56,7 @@ async function main() {
   for (const c of tumCourses) {
     const course = await prisma.course.upsert({
       where: { code: c.code },
-      update: {},
+      update: { name: c.name, credits: c.credits },
       create: {
         code: c.code,
         name: c.name,
@@ -344,6 +344,44 @@ async function main() {
     });
 
     console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → DSAI:DC`);
+  }
+
+  // ─── Additional TU Munich Semester 5 CSE courses ─────────────────────────
+  const tumSem5Courses = [
+    { code: "IN4212",      name: "Masterpraktikum - Advanced Platform Engineering for Agentic AI", credits: 6.67 },
+    { code: "CIT3230002",  name: "Cloud Information Systems",                                       credits: 3.33 },
+    { code: "IN212819",    name: "Practical Course - JavaScript Technology",                        credits: 6.67 },
+  ];
+
+  for (const c of tumSem5Courses) {
+    const course = await prisma.course.upsert({
+      where: { code: c.code },
+      update: { name: c.name, credits: c.credits },
+      create: {
+        code: c.code,
+        name: c.name,
+        credits: c.credits,
+        department: "TU Munich (Semester Exchange)",
+        level: 300,
+        description: semexDescription,
+        offeredInFall: true,
+        offeredInSpring: true,
+        isActive: true,
+      },
+    });
+
+    await prisma.courseBranchMapping.upsert({
+      where: { courseId_branch_batch: { courseId: course.id, branch: "CSE", batch: "" } },
+      update: { courseCategory: CourseCategoryType.DE, isRequired: false },
+      create: {
+        courseId: course.id,
+        branch: "CSE",
+        courseCategory: CourseCategoryType.DE,
+        isRequired: false,
+      },
+    });
+
+    console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → CSE:DE`);
   }
 
   // CS305 already exists — just ensure DSAI:DC mapping is present.
