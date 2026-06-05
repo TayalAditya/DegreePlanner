@@ -264,6 +264,24 @@ export default function PreRegistrationPage() {
     return total;
   }, [data, selected]);
 
+  // Category-wise breakdown of selected + compulsory courses
+  const categoryBreakdown = useMemo(() => {
+    if (!data) return [];
+    const map = new Map<string, { credits: number; count: number }>();
+    for (const o of data.offerings) {
+      if (!o.isCompulsory && !selected.has(o.id)) continue;
+      if (o.completedInSemester !== null) continue; // already done, skip
+      const cat = o.resolvedCategory;
+      const existing = map.get(cat) ?? { credits: 0, count: 0 };
+      map.set(cat, { credits: existing.credits + o.credits, count: existing.count + 1 });
+    }
+    // Sort by fixed order
+    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "IKS", "FE", "MTP", "ISTP"];
+    return ORDER
+      .filter((cat) => map.has(cat))
+      .map((cat) => ({ cat, ...map.get(cat)! }));
+  }, [data, selected]);
+
   const handleToggle = (offering: Offering) => {
     if (offering.isCompulsory || offering.completedInSemester !== null) return;
     if (clashMap.has(offering.id)) return; // core clash — cannot select
@@ -542,6 +560,48 @@ export default function PreRegistrationPage() {
                 clashWith={clashMap.get(o.id)}
               />
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Semester breakdown analysis */}
+      {categoryBreakdown.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface overflow-hidden">
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-sm font-semibold text-foreground">Semester Breakdown</p>
+            <p className="text-xs text-foreground-secondary">What this semester adds to your transcript</p>
+          </div>
+          <div className="p-4 space-y-2">
+            {categoryBreakdown.map(({ cat, credits, count }) => {
+              const color = CATEGORY_COLOR[cat] ?? "bg-surface-secondary text-foreground-secondary border-border";
+              const label = CATEGORY_LABEL[cat] ?? cat;
+              const pct = Math.min(100, (credits / totalCredits) * 100);
+              return (
+                <div key={cat} className="flex items-center gap-3">
+                  <span className={`flex-shrink-0 w-12 text-center px-1.5 py-0.5 text-xs font-semibold rounded border ${color}`}>
+                    {label}
+                  </span>
+                  <div className="flex-1 h-2 rounded-full bg-background-secondary overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${color.includes("primary") ? "bg-primary" : color.includes("secondary") ? "bg-secondary" : color.includes("warning") ? "bg-warning" : color.includes("success") ? "bg-success" : color.includes("info") ? "bg-info" : color.includes("error") ? "bg-error" : color.includes("accent") ? "bg-accent" : "bg-foreground-secondary"}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="flex-shrink-0 text-sm font-medium text-foreground w-16 text-right">
+                    +{formatCredits(credits)} cr
+                  </span>
+                  <span className="flex-shrink-0 text-xs text-foreground-secondary w-16">
+                    {count} course{count !== 1 ? "s" : ""}
+                  </span>
+                </div>
+              );
+            })}
+            <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
+              <span className="text-sm font-semibold text-foreground">Total</span>
+              <span className="text-sm font-semibold text-foreground">
+                {formatCredits(totalCredits)} cr · {categoryBreakdown.reduce((s, r) => s + r.count, 0)} courses
+              </span>
+            </div>
           </div>
         </div>
       )}

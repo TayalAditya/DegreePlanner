@@ -48,7 +48,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
     { name: "Import Courses", href: "/dashboard/import-courses", icon: Download },
     { name: "Courses", href: "/dashboard/courses", icon: BookOpen },
     { name: "Programs", href: "/dashboard/programs", icon: GraduationCap },
-    { name: "Registration", href: "/dashboard/pre-registration", icon: CalendarCheck },
+    { name: "Pre Registration", href: "/dashboard/pre-registration", icon: CalendarCheck },
     { name: "Timetable", href: "/dashboard/timetable", icon: Calendar },
     { name: "Progress", href: "/dashboard/progress", icon: BarChart3 },
     { name: "Documents", href: "/dashboard/documents", icon: FileText },
