@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Search, Filter } from "lucide-react";
+import { Save, Search, Filter, Users } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 
 interface Course {
@@ -16,6 +16,7 @@ interface CourseMapping {
   id: string;
   courseId: string;
   branch: string;
+  batch: string;
   courseCategory: string;
   isRequired: boolean;
   semester: number | null;
@@ -41,6 +42,14 @@ const BRANCHES = [
   { code: "BSCS", name: "B.S. Chemical Sciences" },
 ];
 
+// "" = all batches (default/generic); "2023"/"2024"/"2025" = batch-specific override
+const BATCHES = [
+  { value: "", label: "All Batches (Default)" },
+  { value: "2023", label: "B23 (2023)" },
+  { value: "2024", label: "B24 (2024)" },
+  { value: "2025", label: "B25 (2025)" },
+];
+
 const COURSE_CATEGORIES = [
   { value: "IC", label: "IC - Institute Core" },
   { value: "IC_BASKET", label: "IC Basket" },
@@ -54,15 +63,21 @@ const COURSE_CATEGORIES = [
   { value: "NA", label: "N/A - Not Applicable" },
 ];
 
+type MappingKey = string; // `${courseId}-${branch}-${batch}`
+const mappingKey = (courseId: string, branch: string, batch: string) =>
+  `${courseId}-${branch}-${batch}`;
+
 export default function CourseMappingsPage() {
   const { showToast } = useToast();
   const [courses, setCourses] = useState<Course[]>([]);
-  const [mappings, setMappings] = useState<Map<string, CourseMapping>>(new Map());
+  // mappings keyed by courseId-branch-batch
+  const [mappings, setMappings] = useState<Map<MappingKey, CourseMapping>>(new Map());
   const [selectedBranch, setSelectedBranch] = useState(() => BRANCHES[0]?.code || "");
+  const [selectedBatch, setSelectedBatch] = useState(""); // "" = all batches
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [changes, setChanges] = useState<Map<string, Partial<CourseMapping>>>(new Map());
+  const [changes, setChanges] = useState<Map<MappingKey, Partial<CourseMapping>>>(new Map());
 
   useEffect(() => {
     fetchCourses();
@@ -70,9 +85,10 @@ export default function CourseMappingsPage() {
 
   useEffect(() => {
     if (selectedBranch) {
-      fetchMappings(selectedBranch);
+      fetchMappings(selectedBranch, selectedBatch);
     }
-  }, [selectedBranch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranch, selectedBatch]);
 
   const fetchCourses = async () => {
     try {
@@ -85,17 +101,19 @@ export default function CourseMappingsPage() {
     }
   };
 
-  const fetchMappings = async (branch: string) => {
+  const fetchMappings = async (branch: string, batch: string) => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/course-mappings?branch=${branch}`);
+      // Fetch selected batch AND the generic ("") fallback so we can show differences
+      const batchParam = batch !== "" ? `&batch=${batch}` : "&batch=";
+      const res = await fetch(`/api/course-mappings?branch=${branch}${batchParam}`);
       const data: CourseMapping[] = await res.json();
-      
-      const mappingMap = new Map<string, CourseMapping>();
-      data.forEach((mapping) => {
-        mappingMap.set(`${mapping.courseId}-${mapping.branch}`, mapping);
+
+      const mappingMap = new Map<MappingKey, CourseMapping>();
+      data.forEach((m) => {
+        mappingMap.set(mappingKey(m.courseId, m.branch, m.batch), m);
       });
-      
+
       setMappings(mappingMap);
     } catch (error) {
       console.error("Failed to fetch mappings:", error);
@@ -105,36 +123,82 @@ export default function CourseMappingsPage() {
     }
   };
 
+  // When looking up a category for a course in the current view:
+  // - If editing a batch-specific view, the batch-specific mapping overrides the generic one.
+  // - If batch-specific mapping doesn't exist yet, show the generic fallback (greyed out).
+  const getEffectiveCategory = (courseId: string): { category: string; isOverride: boolean } => {
+    const key = mappingKey(courseId, selectedBranch, selectedBatch);
+    const genericKey = mappingKey(courseId, selectedBranch, "");
+
+    const pendingChange = changes.get(key);
+    if (pendingChange?.courseCategory) {
+      return { category: pendingChange.courseCategory, isOverride: selectedBatch !== "" };
+    }
+
+    const batchMapping = selectedBatch !== "" ? mappings.get(key) : undefined;
+    if (batchMapping) {
+      return { category: batchMapping.courseCategory, isOverride: true };
+    }
+
+    const genericMapping = mappings.get(genericKey);
+    return { category: genericMapping?.courseCategory ?? "FE", isOverride: false };
+  };
+
+  const getDisplaySemester = (courseId: string): string | number => {
+    const key = mappingKey(courseId, selectedBranch, selectedBatch);
+    const genericKey = mappingKey(courseId, selectedBranch, "");
+    return (
+      changes.get(key)?.semester ??
+      mappings.get(key)?.semester ??
+      (selectedBatch !== "" ? (mappings.get(genericKey)?.semester ?? "") : "")
+    );
+  };
+
+  // Does this course have different mappings across batches?
+  const hasBatchDifference = (courseId: string): boolean => {
+    const batchValues = BATCHES.filter((b) => b.value !== "").map((b) => {
+      const k = mappingKey(courseId, selectedBranch, b.value);
+      return mappings.get(k)?.courseCategory;
+    }).filter(Boolean);
+    const generic = mappings.get(mappingKey(courseId, selectedBranch, ""))?.courseCategory;
+    return batchValues.some((v) => v !== generic);
+  };
+
   const handleCategoryChange = (courseId: string, category: string) => {
-    const key = `${courseId}-${selectedBranch}`;
-    const currentMapping = mappings.get(key);
-    
-    const newChange = {
+    const key = mappingKey(courseId, selectedBranch, selectedBatch);
+    const existingMapping = mappings.get(key);
+    const genericMapping = mappings.get(mappingKey(courseId, selectedBranch, ""));
+
+    setChanges((prev) => new Map(prev).set(key, {
+      ...prev.get(key),
       courseId,
       branch: selectedBranch,
+      batch: selectedBatch,
       courseCategory: category,
-      isRequired: currentMapping?.isRequired || false,
-      semester: currentMapping?.semester || null,
-    };
-
-    setChanges(new Map(changes.set(key, newChange)));
+      isRequired: existingMapping?.isRequired ?? genericMapping?.isRequired ?? false,
+      semester: existingMapping?.semester ?? genericMapping?.semester ?? null,
+    }));
   };
 
   const handleSemesterChange = (courseId: string, semester: string) => {
-    const key = `${courseId}-${selectedBranch}`;
-    const currentMapping = mappings.get(key);
+    const key = mappingKey(courseId, selectedBranch, selectedBatch);
+    const existingMapping = mappings.get(key);
+    const genericMapping = mappings.get(mappingKey(courseId, selectedBranch, ""));
     const existing = changes.get(key);
-    
-    const newChange = {
+
+    setChanges((prev) => new Map(prev).set(key, {
       ...existing,
       courseId,
       branch: selectedBranch,
-      courseCategory: existing?.courseCategory || currentMapping?.courseCategory || "FE",
+      batch: selectedBatch,
+      courseCategory:
+        existing?.courseCategory ??
+        existingMapping?.courseCategory ??
+        genericMapping?.courseCategory ??
+        "FE",
       semester: semester ? parseInt(semester) : null,
-      isRequired: currentMapping?.isRequired || false,
-    };
-
-    setChanges(new Map(changes.set(key, newChange)));
+      isRequired: existingMapping?.isRequired ?? genericMapping?.isRequired ?? false,
+    }));
   };
 
   const handleSaveChanges = async () => {
@@ -146,7 +210,7 @@ export default function CourseMappingsPage() {
     setSaving(true);
     try {
       const mappingsArray = Array.from(changes.values());
-      
+
       const res = await fetch("/api/course-mappings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -156,7 +220,7 @@ export default function CourseMappingsPage() {
       if (res.ok) {
         showToast("success", `Saved ${changes.size} changes`);
         setChanges(new Map());
-        fetchMappings(selectedBranch);
+        fetchMappings(selectedBranch, selectedBatch);
       } else {
         showToast("error", "Failed to save changes");
       }
@@ -168,15 +232,15 @@ export default function CourseMappingsPage() {
     }
   };
 
-  // Smart defaults: for CSE, CS-* and DS-* (not already DC) → DE
-  //                 for BSCS, CH-* → DC
   const handleApplyBranchDefaults = () => {
     const newChanges = new Map(changes);
     let count = 0;
 
     for (const course of courses) {
-      const key = `${course.id}-${selectedBranch}`;
-      const existingCategory = mappings.get(key)?.courseCategory;
+      const key = mappingKey(course.id, selectedBranch, selectedBatch);
+      const genericKey = mappingKey(course.id, selectedBranch, "");
+      const existingCategory =
+        mappings.get(key)?.courseCategory ?? mappings.get(genericKey)?.courseCategory;
       const code = course.code.toUpperCase().replace(/[-\s]/g, "");
 
       let targetCategory: string | null = null;
@@ -196,9 +260,10 @@ export default function CourseMappingsPage() {
           ...newChanges.get(key),
           courseId: course.id,
           branch: selectedBranch,
+          batch: selectedBatch,
           courseCategory: targetCategory,
-          isRequired: mappings.get(key)?.isRequired || false,
-          semester: mappings.get(key)?.semester || null,
+          isRequired: mappings.get(genericKey)?.isRequired || false,
+          semester: mappings.get(genericKey)?.semester || null,
         });
         count++;
       }
@@ -213,15 +278,7 @@ export default function CourseMappingsPage() {
     course.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getDisplayCategory = (courseId: string) => {
-    const key = `${courseId}-${selectedBranch}`;
-    return changes.get(key)?.courseCategory || mappings.get(key)?.courseCategory || "FE";
-  };
-
-  const getDisplaySemester = (courseId: string) => {
-    const key = `${courseId}-${selectedBranch}`;
-    return changes.get(key)?.semester ?? mappings.get(key)?.semester ?? "";
-  };
+  const selectedBatchLabel = BATCHES.find((b) => b.value === selectedBatch)?.label ?? "All Batches";
 
   return (
     <div className="space-y-6">
@@ -230,27 +287,52 @@ export default function CourseMappingsPage() {
           Course-Branch Mappings
         </h1>
         <p className="text-foreground-secondary">
-          Assign course categories (IC, DC, DE, FE, etc.) for each branch
+          Assign course categories (IC, DC, DE, FE, etc.) per branch and batch. Batch-specific mappings override the default for that batch only.
         </p>
       </div>
 
       {/* Controls */}
       <div className="bg-surface rounded-lg p-4 sm:p-6 space-y-4 border border-border">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Branch Selection */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
               <Filter className="w-4 h-4 inline mr-1" />
-              Select Branch
+              Branch
             </label>
             <select
               value={selectedBranch}
-              onChange={(e) => setSelectedBranch(e.target.value)}
+              onChange={(e) => {
+                setSelectedBranch(e.target.value);
+                setChanges(new Map());
+              }}
               className="w-full px-4 py-2 border border-border rounded-md bg-background text-foreground"
             >
               {BRANCHES.map((branch) => (
                 <option key={branch.code} value={branch.code}>
                   {branch.code} - {branch.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Batch Selection */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              <Users className="w-4 h-4 inline mr-1" />
+              Batch
+            </label>
+            <select
+              value={selectedBatch}
+              onChange={(e) => {
+                setSelectedBatch(e.target.value);
+                setChanges(new Map());
+              }}
+              className="w-full px-4 py-2 border border-border rounded-md bg-background text-foreground"
+            >
+              {BATCHES.map((batch) => (
+                <option key={batch.value} value={batch.value}>
+                  {batch.label}
                 </option>
               ))}
             </select>
@@ -293,6 +375,18 @@ export default function CourseMappingsPage() {
             </button>
           </div>
         </div>
+
+        {/* Batch info banner */}
+        {selectedBatch !== "" && (
+          <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-sm">
+            <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+            <div className="text-blue-800 dark:text-blue-300">
+              <strong>Batch override mode — {selectedBatchLabel}.</strong> Changes here only apply to {selectedBatchLabel} students.
+              Rows without a batch-specific mapping fall back to the "All Batches" default (shown in grey).
+              Rows marked <span className="font-semibold text-blue-600 dark:text-blue-400">↗ override</span> already have a {selectedBatchLabel}-specific mapping.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Course Table */}
@@ -312,40 +406,65 @@ export default function CourseMappingsPage() {
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
                   Category for {selectedBranch}
+                  {selectedBatch && ` · ${selectedBatchLabel}`}
                 </th>
                 <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">
                   Semester
                 </th>
+                {selectedBatch === "" && (
+                  <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">
+                    Batch Diff?
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-foreground-secondary">
+                  <td colSpan={6} className="px-4 py-8 text-center text-foreground-secondary">
                     Loading courses...
                   </td>
                 </tr>
               ) : filteredCourses.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-foreground-secondary">
+                  <td colSpan={6} className="px-4 py-8 text-center text-foreground-secondary">
                     No courses found
                   </td>
                 </tr>
               ) : (
                 filteredCourses.map((course) => {
-                  const category = getDisplayCategory(course.id);
+                  const { category, isOverride } = getEffectiveCategory(course.id);
                   const semester = getDisplaySemester(course.id);
-                  const isChanged = changes.has(`${course.id}-${selectedBranch}`);
+                  const key = mappingKey(course.id, selectedBranch, selectedBatch);
+                  const isChanged = changes.has(key);
+                  const hasDiff = selectedBatch === "" && hasBatchDifference(course.id);
+
+                  // In batch-specific mode: grey out row if no override exists yet
+                  const hasSpecificMapping =
+                    selectedBatch === "" ||
+                    isOverride ||
+                    isChanged;
 
                   return (
                     <tr
                       key={course.id}
-                      className={`hover:bg-background-secondary ${
-                        isChanged ? "bg-yellow-50 dark:bg-yellow-900/10" : ""
+                      className={`hover:bg-background-secondary transition-colors ${
+                        isChanged
+                          ? "bg-yellow-50 dark:bg-yellow-900/10"
+                          : hasDiff
+                          ? "bg-purple-50 dark:bg-purple-900/10"
+                          : ""
                       }`}
                     >
                       <td className="px-4 py-3 text-sm font-medium text-foreground">
-                        {course.code}
+                        <div className="flex items-center gap-1.5">
+                          {course.code}
+                          {selectedBatch !== "" && isOverride && !isChanged && (
+                            <span className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                              ↗ override
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-sm text-foreground">
                         {course.name}
@@ -357,11 +476,16 @@ export default function CourseMappingsPage() {
                         <select
                           value={category}
                           onChange={(e) => handleCategoryChange(course.id, e.target.value)}
-                          className="w-full px-3 py-1.5 border border-border rounded-md bg-background text-foreground text-sm"
+                          className={`w-full px-3 py-1.5 border border-border rounded-md bg-background text-sm ${
+                            !hasSpecificMapping
+                              ? "text-foreground-secondary italic"
+                              : "text-foreground"
+                          }`}
                         >
                           {COURSE_CATEGORIES.map((cat) => (
                             <option key={cat.value} value={cat.value}>
                               {cat.label}
+                              {selectedBatch !== "" && !isOverride && !isChanged ? " (default)" : ""}
                             </option>
                           ))}
                         </select>
@@ -377,6 +501,15 @@ export default function CourseMappingsPage() {
                           className="w-20 px-3 py-1.5 border border-border rounded-md bg-background text-foreground text-sm text-center"
                         />
                       </td>
+                      {selectedBatch === "" && (
+                        <td className="px-4 py-3 text-center">
+                          {hasDiff && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+                              varies
+                            </span>
+                          )}
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -387,11 +520,16 @@ export default function CourseMappingsPage() {
       </div>
 
       {/* Stats */}
-      <div className="text-sm text-foreground-secondary">
-        Showing {filteredCourses.length} of {courses.length} courses
+      <div className="flex flex-wrap gap-4 text-sm text-foreground-secondary">
+        <span>Showing {filteredCourses.length} of {courses.length} courses</span>
         {changes.size > 0 && (
-          <span className="ml-4 text-yellow-600 dark:text-yellow-400 font-medium">
+          <span className="text-yellow-600 dark:text-yellow-400 font-medium">
             • {changes.size} unsaved changes
+          </span>
+        )}
+        {selectedBatch === "" && (
+          <span className="text-purple-600 dark:text-purple-400">
+            • Purple rows have batch-specific overrides
           </span>
         )}
       </div>

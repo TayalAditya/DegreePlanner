@@ -28,6 +28,7 @@ function toUiCategory(category: CourseCategoryType): string {
 
 // GET /api/course-category-map?branch=...
 // Returns a map: normalizedCode -> UI course category (IC, ICB, DC, DE, HSS, IKS, FE, MTP, ISTP)
+// Batch-specific mappings take priority over generic (batch="") mappings.
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
@@ -42,38 +43,58 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "branch is required" }, { status: 400 });
   }
 
+  // Resolve user batch: prefer query param (for impersonation), fall back to session
+  const batchParam = searchParams.get("batch");
+  const userBatch = batchParam !== null
+    ? batchParam
+    : session.user.batch ? String(session.user.batch) : "";
+
   const candidates = getBranchCandidates(requestedBranch);
   const candidateOrder = new Map<string, number>(candidates.map((b, idx) => [b, idx]));
 
+  // Fetch mappings for this branch's candidates, for generic batch "" AND the user's specific batch
+  const batchFilter = userBatch
+    ? { in: ["", userBatch] }
+    : { equals: "" };
+
   const mappings = await prisma.courseBranchMapping.findMany({
-    where: { branch: { in: candidates } },
+    where: {
+      branch: { in: candidates },
+      batch: batchFilter,
+    },
     select: {
       branch: true,
+      batch: true,
       courseCategory: true,
       course: { select: { code: true } },
     },
   });
 
-  const pickedIndexByCode = new Map<string, number>();
+  // For each course code, pick the best mapping:
+  //   lower candidateOrder index = better branch match
+  //   within same branch priority, batch-specific beats generic (score += 0 vs 1)
+  const pickedScoreByCode = new Map<string, number>();
   const categoriesByCode: Record<string, string> = {};
 
   for (const m of mappings) {
     const code = normalizeCourseCode(m.course.code);
-    const idx = candidateOrder.get(m.branch) ?? Number.POSITIVE_INFINITY;
-    const existingIdx = pickedIndexByCode.get(code);
-    if (existingIdx !== undefined && existingIdx <= idx) continue;
+    const branchIdx = candidateOrder.get(m.branch) ?? Number.POSITIVE_INFINITY;
+    const batchBonus = userBatch && m.batch === userBatch ? 0 : 1;
+    const score = branchIdx * 2 + batchBonus;
 
-    pickedIndexByCode.set(code, idx);
+    const existingScore = pickedScoreByCode.get(code);
+    if (existingScore !== undefined && existingScore <= score) continue;
+
+    pickedScoreByCode.set(code, score);
 
     const uiCategory = toUiCategory(m.courseCategory);
-    // IK-xxx courses should not count towards IKS requirement.
     categoriesByCode[code] = uiCategory === "IKS" && /^IK\d/.test(code) ? "FE" : uiCategory;
   }
 
   return NextResponse.json({
     branch: requestedBranch,
+    batch: userBatch,
     candidates,
     categoriesByCode,
   });
 }
-

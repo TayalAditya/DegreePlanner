@@ -28,6 +28,7 @@ type EnrollmentLike = {
     credits?: number | null;
     branchMappings?: Array<{
       branch?: string | null;
+      batch?: string | null;
       courseCategory?: string | null;
     }>;
   } | null;
@@ -140,22 +141,43 @@ export function computeEnrollmentCreditBreakdown({
     return "FE";
   };
 
+  const batchStr = userBatch ? String(userBatch) : "";
+
   const pickMapping = (enrollment: EnrollmentLike, rawBranch: string, checkBranch: string) => {
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length === 0) return null;
 
-    const aliasList = getBranchCandidates(rawBranch).filter((branch) => branch !== "COMMON");
-    const exact =
-      mappings.find((mapping) => mapping.branch === rawBranch) ||
-      mappings.find((mapping) => mapping.branch === checkBranch);
-    const direct = exact || mappings.find((mapping) => aliasList.includes(String(mapping.branch || "")));
-    const ge =
-      checkBranch === "GE"
-        ? mappings.find((mapping) => String(mapping.branch || "").startsWith("GE"))
-        : undefined;
-    const common = mappings.find((mapping) => mapping.branch === "COMMON");
+    const aliasList = getBranchCandidates(rawBranch);
+    const candidateOrder = new Map<string, number>(aliasList.map((b, idx) => [b, idx]));
 
-    return direct || ge || common || null;
+    let best: (typeof mappings)[number] | null = null;
+    let bestScore = Number.POSITIVE_INFINITY;
+
+    for (const m of mappings) {
+      const mBranch = String(m.branch || "");
+      const mBatch = m.batch ?? "";
+
+      // Skip mappings that don't apply to this batch
+      if (mBatch !== "" && mBatch !== batchStr) continue;
+
+      let branchIdx: number;
+      if (candidateOrder.has(mBranch)) {
+        branchIdx = candidateOrder.get(mBranch)!;
+      } else if (checkBranch === "GE" && mBranch.startsWith("GE") && candidateOrder.has("GE")) {
+        branchIdx = (candidateOrder.get("GE") ?? Number.POSITIVE_INFINITY) + 0.5;
+      } else {
+        continue;
+      }
+
+      const batchBonus = batchStr && mBatch === batchStr ? 0 : 1;
+      const score = branchIdx * 2 + batchBonus;
+      if (score < bestScore) {
+        best = m;
+        bestScore = score;
+      }
+    }
+
+    return best;
   };
 
   const getCourseCategory = (enrollment: EnrollmentLike): CategoryKey => {

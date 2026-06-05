@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
               select: {
                 courseCategory: true,
                 branch: true,
+                batch: true,
                 splitCategory: true,
                 splitAmount: true,
               },

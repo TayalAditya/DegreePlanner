@@ -47,40 +47,53 @@ export interface MTPEligibility {
 interface BranchMapping {
   courseCategory: string;
   branch: string;
+  batch?: string | null;
   splitCategory?: string | null;
   splitAmount?: number | null;
 }
 
+// Pick the best mapping for a given branch + batch.
+// Within the same branch priority, a batch-specific mapping beats a generic one (batch="").
 function pickBranchMapping(
   mappings: BranchMapping[] | undefined,
-  branch?: string
+  branch?: string,
+  batchYear?: number | null
 ): BranchMapping | undefined {
   if (!mappings || mappings.length === 0) return undefined;
 
   const normalizedBranch = normalizeBranchCode(branch);
   const candidates = getBranchCandidates(normalizedBranch);
   const candidateOrder = new Map<string, number>(candidates.map((br, idx) => [br, idx]));
+  const batchStr = batchYear ? String(batchYear) : "";
 
   let best: BranchMapping | undefined;
-  let bestIdx = Number.POSITIVE_INFINITY;
+  let bestScore = Number.POSITIVE_INFINITY;
 
   for (const m of mappings) {
     const mappingBranch = normalizeBranchCode(m.branch);
-    const idx = candidateOrder.get(mappingBranch);
+    const mappingBatch = m.batch ?? "";
 
-    if (idx !== undefined && idx < bestIdx) {
-      best = m;
-      bestIdx = idx;
+    // Skip mappings that don't apply to this batch
+    if (mappingBatch !== "" && mappingBatch !== batchStr) continue;
+
+    let branchIdx: number;
+
+    const directIdx = candidateOrder.get(mappingBranch);
+    if (directIdx !== undefined) {
+      branchIdx = directIdx;
+    } else if (normalizedBranch === "GE" && mappingBranch.startsWith("GE") && candidateOrder.has("GE")) {
+      branchIdx = (candidateOrder.get("GE") ?? Number.POSITIVE_INFINITY) + 0.5;
+    } else {
       continue;
     }
 
-    // GE specializations are stored as "GE-*" mappings; allow a GE user to match them.
-    if (normalizedBranch === "GE" && mappingBranch.startsWith("GE") && candidateOrder.has("GE")) {
-      const geIdx = (candidateOrder.get("GE") ?? Number.POSITIVE_INFINITY) + 0.5;
-      if (geIdx < bestIdx) {
-        best = m;
-        bestIdx = geIdx;
-      }
+    // Lower score = better: branch priority * 2, minus 1 bonus for batch-specific match
+    const batchBonus = batchStr && mappingBatch === batchStr ? 0 : 1;
+    const score = branchIdx * 2 + batchBonus;
+
+    if (score < bestScore) {
+      best = m;
+      bestScore = score;
     }
   }
 
@@ -89,9 +102,10 @@ function pickBranchMapping(
 
 function pickBranchMappingCategory(
   mappings: BranchMapping[] | undefined,
-  branch?: string
+  branch?: string,
+  batchYear?: number | null
 ): string | undefined {
-  return pickBranchMapping(mappings, branch)?.courseCategory;
+  return pickBranchMapping(mappings, branch, batchYear)?.courseCategory;
 }
 
 export class CreditCalculator {
@@ -125,6 +139,7 @@ export class CreditCalculator {
               select: {
                 courseCategory: true,
                 branch: true,
+                batch: true,
                 splitCategory: true,
                 splitAmount: true,
               },
@@ -259,13 +274,15 @@ export class CreditCalculator {
         (!e.grade || e.grade !== "F") // Exclude failed courses
       ),
       user?.branch || undefined,
-      minorDeToFeCourseCodes
+      minorDeToFeCourseCodes,
+      user?.batch ?? null
     );
 
     const inProgress = this.calculateCreditsByType(
       enrollments.filter((e) => e.status === EnrollmentStatus.IN_PROGRESS),
       user?.branch || undefined,
-      minorDeToFeCourseCodes
+      minorDeToFeCourseCodes,
+      user?.batch ?? null
     );
 
     // DE overflow → FE: excess DE credits beyond requirement count as Free Electives
@@ -469,7 +486,8 @@ export class CreditCalculator {
       isInternship?: boolean;
     }>,
     branch?: string,
-    minorDeToFeCourseCodes?: Set<string>
+    minorDeToFeCourseCodes?: Set<string>,
+    batchYear?: number | null
   ): CreditBreakdown {
     const breakdown: CreditBreakdown = {
       core: 0,
@@ -599,7 +617,7 @@ export class CreditCalculator {
         
         // Non-compulsory IC basket course → check branch mapping before defaulting to FE
         // (e.g. IC-240 is ICB2 but mapped as DC for MSE)
-        const basketFallbackCategory = pickBranchMappingCategory(enrollment.course.branchMappings, branch);
+        const basketFallbackCategory = pickBranchMappingCategory(enrollment.course.branchMappings, branch, batchYear);
         if (basketFallbackCategory === "DC" || basketFallbackCategory === "IC" || basketFallbackCategory === "IC_BASKET") {
           addBreakdownCredits("core", credits);
         } else if (basketFallbackCategory === "DE") {
@@ -616,7 +634,7 @@ export class CreditCalculator {
         return;
       }
 
-      const matchedMapping = pickBranchMapping(enrollment.course.branchMappings, branch);
+      const matchedMapping = pickBranchMapping(enrollment.course.branchMappings, branch, batchYear);
       const mappedCategory = matchedMapping?.courseCategory;
 
       if (mappedCategory) {

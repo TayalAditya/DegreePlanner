@@ -7,7 +7,7 @@ import prisma from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -15,17 +15,20 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const branch = searchParams.get("branch");
     const courseId = searchParams.get("courseId");
+    const batch = searchParams.get("batch"); // null = all batches, "2023" = B23, etc.
 
     const mappings = await prisma.courseBranchMapping.findMany({
       where: {
         ...(branch && { branch }),
         ...(courseId && { courseId }),
+        ...(batch !== null && { batch }),
       },
       include: {
         course: true,
       },
       orderBy: [
         { branch: 'asc' },
+        { batch: 'asc' },
         { course: { code: 'asc' } },
       ],
     });
@@ -44,13 +47,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await req.json();
-    const { courseId, branch, courseCategory, isRequired, semester } = body;
+    const { courseId, branch, batch = "", courseCategory, isRequired, semester } = body;
 
     if (!courseId || !branch || !courseCategory) {
       return NextResponse.json(
@@ -59,12 +62,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Upsert the mapping
     const mapping = await prisma.courseBranchMapping.upsert({
       where: {
-        courseId_branch: {
+        courseId_branch_batch: {
           courseId,
           branch,
+          batch,
         },
       },
       update: {
@@ -75,6 +78,7 @@ export async function POST(req: NextRequest) {
       create: {
         courseId,
         branch,
+        batch,
         courseCategory,
         isRequired: isRequired || false,
         semester,
@@ -98,7 +102,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user || session.user.role !== "ADMIN") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -113,14 +117,14 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Bulk upsert
     const results = await Promise.all(
-      mappings.map(({ courseId, branch, courseCategory, isRequired, semester }) =>
+      mappings.map(({ courseId, branch, batch = "", courseCategory, isRequired, semester }) =>
         prisma.courseBranchMapping.upsert({
           where: {
-            courseId_branch: {
+            courseId_branch_batch: {
               courseId,
               branch,
+              batch,
             },
           },
           update: {
@@ -131,6 +135,7 @@ export async function PUT(req: NextRequest) {
           create: {
             courseId,
             branch,
+            batch,
             courseCategory,
             isRequired: isRequired || false,
             semester,

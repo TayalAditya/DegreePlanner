@@ -241,6 +241,7 @@ model CourseBranchMapping {
   id              String              @id @default(cuid())
   courseId        String
   branch          String              // Branch code (CSE, EE, ME, etc.)
+  batch           String              @default("") // "" = all batches, "2023" = B23, "2024" = B24, etc.
   courseCategory  CourseCategoryType  // IC, IC-BASKET, DC, DE, FE, HSS, IKS
   isRequired      Boolean             @default(false)
   semester        Int?                // Recommended semester for this branch
@@ -254,9 +255,10 @@ model CourseBranchMapping {
 
   course          Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
-  @@unique([courseId, branch])
+  @@unique([courseId, branch, batch])
   @@index([courseId])
   @@index([branch])
+  @@index([batch])
   @@index([courseCategory])
 }
 
