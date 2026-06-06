@@ -346,6 +346,53 @@ async function main() {
     console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → DSAI:DC`);
   }
 
+  // ─── TU Darmstadt – EE Semester Exchange courses ─────────────────────────
+  const tuDarmstadtEEDescription =
+    "Available via Semester Exchange (TU Darmstadt) only. Can be taken in Semester 5, 6, or 7.";
+
+  const tuDarmstadtEECourses: {
+    code: string;
+    name: string;
+    credits: number;
+    category: CourseCategoryType;
+  }[] = [
+    { code: "18-ho-2610", name: "Advanced Digital Integrated Circuit Design", credits: 4,    category: CourseCategoryType.DE },
+    { code: "18-zo-2060", name: "Digital Signal Processing",                  credits: 4,    category: CourseCategoryType.DC },
+    { code: "18-zh-1010", name: "Hardware Fundamentals for Neural Networks",   credits: 4,    category: CourseCategoryType.DE },
+    { code: "18-zo-2030", name: "Digital Signal Processing Lab",               credits: 4,    category: CourseCategoryType.DE },
+  ];
+
+  for (const c of tuDarmstadtEECourses) {
+    const course = await prisma.course.upsert({
+      where: { code: c.code },
+      update: { name: c.name, credits: c.credits },
+      create: {
+        code: c.code,
+        name: c.name,
+        credits: c.credits,
+        department: "TU Darmstadt (Semester Exchange)",
+        level: 300,
+        description: tuDarmstadtEEDescription,
+        offeredInFall: true,
+        offeredInSpring: true,
+        isActive: true,
+      },
+    });
+
+    await prisma.courseBranchMapping.upsert({
+      where: { courseId_branch_batch: { courseId: course.id, branch: "EE", batch: "" } },
+      update: { courseCategory: c.category, isRequired: false },
+      create: {
+        courseId: course.id,
+        branch: "EE",
+        courseCategory: c.category,
+        isRequired: false,
+      },
+    });
+
+    console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → EE:${c.category}`);
+  }
+
   // ─── Additional TU Munich Semester 5 CSE courses ─────────────────────────
   const tumSem5Courses = [
     { code: "IN4212",      name: "Masterpraktikum - Advanced Platform Engineering for Agentic AI", credits: 6.67 },
