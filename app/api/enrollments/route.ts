@@ -298,8 +298,12 @@ export async function POST(request: NextRequest) {
     const specialDpCourseType = getSpecialDpCourseType(normalizedCourseCode);
     if (specialDpCourseType) finalCourseType = specialDpCourseType as CourseType;
 
+    // Internship courses (XX-396P / XX-399P) are always P/F — bypass user toggle and 9cr limit check
+    const isInternshipCourse =
+      normalizedCourseCode.endsWith("396P") || normalizedCourseCode.endsWith("399P");
     const finalIsPassFail =
-      finalCourseType === CourseType.FREE_ELECTIVE ? Boolean(isPassFail) : false;
+      isInternshipCourse ||
+      (finalCourseType === CourseType.FREE_ELECTIVE ? Boolean(isPassFail) : false);
 
     // Semester-long onsite internship constraint (e.g., DP-399P):
     // If any *399P course is enrolled in semester 6/7, no other courses are allowed in that semester.

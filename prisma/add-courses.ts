@@ -502,6 +502,7 @@ async function main() {
     { code: "ME-396P", branch: "ME"  }, { code: "ME-399P", branch: "ME"  },
   ];
 
+  const patchedCodes = new Set<string>();
   for (const { code, branch } of internshipMappingFixes) {
     const course = await prisma.course.findUnique({ where: { code } });
     if (!course) { console.log(`⚠ ${code} not found, skipping`); continue; }
@@ -509,8 +510,25 @@ async function main() {
       where: { courseId: course.id, branch },
       data: { courseCategory: CourseCategoryType.FE },
     });
+    if (!patchedCodes.has(code)) {
+      await prisma.course.update({
+        where: { id: course.id },
+        data: { isPassFailEligible: true },
+      });
+      patchedCodes.add(code);
+    }
     console.log(`✓ ${code} ${branch}:DE → FE`);
   }
+
+  // Mark all remaining XX-396P / XX-399P as isPassFailEligible (those already FE in DB)
+  await prisma.course.updateMany({
+    where: {
+      OR: [{ code: { endsWith: "-396P" } }, { code: { endsWith: "-399P" } }],
+      isPassFailEligible: false,
+    },
+    data: { isPassFailEligible: true },
+  });
+  console.log("✓ All XX-396P / XX-399P → isPassFailEligible: true");
 
   console.log("\nDone!");
 }

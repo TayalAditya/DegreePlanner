@@ -542,11 +542,13 @@ export default function CoursesPage() {
   };
 
   const handleAddCourse = (course: Course) => {
+    const norm = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const isInternshipCourse = norm.endsWith("396P") || norm.endsWith("399P");
     setAddingCourse(course);
     setSemester(/^[A-Z]+-010$/i.test(course.code) ? "8" : "");
     setGrade("");
     setCourseType(determineCourseType(course));
-    setIsPassFail(false);
+    setIsPassFail(isInternshipCourse);
   };
 
   const inferBatchYear = () => {
