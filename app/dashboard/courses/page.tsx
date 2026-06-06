@@ -543,7 +543,7 @@ export default function CoursesPage() {
 
   const handleAddCourse = (course: Course) => {
     setAddingCourse(course);
-    setSemester("");
+    setSemester(/^[A-Z]+-010$/i.test(course.code) ? "8" : "");
     setGrade("");
     setCourseType(determineCourseType(course));
     setIsPassFail(false);
@@ -1368,12 +1368,40 @@ export default function CoursesPage() {
                   </div>
                 </div>
 
+                {/* XX-010 branch mismatch warning */}
+                {/^[A-Z]+-010$/i.test(addingCourse.code) && (() => {
+                  const prefix = addingCourse.code.split("-")[0].toUpperCase();
+                  const candidates = getBranchCandidates(user?.branch).filter((b) => b !== "COMMON");
+                  if (candidates.some((c) => c.toUpperCase() === prefix)) return null;
+                  return (
+                    <div className="p-3 rounded-lg bg-error/10 border border-error/30 text-sm text-error font-medium">
+                      ⚠️ This is a different branch&apos;s Department Project — you can only add your own branch&apos;s XX-010 course.
+                    </div>
+                  );
+                })()}
+
                 {/* Semester Input */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Semester Number <span className="text-error">*</span>
                   </label>
                   {(() => {
+                    // XX-010 courses are locked to Semester 8 only
+                    if (/^[A-Z]+-010$/i.test(addingCourse.code)) {
+                      return (
+                        <>
+                          <select
+                            value={semester}
+                            onChange={(e) => setSemester(e.target.value)}
+                            className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
+                          >
+                            <option value="8">Semester 8 (Spring)</option>
+                          </select>
+                          <p className="text-xs text-info mt-1">ℹ️ Department Projects are only in Semester 8</p>
+                        </>
+                      );
+                    }
+
                     const { offeredInFall, offeredInSpring } = addingCourse;
                     const offeredBothSemesters = offeredInFall && offeredInSpring;
                     const offeredOddOnly = offeredInFall && !offeredInSpring;
@@ -1634,7 +1662,12 @@ export default function CoursesPage() {
                 </button>
                 <button
                   onClick={submitEnrollment}
-                  disabled={submitting || !semester}
+                  disabled={submitting || !semester || (() => {
+                    if (!/^[A-Z]+-010$/i.test(addingCourse.code)) return false;
+                    const prefix = addingCourse.code.split("-")[0].toUpperCase();
+                    const candidates = getBranchCandidates(user?.branch).filter((b) => b !== "COMMON");
+                    return !candidates.some((c) => c.toUpperCase() === prefix);
+                  })()}
                   className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-all font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitting ? "Adding..." : "Add Course"}
