@@ -442,6 +442,76 @@ async function main() {
     console.log("✓ CS305 Artificial Intelligence → DSAI:DC");
   }
 
+  // ─── Add missing XX-010 Department Project courses ───────────────────────
+  // 2cr IC, Sem 8 only (Spring), own-branch only.
+  // MS-010, VL-010, GE-010, MC-010 were missing from DB.
+  const missingDp010 = [
+    { code: "MS-010", branch: "MS" },
+    { code: "VL-010", branch: "VL" },
+    { code: "GE-010", branch: "GE" },
+    { code: "MC-010", branch: "MC" },
+  ];
+
+  for (const c of missingDp010) {
+    const course = await prisma.course.upsert({
+      where: { code: c.code },
+      update: {},
+      create: {
+        code: c.code,
+        name: "Internship",
+        credits: 2,
+        department: "IIT Mandi",
+        level: 0,
+        offeredInFall: false,
+        offeredInSpring: true,
+        isActive: true,
+      },
+    });
+
+    await prisma.courseBranchMapping.upsert({
+      where: { courseId_branch_batch: { courseId: course.id, branch: c.branch, batch: "" } },
+      update: { courseCategory: CourseCategoryType.IC, isRequired: true },
+      create: { courseId: course.id, branch: c.branch, batch: "", courseCategory: CourseCategoryType.IC, isRequired: true },
+    });
+
+    console.log(`✓ ${c.code} Internship (2 cr) → ${c.branch}:IC`);
+  }
+
+  // Fix DS-010: CSE:DE is wrong — CSE students cannot take another branch's XX-010
+  const ds010 = await prisma.course.findUnique({ where: { code: "DS-010" } });
+  if (ds010) {
+    await prisma.courseBranchMapping.updateMany({
+      where: { courseId: ds010.id, branch: "CSE" },
+      data: { courseCategory: CourseCategoryType.NA },
+    });
+    console.log("✓ DS-010 CSE:DE → NA (CSE can't take DS-010)");
+  }
+
+  // ─── Fix XX-396P and XX-399P: all → FE (P/F internships) ─────────────────
+  // BE, CE, CS/CSE, EE, EP, ME were incorrectly mapped as DE.
+  // DSE mapping on DS-396P/DS-399P was also DE — fix to FE.
+  const internshipMappingFixes: { code: string; branch: string }[] = [
+    { code: "BE-396P", branch: "BE"  }, { code: "BE-396P", branch: "BIO" },
+    { code: "BE-399P", branch: "BE"  }, { code: "BE-399P", branch: "BIO" },
+    { code: "CE-396P", branch: "CE"  }, { code: "CE-399P", branch: "CE"  },
+    { code: "CS-396P", branch: "CS"  }, { code: "CS-396P", branch: "CSE" },
+    { code: "CS-399P", branch: "CS"  }, { code: "CS-399P", branch: "CSE" },
+    { code: "DS-396P", branch: "DSE" }, { code: "DS-399P", branch: "DSE" },
+    { code: "EE-396P", branch: "EE"  }, { code: "EE-399P", branch: "EE"  },
+    { code: "EP-396P", branch: "EP"  }, { code: "EP-399P", branch: "EP"  },
+    { code: "ME-396P", branch: "ME"  }, { code: "ME-399P", branch: "ME"  },
+  ];
+
+  for (const { code, branch } of internshipMappingFixes) {
+    const course = await prisma.course.findUnique({ where: { code } });
+    if (!course) { console.log(`⚠ ${code} not found, skipping`); continue; }
+    await prisma.courseBranchMapping.updateMany({
+      where: { courseId: course.id, branch },
+      data: { courseCategory: CourseCategoryType.FE },
+    });
+    console.log(`✓ ${code} ${branch}:DE → FE`);
+  }
+
   console.log("\nDone!");
 }
 
