@@ -534,18 +534,18 @@ export default function CoursesPage() {
       }
     }
 
-    // Fallback heuristics (conservative)
+    // Fallback heuristics
     if (normalizedCode.startsWith("IC")) return "CORE";
     if (user?.branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
     if (isDataScienceBranch(user?.branch) && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
-    return "CORE";
+    return "FREE_ELECTIVE";
   };
 
   const handleAddCourse = (course: Course) => {
     setAddingCourse(course);
     setSemester("");
     setGrade("");
-    setCourseType("AUTO");
+    setCourseType(determineCourseType(course));
     setIsPassFail(false);
   };
 
@@ -1556,7 +1556,7 @@ export default function CoursesPage() {
                         return <span>→ Will count as <span className="font-semibold text-secondary">Discipline Elective</span></span>;
                       }
 
-                      return <span className="text-foreground-muted">→ No mapping for your branch — will default to Core</span>;
+                      return <span className="text-foreground-muted">→ No mapping for your branch — will count as <span className="font-semibold text-success">Free Elective</span></span>;
                     })()}
                   </p>
                 </div>
