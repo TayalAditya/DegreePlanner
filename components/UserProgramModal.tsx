@@ -125,6 +125,8 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   const [courseResults, setCourseResults] = useState<CourseSearchResult[]>([]);
   const [showCourseDropdown, setShowCourseDropdown] = useState(false);
   const [courseSearchLoading, setCourseSearchLoading] = useState(false);
+  const [detectedCategory, setDetectedCategory] = useState<string | null>(null);
+  const courseCategoryMapRef = useRef<Record<string, string>>({});
   const courseSearchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const queryClient = useQueryClient();
@@ -215,6 +217,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       setAddForm({ courseCode: "", semester: "1" });
       setCourseSearch("");
       setCourseResults([]);
+      setDetectedCategory(null);
       queryClient.invalidateQueries({ queryKey: ["admin-user-programs", userId] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
     },
@@ -235,6 +238,17 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     if (!ok) return;
     deleteEnrollmentMutation.mutate(enrollment.id);
   };
+
+  // Fetch category map once when form opens so we can show instant category preview
+  useEffect(() => {
+    if (!showAddForm || !data?.userSettings?.branch) return;
+    const branch = data.userSettings.branch;
+    const batch = data.userSettings.batch ? String(data.userSettings.batch) : "";
+    fetch(`/api/course-category-map?branch=${encodeURIComponent(branch)}&batch=${encodeURIComponent(batch)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.categoriesByCode) courseCategoryMapRef.current = d.categoriesByCode; })
+      .catch(() => {});
+  }, [showAddForm, data?.userSettings?.branch, data?.userSettings?.batch]);
 
   // Course search debounce
   useEffect(() => {
@@ -760,6 +774,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                   onChange={(e) => {
                                     setCourseSearch(e.target.value);
                                     setAddForm((f) => ({ ...f, courseCode: "" }));
+                                    setDetectedCategory(null);
                                   }}
                                   onFocus={() => courseResults.length > 0 && setShowCourseDropdown(true)}
                                   className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
@@ -778,6 +793,8 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                           setAddForm((f) => ({ ...f, courseCode: c.code }));
                                           setCourseSearch(`${c.code} - ${c.name}`);
                                           setShowCourseDropdown(false);
+                                          const norm = normalizeCourseCode(c.code);
+                                          setDetectedCategory(courseCategoryMapRef.current[norm] ?? null);
                                         }}
                                         className="w-full text-left px-3 py-2 hover:bg-surface-hover transition-colors border-b border-border/50 last:border-0"
                                       >
@@ -790,6 +807,18 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                 )}
                               </div>
                             </div>
+                            {detectedCategory && (
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <span className="text-foreground-secondary">Counts as:</span>
+                                <span className={`px-2 py-0.5 rounded-full font-semibold ${
+                                  categoryColors[detectedCategory as CourseCategory]?.bg ?? "bg-surface"
+                                } ${
+                                  categoryColors[detectedCategory as CourseCategory]?.text ?? "text-foreground"
+                                }`}>
+                                  {categoryLabels[detectedCategory as CourseCategory] ?? detectedCategory}
+                                </span>
+                              </div>
+                            )}
                             <div>
                               <label className="block text-xs text-foreground-secondary mb-1">Semester</label>
                               <select
@@ -804,7 +833,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                           <div className="flex gap-2 justify-end">
                             <button
                               type="button"
-                              onClick={() => { setShowAddForm(false); setCourseSearch(""); setCourseResults([]); }}
+                              onClick={() => { setShowAddForm(false); setCourseSearch(""); setCourseResults([]); setDetectedCategory(null); }}
                               className="px-3 py-1.5 text-sm rounded-lg border border-border text-foreground-secondary hover:bg-surface-hover transition-colors"
                             >
                               Cancel
