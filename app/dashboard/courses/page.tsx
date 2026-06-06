@@ -604,7 +604,11 @@ export default function CoursesPage() {
       });
 
       if (response.ok) {
+        const result = await response.json();
         showToast("success", "Course added successfully!");
+        if (result.droppedPfCourses?.length > 0) {
+          showToast("warning", `P/F removed from ${result.droppedPfCourses.join(", ")} — internship occupies the P/F budget.`);
+        }
         setAddingCourse(null);
         setIsAudit(false);
         await loadData();

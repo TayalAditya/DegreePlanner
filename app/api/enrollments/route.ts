@@ -11,6 +11,7 @@ import {
   canTakePassFailCourse,
   validateBranchSpecificCourse,
   getInternshipCredits,
+  PASS_FAIL_LIMITS,
 } from "@/lib/course-validation";
 
 const COURSE_NAME_OVERRIDES: Record<string, string> = {
@@ -350,7 +351,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (finalIsPassFail) {
+    // Internship courses (396P/399P) always go through as P/F — skip limit check.
+    // Retroactive P/F removal for optional FE courses happens after enrollment below.
+    if (finalIsPassFail && !isInternshipCourse) {
       const { allowed, reason } = await canTakePassFailCourse(
         session.user.id,
         course.credits,
@@ -511,18 +514,64 @@ export async function POST(request: NextRequest) {
     if (finalIsPassFail) {
       await prisma.user.update({
         where: { id: session.user.id },
-        data: {
-          totalPassFailCredits: {
-            increment: course.credits,
-          },
-        },
+        data: { totalPassFailCredits: { increment: course.credits } },
       });
+    }
+
+    // Internship P/F has priority: if total P/F now exceeds 9cr, retroactively
+    // remove P/F status from optional FE enrollments (newest first) until within limit.
+    let droppedPfCourses: string[] = [];
+    if (isInternshipCourse) {
+      const updatedUser = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { totalPassFailCredits: true },
+      });
+      const total = updatedUser?.totalPassFailCredits ?? 0;
+
+      if (total > PASS_FAIL_LIMITS.TOTAL_CREDITS) {
+        const allOptionalPf = await prisma.courseEnrollment.findMany({
+          where: { userId: session.user.id, isPassFail: true, id: { not: enrollment.id } },
+          select: { id: true, passFailCredits: true, course: { select: { credits: true, code: true } } },
+          orderBy: { createdAt: "desc" },
+        });
+
+        const nonInternshipPf = allOptionalPf.filter((e) => {
+          const norm = e.course.code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+          return !norm.endsWith("396P") && !norm.endsWith("399P");
+        });
+
+        let excess = total - PASS_FAIL_LIMITS.TOTAL_CREDITS;
+        const toDrop: string[] = [];
+        for (const e of nonInternshipPf) {
+          if (excess <= 0) break;
+          toDrop.push(e.id);
+          droppedPfCourses.push(e.course.code);
+          excess -= e.course.credits;
+        }
+
+        if (toDrop.length > 0) {
+          await prisma.courseEnrollment.updateMany({
+            where: { id: { in: toDrop } },
+            data: { isPassFail: false, passFailCredits: 0 },
+          });
+          // Recompute totalPassFailCredits from live data
+          const agg = await prisma.courseEnrollment.aggregate({
+            where: { userId: session.user.id, isPassFail: true },
+            _sum: { passFailCredits: true },
+          });
+          await prisma.user.update({
+            where: { id: session.user.id },
+            data: { totalPassFailCredits: agg._sum.passFailCredits ?? 0 },
+          });
+        }
+      }
     }
 
     return NextResponse.json(
       {
         ...enrollment,
         internshipCredits,
+        droppedPfCourses,
         message: isInternship
           ? `Internship enrolled. Credits to be awarded: ${internshipCredits}`
           : undefined,
