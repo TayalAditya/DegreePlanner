@@ -1519,19 +1519,45 @@ export default function CoursesPage() {
                     <option value="MTP">MTP</option>
                   </select>
                   <p className="text-xs text-foreground-secondary mt-1">
-                    {courseType === "AUTO" && (
-                      <>
-                        {addingCourse.code.startsWith("HS-") ? (
-                          hssCreditsCompleted < 12 ? (
-                            <span className="text-success">→ Will be marked as HSS/Core ({formatCredits(subtractCredits(12, hssCreditsCompleted))} credits remaining)</span>
-                          ) : (
-                            <span className="text-info">→ Will be marked as Free Elective (HSS limit reached)</span>
-                          )
+                    {courseType === "AUTO" && (() => {
+                      const code = addingCourse.code.toUpperCase();
+                      const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+
+                      if (code.startsWith("HS-")) {
+                        return hssCreditsCompleted < 12 ? (
+                          <span className="text-success">→ Will count as HSS/Core ({formatCredits(subtractCredits(12, hssCreditsCompleted))} cr remaining)</span>
                         ) : (
-                          <span>→ Will auto-detect based on course code</span>
-                        )}
-                      </>
-                    )}
+                          <span className="text-info">→ Will count as Free Elective (HSS cap reached)</span>
+                        );
+                      }
+
+                      const catMeta: Record<string, { label: string; color: string }> = {
+                        IC:   { label: "Institute Core",                        color: "text-info"      },
+                        ICB:  { label: "IC Basket",                             color: "text-accent"    },
+                        DC:   { label: "Discipline Core",                       color: "text-primary"   },
+                        DE:   { label: "Discipline Elective",                   color: "text-secondary" },
+                        FE:   { label: "Free Elective",                         color: "text-success"   },
+                        HSS:  { label: "Humanities & Social Sciences",          color: "text-warning"   },
+                        IKS:  { label: "Indian Knowledge System",               color: "text-warning"   },
+                        MTP:  { label: "Major Technical Project",               color: "text-error"     },
+                        ISTP: { label: "Interactive Socio-Technical Practicum", color: "text-accent"    },
+                      };
+
+                      const rawCat = dbCourseCategoryMap.get(normalizedCode);
+                      if (rawCat && catMeta[rawCat]) {
+                        const { label, color } = catMeta[rawCat];
+                        return <span>→ Will count as <span className={`font-semibold ${color}`}>{label}</span></span>;
+                      }
+
+                      if (normalizedCode.startsWith("IC")) {
+                        return <span>→ Will count as <span className="font-semibold text-info">Institute Core</span></span>;
+                      }
+                      if ((user?.branch === "CSE" || isDataScienceBranch(user?.branch)) && (code.startsWith("DS") || code.startsWith("CS"))) {
+                        return <span>→ Will count as <span className="font-semibold text-secondary">Discipline Elective</span></span>;
+                      }
+
+                      return <span className="text-foreground-muted">→ No mapping for your branch — will default to Core</span>;
+                    })()}
                   </p>
                 </div>
 
