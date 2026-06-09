@@ -329,14 +329,31 @@ export default function CoursesPage() {
 
   const enrolledCourseIds = new Set(enrollments.map((e) => e.courseId));
 
-  const internshipCourses399P = useMemo(() =>
-    allCourses.filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("399P")),
-    [allCourses]
-  );
-  const internshipCourses396P = useMemo(() =>
-    allCourses.filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("396P")),
-    [allCourses]
-  );
+  const internshipCourses399P = useMemo(() => {
+    const BRANCH_PREFIX: Record<string, string> = {
+      CSE: "CS", CS: "CS", DSE: "DS", DSAI: "DS",
+      EE: "EE", ME: "ME", CE: "CE", EP: "EP",
+      BE: "BE", BIO: "BE", MNC: "MC", MC: "MC",
+      MS: "MS", MSE: "MS", GE: "GE", VLSI: "VL",
+    };
+    const branch = (user?.branch ?? "").toUpperCase();
+    const prefix = BRANCH_PREFIX[branch] ?? null;
+    const keep = new Set(["DP399P", ...(prefix ? [`${prefix}399P`] : [])]);
+    return allCourses.filter((c) => keep.has(c.code.toUpperCase().replace(/[^A-Z0-9]/g, "")));
+  }, [allCourses, user?.branch]);
+
+  const internshipCourses396P = useMemo(() => {
+    const BRANCH_PREFIX: Record<string, string> = {
+      CSE: "CS", CS: "CS", DSE: "DS", DSAI: "DS",
+      EE: "EE", ME: "ME", CE: "CE", EP: "EP",
+      BE: "BE", BIO: "BE", MNC: "MC", MC: "MC",
+      MS: "MS", MSE: "MS", GE: "GE", VLSI: "VL",
+    };
+    const branch = (user?.branch ?? "").toUpperCase();
+    const prefix = BRANCH_PREFIX[branch] ?? null;
+    const keep = new Set(["DP396P", ...(prefix ? [`${prefix}396P`] : [])]);
+    return allCourses.filter((c) => keep.has(c.code.toUpperCase().replace(/[^A-Z0-9]/g, "")));
+  }, [allCourses, user?.branch]);
   const hasEnrolledInternship = useMemo(() =>
     enrollments.some((e) => {
       const n = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");

@@ -487,8 +487,20 @@ export default function PreRegistrationPage() {
         }
 
         if (Array.isArray(courses)) {
-          const p399 = (courses as InternshipCourse[]).filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("399P"));
-          const p396 = (courses as InternshipCourse[]).filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("396P"));
+          // Branch → internship course prefix mapping
+          const BRANCH_PREFIX: Record<string, string> = {
+            CSE: "CS", CS: "CS", DSE: "DS", DSAI: "DS",
+            EE: "EE", ME: "ME", CE: "CE", EP: "EP",
+            BE: "BE", BIO: "BE", MNC: "MC", MC: "MC",
+            MS: "MS", MSE: "MS", GE: "GE", VLSI: "VL",
+          };
+          const branch = (d.studentInfo?.branch ?? "").toUpperCase();
+          const prefix = BRANCH_PREFIX[branch] ?? null;
+          const keep399 = new Set(["DP399P", ...(prefix ? [`${prefix}399P`] : [])]);
+          const keep396 = new Set(["DP396P", ...(prefix ? [`${prefix}396P`] : [])]);
+          const norm = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+          const p399 = (courses as InternshipCourse[]).filter((c) => keep399.has(norm(c.code)));
+          const p396 = (courses as InternshipCourse[]).filter((c) => keep396.has(norm(c.code)));
           setInternshipCourses({ p399, p396 });
         }
       })
