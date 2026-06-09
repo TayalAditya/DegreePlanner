@@ -732,7 +732,7 @@ export default function PreRegistrationPage() {
 
         {/* Show internship section even when no offerings uploaded */}
         {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={data.studentInfo?.pfCreditsUsed ?? 0} />
+          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={data?.studentInfo?.pfCreditsUsed ?? 0} />
         )}
       </div>
     );
