@@ -136,6 +136,7 @@ const categoryLabels = {
 
 
 const HSS_CORE_CAP = 12;
+const HSS_FE_CAP = 20;
 
 export default function ProgressPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -265,12 +266,8 @@ export default function ProgressPage() {
     // HS-xxx courses always go to HSS — never let branch mapping override
     if (normalizedCode.startsWith("HS")) {
       if (hssUsed) {
-        const before = hssUsed.credits;
-        if (before < HSS_CORE_CAP) {
-          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
-          return "HSS";
-        }
-        return "FE";
+        // Cap at HSS_FE_CAP=20; accumulateSplitAware splits [0-12]→core [12-20]→FE [20+]→ignored
+        hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
       }
       return "HSS";
     }
@@ -305,9 +302,7 @@ export default function ProgressPage() {
         const resolvedCat = applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
         // Apply HSS cap for non-HS-prefix courses mapped to HSS (e.g. German intensive courses)
         if (resolvedCat === "HSS" && hssUsed) {
-          const before = hssUsed.credits;
-          if (before >= HSS_CORE_CAP) return "FE";
-          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
+          hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
         }
         return resolvedCat;
       }
@@ -524,10 +519,13 @@ export default function ProgressPage() {
       const hssBefore = hssU?.credits ?? 0;
       const category = getCourseCategory(e, icBkt, hssU);
       const hssAfter = hssU?.credits ?? hssBefore;
-      const hssPortionUsed = subtractCredits(hssAfter, hssBefore);
-      if (category === "HSS" && hssPortionUsed < e.course.credits) {
-        map["HSS"] = addCredits(map["HSS"] ?? 0, hssPortionUsed);
-        map["FE"] = addCredits(map["FE"] ?? 0, subtractCredits(e.course.credits, hssPortionUsed));
+      if (category === "HSS") {
+        // [0–12] → HSS core, [12–20] → FE, [20+] → ignored
+        const corePortion = Math.max(0, Math.min(HSS_CORE_CAP, hssAfter) - Math.min(HSS_CORE_CAP, hssBefore));
+        const fePortion = Math.max(0, Math.min(HSS_FE_CAP, hssAfter) - Math.max(HSS_CORE_CAP, hssBefore));
+        if (corePortion > 0) map["HSS"] = addCredits(map["HSS"] ?? 0, corePortion);
+        if (fePortion > 0) map["FE"] = addCredits(map["FE"] ?? 0, fePortion);
+        // credits above HSS_FE_CAP=20 are not added to any bucket
       } else {
         map[category] = addCredits(map[category], e.course.credits);
       }
@@ -638,6 +636,20 @@ export default function ProgressPage() {
         inProgressCredits: inProgress,
       }))
       .sort((a, b) => a.semester - b.semester);
+
+    // DE overflow → FE: same rule as creditCalculator.ts
+    const deRequired = creditsRequiredByCategory.DE;
+    if (creditsByCategory.DE > deRequired) {
+      const overflow = subtractCredits(creditsByCategory.DE, deRequired);
+      creditsByCategory.DE = deRequired;
+      creditsByCategory.FE = addCredits(creditsByCategory.FE, overflow);
+    }
+    const deStillNeeded = Math.max(0, subtractCredits(deRequired, creditsByCategory.DE));
+    if (creditsInProgressByCategory.DE > deStillNeeded) {
+      const overflow = subtractCredits(creditsInProgressByCategory.DE, deStillNeeded);
+      creditsInProgressByCategory.DE = deStillNeeded;
+      creditsInProgressByCategory.FE = addCredits(creditsInProgressByCategory.FE, overflow);
+    }
 
     return {
       totalCreditsEarned,
