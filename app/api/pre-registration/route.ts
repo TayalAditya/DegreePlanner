@@ -77,12 +77,6 @@ export async function GET() {
     completed.map((e) => [e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, ""), e.semester])
   );
 
-  // Fetch user's existing in-progress enrollments for this semester (already added)
-  const inProgress = await prisma.courseEnrollment.findMany({
-    where: { userId: session.user.id, semester: offeringSemester, status: EnrollmentStatus.IN_PROGRESS },
-    select: { courseId: true },
-  });
-  const alreadyAddedCourseIds = new Set(inProgress.map((e) => e.courseId));
 
   const result = offerings
     .filter((o) => {
@@ -112,8 +106,6 @@ export async function GET() {
         completedByCourseCode.get(normalizedCode) ??
         null;
 
-      const alreadyAdded = o.courseId ? alreadyAddedCourseIds.has(o.courseId) : false;
-
       return {
         id: o.id,
         courseId: o.courseId,
@@ -128,7 +120,6 @@ export async function GET() {
         resolvedCategory,
         isCompulsory,
         completedInSemester: completedSem ?? null,
-        alreadyAdded,
       };
     });
 

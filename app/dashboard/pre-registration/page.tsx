@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight } from "lucide-react";
+import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { formatCredits } from "@/lib/utils";
 
@@ -20,7 +20,6 @@ interface Offering {
   resolvedCategory: string;
   isCompulsory: boolean;
   completedInSemester: number | null;
-  alreadyAdded: boolean;
 }
 
 interface ApiResponse {
@@ -108,9 +107,6 @@ function CourseCard({
               Sem {offering.completedInSemester}
             </span>
           )}
-          {offering.alreadyAdded && !isCompleted && (
-            <span className="px-1.5 py-0.5 text-xs rounded bg-info/10 text-info border border-info/20">In Plan</span>
-          )}
         </div>
 
         <p className={`mt-0.5 text-sm font-medium text-foreground ${isCompleted ? "line-through" : ""}`}>
@@ -184,20 +180,25 @@ export default function PreRegistrationPage() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [adding, setAdding] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [showApprovalWarning, setShowApprovalWarning] = useState(false);
   const { showToast } = useToast();
+
+  // localStorage key scoped to semester+year once data loads
+  const storageKey = data ? `prereg-${data.offeringSemester}-${data.offeringYear}` : null;
 
   useEffect(() => {
     fetch("/api/pre-registration")
       .then((r) => r.json())
-      .then((d) => {
+      .then((d: ApiResponse) => {
         setData(d);
-        // Auto-select already-added courses
-        const autoSelected = new Set<string>(
-          d.offerings?.filter((o: Offering) => o.alreadyAdded && !o.isCompulsory).map((o: Offering) => o.id) ?? []
-        );
-        setSelected(autoSelected);
+        // Restore saved selection from localStorage
+        const key = `prereg-${d.offeringSemester}-${d.offeringYear}`;
+        try {
+          const saved = JSON.parse(localStorage.getItem(key) ?? "[]") as string[];
+          const validIds = new Set(d.offerings.map((o: Offering) => o.id));
+          setSelected(new Set(saved.filter((id) => validIds.has(id))));
+        } catch { /* ignore */ }
       })
       .catch(() => showToast("error", "Failed to load offerings"))
       .finally(() => setLoading(false));
@@ -296,59 +297,17 @@ export default function PreRegistrationPage() {
       if (data && newTotal > data.creditLimit) setShowApprovalWarning(true);
     }
     setSelected(next);
+    setSaved(false);
   };
 
-  const handleAddToSchedule = async () => {
-    if (!data) return;
-    if (data.registrationOpensAt) {
-      const opens = new Date(data.registrationOpensAt);
-      showToast("error", `Registration opens on ${opens.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}`);
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "This saves your selection to Degree Planner only — it is NOT the official institute pre-registration.\n\nActual pre-registration on the institute portal will begin in late June.\n\nContinue?"
-    );
-    if (!confirmed) return;
-
-    const toAdd = data.offerings.filter(
-      (o) => (o.isCompulsory || selected.has(o.id)) && !o.alreadyAdded && !o.completedInSemester
-    );
-    if (toAdd.length === 0) { showToast("info", "Nothing new to add"); return; }
-    if (!toAdd.every((o) => o.courseId)) {
-      showToast("error", "Some courses are not yet in the catalog. Contact admin.");
-      return;
-    }
-
-    setAdding(true);
-    let added = 0, failed = 0;
-    for (const o of toAdd) {
-      try {
-        const res = await fetch("/api/enrollments", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            courseId: o.courseId,
-            semester: data.offeringSemester,
-            year: data.offeringYear,
-            term: data.term,
-            courseType: "AUTO",
-            status: "IN_PROGRESS",
-          }),
-        });
-        if (res.ok) added++;
-        else {
-          const err = await res.json();
-          if (res.status === 409) { /* already enrolled, skip silently */ }
-          else { failed++; showToast("error", `${o.courseCode}: ${err.error ?? "Failed"}`); }
-        }
-      } catch { failed++; }
-    }
-    setAdding(false);
-    if (added > 0) showToast("success", `${added} course${added > 1 ? "s" : ""} added to your plan`);
-    if (failed === 0 && added > 0) {
-      // Refresh
-      setTimeout(() => window.location.reload(), 800);
+  const handleSavePlan = () => {
+    if (!data || !storageKey) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify([...selected]));
+      setSaved(true);
+      showToast("success", "Plan saved — this is for your reference only, not the official registration");
+    } catch {
+      showToast("error", "Could not save plan");
     }
   };
 
@@ -390,7 +349,6 @@ export default function PreRegistrationPage() {
   const creditPct = Math.min(100, (totalCredits / creditLimit) * 100);
   const overLimit = totalCredits > creditLimit;
   const registrationLocked = !!data.registrationOpensAt;
-
   const selectedCount = selected.size + compulsory.filter((o) => !o.completedInSemester).length;
 
   return (
@@ -624,23 +582,22 @@ export default function PreRegistrationPage() {
       {/* Sticky bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <p className="text-sm text-foreground-secondary">
-            <span className="font-semibold text-foreground">{selectedCount}</span> course{selectedCount !== 1 ? "s" : ""} ·{" "}
-            <span className={overLimit ? "text-error font-semibold" : ""}>{formatCredits(totalCredits)} cr</span>
-          </p>
+          <div>
+            <p className="text-sm text-foreground-secondary">
+              <span className="font-semibold text-foreground">{selectedCount}</span> course{selectedCount !== 1 ? "s" : ""} ·{" "}
+              <span className={overLimit ? "text-error font-semibold" : ""}>{formatCredits(totalCredits)} cr</span>
+            </p>
+            <p className="text-xs text-foreground-secondary">Planning only · not official registration</p>
+          </div>
           <button
-            onClick={handleAddToSchedule}
-            disabled={adding || selectedCount === 0}
-            className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium
-              hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+            onClick={handleSavePlan}
+            disabled={selectedCount === 0}
+            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2
+              disabled:opacity-50 disabled:cursor-not-allowed
+              ${saved ? "bg-success text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
           >
-            {adding ? (
-              <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Adding...</>
-            ) : registrationLocked ? (
-              <><Lock className="w-4 h-4" /> Registration Locked</>
-            ) : (
-              "Add to Schedule"
-            )}
+            <Save className="w-4 h-4" />
+            {saved ? "Saved" : "Save Plan"}
           </button>
         </div>
       </div>
