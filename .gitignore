@@ -79,3 +79,6 @@ report/
 
 # Migration backups (production data dumps - keep locally for rollback, never commit)
 scripts/backups/
+
+degreeplanner_backup.sql
+public/data/README.md
