@@ -228,6 +228,59 @@ function Section({ title, count, children, defaultOpen = false, headerBg, error 
   );
 }
 
+function InternshipSection({ internshipCourses }: { internshipCourses: { p399: InternshipCourse[]; p396: InternshipCourse[] } }) {
+  return (
+    <Section title="Semester-Long Internship" count={internshipCourses.p399.length + internshipCourses.p396.length}>
+      <div className="space-y-4">
+        {internshipCourses.p399.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-foreground mb-2">Onsite (399P) — 9 cr P/F · No other courses · P/F budget → 0 remaining</p>
+            <div className="flex items-start gap-2 p-2 rounded-lg bg-error/5 border border-error/15 mb-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-error flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-error">Cannot enroll alongside any other course in Sem 6/7</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {internshipCourses.p399.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border bg-background">
+                  <div>
+                    <p className="text-xs font-mono font-semibold text-foreground">{formatCourseCode(c.code)}</p>
+                    <p className="text-xs text-foreground-secondary">{formatCredits(c.credits)} cr P/F</p>
+                  </div>
+                  <a href="/dashboard/courses" className="flex-shrink-0 text-xs text-primary hover:underline flex items-center gap-1">
+                    <Plus className="w-3 h-3" /> Add
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {internshipCourses.p396.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold text-foreground mb-2">Remote (396P) — 6 cr P/F · P/F budget → 3 remaining</p>
+            <div className="flex items-start gap-2 p-2 rounded-lg bg-warning/5 border border-warning/15 mb-2">
+              <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-warning">Uses 6 of 9 total P/F credits</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {internshipCourses.p396.map((c) => (
+                <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border bg-background">
+                  <div>
+                    <p className="text-xs font-mono font-semibold text-foreground">{formatCourseCode(c.code)}</p>
+                    <p className="text-xs text-foreground-secondary">{formatCredits(c.credits)} cr P/F</p>
+                  </div>
+                  <a href="/dashboard/courses" className="flex-shrink-0 text-xs text-primary hover:underline flex items-center gap-1">
+                    <Plus className="w-3 h-3" /> Add
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+}
+
 function ProgressPanel({ programRequirements, completedBreakdown, categoryBreakdown }: {
   programRequirements: Record<string, number>;
   completedBreakdown: Record<string, number>;
@@ -505,14 +558,32 @@ export default function PreRegistrationPage() {
     );
   }
 
-  if (!data || data.offerings.length === 0) {
+  const hasOfferings = data && data.offerings.length > 0;
+
+  if (!hasOfferings) {
     return (
-      <div className="max-w-2xl mx-auto py-16 text-center space-y-3">
-        <BookOpen className="w-10 h-10 text-foreground-secondary mx-auto" />
-        <p className="text-lg font-medium text-foreground">No offerings yet</p>
-        <p className="text-sm text-foreground-secondary">
-          Course offerings for Semester {data?.offeringSemester ?? "—"} haven&apos;t been uploaded yet. Check back soon.
-        </p>
+      <div className="max-w-2xl mx-auto space-y-6 pb-16">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">
+            Semester {data?.offeringSemester ?? "—"} Pre Registration
+          </h1>
+          <p className="mt-1 text-sm text-foreground-secondary">
+            {data?.term} {data?.offeringYear} · Browse and plan your courses for the upcoming semester
+          </p>
+        </div>
+
+        <div className="py-10 text-center space-y-3 rounded-xl border border-border bg-surface">
+          <BookOpen className="w-10 h-10 text-foreground-secondary mx-auto" />
+          <p className="text-lg font-medium text-foreground">No offerings yet</p>
+          <p className="text-sm text-foreground-secondary">
+            Course offerings haven&apos;t been uploaded yet. Check back soon.
+          </p>
+        </div>
+
+        {/* Show internship section even when no offerings uploaded */}
+        {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
+          <InternshipSection internshipCourses={internshipCourses} />
+        )}
       </div>
     );
   }
@@ -821,54 +892,7 @@ export default function PreRegistrationPage() {
 
       {/* Semester-Long Internship */}
       {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-        <Section title="Semester-Long Internship" count={internshipCourses.p399.length + internshipCourses.p396.length}>
-          <div className="space-y-4">
-            {internshipCourses.p399.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-foreground mb-1">Onsite (399P) — 9 cr P/F · No other courses · P/F budget → 0 remaining</p>
-                <div className="flex items-start gap-2 p-2 rounded-lg bg-error/5 border border-error/15 mb-2">
-                  <AlertTriangle className="w-3.5 h-3.5 text-error flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-error">Cannot enroll alongside any other course in Sem 6/7</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {internshipCourses.p399.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border bg-background">
-                      <div>
-                        <p className="text-xs font-mono font-semibold text-foreground">{formatCourseCode(c.code)}</p>
-                        <p className="text-xs text-foreground-secondary">{formatCredits(c.credits)} cr P/F</p>
-                      </div>
-                      <a href="/dashboard/courses" className="flex-shrink-0 text-xs text-primary hover:underline flex items-center gap-1">
-                        <Plus className="w-3 h-3" /> Add
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            {internshipCourses.p396.length > 0 && (
-              <div>
-                <p className="text-xs font-semibold text-foreground mb-1">Remote (396P) — 6 cr P/F · P/F budget → 3 remaining</p>
-                <div className="flex items-start gap-2 p-2 rounded-lg bg-warning/5 border border-warning/15 mb-2">
-                  <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-warning">Uses 6 of 9 total P/F credits</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {internshipCourses.p396.map((c) => (
-                    <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border bg-background">
-                      <div>
-                        <p className="text-xs font-mono font-semibold text-foreground">{formatCourseCode(c.code)}</p>
-                        <p className="text-xs text-foreground-secondary">{formatCredits(c.credits)} cr P/F</p>
-                      </div>
-                      <a href="/dashboard/courses" className="flex-shrink-0 text-xs text-primary hover:underline flex items-center gap-1">
-                        <Plus className="w-3 h-3" /> Add
-                      </a>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </Section>
+        <InternshipSection internshipCourses={internshipCourses} />
       )}
 
       {/* Semester breakdown analysis */}
