@@ -898,25 +898,49 @@ export default function PreRegistrationPage() {
       )}
 
       {/* Credit counter */}
-      <div className="p-4 rounded-xl border border-border bg-surface">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-foreground">Credits Selected</span>
-          <span className={`text-sm font-semibold ${overLimit ? "text-error" : "text-foreground"}`}>
-            {formatCredits(totalCredits)} / {creditLimit} cr
-          </span>
+      <div className="p-4 rounded-xl border border-border bg-surface space-y-3">
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-foreground">Credits Selected</span>
+            <span className={`text-sm font-semibold ${overLimit ? "text-error" : "text-foreground"}`}>
+              {formatCredits(totalCredits)} / {creditLimit} cr
+            </span>
+          </div>
+          <div className="h-2 rounded-full bg-background-secondary overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${overLimit ? "bg-error" : "bg-primary"}`}
+              style={{ width: `${creditPct}%` }}
+            />
+          </div>
+          {overLimit && (
+            <p className="mt-2 text-xs text-error flex items-center gap-1">
+              <Info className="w-3 h-3" />
+              Exceeds {creditLimit} cr limit — additional courses require Academic Affairs approval
+            </p>
+          )}
         </div>
-        <div className="h-2 rounded-full bg-background-secondary overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-all ${overLimit ? "bg-error" : "bg-primary"}`}
-            style={{ width: `${creditPct}%` }}
-          />
-        </div>
-        {overLimit && (
-          <p className="mt-2 text-xs text-error flex items-center gap-1">
-            <Info className="w-3 h-3" />
-            Exceeds {creditLimit} cr limit — additional courses require Academic Affairs approval
-          </p>
-        )}
+        {(() => {
+          const pfUsed = data.studentInfo?.pfCreditsUsed ?? 0;
+          const PF_TOTAL = 9;
+          const pfRemaining = Math.max(0, PF_TOTAL - pfUsed);
+          const pfPct = Math.min(100, (pfUsed / PF_TOTAL) * 100);
+          return (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-medium text-foreground-secondary">P/F Budget</span>
+                <span className={`text-xs font-semibold ${pfRemaining === 0 ? "text-error" : pfRemaining <= 3 ? "text-warning" : "text-foreground"}`}>
+                  {pfUsed} / {PF_TOTAL} cr used · {pfRemaining} remaining
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-background-secondary overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${pfRemaining === 0 ? "bg-error" : pfRemaining <= 3 ? "bg-warning" : "bg-accent"}`}
+                  style={{ width: `${pfPct}%` }}
+                />
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Approval warning popup */}
