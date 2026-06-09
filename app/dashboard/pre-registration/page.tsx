@@ -172,10 +172,21 @@ function CourseCard({
           {offering.instructorEmail && (() => {
             const instructor = offering.instructor ?? "Sir/Ma'am";
             const salutation = instructor.toLowerCase().includes("ma'am") || instructor.toLowerCase().includes("mam") ? "Ma'am" : "Sir/Ma'am";
-            const subject = encodeURIComponent(`Inquiry Regarding ${offering.courseCode} – ${offering.courseName}`);
-            const body = encodeURIComponent(
-              `Respected ${salutation},\n\nI wanted to inquire whether the course ${offering.courseCode} – ${offering.courseName} is being offered to Semester ${studentInfo?.semester ?? "?"} students${studentInfo?.branch ? ` (${studentInfo.branch})` : ""} this semester.\n\nRegards,\n${studentInfo?.name ?? "Student"}`
-            );
+            const code = offering.courseCode;
+            const name = offering.courseName;
+            const sem = studentInfo?.semester ?? "?";
+            const branch = studentInfo?.branch ?? "";
+            const studentName = studentInfo?.name ?? "Student";
+            const semBranch = `Semester ${sem}${branch ? ` (${branch})` : ""}`;
+            const BODY_VARIANTS = [
+              `Respected ${salutation},\n\nI wanted to inquire whether the course ${code} – ${name} is being offered to ${semBranch} students this semester.\n\nRegards,\n${studentName}`,
+              `Respected ${salutation},\n\nI hope this email finds you well. I am a ${semBranch} student and would like to know if ${code} – ${name} will be available for registration this semester.\n\nRegards,\n${studentName}`,
+              `Respected ${salutation},\n\nI am writing to enquire about the availability of ${code} – ${name} for ${semBranch} students in the upcoming semester. Could you please confirm if this course will be offered?\n\nRegards,\n${studentName}`,
+              `Respected ${salutation},\n\nI am interested in registering for ${code} – ${name} this semester. Could you kindly let me know if it is being offered to ${semBranch} students?\n\nThank you,\n${studentName}`,
+              `Respected ${salutation},\n\nI hope you are doing well. I wanted to check whether ${code} – ${name} is being offered this semester for ${semBranch} students, as I am planning my course selection.\n\nWarm regards,\n${studentName}`,
+            ];
+            const subject = encodeURIComponent(`Inquiry Regarding ${code} – ${name}`);
+            const body = encodeURIComponent(BODY_VARIANTS[Math.floor(Math.random() * BODY_VARIANTS.length)]);
             return (
               <a
                 href={`mailto:${offering.instructorEmail}?subject=${subject}&body=${body}`}
