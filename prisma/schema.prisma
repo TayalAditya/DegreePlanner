@@ -618,6 +618,9 @@ model CourseOffering {
   instructor       String?
   instructorEmail  String?
   school           String?             // e.g. "SCEE", "SMSS" — used for FE grouping
+  // If set, this course is only compulsory for students in that specific semester.
+  // Parsed from DC column entries like "CSE S5" — sem 5 students only must take it.
+  compulsorySem    Int?
   branches         String[]            // ["CSE","EE"] or ["ALL"]
   eligibleSems     Int[]               // [5, 7] — which student sems can take it
   slots            String?             // "A1+TA1"

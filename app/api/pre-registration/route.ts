@@ -97,7 +97,12 @@ export async function GET() {
       const resolvedCategory =
         mappingCategory ?? o.categoryOverride ?? "FE";
 
-      const isCompulsory = ["IC", "IC_BASKET", "DC", "IKS"].includes(resolvedCategory);
+      // A course is only compulsory if it's the right semester for this student.
+      // e.g. "CS-305 DC for CSE S5" should not be compulsory for a sem 7 student.
+      const semesterMatches =
+        o.compulsorySem == null || o.compulsorySem === offeringSemester;
+      const isCompulsory =
+        ["IC", "IC_BASKET", "DC", "IKS"].includes(resolvedCategory) && semesterMatches;
 
       // Check if already completed
       const normalizedCode = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");

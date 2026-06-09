@@ -35,6 +35,19 @@ function parseBranches(raw: string): string[] {
     .filter(Boolean);
 }
 
+// Extract the most common semester from a DC column string like "CSE S5, DSE S5" → 5
+// Returns null if no semester found (means compulsory for any semester)
+function extractDcSemester(dcRaw: string): number | null {
+  if (!dcRaw.trim()) return null;
+  const matches = [...dcRaw.matchAll(/S(\d+)/gi)];
+  if (matches.length === 0) return null;
+  const sems = matches.map((m) => parseInt(m[1], 10));
+  // Return the most common one (usually all the same, e.g. all S5)
+  const freq = new Map<number, number>();
+  for (const s of sems) freq.set(s, (freq.get(s) ?? 0) + 1);
+  return [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
+}
+
 // Normalize slot — skip non-slot values
 function normalizeSlot(raw: string): string | null {
   const s = raw.trim();
@@ -126,12 +139,16 @@ async function main() {
     }
 
     // Upsert CourseOffering
+    // Extract compulsory semester from DC column (e.g. "CSE S5" → 5)
+    const compulsorySem = extractDcSemester(String(row[C.DC] ?? ""));
+
     const offeringData = {
       courseId,
       courseName: name,
       instructor,
       instructorEmail,
       school,
+      compulsorySem,
       slots: slot,
       ltpc,
       credits,
