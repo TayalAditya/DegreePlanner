@@ -272,6 +272,7 @@ export default function PreRegistrationPage() {
     if (!data) return 0;
     let total = 0;
     for (const o of data.offerings) {
+      if (o.completedInSemester !== null) continue; // already done, doesn't count toward new load
       if (o.isCompulsory || selected.has(o.id)) total += o.credits;
     }
     return total;

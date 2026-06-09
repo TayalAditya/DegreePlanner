@@ -101,27 +101,26 @@ export async function GET() {
       const resolvedCategory =
         mappingCategory ?? o.categoryOverride ?? "FE";
 
-      // Compulsory if:
-      //  a) no semester restriction, OR same as student's current semester
-      //  b) OR different semester but student hasn't completed it yet (backlog DC/IC)
-      const isCompulsoryCategory = ["IC", "IC_BASKET", "DC", "IKS"].includes(resolvedCategory);
-      const semesterMatches = o.compulsorySem == null || o.compulsorySem === offeringSemester;
-      const isCompleted = completedSem != null;
-
-      // IC-181/IC-182 mutual exclusion — done one → other not compulsory
-      const normCode = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
-      const iksBlocked =
-        (normCode === "IC181" && (ic182Done || ic181Done)) ||
-        (normCode === "IC182" && (ic181Done || ic182Done));
-
-      const isCompulsory = isCompulsoryCategory && !iksBlocked && (semesterMatches || !isCompleted);
-
-      // Check if already completed
+      // Check if already completed — must be declared before isCompulsory
       const normalizedCode = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
       const completedSem =
         (o.courseId ? completedByCourseId.get(o.courseId) : undefined) ??
         completedByCourseCode.get(normalizedCode) ??
         null;
+      const isCompleted = completedSem != null;
+
+      // Compulsory if:
+      //  a) no semester restriction OR same as student's current semester
+      //  b) OR different semester but student hasn't completed it yet (backlog DC/IC)
+      const isCompulsoryCategory = ["IC", "IC_BASKET", "DC", "IKS"].includes(resolvedCategory);
+      const semesterMatches = o.compulsorySem == null || o.compulsorySem === offeringSemester;
+
+      // IC-181/IC-182 mutual exclusion — done either one → other not compulsory
+      const iksBlocked =
+        (normalizedCode === "IC181" && (ic182Done || ic181Done)) ||
+        (normalizedCode === "IC182" && (ic181Done || ic182Done));
+
+      const isCompulsory = isCompulsoryCategory && !iksBlocked && (semesterMatches || !isCompleted);
 
       return {
         id: o.id,
