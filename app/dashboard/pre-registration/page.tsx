@@ -1168,7 +1168,7 @@ export default function PreRegistrationPage() {
         </>
       )}
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
+      <div className="fixed top-16 left-0 right-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div>
             <p className="text-sm text-foreground-secondary">
