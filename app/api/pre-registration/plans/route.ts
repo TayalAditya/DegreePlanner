@@ -29,10 +29,27 @@ export async function GET(req: NextRequest) {
   });
   const offeringMap = new Map(offerings.map((o) => [o.id, o]));
 
+  // Also fetch courses by ID for MTP/internship entries (Course IDs, not Offering IDs)
+  const allIds = [...new Set(plans.flatMap((p) => p.selectedIds))];
+  const offeringIds = new Set(offerings.map((o) => o.id));
+  const courseIds = allIds.filter((id) => !offeringIds.has(id));
+  const courseMap = new Map<string, { courseCode: string; courseName: string; credits: number }>();
+  if (courseIds.length > 0) {
+    const courses = await prisma.course.findMany({
+      where: { id: { in: courseIds } },
+      select: { id: true, code: true, name: true, credits: true },
+    });
+    for (const c of courses) courseMap.set(c.id, { courseCode: c.code, courseName: c.name, credits: c.credits });
+  }
+
   const result = plans.map((p) => {
-    const courses = p.selectedIds
-      .map((id) => offeringMap.get(id))
-      .filter((c): c is NonNullable<typeof c> => c != null);
+    const courses = p.selectedIds.map((id) => {
+      const o = offeringMap.get(id);
+      if (o) return { code: o.courseCode, name: o.courseName, credits: o.credits };
+      const c = courseMap.get(id);
+      if (c) return { code: c.courseCode, name: c.courseName, credits: c.credits };
+      return null;
+    }).filter((c): c is NonNullable<typeof c> => c != null);
     const totalCredits = courses.reduce((s, c) => s + c.credits, 0);
     return {
       userId: p.userId,
@@ -43,7 +60,7 @@ export async function GET(req: NextRequest) {
       batch: p.user.batch,
       updatedAt: p.updatedAt,
       totalCredits,
-      courses: courses.map((c) => ({ code: c.courseCode, name: c.courseName, credits: c.credits })),
+      courses,
     };
   });
 

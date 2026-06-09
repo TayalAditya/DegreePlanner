@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Users, ChevronDown, ChevronRight, Clock } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Users, ChevronDown, ChevronRight, Clock, Search } from "lucide-react";
 import { formatCredits } from "@/lib/utils";
 
 interface CourseSummary { code: string; name: string; credits: number }
@@ -78,6 +78,9 @@ export default function AdminPlansPage() {
   const [plans, setPlans] = useState<StudentPlan[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetched, setFetched] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filterBranch, setFilterBranch] = useState("ALL");
+  const [filterBatch, setFilterBatch] = useState("ALL");
 
   const load = async () => {
     setLoading(true);
@@ -93,12 +96,36 @@ export default function AdminPlansPage() {
 
   useEffect(() => { load(); }, [semester, year]);
 
-  const totalStudents = plans.length;
-  const avgCredits = totalStudents ? plans.reduce((s, p) => s + p.totalCredits, 0) / totalStudents : 0;
+  // Derive unique branches and batches from plans
+  const branches = useMemo(() => {
+    const set = new Set(plans.map(p => p.branch).filter(Boolean) as string[]);
+    return ["ALL", ...Array.from(set).sort()];
+  }, [plans]);
 
-  // Course popularity
+  const batches = useMemo(() => {
+    const set = new Set(plans.map(p => p.batch).filter(Boolean) as number[]);
+    return ["ALL", ...Array.from(set).sort((a, b) => b - a).map(String)];
+  }, [plans]);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return plans.filter(p => {
+      if (filterBranch !== "ALL" && p.branch !== filterBranch) return false;
+      if (filterBatch !== "ALL" && String(p.batch) !== filterBatch) return false;
+      if (q && !(
+        p.name?.toLowerCase().includes(q) ||
+        p.enrollmentId?.toLowerCase().includes(q) ||
+        p.email?.toLowerCase().includes(q)
+      )) return false;
+      return true;
+    });
+  }, [plans, search, filterBranch, filterBatch]);
+
+  const totalStudents = filtered.length;
+  const avgCredits = totalStudents ? filtered.reduce((s, p) => s + p.totalCredits, 0) / totalStudents : 0;
+
   const coursePop = new Map<string, { name: string; count: number; credits: number }>();
-  for (const p of plans) {
+  for (const p of filtered) {
     for (const c of p.courses) {
       const existing = coursePop.get(c.code) ?? { name: c.name, count: 0, credits: c.credits };
       coursePop.set(c.code, { ...existing, count: existing.count + 1 });
@@ -116,26 +143,47 @@ export default function AdminPlansPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 flex-wrap">
+      <div className="flex gap-3 flex-wrap items-end">
         <div>
           <label className="block text-xs font-medium text-foreground-secondary mb-1">Semester</label>
-          <select
-            value={semester}
-            onChange={(e) => setSemester(Number(e.target.value))}
-            className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
-          >
+          <select value={semester} onChange={(e) => setSemester(Number(e.target.value))}
+            className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm">
             {SEMESTERS.map((s) => <option key={s} value={s}>Sem {s}</option>)}
           </select>
         </div>
         <div>
           <label className="block text-xs font-medium text-foreground-secondary mb-1">Year</label>
-          <select
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value))}
-            className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
-          >
+          <select value={year} onChange={(e) => setYear(Number(e.target.value))}
+            className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm">
             {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-foreground-secondary mb-1">Branch</label>
+          <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm">
+            {branches.map((b) => <option key={b} value={b}>{b === "ALL" ? "All Branches" : b}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-foreground-secondary mb-1">Batch</label>
+          <select value={filterBatch} onChange={(e) => setFilterBatch(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm">
+            {batches.map((b) => <option key={b} value={b}>{b === "ALL" ? "All Batches" : `B${b}`}</option>)}
+          </select>
+        </div>
+        <div className="flex-1 min-w-[180px]">
+          <label className="block text-xs font-medium text-foreground-secondary mb-1">Search</label>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground-secondary" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Name, roll no, email…"
+              className="w-full pl-8 pr-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
+            />
+          </div>
         </div>
       </div>
 
@@ -167,16 +215,17 @@ export default function AdminPlansPage() {
           <div className="rounded-xl border border-border bg-surface overflow-hidden">
             <div className="px-4 py-3 border-b border-border">
               <p className="text-sm font-semibold text-foreground">Course Popularity</p>
+              {totalStudents < plans.length && (
+                <p className="text-xs text-foreground-secondary">Filtered: {totalStudents} of {plans.length} students</p>
+              )}
             </div>
             <div className="p-4 space-y-2">
               {popularCourses.map(([code, { name, count }]) => (
                 <div key={code} className="flex items-center gap-3">
                   <span className="font-mono text-xs w-20 flex-shrink-0 text-foreground-secondary">{code}</span>
                   <div className="flex-1 h-2 rounded-full bg-background-secondary overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${(count / totalStudents) * 100}%` }}
-                    />
+                    <div className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${(count / totalStudents) * 100}%` }} />
                   </div>
                   <span className="text-sm text-foreground w-8 text-right flex-shrink-0">{count}</span>
                   <span className="text-xs text-foreground-secondary hidden sm:block w-48 truncate">{name}</span>
@@ -189,9 +238,13 @@ export default function AdminPlansPage() {
           <div className="space-y-2">
             <div className="flex items-center gap-2 mb-3">
               <Users className="w-4 h-4 text-foreground-secondary" />
-              <p className="text-sm font-semibold text-foreground">{totalStudents} Student Plans</p>
+              <p className="text-sm font-semibold text-foreground">{totalStudents} Student Plan{totalStudents !== 1 ? "s" : ""}</p>
             </div>
-            {plans.map((p) => <PlanRow key={p.userId} plan={p} />)}
+            {filtered.length === 0 ? (
+              <p className="text-center py-8 text-foreground-secondary text-sm">No students match the current filters.</p>
+            ) : (
+              filtered.map((p) => <PlanRow key={p.userId} plan={p} />)
+            )}
           </div>
         </>
       )}

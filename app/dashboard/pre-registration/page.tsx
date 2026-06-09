@@ -692,7 +692,7 @@ export default function PreRegistrationPage() {
       const res = await fetch("/api/pre-registration/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ semester: data.offeringSemester, year: data.offeringYear, selectedIds: [...selected] }),
+        body: JSON.stringify({ semester: data.offeringSemester, year: data.offeringYear, selectedIds: [...selected, ...selectedExtra] }),
       });
       if (!res.ok) throw new Error();
       setSaved(true);
