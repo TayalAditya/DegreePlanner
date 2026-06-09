@@ -41,7 +41,7 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { branch, batch, enrollmentId } = session.user;
+  const { branch, batch, enrollmentId, name } = session.user;
   const batchYear = inferBatchYear(batch, enrollmentId);
   if (!batchYear) return NextResponse.json({ error: "Unknown batch" }, { status: 400 });
 
@@ -224,5 +224,10 @@ export async function GET() {
     offerings: result,
     completedBreakdown,
     programRequirements,
+    studentInfo: {
+      name: name ?? null,
+      branch: branch ?? null,
+      semester: offeringSemester,
+    },
   });
 }

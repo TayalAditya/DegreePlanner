@@ -83,7 +83,7 @@ function slotsClash(a: string | null, b: string | null): boolean {
 }
 
 function CourseCard({
-  offering, checked, disabled, onToggle, clashWith, isCompulsory, minorGroupLabel,
+  offering, checked, disabled, onToggle, clashWith, isCompulsory, minorGroupLabel, studentInfo,
 }: {
   offering: Offering & { instructorEmail?: string | null };
   checked: boolean;
@@ -92,6 +92,7 @@ function CourseCard({
   clashWith?: string;
   isCompulsory?: boolean;
   minorGroupLabel?: string;
+  studentInfo?: { name: string | null; branch: string | null; semester: number } | null;
 }) {
   const isCompleted = offering.completedInSemester !== null;
   const catColor = CATEGORY_COLOR[offering.resolvedCategory] ?? "bg-surface-secondary text-foreground-secondary";
@@ -168,15 +169,23 @@ function CourseCard({
               Curriculum <ExternalLink className="w-3 h-3" />
             </a>
           )}
-          {offering.instructorEmail && (
-            <a
-              href={`mailto:${offering.instructorEmail}`}
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 text-xs text-foreground-secondary hover:text-primary hover:underline"
-            >
-              <Mail className="w-3 h-3" /> Contact Instructor
-            </a>
-          )}
+          {offering.instructorEmail && (() => {
+            const instructor = offering.instructor ?? "Sir/Ma'am";
+            const salutation = instructor.toLowerCase().includes("ma'am") || instructor.toLowerCase().includes("mam") ? "Ma'am" : "Sir/Ma'am";
+            const subject = encodeURIComponent(`Inquiry Regarding ${offering.courseCode} – ${offering.courseName}`);
+            const body = encodeURIComponent(
+              `Respected ${salutation},\n\nI wanted to inquire whether the course ${offering.courseCode} – ${offering.courseName} is being offered to Semester ${studentInfo?.semester ?? "?"} students${studentInfo?.branch ? ` (${studentInfo.branch})` : ""} this semester.\n\nRegards,\n${studentInfo?.name ?? "Student"}`
+            );
+            return (
+              <a
+                href={`mailto:${offering.instructorEmail}?subject=${subject}&body=${body}`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1 text-xs text-foreground-secondary hover:text-primary hover:underline"
+              >
+                <Mail className="w-3 h-3" /> Contact Instructor
+              </a>
+            );
+          })()}
         </div>
       </div>
     </label>
@@ -604,6 +613,7 @@ export default function PreRegistrationPage() {
                           disabled={clashMap.has(offering!.id)}
                           onToggle={() => handleToggle(offering!)}
                           clashWith={clashMap.get(offering!.id) ?? interClashMap.get(offering!.id)}
+                          studentInfo={data.studentInfo}
                         />
                       ))}
                     </div>
@@ -617,6 +627,7 @@ export default function PreRegistrationPage() {
                           checked={false}
                           disabled={true}
                           onToggle={() => {}}
+                          studentInfo={data.studentInfo}
                         />
                       ))}
                     </div>
@@ -719,6 +730,7 @@ export default function PreRegistrationPage() {
               disabled={true}
               onToggle={() => {}}
               isCompulsory={true}
+              studentInfo={data.studentInfo}
             />
           ))}
         </Section>
@@ -736,6 +748,7 @@ export default function PreRegistrationPage() {
               onToggle={() => handleToggle(o)}
               clashWith={interClashMap.get(o.id)}
               minorGroupLabel={minorOfferingLabels.get(o.id)}
+              studentInfo={data.studentInfo}
             />
           ))}
         </Section>
@@ -752,6 +765,7 @@ export default function PreRegistrationPage() {
               disabled={false}
               onToggle={() => handleToggle(o)}
               minorGroupLabel={minorOfferingLabels.get(o.id)}
+              studentInfo={data.studentInfo}
             />
           ))}
         </Section>
@@ -776,6 +790,7 @@ export default function PreRegistrationPage() {
                       disabled={false}
                       onToggle={() => handleToggle(o)}
                       minorGroupLabel={minorOfferingLabels.get(o.id)}
+                      studentInfo={data.studentInfo}
                     />
                   ))}
                 </Section>
@@ -797,6 +812,7 @@ export default function PreRegistrationPage() {
                 disabled={true}
                 onToggle={() => {}}
                 clashWith={clashMap.get(o.id)}
+                studentInfo={data.studentInfo}
               />
             ))}
           </div>
