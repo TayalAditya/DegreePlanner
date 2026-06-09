@@ -118,7 +118,11 @@ async function main() {
       slot: normalizeSlot(String(row[C.SLOT] ?? "")),
       branchCatMap,
       allBranches: [...branchCatMap.keys()],
-      compulsorySem: extractDcSemester(String(row[C.DC] ?? "")),
+      compulsorySem:
+        extractDcSemester(String(row[C.DC]  ?? "")) ??
+        extractDcSemester(String(row[C.IC]  ?? "")) ??
+        extractDcSemester(String(row[C.ICB] ?? "")) ??
+        null,
     });
   }
   console.log(`Valid rows: ${parsed.length}, skipped: ${skipped}`);

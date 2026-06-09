@@ -97,12 +97,13 @@ export async function GET() {
       const resolvedCategory =
         mappingCategory ?? o.categoryOverride ?? "FE";
 
-      // A course is only compulsory if it's the right semester for this student.
-      // e.g. "CS-305 DC for CSE S5" should not be compulsory for a sem 7 student.
-      const semesterMatches =
-        o.compulsorySem == null || o.compulsorySem === offeringSemester;
-      const isCompulsory =
-        ["IC", "IC_BASKET", "DC", "IKS"].includes(resolvedCategory) && semesterMatches;
+      // Compulsory if:
+      //  a) no semester restriction, OR same as student's current semester
+      //  b) OR different semester but student hasn't completed it yet (backlog DC/IC)
+      const isCompulsoryCategory = ["IC", "IC_BASKET", "DC", "IKS"].includes(resolvedCategory);
+      const semesterMatches = o.compulsorySem == null || o.compulsorySem === offeringSemester;
+      const isCompleted = completedSem != null;
+      const isCompulsory = isCompulsoryCategory && (semesterMatches || !isCompleted);
 
       // Check if already completed
       const normalizedCode = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
