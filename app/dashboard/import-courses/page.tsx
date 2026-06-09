@@ -922,7 +922,7 @@ export default function ImportCoursesPage() {
               title={branch ? "Branch cannot be changed after selection" : ""}
             >
               <option value="CSE">CSE</option>
-              <option value="DSE">DSE</option>
+              {(!userBatch || userBatch <= 2024) && <option value="DSE">DSE</option>}
               <option value="DSAI">DSAI</option>
               <option value="EE">EE</option>
               <option value="ME">ME</option>
