@@ -157,7 +157,7 @@ function CourseCard({
   );
 }
 
-function Section({ title, count, children, defaultOpen = true }: {
+function Section({ title, count, children, defaultOpen = false }: {
   title: string; count: number; children: React.ReactNode; defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -627,72 +627,50 @@ export default function PreRegistrationPage() {
         </div>
 
         {data.programRequirements && (
-          <div className="hidden lg:block w-72 flex-shrink-0 sticky top-6 space-y-3">
-        <div className="rounded-xl border border-border bg-surface p-4">
-          <p className="text-sm font-semibold text-foreground mb-3">Degree Progress</p>
-          {(() => {
-            const cb = data.completedBreakdown;
-            const pr = data.programRequirements!;
-            const rows = [
-              {
-                key: "CORE", label: "Core",
-                req: pr["CORE"] ?? 0, done: cb["CORE"] ?? 0,
-                adding: (categoryBreakdown.find(b => b.cat === "IC")?.credits ?? 0) +
-                        (categoryBreakdown.find(b => b.cat === "DC")?.credits ?? 0) +
-                        (categoryBreakdown.find(b => b.cat === "HSS")?.credits ?? 0) +
-                        (categoryBreakdown.find(b => b.cat === "IKS")?.credits ?? 0),
-                barColor: "bg-info", addColor: "bg-info/40", catColor: CATEGORY_COLOR["IC"],
-              },
-              {
-                key: "DE", label: "DE",
-                req: pr["DE"] ?? 0, done: cb["DE"] ?? 0,
-                adding: categoryBreakdown.find(b => b.cat === "DE")?.credits ?? 0,
-                barColor: "bg-secondary", addColor: "bg-secondary/40", catColor: CATEGORY_COLOR["DE"],
-              },
-              {
-                key: "FE", label: "FE",
-                req: pr["FE"] ?? 0, done: cb["FE"] ?? 0,
-                adding: (categoryBreakdown.find(b => b.cat === "FE")?.credits ?? 0) +
-                        (categoryBreakdown.find(b => b.cat === "HSS")?.credits ?? 0),
-                barColor: "bg-success", addColor: "bg-success/40", catColor: CATEGORY_COLOR["FE"],
-              },
-            ];
-            return rows.filter(r => r.req > 0).map(r => {
-              const remaining = Math.max(0, r.req - r.done - r.adding);
-              const pctDone = Math.min(100, (r.done / r.req) * 100);
-              const pctAdding = Math.min(100 - pctDone, (r.adding / r.req) * 100);
-              return (
-                <div key={r.key} className="mb-3">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${r.catColor}`}>{r.label}</span>
-                    <div className="text-xs text-foreground-secondary text-right">
-                      <span className="font-medium text-foreground">{formatCredits(r.done + r.adding)}</span>
-                      <span> / {r.req} cr</span>
-                      {remaining > 0 && <span className="text-error ml-1">−{formatCredits(remaining)}</span>}
+          <div className="hidden lg:block w-64 flex-shrink-0 sticky top-6 space-y-3">
+
+            {/* Remaining credits */}
+            <div className="rounded-xl border border-border bg-surface p-4">
+              <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide mb-3">Remaining</p>
+              <div className="space-y-2">
+                {[
+                  { key: "CORE", label: "Core (IC+DC+HSS)", color: "text-info" },
+                  { key: "DE",   label: "Discipline Electives", color: "text-secondary" },
+                  { key: "FE",   label: "Free Electives",  color: "text-success" },
+                ].map(({ key, label, color }) => {
+                  const req  = data.programRequirements![key] ?? 0;
+                  const done = data.completedBreakdown[key] ?? 0;
+                  const rem  = Math.max(0, req - done);
+                  if (!req) return null;
+                  return (
+                    <div key={key} className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-foreground-secondary truncate">{label}</span>
+                      <span className={`text-xs font-semibold flex-shrink-0 ${rem > 0 ? "text-error" : "text-success"}`}>
+                        {rem > 0 ? `−${formatCredits(rem)} cr` : "✓"}
+                      </span>
                     </div>
-                  </div>
-                  <div className="h-2 rounded-full bg-background-secondary overflow-hidden flex">
-                    <div className={`h-full ${r.barColor} transition-all`} style={{ width: `${pctDone}%` }} />
-                    <div className={`h-full ${r.addColor} transition-all`} style={{ width: `${pctAdding}%` }} />
-                  </div>
-                  {r.adding > 0 && (
-                    <p className="text-xs text-foreground-secondary mt-0.5">+{formatCredits(r.adding)} cr this sem</p>
-                  )}
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* This semester breakdown */}
+            {categoryBreakdown.length > 0 && (
+              <div className="rounded-xl border border-border bg-surface p-4">
+                <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide mb-3">Adding this semester</p>
+                <div className="space-y-2">
+                  {categoryBreakdown.map(({ cat, credits, count }) => (
+                    <div key={cat} className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${CATEGORY_COLOR[cat] ?? ""}`}>{cat}</span>
+                        <span className="text-xs text-foreground-secondary">{count} course{count !== 1 ? "s" : ""}</span>
+                      </div>
+                      <span className="text-xs font-semibold text-foreground flex-shrink-0">+{formatCredits(credits)} cr</span>
+                    </div>
+                  ))}
                 </div>
-              );
-            });
-          })()}
-        </div>
-        <div className="rounded-xl border border-border bg-surface p-4 space-y-1.5 text-xs text-foreground-secondary">
-          <div className="flex gap-2 items-center">
-            <div className="w-3 h-2 rounded bg-primary" />
-            <span>Already completed</span>
-          </div>
-          <div className="flex gap-2 items-center">
-            <div className="w-3 h-2 rounded bg-primary/40" />
-            <span>Adding this semester</span>
-          </div>
-        </div>
+              </div>
+            )}
           </div>
         )}
       </div>
