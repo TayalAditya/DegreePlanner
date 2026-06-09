@@ -340,51 +340,41 @@ function Section({ title, count, children, defaultOpen = false, headerBg, error 
 }
 
 function InternshipSection({ internshipCourses }: { internshipCourses: { p399: InternshipCourse[]; p396: InternshipCourse[] } }) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+
+  const toOffering = (c: InternshipCourse): Offering => ({
+    id: c.id, courseId: c.id, courseCode: formatCourseCode(c.code), courseName: c.name,
+    instructor: null, instructorEmail: null, school: null, slots: null, ltpc: null,
+    credits: c.credits, curriculumLink: null, resolvedCategory: "FE",
+    isCompulsory: false, completedInSemester: null,
+  });
+
   return (
     <Section title="Semester-Long Internship" count={internshipCourses.p399.length + internshipCourses.p396.length}>
       <div className="space-y-4">
         {internshipCourses.p399.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-foreground mb-2">Onsite (399P) — 9 cr P/F · No other courses · P/F budget → 0 remaining</p>
-            <div className="flex items-start gap-2 p-2 rounded-lg bg-error/5 border border-error/15 mb-2">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-foreground">Onsite (399P) — 9 cr P/F · No other courses · P/F budget → 0 remaining</p>
+            <div className="flex items-start gap-2 p-2 rounded-lg bg-error/5 border border-error/15">
               <AlertTriangle className="w-3.5 h-3.5 text-error flex-shrink-0 mt-0.5" />
               <p className="text-xs text-error">Cannot enroll alongside any other course in Sem 6/7</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {internshipCourses.p399.map((c) => (
-                <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border bg-background">
-                  <div>
-                    <p className="text-xs font-mono font-semibold text-foreground">{formatCourseCode(c.code)}</p>
-                    <p className="text-xs text-foreground-secondary">{formatCredits(c.credits)} cr P/F</p>
-                  </div>
-                  <a href="/dashboard/courses" className="flex-shrink-0 text-xs text-primary hover:underline flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Add
-                  </a>
-                </div>
-              ))}
-            </div>
+            {internshipCourses.p399.map((c) => (
+              <CourseCard key={c.id} offering={toOffering(c)} checked={selected.has(c.id)} disabled={false} onToggle={() => toggle(c.id)} />
+            ))}
           </div>
         )}
         {internshipCourses.p396.length > 0 && (
-          <div>
-            <p className="text-xs font-semibold text-foreground mb-2">Remote (396P) — 6 cr P/F · P/F budget → 3 remaining</p>
-            <div className="flex items-start gap-2 p-2 rounded-lg bg-warning/5 border border-warning/15 mb-2">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-foreground">Remote (396P) — 6 cr P/F · P/F budget → 3 remaining</p>
+            <div className="flex items-start gap-2 p-2 rounded-lg bg-warning/5 border border-warning/15">
               <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
               <p className="text-xs text-warning">Uses 6 of 9 total P/F credits</p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {internshipCourses.p396.map((c) => (
-                <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border bg-background">
-                  <div>
-                    <p className="text-xs font-mono font-semibold text-foreground">{formatCourseCode(c.code)}</p>
-                    <p className="text-xs text-foreground-secondary">{formatCredits(c.credits)} cr P/F</p>
-                  </div>
-                  <a href="/dashboard/courses" className="flex-shrink-0 text-xs text-primary hover:underline flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Add
-                  </a>
-                </div>
-              ))}
-            </div>
+            {internshipCourses.p396.map((c) => (
+              <CourseCard key={c.id} offering={toOffering(c)} checked={selected.has(c.id)} disabled={false} onToggle={() => toggle(c.id)} />
+            ))}
           </div>
         )}
       </div>
