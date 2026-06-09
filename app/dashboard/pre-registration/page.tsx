@@ -34,7 +34,7 @@ interface ApiResponse {
   offerings: Offering[];
   completedBreakdown: Record<string, number>;
   programRequirements: Record<string, number> | null;
-  studentInfo: { name: string | null; branch: string | null; semester: number } | null;
+  studentInfo: { name: string | null; branch: string | null; semester: number; pfCreditsUsed: number } | null;
   savedPlan?: { selectedIds: string[]; updatedAt: string | null };
 }
 
@@ -348,17 +348,21 @@ function toOffering(c: InternshipCourse, category: string): Offering {
   };
 }
 
-function InternshipSection({ internshipCourses, selected, onToggle }: {
+function InternshipSection({ internshipCourses, selected, onToggle, pfCreditsUsed }: {
   internshipCourses: { p399: InternshipCourse[]; p396: InternshipCourse[] };
   selected: Set<string>;
   onToggle: (id: string) => void;
+  pfCreditsUsed: number;
 }) {
+  const PF_TOTAL = 9;
+  const pfRemaining399 = Math.max(0, PF_TOTAL - pfCreditsUsed - 9);
+  const pfRemaining396 = Math.max(0, PF_TOTAL - pfCreditsUsed - 6);
   return (
     <Section title="Semester-Long Internship" count={internshipCourses.p399.length + internshipCourses.p396.length}>
       <div className="space-y-4">
         {internshipCourses.p399.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-foreground">Onsite (399P) — 9 cr P/F · No other courses · P/F budget → 0 remaining</p>
+            <p className="text-xs font-semibold text-foreground">Onsite (399P) — 9 cr P/F · No other courses · P/F budget → {pfRemaining399} remaining</p>
             <div className="flex items-start gap-2 p-2 rounded-lg bg-error/5 border border-error/15">
               <AlertTriangle className="w-3.5 h-3.5 text-error flex-shrink-0 mt-0.5" />
               <p className="text-xs text-error">Cannot enroll alongside any other course in Sem 6/7</p>
@@ -370,10 +374,10 @@ function InternshipSection({ internshipCourses, selected, onToggle }: {
         )}
         {internshipCourses.p396.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-foreground">Remote (396P) — 6 cr P/F · P/F budget → 3 remaining</p>
+            <p className="text-xs font-semibold text-foreground">Remote (396P) — 6 cr P/F · P/F budget → {pfRemaining396} remaining</p>
             <div className="flex items-start gap-2 p-2 rounded-lg bg-warning/5 border border-warning/15">
               <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-warning">Uses 6 of 9 total P/F credits</p>
+              <p className="text-xs text-warning">Uses {Math.min(6, PF_TOTAL - pfCreditsUsed)} of {PF_TOTAL} total P/F credits</p>
             </div>
             {internshipCourses.p396.map((c) => (
               <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={false} onToggle={() => onToggle(c.id)} />
@@ -504,15 +508,22 @@ export default function PreRegistrationPage() {
             MS: "MS", MSE: "MS", GE: "GE", VLSI: "VL",
           };
           const branch = (d.studentInfo?.branch ?? "").toUpperCase();
+          const sem = d.offeringSemester ?? 0;
           const prefix = BRANCH_PREFIX[branch] ?? null;
-          const keep399 = new Set([...(prefix ? [`${prefix}399P`] : [])]);
-          const keep396 = new Set([...(prefix ? [`${prefix}396P`] : [])]);
           const norm = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-          const p399 = (courses as InternshipCourse[]).filter((c) => keep399.has(norm(c.code)));
-          const p396 = (courses as InternshipCourse[]).filter((c) => keep396.has(norm(c.code)));
-          setInternshipCourses({ p399, p396 });
-          const mtp1 = prefix ? (courses as InternshipCourse[]).find((c) => norm(c.code) === `${prefix}498P`) ?? null : null;
-          setMtp1Course(mtp1);
+          // Internship only eligible from Sem 6 onwards
+          if (sem >= 6 && prefix) {
+            const keep399 = new Set([`${prefix}399P`]);
+            const keep396 = new Set([`${prefix}396P`]);
+            const p399 = (courses as InternshipCourse[]).filter((c) => keep399.has(norm(c.code)));
+            const p396 = (courses as InternshipCourse[]).filter((c) => keep396.has(norm(c.code)));
+            setInternshipCourses({ p399, p396 });
+          }
+          // MTP-1 only from Sem 7 onwards
+          if (sem >= 7 && prefix) {
+            const mtp1 = (courses as InternshipCourse[]).find((c) => norm(c.code) === `${prefix}498P`) ?? null;
+            setMtp1Course(mtp1);
+          }
         }
       })
       .catch(() => showToast("error", "Failed to load offerings"))
@@ -721,7 +732,7 @@ export default function PreRegistrationPage() {
 
         {/* Show internship section even when no offerings uploaded */}
         {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} />
+          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={data.studentInfo?.pfCreditsUsed ?? 0} />
         )}
       </div>
     );
@@ -1036,7 +1047,7 @@ export default function PreRegistrationPage() {
 
       {/* Semester-Long Internship */}
       {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-        <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} />
+        <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={data.studentInfo?.pfCreditsUsed ?? 0} />
       )}
 
       {/* Semester breakdown analysis */}

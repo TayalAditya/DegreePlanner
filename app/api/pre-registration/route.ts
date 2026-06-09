@@ -54,7 +54,7 @@ export async function GET() {
   const normalizedBranch = normalizeBranchCode(branch);
 
   // Fetch all data in parallel
-  const [offerings, completed, userProgram, savedPlan] = await Promise.all([
+  const [offerings, completed, userProgram, savedPlan, userRecord] = await Promise.all([
     prisma.courseOffering.findMany({
       where: { offeringYear, isActive: true },
       include: {
@@ -89,6 +89,10 @@ export async function GET() {
     prisma.preRegistrationPlan.findUnique({
       where: { userId_offeringSemester_offeringYear: { userId: session.user.id, offeringSemester, offeringYear } },
       select: { selectedIds: true, updatedAt: true },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { totalPassFailCredits: true },
     }),
   ]);
 
@@ -229,6 +233,7 @@ export async function GET() {
       name: name ?? null,
       branch: branch ?? null,
       semester: offeringSemester,
+      pfCreditsUsed: userRecord?.totalPassFailCredits ?? 0,
     },
     savedPlan: {
       selectedIds: savedPlan?.selectedIds ?? [],
