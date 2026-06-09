@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
-import { formatCredits } from "@/lib/utils";
+import { formatCredits, formatCourseCode } from "@/lib/utils";
+import { MINORS } from "@/lib/minors";
 
 interface Offering {
   id: string;
@@ -63,7 +64,7 @@ function slotsClash(a: string | null, b: string | null): boolean {
 }
 
 function CourseCard({
-  offering, checked, disabled, onToggle, clashWith, isCompulsory,
+  offering, checked, disabled, onToggle, clashWith, isCompulsory, minorGroupLabel,
 }: {
   offering: Offering & { instructorEmail?: string | null };
   checked: boolean;
@@ -71,6 +72,7 @@ function CourseCard({
   onToggle: () => void;
   clashWith?: string;
   isCompulsory?: boolean;
+  minorGroupLabel?: string;
 }) {
   const isCompleted = offering.completedInSemester !== null;
   const catColor = CATEGORY_COLOR[offering.resolvedCategory] ?? "bg-surface-secondary text-foreground-secondary";
@@ -104,6 +106,11 @@ function CourseCard({
             {offering.courseCode}
           </span>
           <span className={`px-1.5 py-0.5 text-xs font-medium rounded border ${catColor}`}>{catLabel}</span>
+          {minorGroupLabel && (
+            <span className="px-1.5 py-0.5 text-xs font-medium rounded border bg-accent/10 text-accent border-accent/30">
+              Minor · {minorGroupLabel}
+            </span>
+          )}
           {isCompleted && (
             <span className="px-1.5 py-0.5 text-xs rounded bg-success/10 text-success border border-success/20 flex items-center gap-1">
               <CheckCircle className="w-3 h-3" />
@@ -197,6 +204,7 @@ export default function PreRegistrationPage() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showApprovalWarning, setShowApprovalWarning] = useState(false);
+  const [selectedMinorCode, setSelectedMinorCode] = useState<string>("");
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -289,6 +297,41 @@ export default function PreRegistrationPage() {
     }
     return total;
   }, [data, selected]);
+
+  // Minor planner: for selected minor, compute per-group offering data
+  const minorData = useMemo(() => {
+    const minor = MINORS.find((m) => m.code === selectedMinorCode);
+    if (!minor || !data) return null;
+
+    const offeringByCode = new Map<string, Offering>();
+    for (const o of data.offerings) {
+      offeringByCode.set(formatCourseCode(o.courseCode), o);
+    }
+
+    return {
+      minor,
+      groups: minor.groups.map((group) => ({
+        ...group,
+        courses: group.courseCodes.map((rawCode) => {
+          const norm = formatCourseCode(rawCode);
+          const offering = offeringByCode.get(norm);
+          return { code: norm, offering };
+        }),
+      })),
+    };
+  }, [selectedMinorCode, data]);
+
+  // Map offeringId → minor group title (for badge on CourseCard)
+  const minorOfferingLabels = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!minorData) return map;
+    for (const group of minorData.groups) {
+      for (const { offering } of group.courses) {
+        if (offering) map.set(offering.id, group.countsTowardMinor ? group.title : "Prereq");
+      }
+    }
+    return map;
+  }, [minorData]);
 
   // Category-wise breakdown of selected + compulsory courses
   const categoryBreakdown = useMemo(() => {
@@ -408,6 +451,103 @@ export default function PreRegistrationPage() {
         </p>
       </div>
 
+      {/* Minor selector */}
+      <div className="flex items-center gap-3 p-4 rounded-xl border border-border bg-surface">
+        <BookOpen className="w-4 h-4 text-accent flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground">Minor Planner</p>
+          <p className="text-xs text-foreground-secondary">See which offerings count toward a minor</p>
+        </div>
+        <select
+          value={selectedMinorCode}
+          onChange={(e) => setSelectedMinorCode(e.target.value)}
+          className="text-sm bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-0 max-w-[220px]"
+        >
+          <option value="">— Select a minor —</option>
+          {MINORS.map((m) => (
+            <option key={m.code} value={m.code}>{m.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Minor planner breakdown */}
+      {minorData && (
+        <div className="rounded-xl border border-accent/25 bg-surface overflow-hidden">
+          <div className="px-4 py-3 border-b border-accent/20 bg-accent/5 flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{minorData.minor.name}</p>
+              {minorData.minor.totalCreditsRequired && (
+                <p className="text-xs text-foreground-secondary mt-0.5">{minorData.minor.totalCreditsRequired} credits required</p>
+              )}
+            </div>
+          </div>
+          <div className="divide-y divide-border">
+            {minorData.groups.map((group) => {
+              const offered = group.courses.filter((c) => c.offering);
+              const notOffered = group.courses.filter((c) => !c.offering);
+              const completedOffered = offered.filter((c) => c.offering!.completedInSemester !== null);
+              const availableOffered = offered.filter((c) => c.offering!.completedInSemester === null);
+              return (
+                <div key={group.id} className="px-4 py-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold text-foreground">{group.title}</p>
+                    {!group.countsTowardMinor && (
+                      <span className="text-xs text-foreground-secondary bg-surface-secondary px-1.5 py-0.5 rounded-full">Prerequisite</span>
+                    )}
+                    <span className="text-xs text-foreground-secondary bg-surface-secondary px-1.5 py-0.5 rounded-full ml-auto">
+                      Pick {group.requiredCount}
+                    </span>
+                  </div>
+                  {group.note && (
+                    <p className="text-xs text-foreground-secondary italic">{group.note}</p>
+                  )}
+                  {availableOffered.length > 0 && (
+                    <div className="space-y-2">
+                      {availableOffered.map(({ offering }) => (
+                        <CourseCard
+                          key={offering!.id}
+                          offering={offering!}
+                          checked={selected.has(offering!.id)}
+                          disabled={clashMap.has(offering!.id)}
+                          onToggle={() => handleToggle(offering!)}
+                          clashWith={clashMap.get(offering!.id) ?? interClashMap.get(offering!.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {completedOffered.length > 0 && (
+                    <div className="space-y-2">
+                      {completedOffered.map(({ offering }) => (
+                        <CourseCard
+                          key={offering!.id}
+                          offering={offering!}
+                          checked={false}
+                          disabled={true}
+                          onToggle={() => {}}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {notOffered.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {notOffered.map(({ code }) => (
+                        <span key={code} className="font-mono text-xs px-2 py-1 rounded bg-background-secondary text-foreground-secondary border border-border">
+                          {code}
+                        </span>
+                      ))}
+                      <span className="text-xs text-foreground-secondary self-center">not offered this semester</span>
+                    </div>
+                  )}
+                  {offered.length === 0 && notOffered.length > 0 && (
+                    <p className="text-xs text-foreground-secondary">None of these courses are offered this semester.</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Disclaimer banner */}
       <div className="flex items-start gap-3 p-4 rounded-xl border border-info/25 bg-info/5">
         <Info className="w-4 h-4 text-info flex-shrink-0 mt-0.5" />
@@ -501,7 +641,7 @@ export default function PreRegistrationPage() {
       {de.length > 0 && (
         <div className="rounded-xl border border-border bg-surface overflow-hidden">
           <div className="px-4 py-3 border-b border-border">
-            <Section title="Discipline Electives" count={de.length} defaultOpen={true}>
+            <Section title="Discipline Electives" count={de.length} defaultOpen={false}>
               {de.map((o) => (
                 <CourseCard
                   key={o.id}
@@ -510,6 +650,7 @@ export default function PreRegistrationPage() {
                   disabled={false}
                   onToggle={() => handleToggle(o)}
                   clashWith={interClashMap.get(o.id)}
+                  minorGroupLabel={minorOfferingLabels.get(o.id)}
                 />
               ))}
             </Section>
@@ -521,7 +662,7 @@ export default function PreRegistrationPage() {
       {hss.length > 0 && (
         <div className="rounded-xl border border-border bg-surface overflow-hidden">
           <div className="px-4 py-3 border-b border-border">
-            <Section title="Humanities & Social Sciences" count={hss.length} defaultOpen={true}>
+            <Section title="Humanities & Social Sciences" count={hss.length} defaultOpen={false}>
               {hss.map((o) => (
                 <CourseCard
                   key={o.id}
@@ -529,6 +670,7 @@ export default function PreRegistrationPage() {
                   checked={selected.has(o.id)}
                   disabled={false}
                   onToggle={() => handleToggle(o)}
+                  minorGroupLabel={minorOfferingLabels.get(o.id)}
                 />
               ))}
             </Section>
@@ -552,6 +694,7 @@ export default function PreRegistrationPage() {
                     checked={selected.has(o.id)}
                     disabled={false}
                     onToggle={() => handleToggle(o)}
+                    minorGroupLabel={minorOfferingLabels.get(o.id)}
                   />
                 ))}
               </Section>
