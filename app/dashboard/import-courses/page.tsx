@@ -708,6 +708,10 @@ export default function ImportCoursesPage() {
   };
 
   const handleSubmit = async () => {
+    if (preRegLocked) {
+      showToast("error", "Course registration is locked during pre-registration. Use the Pre-Registration page to plan your upcoming semester.");
+      return;
+    }
     setLoading(true);
     setErrorMessage(null);
     try {
@@ -1204,7 +1208,7 @@ export default function ImportCoursesPage() {
             </div>
             <button
               onClick={handleSubmit}
-              disabled={loading || selectedCount === 0}
+              disabled={loading || selectedCount === 0 || preRegLocked}
               className="w-full sm:w-auto px-8 py-3 bg-surface-elevated text-foreground rounded-lg font-semibold border border-white/10 hover:border-white/20 hover:bg-surface-hover hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
