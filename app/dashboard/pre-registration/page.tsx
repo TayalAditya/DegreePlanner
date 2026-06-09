@@ -76,6 +76,44 @@ function fixedSlots(slots: string | null): string[] {
   return parseSlots(slots).filter((t) => !isFlexibleSlot(t));
 }
 
+// Common Indian female first names for salutation inference
+const FEMALE_NAMES = new Set([
+  "priya","sunita","meena","anita","kavita","rekha","shilpa","pooja","puja","neha","ritu","nisha",
+  "asha","usha","lata","geeta","gita","seema","sima","sonia","sonya","divya","deepa","dipa",
+  "manisha","manasa","vandana","archana","kalpana","rashmi","madhu","manju","manjula","saroj",
+  "savita","sushma","shweta","shreya","shruti","swati","smita","suman","sudha","supriya","sushmita",
+  "tanvi","tanya","trisha","uma","vidya","vineeta","vinita","vidhya","yamini","yasmin","zara",
+  "akansha","akanksha","ankita","ambika","amita","amrita","ananya","anamika","anjali","anuradha",
+  "anushka","aparajita","aparna","arati","aarti","aaradhya","aradhana","aruna","avani","babita",
+  "bhavana","chandni","chandra","deepika","deeksha","diksha","durga","ekta","garima","gayatri",
+  "geetanjali","hema","himani","indira","ishita","jyoti","jyotsna","kajal","kamla","kiran",
+  "komal","kritika","kusum","lalita","lavanya","leela","leelavathi","madhumita","mahima","malvika",
+  "mamta","manorama","meenakshi","megha","mona","monika","namrata","nandita","nandini","namita",
+  "natasha","niharika","nilima","nita","nitu","padma","pallavi","parvati","payal","poonam","poornima",
+  "prachi","pragati","pratibha","preeti","preethi","prerna","prerana","pushpa","radha","radhika",
+  "ranjana","ratna","reena","rina","riya","rohini","roshni","rucha","rupa","rupal","sadhana",
+  "sagarika","sangeeta","sangita","sanjana","sanjna","sapna","saraswati","sarla","shalini","shanta",
+  "sharada","sharda","shikha","shipra","shirin","shobha","shradha","shraddha","shubha","silpa",
+  "simran","sneha","snigdha","soumya","sridevi","subha","subhadra","subhashini","sulekha","sulochana",
+  "sunanda","sunanda","suparna","surekha","susheela","sushila","tara","taruna","urvashi","urvasi",
+  "vaishali","varsha","vasudha","veena","vibha","vijaya","vijayalakshmi","vimala","vina","vrinda",
+  "yashoda","yogita","zoya","noor","aisha","fatima","sana","sara","sarah","maria","alice","grace",
+  "linda","lisa","helen","anna","emma","sophia","olivia","emily","charlotte","isabella",
+]);
+
+function inferSalutation(instructorName: string | null): string {
+  if (!instructorName) return "Sir/Ma'am";
+  // strip titles like Dr., Prof., Mr., Mrs., Ms.
+  const stripped = instructorName.replace(/\b(dr\.?|prof\.?|mr\.?|mrs\.?|ms\.?)\s*/gi, "").trim();
+  const firstName = stripped.split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, "");
+  if (FEMALE_NAMES.has(firstName)) return "Ma'am";
+  // heuristic: many Indian female names end in 'a' or 'i' but skip common male endings
+  const MALE_ENDINGS = ["kumar","raj","singh","pal","ram","esh","ish","ush","ant","ash","ar","er","or","ul","al","il","on","an","en","in"];
+  if (MALE_ENDINGS.some(e => firstName.endsWith(e))) return "Sir";
+  if (firstName.endsWith("a") || firstName.endsWith("i") || firstName.endsWith("ee")) return "Ma'am";
+  return "Sir/Ma'am";
+}
+
 function slotsClash(a: string | null, b: string | null): boolean {
   const sa = new Set(fixedSlots(a));
   if (sa.size === 0) return false;
@@ -170,22 +208,23 @@ function CourseCard({
             </a>
           )}
           {offering.instructorEmail && (() => {
-            const instructor = offering.instructor ?? "Sir/Ma'am";
-            const salutation = instructor.toLowerCase().includes("ma'am") || instructor.toLowerCase().includes("mam") ? "Ma'am" : "Sir/Ma'am";
+            const salutation = inferSalutation(offering.instructor);
             const code = offering.courseCode;
             const name = offering.courseName;
+            const cat = CATEGORY_LABEL[offering.resolvedCategory] ?? offering.resolvedCategory;
             const sem = studentInfo?.semester ?? "?";
             const branch = studentInfo?.branch ?? "";
             const studentName = studentInfo?.name ?? "Student";
             const semBranch = `Semester ${sem}${branch ? ` (${branch})` : ""}`;
+            const courseRef = `${code} - ${name} (${cat})`;
             const BODY_VARIANTS = [
-              `Respected ${salutation},\n\nI wanted to inquire whether the course ${code} – ${name} is being offered to ${semBranch} students this semester.\n\nRegards,\n${studentName}`,
-              `Respected ${salutation},\n\nI hope this email finds you well. I am a ${semBranch} student and would like to know if ${code} – ${name} will be available for registration this semester.\n\nRegards,\n${studentName}`,
-              `Respected ${salutation},\n\nI am writing to enquire about the availability of ${code} – ${name} for ${semBranch} students in the upcoming semester. Could you please confirm if this course will be offered?\n\nRegards,\n${studentName}`,
-              `Respected ${salutation},\n\nI am interested in registering for ${code} – ${name} this semester. Could you kindly let me know if it is being offered to ${semBranch} students?\n\nThank you,\n${studentName}`,
-              `Respected ${salutation},\n\nI hope you are doing well. I wanted to check whether ${code} – ${name} is being offered this semester for ${semBranch} students, as I am planning my course selection.\n\nWarm regards,\n${studentName}`,
+              `Respected ${salutation},\n\nI wanted to inquire whether the course ${courseRef} is being offered to ${semBranch} students this semester.\n\nRegards,\n${studentName}`,
+              `Respected ${salutation},\n\nI am writing to enquire about the availability of ${courseRef} for ${semBranch} students in the upcoming semester. Could you please confirm if this course will be offered?\n\nRegards,\n${studentName}`,
+              `Respected ${salutation},\n\nI am interested in registering for ${courseRef} this semester. Could you kindly let me know if it is being offered to ${semBranch} students?\n\nThank you,\n${studentName}`,
+              `Respected ${salutation},\n\nI am a ${semBranch} student planning my course registration and wanted to check whether ${courseRef} will be available this semester.\n\nRegards,\n${studentName}`,
+              `Respected ${salutation},\n\nI would like to enquire if ${courseRef} is being offered to ${semBranch} students this semester, as I am keen on registering for it.\n\nThank you,\n${studentName}`,
             ];
-            const subject = encodeURIComponent(`Inquiry Regarding ${code} – ${name}`);
+            const subject = encodeURIComponent(`Inquiry Regarding ${code} - ${name}`);
             const body = encodeURIComponent(BODY_VARIANTS[Math.floor(Math.random() * BODY_VARIANTS.length)]);
             return (
               <a
