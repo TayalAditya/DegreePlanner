@@ -128,6 +128,12 @@ async function main() {
     }
     if (!branchCatMap.size) { skipped++; continue; }
 
+    // Curriculum overrides: Excel sometimes puts CSE in FE for DS/CS courses,
+    // but curriculum convention is CSE can take DS-xxx/CS-xxx as DE.
+    if (code.startsWith("DS-") && branchCatMap.get("CSE") === CourseCategoryType.FE) {
+      branchCatMap.set("CSE", CourseCategoryType.DE);
+    }
+
     parsed.push({
       code,
       name,
