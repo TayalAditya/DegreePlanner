@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save } from "lucide-react";
+import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { formatCredits } from "@/lib/utils";
 
@@ -12,6 +12,7 @@ interface Offering {
   courseCode: string;
   courseName: string;
   instructor: string | null;
+  instructorEmail: string | null;
   school: string | null;
   slots: string | null;
   ltpc: string | null;
@@ -62,7 +63,7 @@ function slotsClash(a: string | null, b: string | null): boolean {
 function CourseCard({
   offering, checked, disabled, onToggle, clashWith, isCompulsory,
 }: {
-  offering: Offering;
+  offering: Offering & { instructorEmail?: string | null };
   checked: boolean;
   disabled: boolean;
   onToggle: () => void;
@@ -127,17 +128,28 @@ function CourseCard({
           </p>
         )}
 
-        {offering.curriculumLink && (
-          <a
-            href={offering.curriculumLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="mt-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
-          >
-            Curriculum <ExternalLink className="w-3 h-3" />
-          </a>
-        )}
+        <div className="mt-1.5 flex flex-wrap gap-2">
+          {offering.curriculumLink && (
+            <a
+              href={offering.curriculumLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              Curriculum <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+          {offering.instructorEmail && (
+            <a
+              href={`mailto:${offering.instructorEmail}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-xs text-foreground-secondary hover:text-primary hover:underline"
+            >
+              <Mail className="w-3 h-3" /> Contact Instructor
+            </a>
+          )}
+        </div>
       </div>
     </label>
   );

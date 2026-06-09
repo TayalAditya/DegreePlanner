@@ -54,7 +54,7 @@ export async function GET() {
 
   // Fetch all offerings for this semester
   const offerings = await prisma.courseOffering.findMany({
-    where: { offeringSemester, offeringYear, isActive: true },
+    where: { offeringYear, isActive: true },
     include: {
       course: {
         include: {
@@ -112,6 +112,7 @@ export async function GET() {
         courseCode: o.courseCode,
         courseName: o.courseName,
         instructor: o.instructor,
+        instructorEmail: o.instructorEmail,
         school: o.school,
         slots: o.slots,
         ltpc: o.ltpc,

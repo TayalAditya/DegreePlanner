@@ -616,6 +616,7 @@ model CourseOffering {
   courseCode       String
   courseName       String
   instructor       String?
+  instructorEmail  String?
   school           String?             // e.g. "SCEE", "SMSS" — used for FE grouping
   branches         String[]            // ["CSE","EE"] or ["ALL"]
   eligibleSems     Int[]               // [5, 7] — which student sems can take it
