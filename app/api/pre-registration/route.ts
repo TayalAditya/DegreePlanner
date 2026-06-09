@@ -199,20 +199,18 @@ export async function GET() {
       tally.DE = Math.min(tally.DE ?? 0, req.deCredits);
       tally.FE = (tally.FE ?? 0) + deOverflow;
 
-      // Merge IC_BASKET into IC for display
-      tally.IC = (tally.IC ?? 0) + (tally.IC_BASKET ?? 0);
-      delete tally.IC_BASKET;
+      // Keep IC and IC_BASKET separate for sidebar display
 
       completedBreakdown = tally;
       programRequirements = {
-        IC:   req.icCredits,   // full institute core incl. HSS, IKS
         DC:   req.dcCredits,
         DE:   req.deCredits,
         FE:   req.feCredits,
         MTP:  progress.required.mtp,
         ISTP: progress.required.istp,
-        HSS:  12,              // standard HSS core cap across all programs
-        IKS:  8,               // standard IKS requirement (IC-181 + IK courses)
+        HSS:  12,   // first 12 cr count as core
+        IKS:  3,    // IC-181 (IKS basket course)
+        // IC and IC_BASKET: show done only (no separate req in program DB)
       };
     } catch { /* keep null */ }
   }

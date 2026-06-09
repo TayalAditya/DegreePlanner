@@ -200,11 +200,68 @@ function Section({ title, count, children, defaultOpen = false, headerBg, error 
   );
 }
 
+function ProgressPanel({ programRequirements, completedBreakdown, categoryBreakdown }: {
+  programRequirements: Record<string, number>;
+  completedBreakdown: Record<string, number>;
+  categoryBreakdown: { cat: string; credits: number; count: number }[];
+}) {
+  return (
+    <>
+      <div className="rounded-xl border border-border bg-surface p-4">
+        <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide mb-3">Remaining</p>
+        <div className="space-y-2">
+          {(["IC","IC_BASKET","DC","DE","HSS","FE","IKS","MTP","ISTP"] as const).map((key) => {
+            const req  = programRequirements[key] ?? 0;
+            const done = completedBreakdown[key] ?? 0;
+            if (!req && !done) return null;
+            const rem  = req > 0 ? Math.max(0, req - done) : null;
+            const color = CATEGORY_COLOR[key] ?? "";
+            const label = key === "IC_BASKET" ? "ICB" : key;
+            return (
+              <div key={key} className="flex items-center justify-between gap-2">
+                <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${color}`}>{label}</span>
+                <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
+                  {req > 0
+                    ? <span className="text-foreground-secondary">{formatCredits(done)}/{req} cr</span>
+                    : <span className="text-foreground-secondary">{formatCredits(done)} cr</span>
+                  }
+                  {rem !== null && (
+                    <span className={`font-semibold ${rem > 0 ? "text-error" : "text-success"}`}>
+                      {rem > 0 ? `−${formatCredits(rem)}` : "✓"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {categoryBreakdown.length > 0 && (
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide mb-3">Adding this semester</p>
+          <div className="space-y-2">
+            {categoryBreakdown.map(({ cat, credits, count }) => (
+              <div key={cat} className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${CATEGORY_COLOR[cat] ?? ""}`}>{cat}</span>
+                  <span className="text-xs text-foreground-secondary">{count} course{count !== 1 ? "s" : ""}</span>
+                </div>
+                <span className="text-xs font-semibold text-foreground flex-shrink-0">+{formatCredits(credits)} cr</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function PreRegistrationPage() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saved, setSaved] = useState(false);
+  const [progressOpen, setProgressOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showApprovalWarning, setShowApprovalWarning] = useState(false);
   const [selectedMinorCode, setSelectedMinorCode] = useState<string>("");
@@ -761,52 +818,53 @@ export default function PreRegistrationPage() {
 
         {data.programRequirements && (
           <div className="hidden lg:block w-64 flex-shrink-0 sticky top-6 space-y-3">
-
-            {/* Remaining credits */}
-            <div className="rounded-xl border border-border bg-surface p-4">
-              <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide mb-3">Remaining</p>
-              <div className="space-y-2">
-                {(["DC","DE","HSS","FE","IKS","MTP","ISTP"] as const).map((key) => {
-                  const req  = data.programRequirements![key] ?? 0;
-                  if (!req) return null;
-                  const done = data.completedBreakdown[key] ?? 0;
-                  const rem  = Math.max(0, req - done);
-                  const color = CATEGORY_COLOR[key] ?? "";
-                  return (
-                    <div key={key} className="flex items-center justify-between gap-2">
-                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${color}`}>{key}</span>
-                      <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
-                        <span className="text-foreground-secondary">{formatCredits(done)}/{req} cr</span>
-                        <span className={`font-semibold ${rem > 0 ? "text-error" : "text-success"}`}>
-                          {rem > 0 ? `−${formatCredits(rem)}` : "✓"}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* This semester breakdown */}
-            {categoryBreakdown.length > 0 && (
-              <div className="rounded-xl border border-border bg-surface p-4">
-                <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide mb-3">Adding this semester</p>
-                <div className="space-y-2">
-                  {categoryBreakdown.map(({ cat, credits, count }) => (
-                    <div key={cat} className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${CATEGORY_COLOR[cat] ?? ""}`}>{cat}</span>
-                        <span className="text-xs text-foreground-secondary">{count} course{count !== 1 ? "s" : ""}</span>
-                      </div>
-                      <span className="text-xs font-semibold text-foreground flex-shrink-0">+{formatCredits(credits)} cr</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <ProgressPanel
+              programRequirements={data.programRequirements}
+              completedBreakdown={data.completedBreakdown}
+              categoryBreakdown={categoryBreakdown}
+            />
           </div>
         )}
       </div>
+
+      {/* Mobile floating bubble */}
+      {data.programRequirements && (
+        <>
+          <button
+            onClick={() => setProgressOpen(true)}
+            className="lg:hidden fixed bottom-20 right-4 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+            aria-label="View progress"
+          >
+            <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zm6-4a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zm6-3a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+            </svg>
+          </button>
+
+          <AnimatePresence>
+            {progressOpen && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                  className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+                  onClick={() => setProgressOpen(false)}
+                />
+                <motion.div
+                  initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+                  transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                  className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl border-t border-border p-4 space-y-3 max-h-[80vh] overflow-y-auto"
+                >
+                  <div className="w-10 h-1 bg-border rounded-full mx-auto mb-2" />
+                  <ProgressPanel
+                    programRequirements={data.programRequirements}
+                    completedBreakdown={data.completedBreakdown}
+                    categoryBreakdown={categoryBreakdown}
+                  />
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+        </>
+      )}
 
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
