@@ -455,16 +455,18 @@ export default function PreRegistrationPage() {
       </div>
 
       {/* Minor selector */}
-      <div className="flex items-center gap-3 p-4 rounded-xl border border-border bg-surface">
-        <BookOpen className="w-4 h-4 text-accent flex-shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground">Minor Planner</p>
-          <p className="text-xs text-foreground-secondary">See which offerings count toward a minor</p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-border bg-surface">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <BookOpen className="w-4 h-4 text-accent flex-shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">Minor Planner</p>
+            <p className="text-xs text-foreground-secondary">See which offerings count toward a minor</p>
+          </div>
         </div>
         <select
           value={selectedMinorCode}
           onChange={(e) => setSelectedMinorCode(e.target.value)}
-          className="text-sm bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 min-w-0 max-w-[220px]"
+          className="text-sm bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 w-full sm:w-auto sm:max-w-[220px]"
         >
           <option value="">— Select a minor —</option>
           {MINORS.map((m) => (
