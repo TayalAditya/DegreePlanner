@@ -51,10 +51,10 @@ const CATEGORY_COLOR: Record<string, string> = {
   ISTP: "bg-accent/10 text-accent border-accent/20",
 };
 
-// Parse slot string into individual tokens e.g. "A1+TA1" → ["A1","TA1"]
+// Parse slot string — handles +, &, , separators e.g. "B & L4" → ["B","L4"]
 function parseSlots(slots: string | null): string[] {
   if (!slots) return [];
-  return slots.split("+").map((s) => s.trim()).filter(Boolean);
+  return slots.split(/[+&,]/).map((s) => s.trim()).filter(Boolean);
 }
 
 function slotsClash(a: string | null, b: string | null): boolean {
