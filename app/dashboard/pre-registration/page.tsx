@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { PreRegistrationSkeleton } from "./loading";
 import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { formatCredits, formatCourseCode } from "@/lib/utils";
@@ -287,7 +288,7 @@ function CourseCard({
             const body = encodeURIComponent(BODY_VARIANTS[Math.floor(Math.random() * BODY_VARIANTS.length)]);
             return (
               <a
-                href={`mailto:${offering.instructorEmail}?subject=${subject}&body=${body}`}
+                href={`mailto:${offering.instructorEmail.split(/[;,]\s*/).join(",")}?subject=${subject}&body=${body}`}
                 onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 text-xs text-foreground-secondary hover:text-primary hover:underline"
               >
@@ -656,11 +657,7 @@ export default function PreRegistrationPage() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-24">
-        <div className="animate-spin rounded-full w-8 h-8 border-2 border-primary border-t-transparent" />
-      </div>
-    );
+    return <PreRegistrationSkeleton />;
   }
 
   const hasOfferings = data && data.offerings.length > 0;
