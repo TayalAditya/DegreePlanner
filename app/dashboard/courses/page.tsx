@@ -14,6 +14,8 @@ import {
   Award,
   ChevronDown,
   ChevronRight,
+  Briefcase,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
@@ -168,6 +170,7 @@ export default function CoursesPage() {
   const [submitting, setSubmitting] = useState(false);
   const [expandedDepartments, setExpandedDepartments] = useState<string[]>([]);
   const [departmentVisibleCounts, setDepartmentVisibleCounts] = useState<Record<string, number>>({});
+  const [internshipOpen, setInternshipOpen] = useState(true);
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
 
@@ -273,6 +276,9 @@ export default function CoursesPage() {
   const departmentGroups = (() => {
     const bySchool: Record<string, Course[]> = {};
     for (const course of filteredCourses) {
+      // Internship courses are shown in the dedicated section above — skip them here
+      const normCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (normCode.endsWith("399P") || normCode.endsWith("396P")) continue;
       const key = getCourseSchoolKey(course);
       const list = bySchool[key] ?? [];
       list.push(course);
@@ -322,6 +328,23 @@ export default function CoursesPage() {
   }, [selectedDept, tab]);
 
   const enrolledCourseIds = new Set(enrollments.map((e) => e.courseId));
+
+  const internshipCourses399P = useMemo(() =>
+    allCourses.filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("399P")),
+    [allCourses]
+  );
+  const internshipCourses396P = useMemo(() =>
+    allCourses.filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("396P")),
+    [allCourses]
+  );
+  const hasEnrolledInternship = useMemo(() =>
+    enrollments.some((e) => {
+      const n = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      return (n.endsWith("399P") || n.endsWith("396P")) && e.status !== "DROPPED";
+    }),
+    [enrollments]
+  );
+
   const availableCourses = filteredCourses.filter(
     (c) => !enrolledCourseIds.has(c.id)
   );
@@ -979,6 +1002,106 @@ export default function CoursesPage() {
                 ))}
               </select>
             </div>
+
+            {/* Semester-Long Internship Section */}
+            {(internshipCourses399P.length > 0 || internshipCourses396P.length > 0) && (
+              <div className="rounded-xl border border-border bg-surface overflow-hidden">
+                <button
+                  onClick={() => setInternshipOpen((o) => !o)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-surface-secondary transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="w-4 h-4 text-foreground-secondary" />
+                    <span className="text-sm font-semibold text-foreground">Semester-Long Internship</span>
+                    <span className="text-xs text-foreground-secondary bg-background-secondary px-1.5 py-0.5 rounded-full">
+                      {internshipCourses399P.length + internshipCourses396P.length}
+                    </span>
+                    {hasEnrolledInternship && (
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-success/10 text-success border border-success/20">✓ Enrolled</span>
+                    )}
+                  </div>
+                  {internshipOpen ? <ChevronDown className="w-4 h-4 text-foreground-secondary" /> : <ChevronRight className="w-4 h-4 text-foreground-secondary" />}
+                </button>
+
+                {internshipOpen && (
+                  <div className="border-t border-border divide-y divide-border">
+                    {/* 399P — Onsite */}
+                    {internshipCourses399P.length > 0 && (
+                      <div className="p-4">
+                        <div className="flex items-start gap-2 mb-3">
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">Onsite Internship (399P) — 9 credits P/F</p>
+                            <p className="text-xs text-foreground-secondary mt-0.5">Min 14 weeks · Sem 6 or 7 · No other courses allowed</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-error/5 border border-error/20 mb-3">
+                          <AlertTriangle className="w-3.5 h-3.5 text-error flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-error">
+                            Cannot enroll alongside any other course · Consumes entire P/F budget → <strong>0 cr remaining</strong>
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {internshipCourses399P.map((c) => (
+                            <div key={c.id} className="flex items-center justify-between gap-2 p-3 rounded-lg border border-border bg-background">
+                              <div>
+                                <p className="text-sm font-medium text-foreground font-mono">{formatCourseCode(c.code)}</p>
+                                <p className="text-xs text-foreground-secondary">{c.name}</p>
+                              </div>
+                              {enrolledCourseIds.has(c.id) ? (
+                                <span className="text-xs px-2 py-1 rounded bg-success/10 text-success border border-success/20 flex-shrink-0">✓ Enrolled</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleAddCourse(c)}
+                                  className="flex-shrink-0 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-1"
+                                >
+                                  <Plus className="w-3.5 h-3.5" /> Add
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 396P — Remote */}
+                    {internshipCourses396P.length > 0 && (
+                      <div className="p-4">
+                        <div className="mb-3">
+                          <p className="text-sm font-semibold text-foreground">Remote Internship (396P) — 6 credits P/F</p>
+                          <p className="text-xs text-foreground-secondary mt-0.5">Min 14 weeks · Sem 6, 7, or 8 · Other courses allowed</p>
+                        </div>
+                        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-warning/5 border border-warning/20 mb-3">
+                          <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
+                          <p className="text-xs text-warning">
+                            Uses 6 of 9 P/F credits → <strong>3 cr P/F remaining</strong> after enrollment
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {internshipCourses396P.map((c) => (
+                            <div key={c.id} className="flex items-center justify-between gap-2 p-3 rounded-lg border border-border bg-background">
+                              <div>
+                                <p className="text-sm font-medium text-foreground font-mono">{formatCourseCode(c.code)}</p>
+                                <p className="text-xs text-foreground-secondary">{c.name}</p>
+                              </div>
+                              {enrolledCourseIds.has(c.id) ? (
+                                <span className="text-xs px-2 py-1 rounded bg-success/10 text-success border border-success/20 flex-shrink-0">✓ Enrolled</span>
+                              ) : (
+                                <button
+                                  onClick={() => handleAddCourse(c)}
+                                  className="flex-shrink-0 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-1"
+                                >
+                                  <Plus className="w-3.5 h-3.5" /> Add
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Course List */}
             {filteredCourses.length === 0 ? (
