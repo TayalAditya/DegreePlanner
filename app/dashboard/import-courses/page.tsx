@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   CheckCircle,
@@ -52,6 +53,7 @@ interface CatalogCourse {
 export default function ImportCoursesPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
+  const router = useRouter();
   const [preRegLocked, setPreRegLocked] = useState(false);
   const [branch, setBranch] = useState("CSE");
   const [geSubBranch, setGeSubBranch] = useState("GE-ROBO");
@@ -181,8 +183,13 @@ export default function ImportCoursesPage() {
 
         if (inferredBatch) {
           const state = inferAcademicState(inferredBatch);
-          setCurrentSemester(state.currentSemester);
-          if (state.phase === "PRE_REGISTRATION") setPreRegLocked(true);
+          if (state.phase === "PRE_REGISTRATION") {
+            setPreRegLocked(true);
+            // Set to last completed semester, not the upcoming one
+            setCurrentSemester((state.upcomingSemester ?? state.currentSemester) - 1);
+          } else {
+            setCurrentSemester(state.currentSemester);
+          }
         }
 
         const mtp1 = data.doingMTP ?? true;
@@ -837,19 +844,29 @@ export default function ImportCoursesPage() {
       .filter(Boolean)
   );
 
-  return (
-    <div className="space-y-6">
-      {preRegLocked && (
-        <div className="flex items-start gap-3 p-4 rounded-xl border border-warning/30 bg-warning/5">
-          <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-foreground-secondary">
-            <span className="font-medium text-warning">Course registration is locked.</span>{" "}
-            Registration for the upcoming semester will open after the add-drop period ends.
-            You can browse courses on the{" "}
-            <a href="/dashboard/pre-registration" className="text-primary hover:underline">Pre Registration</a> page.
+  if (preRegLocked) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-6 text-center max-w-md mx-auto">
+        <AlertCircle className="w-12 h-12 text-warning" />
+        <div>
+          <p className="text-lg font-semibold text-foreground">Import Locked During Pre-Registration</p>
+          <p className="text-sm text-foreground-secondary mt-2">
+            Course import is disabled while pre-registration is active. Your past semester courses are already saved.
+            Use the Pre-Registration page to plan your upcoming semester.
           </p>
         </div>
-      )}
+        <button
+          onClick={() => router.push("/dashboard/pre-registration")}
+          className="px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
+        >
+          Go to Pre-Registration
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
       {errorMessage && (
         <div className="bg-error/10 border border-error/20 rounded-lg overflow-hidden">
           <div className="px-4 py-3 flex items-start gap-3">
