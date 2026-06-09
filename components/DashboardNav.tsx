@@ -60,8 +60,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
   const adminNavigation = [
     { name: "Users", href: "/dashboard/admin", icon: Users },
     { name: "Announcements", href: "/dashboard/admin/announcements", icon: Megaphone },
-    { name: "Pre-Reg Upload", href: "/dashboard/admin/pre-registration", icon: CalendarCheck },
-    { name: "Pre-Reg Plans", href: "/dashboard/admin/pre-registration/plans", icon: Users },
+{ name: "Pre-Reg Plans", href: "/dashboard/admin/pre-registration/plans", icon: Users },
     { name: "Course Mappings", href: "/dashboard/course-mappings", icon: GitBranch },
     { name: "Inbox", href: "/dashboard/inbox", icon: Inbox },
   ];
