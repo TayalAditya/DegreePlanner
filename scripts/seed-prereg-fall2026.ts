@@ -1,16 +1,14 @@
 import { PrismaClient, CourseCategoryType } from "@prisma/client";
 import XLSX from "xlsx";
-import path from "path";
+import { randomUUID } from "crypto";
 
 const prisma = new PrismaClient();
 
 const OFFERING_SEMESTER = 7;
 const OFFERING_YEAR = 2026;
-const ELIGIBLE_SEMS = [3, 5, 7]; // B25→sem3, B24→sem5, B23→sem7
+const ELIGIBLE_SEMS = [3, 5, 7];
 
-// Column indices
 const C = {
-  ISSUES: 0, ACTION: 1, VERDICT: 2,
   CODE: 3, NAME: 4, LTPC: 5, CREDITS: 6,
   PROF: 7, EMAIL: 8, SCHOOL: 9, SLOT: 10,
   DC: 11, DE: 12, HSS: 13, IC: 14, ICB: 15, IKS: 16, MTP: 17, FE: 18,
@@ -27,159 +25,225 @@ const CAT_COLS: [number, CourseCategoryType][] = [
   [C.FE,  CourseCategoryType.FE],
 ];
 
-// Parse "CSE S5, DSE S5, BE" → ["CSE", "DSE", "BE"]
 function parseBranches(raw: string): string[] {
-  return raw
-    .split(",")
-    .map((s) => s.trim().replace(/\s+S\d+$/i, "").trim())
-    .filter(Boolean);
+  return raw.split(",").map((s) => s.trim().replace(/\s+S\d+$/i, "").trim()).filter(Boolean);
 }
 
-// Extract the most common semester from a DC column string like "CSE S5, DSE S5" → 5
-// Returns null if no semester found (means compulsory for any semester)
 function extractDcSemester(dcRaw: string): number | null {
-  if (!dcRaw.trim()) return null;
   const matches = [...dcRaw.matchAll(/S(\d+)/gi)];
-  if (matches.length === 0) return null;
-  const sems = matches.map((m) => parseInt(m[1], 10));
-  // Return the most common one (usually all the same, e.g. all S5)
+  if (!matches.length) return null;
   const freq = new Map<number, number>();
-  for (const s of sems) freq.set(s, (freq.get(s) ?? 0) + 1);
+  for (const m of matches) freq.set(parseInt(m[1]), (freq.get(parseInt(m[1])) ?? 0) + 1);
   return [...freq.entries()].sort((a, b) => b[1] - a[1])[0][0];
 }
 
-// Normalize slot — skip non-slot values
 function normalizeSlot(raw: string): string | null {
   const s = raw.trim();
-  if (!s || /not required|NS|^ns$/i.test(s)) return null;
+  if (!s || /not required|^ns$/i.test(s)) return null;
   if (/free slot/i.test(s)) return "Free Slot";
   return s;
 }
 
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
 async function main() {
-  const wb = XLSX.readFile(
-    "C:/Users/AdityaTayal/Downloads/final-compiled-course-list-recommended.xlsx"
-  );
-  const ws = wb.Sheets["Compiled"];
-  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" }) as string[][];
-  const dataRows = rows.slice(1); // skip header
+  const wb = XLSX.readFile("C:/Users/AdityaTayal/Downloads/final-compiled-course-list-recommended.xlsx");
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets["Compiled"], { header: 1, defval: "" }) as string[][];
+  const dataRows = rows.slice(1);
+  console.log(`Parsed ${dataRows.length} rows from sheet`);
 
-  console.log(`Processing ${dataRows.length} rows…\n`);
+  // ── Step 1: pre-load existing data ────────────────────────────────────────
+  const [existingCourses, existingOfferings, existingMappings] = await Promise.all([
+    prisma.course.findMany({ select: { id: true, code: true } }),
+    prisma.courseOffering.findMany({
+      where: { offeringSemester: OFFERING_SEMESTER, offeringYear: OFFERING_YEAR },
+      select: { id: true, courseCode: true },
+    }),
+    prisma.courseBranchMapping.findMany({ select: { id: true, courseId: true, branch: true, batch: true } }),
+  ]);
 
-  // Load existing courses for fast lookup
-  const existingCourses = await prisma.course.findMany({ select: { id: true, code: true } });
-  const courseByCode = new Map(existingCourses.map((c) => [c.code.toUpperCase(), c.id]));
+  const courseByCode  = new Map(existingCourses.map((c) => [c.code.toUpperCase(), c.id]));
+  const offeringById  = new Map(existingOfferings.map((o) => [o.courseCode.toUpperCase(), o.id]));
+  const mappingKey    = (courseId: string, branch: string) => `${courseId}|${branch}|`;
+  const existingMapSet = new Set(existingMappings.map((m) => mappingKey(m.courseId, m.branch)));
+  console.log(`Loaded: ${existingCourses.length} courses, ${existingOfferings.length} existing offerings, ${existingMappings.length} existing mappings`);
 
-  let created = 0, updated = 0, skipped = 0, newCourses = 0, mappingsSet = 0;
+  // ── Step 2: parse all rows ─────────────────────────────────────────────────
+  type ParsedRow = {
+    code: string; name: string; ltpc: string | null; credits: number;
+    instructor: string | null; instructorEmail: string | null;
+    school: string | null; slot: string | null;
+    branchCatMap: Map<string, CourseCategoryType>;
+    allBranches: string[];
+    compulsorySem: number | null;
+  };
+
+  const parsed: ParsedRow[] = [];
+  let skipped = 0;
 
   for (const row of dataRows) {
     const rawCode = String(row[C.CODE] ?? "").trim();
-
-    // Skip blank / group rows (contains space = "IK XXX" etc.)
     if (!rawCode || rawCode.includes(" ") || rawCode.includes("|")) { skipped++; continue; }
-
-    const verdict = String(row[C.VERDICT] ?? "").trim().toLowerCase();
+    const verdict = String((row as any)[2] ?? "").toLowerCase();
     if (verdict.includes("exclude")) { skipped++; continue; }
 
     const code = rawCode.toUpperCase();
     const name = String(row[C.NAME] ?? "").trim() || code;
     const ltpc = String(row[C.LTPC] ?? "").trim() || null;
     const creditsRaw = parseFloat(String(row[C.CREDITS] ?? ""));
-    const credits = isNaN(creditsRaw) ? (ltpc ? parseFloat(ltpc.split("-").pop()!) || 3 : 3) : creditsRaw;
-    const instructor = String(row[C.PROF] ?? "").trim() || null;
-    const instructorEmail = String(row[C.EMAIL] ?? "").trim() || null;
-    const school = String(row[C.SCHOOL] ?? "").trim() || null;
-    const slot = normalizeSlot(String(row[C.SLOT] ?? ""));
+    const credits = isNaN(creditsRaw)
+      ? (ltpc ? (parseFloat(ltpc.split("-").pop()!) || 3) : 3)
+      : creditsRaw;
 
-    // Build branch → category map
     const branchCatMap = new Map<string, CourseCategoryType>();
-    const allBranches = new Set<string>();
-
     for (const [colIdx, cat] of CAT_COLS) {
-      const branches = parseBranches(String(row[colIdx] ?? ""));
-      for (const b of branches) {
-        if (b) {
-          branchCatMap.set(b, cat);
-          allBranches.add(b);
-        }
+      for (const b of parseBranches(String(row[colIdx] ?? ""))) {
+        if (b) branchCatMap.set(b, cat);
       }
     }
+    if (!branchCatMap.size) { skipped++; continue; }
 
-    if (allBranches.size === 0) { skipped++; continue; }
-
-    // Find or create Course
-    let courseId = courseByCode.get(code);
-    if (!courseId) {
-      const newCourse = await prisma.course.create({
-        data: {
-          code,
-          name,
-          credits,
-          department: school ?? "Unknown",
-          level: 300,
-          offeredInFall: true,
-          offeredInSpring: false,
-          isActive: true,
-        },
-      });
-      courseId = newCourse.id;
-      courseByCode.set(code, courseId);
-      newCourses++;
-      console.log(`  + Created course: ${code} — ${name}`);
-    }
-
-    // Upsert CourseBranchMapping for each branch
-    for (const [branch, category] of branchCatMap) {
-      await prisma.courseBranchMapping.upsert({
-        where: { courseId_branch_batch: { courseId, branch, batch: "" } },
-        update: { courseCategory: category },
-        create: { courseId, branch, batch: "", courseCategory: category, isRequired: false },
-      });
-      mappingsSet++;
-    }
-
-    // Upsert CourseOffering
-    // Extract compulsory semester from DC column (e.g. "CSE S5" → 5)
-    const compulsorySem = extractDcSemester(String(row[C.DC] ?? ""));
-
-    const offeringData = {
-      courseId,
-      courseName: name,
-      instructor,
-      instructorEmail,
-      school,
-      compulsorySem,
-      slots: slot,
+    parsed.push({
+      code,
+      name,
       ltpc,
       credits,
-      branches: [...allBranches],
-      eligibleSems: ELIGIBLE_SEMS,
-      offeringSemester: OFFERING_SEMESTER,
-      offeringYear: OFFERING_YEAR,
-      isActive: true,
-      categoryOverride: null,
-      curriculumLink: null,
-    };
-
-    const existing = await prisma.courseOffering.findUnique({
-      where: { courseCode_offeringSemester_offeringYear: { courseCode: code, offeringSemester: OFFERING_SEMESTER, offeringYear: OFFERING_YEAR } },
+      instructor: String(row[C.PROF] ?? "").trim() || null,
+      instructorEmail: String(row[C.EMAIL] ?? "").trim() || null,
+      school: String(row[C.SCHOOL] ?? "").trim() || null,
+      slot: normalizeSlot(String(row[C.SLOT] ?? "")),
+      branchCatMap,
+      allBranches: [...branchCatMap.keys()],
+      compulsorySem: extractDcSemester(String(row[C.DC] ?? "")),
     });
+  }
+  console.log(`Valid rows: ${parsed.length}, skipped: ${skipped}`);
 
-    if (existing) {
-      await prisma.courseOffering.update({ where: { id: existing.id }, data: offeringData });
-      updated++;
-    } else {
-      await prisma.courseOffering.create({ data: { courseCode: code, ...offeringData } });
-      created++;
+  // ── Step 3: create missing courses ────────────────────────────────────────
+  const newCourses = parsed.filter((p) => !courseByCode.has(p.code));
+  if (newCourses.length) {
+    await prisma.course.createMany({
+      data: newCourses.map((p) => ({
+        id: randomUUID(),
+        code: p.code,
+        name: p.name,
+        credits: p.credits,
+        department: p.school ?? "Unknown",
+        level: 300,
+        offeredInFall: true,
+        offeredInSpring: false,
+        isActive: true,
+      })),
+      skipDuplicates: true,
+    });
+    // Reload new IDs
+    const fresh = await prisma.course.findMany({
+      where: { code: { in: newCourses.map((p) => p.code) } },
+      select: { id: true, code: true },
+    });
+    for (const c of fresh) courseByCode.set(c.code.toUpperCase(), c.id);
+    console.log(`Created ${newCourses.length} new courses`);
+  }
+
+  // ── Step 4: bulk upsert CourseBranchMapping ────────────────────────────────
+  // Collect all mappings to upsert
+  const allMappings: { courseId: string; branch: string; category: CourseCategoryType }[] = [];
+  for (const p of parsed) {
+    const courseId = courseByCode.get(p.code);
+    if (!courseId) continue;
+    for (const [branch, category] of p.branchCatMap) {
+      allMappings.push({ courseId, branch, category });
     }
   }
 
-  console.log(`\n✓ Done`);
-  console.log(`  Offerings created : ${created}`);
-  console.log(`  Offerings updated : ${updated}`);
-  console.log(`  Rows skipped      : ${skipped}`);
-  console.log(`  New courses       : ${newCourses}`);
-  console.log(`  Branch mappings   : ${mappingsSet}`);
+  // Split into new vs update
+  const newMappings  = allMappings.filter((m) => !existingMapSet.has(mappingKey(m.courseId, m.branch)));
+  const updMappings  = allMappings.filter((m) =>  existingMapSet.has(mappingKey(m.courseId, m.branch)));
+
+  // Upsert all mappings via raw SQL ON CONFLICT (fastest approach)
+  for (const batch of chunk(allMappings, 500)) {
+    const now = new Date().toISOString();
+    const values = batch
+      .map((m) => `('${randomUUID()}','${m.courseId}','${m.branch}','','${m.category}',false,'${now}','${now}')`)
+      .join(",");
+    await prisma.$executeRawUnsafe(`
+      INSERT INTO "CourseBranchMapping" (id,"courseId",branch,batch,"courseCategory","isRequired","createdAt","updatedAt")
+      VALUES ${values}
+      ON CONFLICT ("courseId",branch,batch) DO UPDATE SET "courseCategory"=EXCLUDED."courseCategory","updatedAt"=EXCLUDED."updatedAt"
+    `);
+  }
+  console.log(`Upserted ${allMappings.length} branch mappings`);
+
+  // ── Step 5: bulk upsert CourseOffering ────────────────────────────────────
+  const toCreate: typeof parsed = [];
+  const toUpdate: typeof parsed = [];
+
+  for (const p of parsed) {
+    if (offeringById.has(p.code)) toUpdate.push(p);
+    else toCreate.push(p);
+  }
+
+  // Create new offerings
+  if (toCreate.length) {
+    await prisma.courseOffering.createMany({
+      data: toCreate.map((p) => ({
+        id: randomUUID(),
+        courseCode: p.code,
+        courseId: courseByCode.get(p.code) ?? null,
+        courseName: p.name,
+        instructor: p.instructor,
+        instructorEmail: p.instructorEmail,
+        school: p.school,
+        slots: p.slot,
+        ltpc: p.ltpc,
+        credits: p.credits,
+        branches: p.allBranches,
+        eligibleSems: ELIGIBLE_SEMS,
+        compulsorySem: p.compulsorySem,
+        offeringSemester: OFFERING_SEMESTER,
+        offeringYear: OFFERING_YEAR,
+        isActive: true,
+        categoryOverride: null,
+        curriculumLink: null,
+      })),
+      skipDuplicates: true,
+    });
+    console.log(`Created ${toCreate.length} new offerings`);
+  }
+
+  // Update existing offerings via raw SQL
+  for (const batch of chunk(toUpdate, 200)) {
+    const now = new Date().toISOString();
+    for (const p of batch) {
+      const cid = courseByCode.get(p.code);
+      const branches = JSON.stringify(p.allBranches).replace(/'/g, "''");
+      const eligSems = `ARRAY[${ELIGIBLE_SEMS.join(",")}]::int[]`;
+      await prisma.$executeRawUnsafe(`
+        UPDATE "CourseOffering" SET
+          "courseId"=${cid ? `'${cid}'` : "NULL"},
+          "courseName"='${p.name.replace(/'/g,"''")}',
+          "instructor"=${p.instructor ? `'${p.instructor.replace(/'/g,"''")}'` : "NULL"},
+          "instructorEmail"=${p.instructorEmail ? `'${p.instructorEmail}'` : "NULL"},
+          "school"=${p.school ? `'${p.school}'` : "NULL"},
+          "slots"=${p.slot ? `'${p.slot}'` : "NULL"},
+          "ltpc"=${p.ltpc ? `'${p.ltpc}'` : "NULL"},
+          "credits"=${p.credits},
+          "branches"=ARRAY[${p.allBranches.map(b=>`'${b}'`).join(",")}]::text[],
+          "eligibleSems"=${eligSems},
+          "compulsorySem"=${p.compulsorySem ?? "NULL"},
+          "isActive"=true,
+          "updatedAt"='${now}'
+        WHERE "courseCode"='${p.code}' AND "offeringSemester"=${OFFERING_SEMESTER} AND "offeringYear"=${OFFERING_YEAR}
+      `);
+    }
+  }
+  console.log(`Updated ${toUpdate.length} existing offerings`);
+
+  console.log("\n✓ Done!");
 }
 
 main()
