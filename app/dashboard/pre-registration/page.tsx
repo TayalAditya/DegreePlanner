@@ -378,9 +378,8 @@ export default function PreRegistrationPage() {
 
   return (
     <div className="max-w-6xl mx-auto pb-24">
-    <div className="flex gap-6 items-start">
-    {/* ── Main content ── */}
-    <div className="flex-1 min-w-0 space-y-6">
+      <div className="flex gap-6 items-start">
+        <div className="flex-1 min-w-0 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground">
@@ -607,11 +606,10 @@ export default function PreRegistrationPage() {
         </div>
       )}
 
-    </div>{/* end main content */}
+        </div>
 
-    {/* ── Progress sidebar ── */}
-    {data.programRequirements && (
-      <div className="hidden lg:block w-72 flex-shrink-0 sticky top-6 space-y-3">
+        {data.programRequirements && (
+          <div className="hidden lg:block w-72 flex-shrink-0 sticky top-6 space-y-3">
         <div className="rounded-xl border border-border bg-surface p-4">
           <p className="text-sm font-semibold text-foreground mb-3">Degree Progress</p>
           {(["IC","DC","DE","HSS","FE"] as const).map((cat) => {
@@ -657,11 +655,10 @@ export default function PreRegistrationPage() {
             <span>Adding this semester</span>
           </div>
         </div>
+          </div>
+        )}
       </div>
-    )}
-    </div>{/* end flex row */}
 
-      {/* Sticky bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div>
@@ -683,6 +680,6 @@ export default function PreRegistrationPage() {
           </button>
         </div>
       </div>
-    </div>{/* end outer wrapper */}
+    </div>
   );
 }
