@@ -306,6 +306,11 @@ export default function PreRegistrationPage() {
       return;
     }
 
+    const confirmed = window.confirm(
+      "This saves your selection to Degree Planner only — it is NOT the official institute pre-registration.\n\nActual pre-registration on the institute portal will begin in late June.\n\nContinue?"
+    );
+    if (!confirmed) return;
+
     const toAdd = data.offerings.filter(
       (o) => (o.isCompulsory || selected.has(o.id)) && !o.alreadyAdded && !o.completedInSemester
     );
@@ -393,10 +398,20 @@ export default function PreRegistrationPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground">
-          Semester {data.offeringSemester} Registration
+          Semester {data.offeringSemester} Pre Registration
         </h1>
         <p className="mt-1 text-sm text-foreground-secondary">
-          {data.term} {data.offeringYear} · Select your courses for the upcoming semester
+          {data.term} {data.offeringYear} · Browse and plan your courses for the upcoming semester
+        </p>
+      </div>
+
+      {/* Disclaimer banner */}
+      <div className="flex items-start gap-3 p-4 rounded-xl border border-info/25 bg-info/5">
+        <Info className="w-4 h-4 text-info flex-shrink-0 mt-0.5" />
+        <p className="text-sm text-foreground-secondary">
+          <span className="font-medium text-foreground">This is not the official pre-registration.</span>{" "}
+          Degree Planner lets you browse all eligible courses by category and plan your semester ahead of time.
+          Actual pre-registration on the institute portal will begin in late June.
         </p>
       </div>
 
