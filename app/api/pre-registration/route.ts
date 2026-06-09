@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { getBranchCandidates, normalizeBranchCode } from "@/lib/branchInfo";
 import { EnrollmentStatus } from "@prisma/client";
+import { creditCalculator } from "@/lib/creditCalculator";
 
 const PRE_REG_OPEN = new Date("2026-07-15T00:00:00+05:30");
 
@@ -140,43 +141,35 @@ export async function GET() {
       };
     });
 
-  // Current credit breakdown (for progress panel)
-  const program = await prisma.userProgram.findFirst({
+  // Use the real credit calculator for accurate completed breakdown
+  const userProgram = await prisma.userProgram.findFirst({
     where: { userId: session.user.id, isPrimary: true },
-    select: { program: { select: { dcCredits: true, deCredits: true, feCredits: true, icCredits: true, mtpIstpCredits: true } } },
+    select: { programId: true, program: { select: { icCredits: true, dcCredits: true, deCredits: true, feCredits: true } } },
   });
 
-  // Tally completed credits by category using the same branchMapping logic
-  const completedBreakdown: Record<string, number> = { IC: 0, DC: 0, DE: 0, HSS: 0, FE: 0, IKS: 0, MTP: 0, ISTP: 0 };
-  const completedWithMappings = await prisma.courseEnrollment.findMany({
-    where: { userId: session.user.id, status: EnrollmentStatus.COMPLETED },
-    include: {
-      course: {
-        select: {
-          code: true, credits: true,
-          branchMappings: { select: { courseCategory: true, branch: true, batch: true } },
-        },
-      },
-    },
-  });
+  let completedBreakdown: Record<string, number> = { CORE: 0, DE: 0, FE: 0, MTP: 0, ISTP: 0 };
+  let programRequirements: Record<string, number> | null = null;
 
-  for (const e of completedWithMappings) {
-    const code = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const cat = pickCategory(e.course.branchMappings, normalizedBranch, batch) ??
-      (code.startsWith("HS") ? "HSS" : code.startsWith("IC") ? "IC" : "FE");
-    const key = cat === "IC_BASKET" ? "IC" : cat;
-    if (key in completedBreakdown) completedBreakdown[key] = (completedBreakdown[key] ?? 0) + e.course.credits;
+  if (userProgram?.programId) {
+    try {
+      const progress = await creditCalculator.calculateProgramProgress(session.user.id, userProgram.programId);
+      // creditCalculator correctly handles DE overflow→FE, split credits, HSS cap, everything
+      completedBreakdown = {
+        CORE: progress.completed.core,        // IC + DC + HSS + IKS combined
+        DE:   progress.completed.de,          // capped at deCredits; overflow already in FE
+        FE:   progress.completed.freeElective, // includes DE overflow + split FE credits
+        MTP:  progress.completed.mtp,
+        ISTP: progress.completed.istp,
+      };
+      programRequirements = {
+        CORE: progress.required.core,  // icCredits + dcCredits
+        DE:   progress.required.de,
+        FE:   progress.required.freeElective,
+        MTP:  8,
+        ISTP: 4,
+      };
+    } catch { /* keep null */ }
   }
-
-  const req = program?.program;
-  const programRequirements = req ? {
-    IC: req.icCredits,
-    DC: req.dcCredits,
-    DE: req.deCredits,
-    FE: req.feCredits,
-    MTP: 8,
-    ISTP: 4,
-  } : null;
 
   return NextResponse.json({
     offeringSemester,

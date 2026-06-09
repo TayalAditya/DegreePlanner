@@ -633,33 +633,27 @@ export default function PreRegistrationPage() {
           {(() => {
             const cb = data.completedBreakdown;
             const pr = data.programRequirements!;
-            // IC in DB = all institute core (IC + HSS + IKS + ICB combined)
             const rows = [
               {
-                cat: "IC", label: "Core (IC+HSS)",
-                req: pr["IC"] ?? 0,
-                done: (cb["IC"] ?? 0) + (cb["HSS"] ?? 0) + (cb["IKS"] ?? 0) + (cb["IC_BASKET"] ?? 0),
+                key: "CORE", label: "Core",
+                req: pr["CORE"] ?? 0, done: cb["CORE"] ?? 0,
                 adding: (categoryBreakdown.find(b => b.cat === "IC")?.credits ?? 0) +
+                        (categoryBreakdown.find(b => b.cat === "DC")?.credits ?? 0) +
                         (categoryBreakdown.find(b => b.cat === "HSS")?.credits ?? 0) +
                         (categoryBreakdown.find(b => b.cat === "IKS")?.credits ?? 0),
                 barColor: "bg-info", addColor: "bg-info/40", catColor: CATEGORY_COLOR["IC"],
               },
               {
-                cat: "DC", label: "DC",
-                req: pr["DC"] ?? 0, done: cb["DC"] ?? 0,
-                adding: categoryBreakdown.find(b => b.cat === "DC")?.credits ?? 0,
-                barColor: "bg-primary", addColor: "bg-primary/40", catColor: CATEGORY_COLOR["DC"],
-              },
-              {
-                cat: "DE", label: "DE",
+                key: "DE", label: "DE",
                 req: pr["DE"] ?? 0, done: cb["DE"] ?? 0,
                 adding: categoryBreakdown.find(b => b.cat === "DE")?.credits ?? 0,
                 barColor: "bg-secondary", addColor: "bg-secondary/40", catColor: CATEGORY_COLOR["DE"],
               },
               {
-                cat: "FE", label: "FE",
+                key: "FE", label: "FE",
                 req: pr["FE"] ?? 0, done: cb["FE"] ?? 0,
-                adding: categoryBreakdown.find(b => b.cat === "FE")?.credits ?? 0,
+                adding: (categoryBreakdown.find(b => b.cat === "FE")?.credits ?? 0) +
+                        (categoryBreakdown.find(b => b.cat === "HSS")?.credits ?? 0),
                 barColor: "bg-success", addColor: "bg-success/40", catColor: CATEGORY_COLOR["FE"],
               },
             ];
@@ -668,7 +662,7 @@ export default function PreRegistrationPage() {
               const pctDone = Math.min(100, (r.done / r.req) * 100);
               const pctAdding = Math.min(100 - pctDone, (r.adding / r.req) * 100);
               return (
-                <div key={r.cat} className="mb-3">
+                <div key={r.key} className="mb-3">
                   <div className="flex items-center justify-between mb-1">
                     <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${r.catColor}`}>{r.label}</span>
                     <div className="text-xs text-foreground-secondary text-right">
