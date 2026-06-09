@@ -268,7 +268,8 @@ function CourseCard({
             </a>
           )}
           {offering.instructorEmail && (() => {
-            const salutation = inferSalutation(offering.instructor);
+            const emails = offering.instructorEmail.split(/[;,]\s*/);
+            const salutation = emails.length > 1 ? "Sir/Ma'am" : inferSalutation(offering.instructor);
             const code = offering.courseCode;
             const name = offering.courseName;
             const cat = CATEGORY_LABEL[offering.resolvedCategory] ?? offering.resolvedCategory;
