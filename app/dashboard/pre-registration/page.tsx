@@ -58,9 +58,20 @@ function parseSlots(slots: string | null): string[] {
   return slots.split(/[+&,]/).map((s) => s.trim()).filter(Boolean);
 }
 
+// Flexible slots never clash — TBD, FS1/FS2/FS3, Free Slot
+function isFlexibleSlot(token: string): boolean {
+  const t = token.trim().toUpperCase();
+  return t === "TBD" || t === "FREE SLOT" || /^FS\d*$/i.test(t) || t === "NS";
+}
+
+function fixedSlots(slots: string | null): string[] {
+  return parseSlots(slots).filter((t) => !isFlexibleSlot(t));
+}
+
 function slotsClash(a: string | null, b: string | null): boolean {
-  const sa = new Set(parseSlots(a));
-  return parseSlots(b).some((t) => sa.has(t));
+  const sa = new Set(fixedSlots(a));
+  if (sa.size === 0) return false;
+  return fixedSlots(b).some((t) => sa.has(t));
 }
 
 function CourseCard({
@@ -299,7 +310,7 @@ export default function PreRegistrationPage() {
   // Compulsory course slots (blocked)
   const compulsorySlots = useMemo(() => {
     const s = new Set<string>();
-    data?.offerings.filter((o) => o.isCompulsory).forEach((o) => parseSlots(o.slots).forEach((t) => s.add(t)));
+    data?.offerings.filter((o) => o.isCompulsory).forEach((o) => fixedSlots(o.slots).forEach((t) => s.add(t)));
     return s;
   }, [data]);
 
