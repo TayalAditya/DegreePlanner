@@ -34,6 +34,7 @@ interface ApiResponse {
   completedBreakdown: Record<string, number>;
   programRequirements: Record<string, number> | null;
   studentInfo: { name: string | null; branch: string | null; semester: number } | null;
+  savedPlan?: { selectedIds: string[]; updatedAt: string | null };
 }
 
 interface InternshipCourse {
@@ -76,41 +77,99 @@ function fixedSlots(slots: string | null): string[] {
   return parseSlots(slots).filter((t) => !isFlexibleSlot(t));
 }
 
-// Common Indian female first names for salutation inference
-const FEMALE_NAMES = new Set([
-  "priya","sunita","meena","anita","kavita","rekha","shilpa","pooja","puja","neha","ritu","nisha",
-  "asha","usha","lata","geeta","gita","seema","sima","sonia","sonya","divya","deepa","dipa",
-  "manisha","manasa","vandana","archana","kalpana","rashmi","madhu","manju","manjula","saroj",
-  "savita","sushma","shweta","shreya","shruti","swati","smita","suman","sudha","supriya","sushmita",
-  "tanvi","tanya","trisha","uma","vidya","vineeta","vinita","vidhya","yamini","yasmin","zara",
-  "akansha","akanksha","ankita","ambika","amita","amrita","ananya","anamika","anjali","anuradha",
-  "anushka","aparajita","aparna","arati","aarti","aaradhya","aradhana","aruna","avani","babita",
-  "bhavana","chandni","chandra","deepika","deeksha","diksha","durga","ekta","garima","gayatri",
-  "geetanjali","hema","himani","indira","ishita","jyoti","jyotsna","kajal","kamla","kiran",
-  "komal","kritika","kusum","lalita","lavanya","leela","leelavathi","madhumita","mahima","malvika",
-  "mamta","manorama","meenakshi","megha","mona","monika","namrata","nandita","nandini","namita",
-  "natasha","niharika","nilima","nita","nitu","padma","pallavi","parvati","payal","poonam","poornima",
-  "prachi","pragati","pratibha","preeti","preethi","prerna","prerana","pushpa","radha","radhika",
-  "ranjana","ratna","reena","rina","riya","rohini","roshni","rucha","rupa","rupal","sadhana",
-  "sagarika","sangeeta","sangita","sanjana","sanjna","sapna","saraswati","sarla","shalini","shanta",
-  "sharada","sharda","shikha","shipra","shirin","shobha","shradha","shraddha","shubha","silpa",
-  "simran","sneha","snigdha","soumya","sridevi","subha","subhadra","subhashini","sulekha","sulochana",
-  "sunanda","sunanda","suparna","surekha","susheela","sushila","tara","taruna","urvashi","urvasi",
-  "vaishali","varsha","vasudha","veena","vibha","vijaya","vijayalakshmi","vimala","vina","vrinda",
-  "yashoda","yogita","zoya","noor","aisha","fatima","sana","sara","sarah","maria","alice","grace",
-  "linda","lisa","helen","anna","emma","sophia","olivia","emily","charlotte","isabella",
-]);
+// Verified instructor salutation map (sourced from manual review)
+const INSTRUCTOR_SALUTATION: Record<string, string> = {
+  "Acharyanet and Shri Chitravina Ravikiran": "Sir",
+  "Ajay Soni": "Sir", "All SBB Faculty": "Sir/Ma'am", "Amit Jaiswal": "Sir",
+  "Amit Prasad": "Sir", "Aniruddha Jena": "Sir", "Anjan Kumar Swain": "Sir",
+  "Aparna Malaviya": "Ma'am", "Arko Roy": "Sir", "Arti Kashyap": "Ma'am",
+  "Ashish Bollimbala": "Sir", "Atul Dhar": "Sir", "Baskar Bakthavachalu": "Sir",
+  "C. S. Yadav": "Sir", "Chair SHSS": "Sir/Ma'am", "Dechen Angmo": "Ma'am",
+  "Dr. Abhimanew Dhir": "Sir", "Dr. Abhishek Dewanji": "Sir", "Dr. Abhishek Sharma": "Sir",
+  "Dr. Aditya Nigam": "Sir", "Dr. Adrash Patel": "Sir", "Dr. Akhilesh Paswan": "Sir",
+  "Dr. Aliva Nanda": "Ma'am", "Dr. Amit B Pawar": "Sir", "Dr. Amit D. Lad": "Sir",
+  "Dr. Amit Kumar Singha": "Sir", "Dr. Amit Shukla": "Sir", "Dr. Amit Sil": "Sir",
+  "Dr. Anshu Bamney": "Sir", "Dr. Archi Banerjee": "Ma'am", "Dr. Arnav Bhavsar": "Sir",
+  "Dr. Arpita Dutta": "Ma'am", "Dr. Ashutosh Kumar": "Sir", "Dr. Bhaskar Mondal": "Sir",
+  "Dr. Bikram Paul": "Sir", "Dr. Dericks P Shukla": "Sir", "Dr. Dhanya J": "Ma'am",
+  "Dr. Dinesh Singh": "Sir", "Dr. Doyel Pandey": "Ma'am", "Dr. Dwijasish Das": "Sir",
+  "Dr. Garima Agrawal": "Ma'am", "Dr. Gaurav Sood": "Sir", "Dr. Harshad Kulkarni": "Sir",
+  "Dr. Himanshu Misra": "Sir", "Dr. Indu Bala": "Ma'am", "Dr. Indu Joshi": "Ma'am",
+  "Dr. Jinesh Machchar": "Sir", "Dr. Kala Venkat Uday": "Ma'am", "Dr. Kaushik Halder": "Sir",
+  "Dr. Kaustav Sarkar": "Sir", "Dr. Krishna Gajendra Panda": "Sir", "Dr. Kumar Sambhav Pandey": "Sir",
+  "Dr. Kunal Ghosh": "Sir", "Dr. Lokesh Ramteke": "Sir", "Dr. Maheshreddy Gade": "Sir",
+  "Dr. Milan Pramanik": "Sir", "Dr. Mirza Galib": "Sir", "Dr. Mohit Mishra": "Sir",
+  "Dr. Moumita Das": "Sir/Ma'am", "Dr. Moupriya Das": "Ma'am", "Dr. Mousumi Mukherjee": "Ma'am",
+  "Dr. Muslim Malik": "Sir", "Dr. Narayan Sinha": "Sir", "Dr. Narendra Kumar Dhar": "Sir",
+  "Dr. Needhi Kotoky": "Ma'am", "Dr. Neeraj Sharma": "Sir", "Dr. Neha Thakur": "Ma'am",
+  "Dr. Nidht Bisht": "Ma'am", "Dr. P Nirmal Harish": "Sir", "Dr. Padmanabhan Rajan": "Sir",
+  "Dr. Parimala Kancharla": "Ma'am", "Dr. Pavan Reddy": "Sir", "Dr. Prateek Vishnoi": "Sir",
+  "Dr. Pratim Kundu": "Sir", "Dr. Preeti": "Ma'am", "Dr. Preti Kumari": "Ma'am",
+  "Dr. Priyank Singh": "Sir", "Dr. Pushpendra singh": "Sir", "Dr. Qaiser Jahan": "Ma'am",
+  "Dr. Rahul Shrestha": "Sir", "Dr. Rajneesh Sharma": "Sir", "Dr. Rakesh Kumar": "Sir",
+  "Dr. Rakhi Pratihar": "Ma'am", "Dr. Ranjeet Kumar Jha": "Sir", "Dr. Rishikesh Yadav": "Sir",
+  "Dr. Riya Tapwal": "Ma'am", "Dr. Robin Khosla": "Sir", "Dr. Rohit Saluja": "Sir",
+  "Dr. Samar Agnihotri": "Sir", "Dr. Samir Shukla": "Sir", "Dr. Sampat Kr. Sharma": "Sir",
+  "Dr. Sandip K Saha": "Sir", "Dr. Saswata Adhikari": "Sir", "Dr. Sayantan Sarkar": "Sir",
+  "Dr. Shashank Pathak": "Sir", "Dr. Sherya Ghosh": "Ma'am", "Dr. Shivang Shekhar": "Sir",
+  "Dr. Siddhartha Panwar": "Sir", "Dr. Siddhartha Sarma": "Sir", "Dr. Sneha Singh": "Ma'am",
+  "Dr. Sourav Dutta": "Sir", "Dr. Sreelakshmi P M": "Ma'am", "Dr. Srikant Sugavanam": "Sir",
+  "Dr. Srinivasu B": "Sir", "Dr. Subhamoy Sen": "Sir", "Dr. Sudipta Ghosh": "Sir",
+  "Dr. Tanmay Kayal": "Sir", "Dr. Vaibhav Gupta": "Sir", "Dr. Vankata Ratnam Vakacharla": "Sir",
+  "Dr. Varun Kumar Jayapaul": "Sir", "Dr. Venkatesh Chembrolu": "Sir",
+  "Dr. Venkatesh H. Chembrolu": "Sir", "Dr. Venkateshwar Pai": "Sir",
+  "Dr. Vijayakanth Thangavel": "Sir", "Dr. Vikash Tripathi": "Sir", "Dr. Vivek Gupta": "Sir",
+  "Dr. Y V Karteek": "Sir", "Dr. kuruva Balana": "Sir",
+  "Dr.Anand Giri": "Sir", "Dr.Anil Kishan": "Sir", "Dr.Deepak Patil": "Sir",
+  "Dr.Deepak Sachan": "Sir", "Dr.Dheeraj Dube Prakashchand": "Sir", "Dr.Gajendra": "Sir",
+  "Dr.Gaurav Bhutani": "Sir", "Dr.Himanshu Pathak": "Sir", "Dr.Jaspreet Kaur Randhawa": "Ma'am",
+  "Dr.Neha Shukla": "Ma'am", "Dr.Neha Thakur": "Ma'am", "Dr.Parmod Kumar": "Sir",
+  "Dr.Pradeep Kumar": "Sir", "Dr.Prateek Saxena": "Sir", "Dr.Raj Kiran": "Sir",
+  "Dr.Rajesh Ghosh": "Sir", "Dr.Ranbir Singh": "Sir", "Dr.Sanasam Sunderlal": "Sir",
+  "Dr.Sandeep Sahu": "Sir", "Dr.Sarthak Nag": "Sir", "Dr.Satvasheel Ramesh powar": "Sir",
+  "Dr.Shashwat Bhattacharya": "Sir", "Dr.Sudhir Kumar Pandey": "Sir", "Dr.Sunny Zafar": "Sir",
+  "Dr.Suntharavel Muthaiah": "Sir", "Dr.Swati Sharma": "Ma'am",
+  "Hari Varma": "Sir", "Harsh Soni": "Sir", "Jaskaran Singh": "Sir", "Karan Rai": "Sir",
+  "Kaustav Mukherjee": "Sir", "Kharerin Hungyo": "Sir", "Krishna Panda": "Sir",
+  "Lokeshkumar Ramteke": "Sir", "Manoj Thakur": "Sir", "Masudul Hasan Adil": "Sir",
+  "Mohammad Talha/Rajesh Ghosh": "Sir", "Neethi": "Ma'am", "Neethi V. Alexander": "Ma'am",
+  "Neha Kaushik": "Ma'am", "Nilamber Chhetri": "Sir", "Prabhakar Palni": "Sir",
+  "Pradyumna K Pathak": "Sir", "Prasad Kasturi": "Sir", "Prof Dipankar Deb": "Sir",
+  "Prof SRC": "Sir", "Prof. A P Tiwari": "Sir", "Prof. Aditi Halder": "Ma'am",
+  "Prof. Animesh Biswas": "Sir", "Prof. Aniruddha Chakraborty": "Sir", "Prof. Arnav Bhavsar": "Sir",
+  "Prof. Bijnan Bandyopadhyay": "Sir", "Prof. Chayan Nandi": "Sir", "Prof. Hitesh Shrimali": "Sir",
+  "Prof. Laxmidhar Behera": "Sir", "Prof. Manoj Thakur": "Sir", "Prof. Nitu Kumari": "Ma'am",
+  "Prof. Pradeep Parameswaran": "Sir", "Prof. Prem Felix Siril": "Sir",
+  "Prof. Rajendra Kr. Ray": "Sir", "Prof. Sarita Azad": "Ma'am",
+  "Prof. Satinder Kumar Sharma": "Sir", "Prof. Satyajit": "Sir", "Prof. Subrata Ghosh": "Sir",
+  "Prof. Syed Abbas": "Sir", "Prof. Tushar Jain": "Sir", "Prof. Varun Dutt": "Sir",
+  "Prof. Venkata Krishnan": "Sir", "Prof.Atul Dhar": "Sir", "Prof.Rahul Vaish": "Sir",
+  "Prof.Rajeev Kumar": "Sir", "Prof.Rik Rani Koner": "Ma'am", "Prof.Talha": "Sir",
+  "Prof.Vishal Singh Chauhan": "Sir", "Prof.Viswanath Balakrishnan": "Sir",
+  "Puran Singh": "Sir", "Pushpendra Singh": "Ma'am", "Rahul Kothari": "Sir",
+  "Rajeshwari Dutt": "Ma'am", "Ramajayam Govindaraji": "Sir", "Ramna Thakur": "Ma'am",
+  "Ridhi Arora": "Ma'am", "Sanjeev Nara": "Sir", "Satvasheel Powar": "Sir",
+  "Saumya Dixit": "Ma'am", "Saumya Malviya": "Sir", "Shyam Kumar Masakapalli": "Sir",
+  "Shyam Masakpalli": "Sir", "Shyamasree Dasgupta": "Ma'am", "Suman": "Ma'am",
+  "Suman Kalyan Pal": "Ma'am", "Sumit Murab": "Sir", "Surya Prakash Upadhyay": "Sir",
+  "Thirthankar Chakraborty": "Sir", "Trayambak Basak": "Sir",
+};
 
 function inferSalutation(instructorName: string | null): string {
   if (!instructorName) return "Sir/Ma'am";
-  // strip titles like Dr., Prof., Mr., Mrs., Ms.
-  const stripped = instructorName.replace(/\b(dr\.?|prof\.?|mr\.?|mrs\.?|ms\.?)\s*/gi, "").trim();
-  const firstName = stripped.split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, "");
-  if (FEMALE_NAMES.has(firstName)) return "Ma'am";
-  // heuristic: many Indian female names end in 'a' or 'i' but skip common male endings
-  const MALE_ENDINGS = ["kumar","raj","singh","pal","ram","esh","ish","ush","ant","ash","ar","er","or","ul","al","il","on","an","en","in"];
-  if (MALE_ENDINGS.some(e => firstName.endsWith(e))) return "Sir";
-  if (firstName.endsWith("a") || firstName.endsWith("i") || firstName.endsWith("ee")) return "Ma'am";
+  // strip parenthetical suffixes like (LC), (FA), (Local Coordinator) etc.
+  const cleaned = instructorName.replace(/\s*\([^)]*\)\s*/g, " ").trim();
+  // direct lookup
+  if (INSTRUCTOR_SALUTATION[cleaned]) return INSTRUCTOR_SALUTATION[cleaned];
+  // try stripping after comma/& (multiple instructors — use first)
+  const firstName = cleaned.split(/[,&]/)[0].trim();
+  if (INSTRUCTOR_SALUTATION[firstName]) return INSTRUCTOR_SALUTATION[firstName];
+  // heuristic fallback for unknown instructors
+  const strippedTitle = firstName.replace(/\b(dr\.?|prof\.?|mr\.?|mrs\.?|ms\.?)\s*/gi, "").trim();
+  const first = strippedTitle.split(/\s+/)[0].toLowerCase().replace(/[^a-z]/g, "");
+  const MALE_ENDINGS = ["kumar","raj","singh","ram","esh","ish","ant","ar","er","or","ul","al","on","an","en","in"];
+  if (MALE_ENDINGS.some(e => first.endsWith(e))) return "Sir";
+  if (first.endsWith("a") || first.endsWith("i") || first.endsWith("ee")) return "Ma'am";
   return "Sir/Ma'am";
 }
 
@@ -400,43 +459,39 @@ export default function PreRegistrationPage() {
   const { showToast } = useToast();
 
   useEffect(() => {
-    fetch("/api/pre-registration")
-      .then((r) => r.json())
-      .then(async (d: ApiResponse) => {
+    Promise.all([
+      fetch("/api/pre-registration").then((r) => r.json() as Promise<ApiResponse>),
+      fetch("/api/courses").then((r) => r.json()).catch(() => [] as InternshipCourse[]),
+    ])
+      .then(([d, courses]) => {
         setData(d);
-        // Load saved plan from server
-        const res = await fetch(`/api/pre-registration/plan?semester=${d.offeringSemester}&year=${d.offeringYear}`);
-        if (res.ok) {
-          const plan = await res.json() as { selectedIds: string[] };
+
+        // Restore saved plan from embedded response — no second round-trip
+        const plan = d.savedPlan;
+        if (plan && plan.selectedIds.length > 0) {
           const offeringById = new Map(d.offerings.map((o: Offering) => [o.id, o]));
-          // Restore saved selection, validating slot clashes greedily
           const restoredSlots = new Set<string>();
           const restoredIds = new Set<string>();
           for (const id of plan.selectedIds) {
             const o = offeringById.get(id);
             if (!o) continue;
             const oSlots = parseSlots(o.slots);
-            if (oSlots.some((s) => restoredSlots.has(s))) continue; // skip clashing
+            if (oSlots.some((s) => restoredSlots.has(s))) continue;
             oSlots.forEach((s) => restoredSlots.add(s));
             restoredIds.add(id);
           }
           setSelected(restoredIds);
           setSaved(true);
         }
+
+        if (Array.isArray(courses)) {
+          const p399 = (courses as InternshipCourse[]).filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("399P"));
+          const p396 = (courses as InternshipCourse[]).filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("396P"));
+          setInternshipCourses({ p399, p396 });
+        }
       })
       .catch(() => showToast("error", "Failed to load offerings"))
       .finally(() => setLoading(false));
-
-    // Fetch internship courses separately
-    fetch("/api/courses")
-      .then((r) => r.json())
-      .then((courses: InternshipCourse[]) => {
-        if (!Array.isArray(courses)) return;
-        const p399 = courses.filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("399P"));
-        const p396 = courses.filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("396P"));
-        setInternshipCourses({ p399, p396 });
-      })
-      .catch(() => {});
   }, []);
 
   // Compulsory course slots (blocked)
