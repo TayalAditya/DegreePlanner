@@ -77,6 +77,10 @@ export async function GET() {
     completed.map((e) => [e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, ""), e.semester])
   );
 
+  // IC-181 & IC-182 are IKS basket — only one counts. If either is done, the other is not compulsory.
+  const ic181Done = completedByCourseCode.has("IC181");
+  const ic182Done = completedByCourseCode.has("IC182");
+
 
   const result = offerings
     .filter((o) => {
@@ -103,7 +107,14 @@ export async function GET() {
       const isCompulsoryCategory = ["IC", "IC_BASKET", "DC", "IKS"].includes(resolvedCategory);
       const semesterMatches = o.compulsorySem == null || o.compulsorySem === offeringSemester;
       const isCompleted = completedSem != null;
-      const isCompulsory = isCompulsoryCategory && (semesterMatches || !isCompleted);
+
+      // IC-181/IC-182 mutual exclusion — done one → other not compulsory
+      const normCode = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const iksBlocked =
+        (normCode === "IC181" && (ic182Done || ic181Done)) ||
+        (normCode === "IC182" && (ic181Done || ic182Done));
+
+      const isCompulsory = isCompulsoryCategory && !iksBlocked && (semesterMatches || !isCompleted);
 
       // Check if already completed
       const normalizedCode = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");

@@ -6,7 +6,28 @@ const prisma = new PrismaClient();
 
 const OFFERING_SEMESTER = 7;
 const OFFERING_YEAR = 2026;
-const ELIGIBLE_SEMS = [3, 5, 7];
+const ALL_ACTIVE_SEMS = [3, 5, 7];
+
+// IC courses with non-default semesters (everything else IC defaults to sem 1)
+const IC_SEM_OVERRIDES: Record<string, number> = {
+  "IC-202P": 3,
+  "IC-222P": 3,
+  "IC-252":  2, // sem 2 — not offered in Fall pre-reg
+  "IC-240":  2,
+  "IC-241":  2,
+  "IC-253":  2,
+  "IC-121":  2,
+};
+
+// Eligible sems = odd active sems >= compulsorySem
+// Even-sem courses (sem 2, 4 etc.) get empty → isActive=false effectively
+// e.g. compulsorySem=5 → [5,7]; compulsorySem=7 → [7]; null/1 → [3,5,7]; 2/4 → []
+function computeEligibleSems(compulsorySem: number | null): number[] {
+  const min = compulsorySem ?? 1;
+  if (min % 2 === 0) return []; // even-sem course → hide from Fall pre-reg
+  const filtered = ALL_ACTIVE_SEMS.filter((s) => s >= min);
+  return filtered.length > 0 ? filtered : ALL_ACTIVE_SEMS;
+}
 
 const C = {
   CODE: 3, NAME: 4, LTPC: 5, CREDITS: 6,
@@ -118,11 +139,20 @@ async function main() {
       slot: normalizeSlot(String(row[C.SLOT] ?? "")),
       branchCatMap,
       allBranches: [...branchCatMap.keys()],
-      compulsorySem:
-        extractDcSemester(String(row[C.DC]  ?? "")) ??
-        extractDcSemester(String(row[C.IC]  ?? "")) ??
-        extractDcSemester(String(row[C.ICB] ?? "")) ??
-        null,
+      compulsorySem: (() => {
+        // Explicit override first (IC-202P, IC-222P → sem 3)
+        if (IC_SEM_OVERRIDES[code]) return IC_SEM_OVERRIDES[code];
+        // Try to extract from DC/IC/ICB columns
+        const parsed =
+          extractDcSemester(String(row[C.DC]  ?? "")) ??
+          extractDcSemester(String(row[C.IC]  ?? "")) ??
+          extractDcSemester(String(row[C.ICB] ?? "")) ??
+          null;
+        // IC courses with no semester annotation → default to sem 1
+        const hasIcEntry = String(row[C.IC] ?? "").trim() || String(row[C.ICB] ?? "").trim();
+        if (!parsed && hasIcEntry) return 1;
+        return parsed;
+      })(),
     });
   }
   console.log(`Valid rows: ${parsed.length}, skipped: ${skipped}`);
@@ -206,7 +236,7 @@ async function main() {
         ltpc: p.ltpc,
         credits: p.credits,
         branches: p.allBranches,
-        eligibleSems: ELIGIBLE_SEMS,
+        eligibleSems: computeEligibleSems(p.compulsorySem),
         compulsorySem: p.compulsorySem,
         offeringSemester: OFFERING_SEMESTER,
         offeringYear: OFFERING_YEAR,
@@ -225,7 +255,7 @@ async function main() {
     for (const p of batch) {
       const cid = courseByCode.get(p.code);
       const branches = JSON.stringify(p.allBranches).replace(/'/g, "''");
-      const eligSems = `ARRAY[${ELIGIBLE_SEMS.join(",")}]::int[]`;
+      const eligSems = `ARRAY[${computeEligibleSems(p.compulsorySem).join(",")}]::int[]`;
       await prisma.$executeRawUnsafe(`
         UPDATE "CourseOffering" SET
           "courseId"=${cid ? `'${cid}'` : "NULL"},
