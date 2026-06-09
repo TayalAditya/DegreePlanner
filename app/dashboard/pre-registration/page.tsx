@@ -208,8 +208,19 @@ export default function PreRegistrationPage() {
         const res = await fetch(`/api/pre-registration/plan?semester=${d.offeringSemester}&year=${d.offeringYear}`);
         if (res.ok) {
           const plan = await res.json() as { selectedIds: string[] };
-          const validIds = new Set(d.offerings.map((o: Offering) => o.id));
-          setSelected(new Set(plan.selectedIds.filter((id) => validIds.has(id))));
+          const offeringById = new Map(d.offerings.map((o: Offering) => [o.id, o]));
+          // Restore saved selection, validating slot clashes greedily
+          const restoredSlots = new Set<string>();
+          const restoredIds = new Set<string>();
+          for (const id of plan.selectedIds) {
+            const o = offeringById.get(id);
+            if (!o) continue;
+            const oSlots = parseSlots(o.slots);
+            if (oSlots.some((s) => restoredSlots.has(s))) continue; // skip clashing
+            oSlots.forEach((s) => restoredSlots.add(s));
+            restoredIds.add(id);
+          }
+          setSelected(restoredIds);
           if (plan.selectedIds.length > 0) setSaved(true);
         }
       })
@@ -619,38 +630,64 @@ export default function PreRegistrationPage() {
           <div className="hidden lg:block w-72 flex-shrink-0 sticky top-6 space-y-3">
         <div className="rounded-xl border border-border bg-surface p-4">
           <p className="text-sm font-semibold text-foreground mb-3">Degree Progress</p>
-          {(["IC","DC","DE","HSS","FE"] as const).map((cat) => {
-            const req = data.programRequirements![cat] ?? 0;
-            if (!req) return null;
-            const done = data.completedBreakdown[cat] ?? 0;
-            const adding = categoryBreakdown.find(b => b.cat === cat)?.credits ?? 0;
-            const after = Math.min(req, done + adding);
-            const remaining = Math.max(0, req - done - adding);
-            const pctDone = Math.min(100, (done / req) * 100);
-            const pctAdding = Math.min(100 - pctDone, (adding / req) * 100);
-            const catColor = CATEGORY_COLOR[cat] ?? "";
-            const barColor = cat === "DC" ? "bg-primary" : cat === "DE" ? "bg-secondary" : cat === "HSS" ? "bg-warning" : cat === "IC" ? "bg-info" : "bg-success";
-            const addColor = cat === "DC" ? "bg-primary/40" : cat === "DE" ? "bg-secondary/40" : cat === "HSS" ? "bg-warning/40" : cat === "IC" ? "bg-info/40" : "bg-success/40";
-            return (
-              <div key={cat} className="mb-3">
-                <div className="flex items-center justify-between mb-1">
-                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${catColor}`}>{cat}</span>
-                  <div className="text-xs text-foreground-secondary text-right">
-                    <span className="font-medium text-foreground">{formatCredits(done + adding)}</span>
-                    <span> / {req} cr</span>
-                    {remaining > 0 && <span className="text-error ml-1">−{formatCredits(remaining)}</span>}
+          {(() => {
+            const cb = data.completedBreakdown;
+            const pr = data.programRequirements!;
+            // IC in DB = all institute core (IC + HSS + IKS + ICB combined)
+            const rows = [
+              {
+                cat: "IC", label: "Core (IC+HSS)",
+                req: pr["IC"] ?? 0,
+                done: (cb["IC"] ?? 0) + (cb["HSS"] ?? 0) + (cb["IKS"] ?? 0) + (cb["IC_BASKET"] ?? 0),
+                adding: (categoryBreakdown.find(b => b.cat === "IC")?.credits ?? 0) +
+                        (categoryBreakdown.find(b => b.cat === "HSS")?.credits ?? 0) +
+                        (categoryBreakdown.find(b => b.cat === "IKS")?.credits ?? 0),
+                barColor: "bg-info", addColor: "bg-info/40", catColor: CATEGORY_COLOR["IC"],
+              },
+              {
+                cat: "DC", label: "DC",
+                req: pr["DC"] ?? 0, done: cb["DC"] ?? 0,
+                adding: categoryBreakdown.find(b => b.cat === "DC")?.credits ?? 0,
+                barColor: "bg-primary", addColor: "bg-primary/40", catColor: CATEGORY_COLOR["DC"],
+              },
+              {
+                cat: "DE", label: "DE",
+                req: pr["DE"] ?? 0, done: cb["DE"] ?? 0,
+                adding: categoryBreakdown.find(b => b.cat === "DE")?.credits ?? 0,
+                barColor: "bg-secondary", addColor: "bg-secondary/40", catColor: CATEGORY_COLOR["DE"],
+              },
+              {
+                cat: "FE", label: "FE",
+                req: pr["FE"] ?? 0, done: cb["FE"] ?? 0,
+                adding: categoryBreakdown.find(b => b.cat === "FE")?.credits ?? 0,
+                barColor: "bg-success", addColor: "bg-success/40", catColor: CATEGORY_COLOR["FE"],
+              },
+            ];
+            return rows.filter(r => r.req > 0).map(r => {
+              const remaining = Math.max(0, r.req - r.done - r.adding);
+              const pctDone = Math.min(100, (r.done / r.req) * 100);
+              const pctAdding = Math.min(100 - pctDone, (r.adding / r.req) * 100);
+              return (
+                <div key={r.cat} className="mb-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${r.catColor}`}>{r.label}</span>
+                    <div className="text-xs text-foreground-secondary text-right">
+                      <span className="font-medium text-foreground">{formatCredits(r.done + r.adding)}</span>
+                      <span> / {r.req} cr</span>
+                      {remaining > 0 && <span className="text-error ml-1">−{formatCredits(remaining)}</span>}
+                    </div>
                   </div>
+                  <div className="h-2 rounded-full bg-background-secondary overflow-hidden flex">
+                    <div className={`h-full ${r.barColor} transition-all`} style={{ width: `${pctDone}%` }} />
+                    <div className={`h-full ${r.addColor} transition-all`} style={{ width: `${pctAdding}%` }} />
+                  </div>
+                  {r.adding > 0 && (
+                    <p className="text-xs text-foreground-secondary mt-0.5">+{formatCredits(r.adding)} cr this sem</p>
+                  )}
                 </div>
-                <div className="h-2 rounded-full bg-background-secondary overflow-hidden flex">
-                  <div className={`h-full ${barColor} transition-all`} style={{ width: `${pctDone}%` }} />
-                  <div className={`h-full ${addColor} transition-all`} style={{ width: `${pctAdding}%` }} />
-                </div>
-                {adding > 0 && (
-                  <p className="text-xs text-foreground-secondary mt-0.5">+{formatCredits(adding)} cr this sem</p>
-                )}
-              </div>
-            );
-          })}
+              );
+            });
+          })()}
         </div>
         <div className="rounded-xl border border-border bg-surface p-4 space-y-1.5 text-xs text-foreground-secondary">
           <div className="flex gap-2 items-center">
