@@ -22,6 +22,7 @@ import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { getSpecialDpCategory, getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { addCredits, formatCourseCode, formatCredits, subtractCredits, sumCredits } from "@/lib/utils";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
+import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 
 interface Course {
   id: string;
@@ -148,6 +149,7 @@ function getCourseSchoolKey(course: Pick<Course, "code" | "department">): School
 }
 
 export default function CoursesPage() {
+  const [preRegLocked, setPreRegLocked] = useState(false);
   const [tab, setTab] = useState<"my-courses" | "catalog">("my-courses");
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -181,6 +183,10 @@ export default function CoursesPage() {
 
   useEffect(() => {
     loadData();
+    fetch("/api/academic-state")
+      .then(r => r.json())
+      .then(d => { if (d.phase === "PRE_REGISTRATION") setPreRegLocked(true); })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -332,19 +338,6 @@ export default function CoursesPage() {
   const passFailUsed = user?.totalPassFailCredits ?? 0;
   const passFailRemaining = Math.max(0, maxPassFailCredits - passFailUsed);
 
-  const ICB1_CODES = new Set([
-    "IC131",
-    "IC136",
-    "IC230",
-  ]);
-
-  const ICB2_CODES = new Set([
-    "IC121",
-    "IC240",
-    "IC241",
-    "IC253",
-  ]);
-
   const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
     if (!minorPlanner.enabled) return new Set<string>();
@@ -377,7 +370,10 @@ export default function CoursesPage() {
   };
 
   // Calculate credits by category
-  const getCourseCategory = (enrollment: Enrollment): string => {
+  const getCourseCategory = (
+    enrollment: Enrollment,
+    icBasketUsed?: { ic1: boolean; ic2: boolean }
+  ): string => {
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
 
@@ -399,6 +395,35 @@ export default function CoursesPage() {
     if (normalizedCode === "IK593") return "FE";
     if (normalizedCode === "IC181") return "IKS";
     if (normalizedCode === "IC182") return isBatch24Or25 ? "IKS" : "IC";
+
+    const isICB1 = ICB1_CODES.has(normalizedCode);
+    const isICB2 = ICB2_CODES.has(normalizedCode);
+
+    if ((isICB1 || isICB2) && user?.branch) {
+      const basketBranch = normalizeBranchForIcBasket(user.branch);
+      const branchCompulsion = IC_BASKET_COMPULSIONS[basketBranch] || {};
+
+      if (isICB1 && branchCompulsion.ic1 && normalizedCode === branchCompulsion.ic1) {
+        return "IC_BASKET";
+      }
+      if (isICB2 && branchCompulsion.ic2 && normalizedCode === branchCompulsion.ic2) {
+        return "IC_BASKET";
+      }
+      if (isICB1 && !branchCompulsion.ic1 && icBasketUsed && !icBasketUsed.ic1) {
+        icBasketUsed.ic1 = true;
+        return "IC_BASKET";
+      }
+      if (isICB2 && !branchCompulsion.ic2 && icBasketUsed && !icBasketUsed.ic2) {
+        icBasketUsed.ic2 = true;
+        return "IC_BASKET";
+      }
+
+      const branchCandidates = getBranchCandidates(user.branch);
+      const mapping = branchCandidates
+        .map((branch) => enrollment.course.branchMappings?.find((candidate) => candidate.branch === branch))
+        .find(Boolean);
+      return mapping?.courseCategory === "DC" ? "DC" : "FE";
+    }
 
     // First try to get from branchMappings if available
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
@@ -428,9 +453,6 @@ export default function CoursesPage() {
     if (isIkCourse) return "FE";
 
     // Fallback to code analysis
-    const isICB1 = ICB1_CODES.has(normalizedCode);
-    const isICB2 = ICB2_CODES.has(normalizedCode);
-
     if (isICB1 || isICB2) return "IC_BASKET";
     
     // Branch-specific course patterns
@@ -472,8 +494,10 @@ export default function CoursesPage() {
     ISTP: 0,
   };
 
+  const completedIcBasketUsed = { ic1: false, ic2: false };
   enrollments
     .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
+    .sort((a, b) => a.semester - b.semester)
     .forEach((e) => {
       // Check for split-credit mapping before using getCourseCategory
       if (user?.branch && e.course.branchMappings && e.course.branchMappings.length > 0) {
@@ -490,7 +514,7 @@ export default function CoursesPage() {
           return;
         }
       }
-      const category = getCourseCategory(e);
+      const category = getCourseCategory(e, completedIcBasketUsed);
       if (category in creditsByCategory) {
         creditsByCategory[category] = addCredits(creditsByCategory[category], e.course.credits);
       }
@@ -542,6 +566,10 @@ export default function CoursesPage() {
   };
 
   const handleAddCourse = (course: Course) => {
+    if (preRegLocked) {
+      showToast("error", "Course registration for the next semester will open after add-drop period ends");
+      return;
+    }
     const norm = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
     const isInternshipCourse = norm.endsWith("396P") || norm.endsWith("399P");
     setAddingCourse(course);

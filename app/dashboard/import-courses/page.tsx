@@ -24,6 +24,7 @@ import { OcrConfirmModal, ConfirmRow } from "@/components/OcrConfirmModal";
 import { parseTranscriptText, normalizeCourseCode, DetectedCourse } from "@/lib/parseTranscript";
 import { courseIdentityKey } from "@/lib/courseIdentity";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
+import { isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
 
 interface SelectedCourse extends DefaultCourse {
   selected: boolean;
@@ -51,6 +52,7 @@ interface CatalogCourse {
 export default function ImportCoursesPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
+  const [preRegLocked, setPreRegLocked] = useState(false);
   const [branch, setBranch] = useState("CSE");
   const [geSubBranch, setGeSubBranch] = useState("GE-ROBO");
   const [userBatch, setUserBatch] = useState<number | null>(null);
@@ -178,7 +180,9 @@ export default function ImportCoursesPage() {
         );
 
         if (inferredBatch) {
-          setCurrentSemester(inferAcademicState(inferredBatch).currentSemester);
+          const state = inferAcademicState(inferredBatch);
+          setCurrentSemester(state.currentSemester);
+          if (state.phase === "PRE_REGISTRATION") setPreRegLocked(true);
         }
 
         const mtp1 = data.doingMTP ?? true;
@@ -271,15 +275,13 @@ export default function ImportCoursesPage() {
         : ["IC140", "IC102P", "IC181"];
     // ISTP/MTP courses
     const ISTP_CODES = ["DP 301P", "DP301P"];
-    const MTP1_CODES = ["DP 498P", "DP498P"];
-    const MTP2_CODES = ["DP 499P", "DP499P"];
-    
+
     const coursesWithSelection = filteredResolvedCourses
       .filter((course) => {
         const normalizedCode = normalize(course.code);
         const isISTP = ISTP_CODES.some((code) => normalize(code) === normalizedCode);
-        const isMTP1 = MTP1_CODES.some((code) => normalize(code) === normalizedCode);
-        const isMTP2 = MTP2_CODES.some((code) => normalize(code) === normalizedCode);
+        const isMTP1 = isMtp1CourseCode(normalizedCode);
+        const isMTP2 = isMtp2CourseCode(normalizedCode);
         // Filter out MTP-1/2 if user disabled MTP entirely
         if (!doingMTP && (isMTP1 || isMTP2)) {
           return false;
@@ -295,8 +297,8 @@ export default function ImportCoursesPage() {
       .map((course) => {
         const normalizedCode = normalize(course.code);
         const isISTP = ISTP_CODES.some((code) => normalize(code) === normalizedCode);
-        const isMTP1 = MTP1_CODES.some((code) => normalize(code) === normalizedCode);
-        const isMTP2 = MTP2_CODES.some((code) => normalize(code) === normalizedCode);
+        const isMTP1 = isMtp1CourseCode(normalizedCode);
+        const isMTP2 = isMtp2CourseCode(normalizedCode);
         const isAssignedIcb1 =
           typeof icb1Assigned === "string" &&
           course.category === "ICB" &&
@@ -833,6 +835,17 @@ export default function ImportCoursesPage() {
 
   return (
     <div className="space-y-6">
+      {preRegLocked && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-warning/30 bg-warning/5">
+          <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-foreground-secondary">
+            <span className="font-medium text-warning">Course registration is locked.</span>{" "}
+            Registration for the upcoming semester will open after the add-drop period ends.
+            You can browse courses on the{" "}
+            <a href="/dashboard/pre-registration" className="text-primary hover:underline">Pre Registration</a> page.
+          </p>
+        </div>
+      )}
       {errorMessage && (
         <div className="bg-error/10 border border-error/20 rounded-lg overflow-hidden">
           <div className="px-4 py-3 flex items-start gap-3">
