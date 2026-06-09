@@ -625,19 +625,27 @@ export default function PreRegistrationPage() {
   const categoryBreakdown = useMemo(() => {
     if (!data) return [];
     const map = new Map<string, { credits: number; count: number }>();
+    const add = (cat: string, credits: number) => {
+      const e = map.get(cat) ?? { credits: 0, count: 0 };
+      map.set(cat, { credits: e.credits + credits, count: e.count + 1 });
+    };
     for (const o of data.offerings) {
       if (!o.isCompulsory && !selected.has(o.id)) continue;
-      if (o.completedInSemester !== null) continue; // already done, skip
-      const cat = o.resolvedCategory;
-      const existing = map.get(cat) ?? { credits: 0, count: 0 };
-      map.set(cat, { credits: existing.credits + o.credits, count: existing.count + 1 });
+      if (o.completedInSemester !== null) continue;
+      add(o.resolvedCategory, o.credits);
     }
-    // Sort by fixed order
+    // Add internship / MTP-1 selections
+    const extraCourses: { id: string; credits: number; category: string }[] = [
+      ...internshipCourses.p399.map(c => ({ id: c.id, credits: c.credits, category: "FE" })),
+      ...internshipCourses.p396.map(c => ({ id: c.id, credits: c.credits, category: "FE" })),
+      ...(mtp1Course ? [{ id: mtp1Course.id, credits: mtp1Course.credits, category: "MTP" }] : []),
+    ];
+    for (const c of extraCourses) {
+      if (selectedExtra.has(c.id)) add(c.category, c.credits);
+    }
     const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "IKS", "FE", "MTP", "ISTP"];
-    return ORDER
-      .filter((cat) => map.has(cat))
-      .map((cat) => ({ cat, ...map.get(cat)! }));
-  }, [data, selected]);
+    return ORDER.filter((cat) => map.has(cat)).map((cat) => ({ cat, ...map.get(cat)! }));
+  }, [data, selected, selectedExtra, internshipCourses, mtp1Course]);
 
   const handleToggle = (offering: Offering) => {
     if (offering.isCompulsory || offering.completedInSemester !== null) return;
