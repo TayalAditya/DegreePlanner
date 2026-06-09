@@ -382,6 +382,22 @@ function InternshipSection({ internshipCourses }: { internshipCourses: { p399: I
   );
 }
 
+function MtpSection({ course }: { course: InternshipCourse }) {
+  const [checked, setChecked] = useState(false);
+  const offering: Offering = {
+    id: course.id, courseId: course.id, courseCode: formatCourseCode(course.code),
+    courseName: course.name, instructor: null, instructorEmail: null, school: null,
+    slots: null, ltpc: null, credits: course.credits, curriculumLink: null,
+    resolvedCategory: "MTP", isCompulsory: false, completedInSemester: null,
+  };
+  return (
+    <Section title="Major Technical Project - I (MTP)" count={1} headerBg="bg-error/5">
+      <p className="text-xs text-foreground-secondary mb-2">4 credits · DC · Semester 7 onwards</p>
+      <CourseCard offering={offering} checked={checked} disabled={false} onToggle={() => setChecked(v => !v)} />
+    </Section>
+  );
+}
+
 function ProgressPanel({ programRequirements, completedBreakdown, categoryBreakdown }: {
   programRequirements: Record<string, number>;
   completedBreakdown: Record<string, number>;
@@ -448,6 +464,7 @@ export default function PreRegistrationPage() {
   const [showApprovalWarning, setShowApprovalWarning] = useState(false);
   const [selectedMinorCode, setSelectedMinorCode] = useState<string>("");
   const [internshipCourses, setInternshipCourses] = useState<{ p399: InternshipCourse[]; p396: InternshipCourse[] }>({ p399: [], p396: [] });
+  const [mtp1Course, setMtp1Course] = useState<InternshipCourse | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -486,12 +503,14 @@ export default function PreRegistrationPage() {
           };
           const branch = (d.studentInfo?.branch ?? "").toUpperCase();
           const prefix = BRANCH_PREFIX[branch] ?? null;
-          const keep399 = new Set(["DP399P", ...(prefix ? [`${prefix}399P`] : [])]);
-          const keep396 = new Set(["DP396P", ...(prefix ? [`${prefix}396P`] : [])]);
+          const keep399 = new Set([...(prefix ? [`${prefix}399P`] : [])]);
+          const keep396 = new Set([...(prefix ? [`${prefix}396P`] : [])]);
           const norm = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
           const p399 = (courses as InternshipCourse[]).filter((c) => keep399.has(norm(c.code)));
           const p396 = (courses as InternshipCourse[]).filter((c) => keep396.has(norm(c.code)));
           setInternshipCourses({ p399, p396 });
+          const mtp1 = prefix ? (courses as InternshipCourse[]).find((c) => norm(c.code) === `${prefix}498P`) ?? null : null;
+          setMtp1Course(mtp1);
         }
       })
       .catch(() => showToast("error", "Failed to load offerings"))
@@ -910,6 +929,11 @@ export default function PreRegistrationPage() {
             />
           ))}
         </Section>
+      )}
+
+      {/* MTP-1 */}
+      {mtp1Course && (
+        <MtpSection course={mtp1Course} />
       )}
 
       {/* DE */}
