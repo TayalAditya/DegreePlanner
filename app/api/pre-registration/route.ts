@@ -147,26 +147,72 @@ export async function GET() {
     select: { programId: true, program: { select: { icCredits: true, dcCredits: true, deCredits: true, feCredits: true } } },
   });
 
-  let completedBreakdown: Record<string, number> = { CORE: 0, DE: 0, FE: 0, MTP: 0, ISTP: 0 };
+  let completedBreakdown: Record<string, number> = {};
   let programRequirements: Record<string, number> | null = null;
 
   if (userProgram?.programId) {
     try {
       const progress = await creditCalculator.calculateProgramProgress(session.user.id, userProgram.programId);
-      // creditCalculator correctly handles DE overflow→FE, split credits, HSS cap, everything
-      completedBreakdown = {
-        CORE: progress.completed.core,        // IC + DC + HSS + IKS combined
-        DE:   progress.completed.de,          // capped at deCredits; overflow already in FE
-        FE:   progress.completed.freeElective, // includes DE overflow + split FE credits
-        MTP:  progress.completed.mtp,
-        ISTP: progress.completed.istp,
-      };
+      const req = userProgram.program;
+
+      // Build per-category breakdown from completed enrollments
+      // (creditCalculator groups IC+DC+HSS into "core"; we split them here)
+      const completedEnrollments = await prisma.courseEnrollment.findMany({
+        where: { userId: session.user.id, status: EnrollmentStatus.COMPLETED },
+        include: {
+          course: {
+            select: {
+              code: true, credits: true,
+              branchMappings: {
+                select: { courseCategory: true, branch: true, batch: true, splitCategory: true, splitAmount: true },
+              },
+            },
+          },
+        },
+      });
+
+      const tally: Record<string, number> = { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, HSS: 0, IKS: 0, FE: 0, MTP: 0, ISTP: 0 };
+      const add = (cat: string, cr: number) => { tally[cat] = (tally[cat] ?? 0) + cr; };
+
+      for (const e of completedEnrollments) {
+        if (e.grade === "F") continue;
+        const cr = e.course.credits;
+        const code = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        const mapping = (e.course.branchMappings as Array<{ courseCategory: string; branch: string; batch: string; splitCategory: string | null; splitAmount: number | null }>)
+          .find(m => pickCategory([m], normalizedBranch, batch) !== undefined &&
+            getBranchCandidates(normalizedBranch).map(b => b.toUpperCase()).includes(m.branch.toUpperCase())) ??
+          (() => { const c = pickCategory(e.course.branchMappings as any, normalizedBranch, batch); return c ? { courseCategory: c, splitCategory: null, splitAmount: null } : null; })();
+
+        const cat = mapping?.courseCategory ??
+          (code.startsWith("HS") ? "HSS" : code.startsWith("IC") ? "IC" : "FE");
+
+        if (mapping?.splitCategory && mapping.splitAmount) {
+          add(cat, cr - mapping.splitAmount);
+          add(mapping.splitCategory, mapping.splitAmount);
+        } else {
+          add(cat, cr);
+        }
+      }
+
+      // DE overflow → FE (same as creditCalculator)
+      const deOverflow = Math.max(0, (tally.DE ?? 0) - req.deCredits);
+      tally.DE = Math.min(tally.DE ?? 0, req.deCredits);
+      tally.FE = (tally.FE ?? 0) + deOverflow;
+
+      // Merge IC_BASKET into IC for display
+      tally.IC = (tally.IC ?? 0) + (tally.IC_BASKET ?? 0);
+      delete tally.IC_BASKET;
+
+      completedBreakdown = tally;
       programRequirements = {
-        CORE: progress.required.core,  // icCredits + dcCredits
-        DE:   progress.required.de,
-        FE:   progress.required.freeElective,
-        MTP:  8,
-        ISTP: 4,
+        IC:   req.icCredits,   // full institute core incl. HSS, IKS
+        DC:   req.dcCredits,
+        DE:   req.deCredits,
+        FE:   req.feCredits,
+        MTP:  progress.required.mtp,
+        ISTP: progress.required.istp,
+        HSS:  12,              // standard HSS core cap across all programs
+        IKS:  8,               // standard IKS requirement (IC-181 + IK courses)
       };
     } catch { /* keep null */ }
   }

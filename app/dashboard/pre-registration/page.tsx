@@ -776,21 +776,21 @@ export default function PreRegistrationPage() {
             <div className="rounded-xl border border-border bg-surface p-4">
               <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide mb-3">Remaining</p>
               <div className="space-y-2">
-                {[
-                  { key: "CORE", label: "Core (IC+DC+HSS)", color: "text-info" },
-                  { key: "DE",   label: "Discipline Electives", color: "text-secondary" },
-                  { key: "FE",   label: "Free Electives",  color: "text-success" },
-                ].map(({ key, label, color }) => {
+                {(["DC","DE","HSS","FE","IKS","MTP","ISTP"] as const).map((key) => {
                   const req  = data.programRequirements![key] ?? 0;
+                  if (!req) return null;
                   const done = data.completedBreakdown[key] ?? 0;
                   const rem  = Math.max(0, req - done);
-                  if (!req) return null;
+                  const color = CATEGORY_COLOR[key] ?? "";
                   return (
                     <div key={key} className="flex items-center justify-between gap-2">
-                      <span className="text-xs text-foreground-secondary truncate">{label}</span>
-                      <span className={`text-xs font-semibold flex-shrink-0 ${rem > 0 ? "text-error" : "text-success"}`}>
-                        {rem > 0 ? `−${formatCredits(rem)} cr` : "✓"}
-                      </span>
+                      <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${color}`}>{key}</span>
+                      <div className="flex items-center gap-1.5 text-xs flex-shrink-0">
+                        <span className="text-foreground-secondary">{formatCredits(done)}/{req} cr</span>
+                        <span className={`font-semibold ${rem > 0 ? "text-error" : "text-success"}`}>
+                          {rem > 0 ? `−${formatCredits(rem)}` : "✓"}
+                        </span>
+                      </div>
                     </div>
                   );
                 })}
