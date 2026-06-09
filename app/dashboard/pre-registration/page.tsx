@@ -30,6 +30,8 @@ interface ApiResponse {
   creditLimit: number;
   registrationOpensAt: string | null;
   offerings: Offering[];
+  completedBreakdown: Record<string, number>;
+  programRequirements: Record<string, number> | null;
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -300,12 +302,22 @@ export default function PreRegistrationPage() {
     if (offering.isCompulsory || offering.completedInSemester !== null) return;
     if (clashMap.has(offering.id)) return; // core clash — cannot select
 
+    // Prevent selecting if it clashes with an already-selected optional course
+    if (!selected.has(offering.id)) {
+      const clash = data?.offerings.find(
+        (o) => selected.has(o.id) && slotsClash(o.slots, offering.slots)
+      );
+      if (clash) {
+        showToast("error", `Slot clash with ${clash.courseCode} — deselect it first`);
+        return;
+      }
+    }
+
     const next = new Set(selected);
     if (next.has(offering.id)) {
       next.delete(offering.id);
     } else {
       next.add(offering.id);
-      // Credit limit check
       const newTotal = totalCredits + offering.credits;
       if (data && newTotal > data.creditLimit) setShowApprovalWarning(true);
     }
@@ -365,7 +377,10 @@ export default function PreRegistrationPage() {
   const selectedCount = selected.size + compulsory.filter((o) => !o.completedInSemester).length;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-24">
+    <div className="max-w-6xl mx-auto pb-24">
+    <div className="flex gap-6 items-start">
+    {/* ── Main content ── */}
+    <div className="flex-1 min-w-0 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground">
@@ -592,6 +607,60 @@ export default function PreRegistrationPage() {
         </div>
       )}
 
+    </div>{/* end main content */}
+
+    {/* ── Progress sidebar ── */}
+    {data.programRequirements && (
+      <div className="hidden lg:block w-72 flex-shrink-0 sticky top-6 space-y-3">
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <p className="text-sm font-semibold text-foreground mb-3">Degree Progress</p>
+          {(["IC","DC","DE","HSS","FE"] as const).map((cat) => {
+            const req = data.programRequirements![cat] ?? 0;
+            if (!req) return null;
+            const done = data.completedBreakdown[cat] ?? 0;
+            const adding = categoryBreakdown.find(b => b.cat === cat)?.credits ?? 0;
+            const after = Math.min(req, done + adding);
+            const remaining = Math.max(0, req - done - adding);
+            const pctDone = Math.min(100, (done / req) * 100);
+            const pctAdding = Math.min(100 - pctDone, (adding / req) * 100);
+            const catColor = CATEGORY_COLOR[cat] ?? "";
+            const barColor = cat === "DC" ? "bg-primary" : cat === "DE" ? "bg-secondary" : cat === "HSS" ? "bg-warning" : cat === "IC" ? "bg-info" : "bg-success";
+            const addColor = cat === "DC" ? "bg-primary/40" : cat === "DE" ? "bg-secondary/40" : cat === "HSS" ? "bg-warning/40" : cat === "IC" ? "bg-info/40" : "bg-success/40";
+            return (
+              <div key={cat} className="mb-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border ${catColor}`}>{cat}</span>
+                  <div className="text-xs text-foreground-secondary text-right">
+                    <span className="font-medium text-foreground">{formatCredits(done + adding)}</span>
+                    <span> / {req} cr</span>
+                    {remaining > 0 && <span className="text-error ml-1">−{formatCredits(remaining)}</span>}
+                  </div>
+                </div>
+                <div className="h-2 rounded-full bg-background-secondary overflow-hidden flex">
+                  <div className={`h-full ${barColor} transition-all`} style={{ width: `${pctDone}%` }} />
+                  <div className={`h-full ${addColor} transition-all`} style={{ width: `${pctAdding}%` }} />
+                </div>
+                {adding > 0 && (
+                  <p className="text-xs text-foreground-secondary mt-0.5">+{formatCredits(adding)} cr this sem</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="rounded-xl border border-border bg-surface p-4 space-y-1.5 text-xs text-foreground-secondary">
+          <div className="flex gap-2 items-center">
+            <div className="w-3 h-2 rounded bg-primary" />
+            <span>Already completed</span>
+          </div>
+          <div className="flex gap-2 items-center">
+            <div className="w-3 h-2 rounded bg-primary/40" />
+            <span>Adding this semester</span>
+          </div>
+        </div>
+      </div>
+    )}
+    </div>{/* end flex row */}
+
       {/* Sticky bottom bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
@@ -614,6 +683,6 @@ export default function PreRegistrationPage() {
           </button>
         </div>
       </div>
-    </div>
+    </div>{/* end outer wrapper */}
   );
 }

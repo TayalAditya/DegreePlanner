@@ -140,6 +140,49 @@ export async function GET() {
       };
     });
 
+  // Current credit breakdown (for progress panel)
+  const program = await prisma.userProgram.findFirst({
+    where: { userId: session.user.id, isPrimary: true },
+    select: { program: { select: { dcCredits: true, deCredits: true, feCredits: true, icCredits: true, mtpIstpCredits: true } } },
+  });
+
+  // Tally completed credits by category using the same branchMapping logic
+  const completedBreakdown: Record<string, number> = { IC: 0, DC: 0, DE: 0, HSS: 0, FE: 0, IKS: 0, MTP: 0, ISTP: 0 };
+  for (const e of completed) {
+    const code = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    // Fetch mapping for this course
+  }
+  // Simpler: fetch all completed enrollments with branchMappings for credit tally
+  const completedWithMappings = await prisma.courseEnrollment.findMany({
+    where: { userId: session.user.id, status: EnrollmentStatus.COMPLETED },
+    include: {
+      course: {
+        select: {
+          code: true, credits: true,
+          branchMappings: { select: { courseCategory: true, branch: true, batch: true } },
+        },
+      },
+    },
+  });
+
+  for (const e of completedWithMappings) {
+    const code = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const cat = pickCategory(e.course.branchMappings, normalizedBranch, batch) ??
+      (code.startsWith("HS") ? "HSS" : code.startsWith("IC") ? "IC" : "FE");
+    const key = cat === "IC_BASKET" ? "IC" : cat;
+    if (key in completedBreakdown) completedBreakdown[key] = (completedBreakdown[key] ?? 0) + e.course.credits;
+  }
+
+  const req = program?.program;
+  const programRequirements = req ? {
+    IC: req.icCredits,
+    DC: req.dcCredits,
+    DE: req.deCredits,
+    FE: req.feCredits,
+    MTP: 8,
+    ISTP: 4,
+  } : null;
+
   return NextResponse.json({
     offeringSemester,
     offeringYear,
@@ -147,5 +190,7 @@ export async function GET() {
     creditLimit,
     registrationOpensAt,
     offerings: result,
+    completedBreakdown,
+    programRequirements,
   });
 }
