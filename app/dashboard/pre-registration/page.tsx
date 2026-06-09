@@ -371,7 +371,7 @@ export default function PreRegistrationPage() {
             restoredIds.add(id);
           }
           setSelected(restoredIds);
-          if (plan.selectedIds.length > 0) setSaved(true);
+          setSaved(true);
         }
       })
       .catch(() => showToast("error", "Failed to load offerings"))
@@ -1000,7 +1000,7 @@ export default function PreRegistrationPage() {
           </div>
           <button
             onClick={handleSavePlan}
-            disabled={selectedCount === 0 || saving}
+            disabled={saving}
             className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2
               disabled:opacity-50 disabled:cursor-not-allowed
               ${saved ? "bg-success text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
