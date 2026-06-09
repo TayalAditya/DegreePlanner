@@ -339,17 +339,20 @@ function Section({ title, count, children, defaultOpen = false, headerBg, error 
   );
 }
 
-function InternshipSection({ internshipCourses }: { internshipCourses: { p399: InternshipCourse[]; p396: InternshipCourse[] } }) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const toggle = (id: string) => setSelected(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
-
-  const toOffering = (c: InternshipCourse): Offering => ({
+function toOffering(c: InternshipCourse, category: string): Offering {
+  return {
     id: c.id, courseId: c.id, courseCode: formatCourseCode(c.code), courseName: c.name,
     instructor: null, instructorEmail: null, school: null, slots: null, ltpc: null,
-    credits: c.credits, curriculumLink: null, resolvedCategory: "FE",
+    credits: c.credits, curriculumLink: null, resolvedCategory: category,
     isCompulsory: false, completedInSemester: null,
-  });
+  };
+}
 
+function InternshipSection({ internshipCourses, selected, onToggle }: {
+  internshipCourses: { p399: InternshipCourse[]; p396: InternshipCourse[] };
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+}) {
   return (
     <Section title="Semester-Long Internship" count={internshipCourses.p399.length + internshipCourses.p396.length}>
       <div className="space-y-4">
@@ -361,7 +364,7 @@ function InternshipSection({ internshipCourses }: { internshipCourses: { p399: I
               <p className="text-xs text-error">Cannot enroll alongside any other course in Sem 6/7</p>
             </div>
             {internshipCourses.p399.map((c) => (
-              <CourseCard key={c.id} offering={toOffering(c)} checked={selected.has(c.id)} disabled={false} onToggle={() => toggle(c.id)} />
+              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={false} onToggle={() => onToggle(c.id)} />
             ))}
           </div>
         )}
@@ -373,7 +376,7 @@ function InternshipSection({ internshipCourses }: { internshipCourses: { p399: I
               <p className="text-xs text-warning">Uses 6 of 9 total P/F credits</p>
             </div>
             {internshipCourses.p396.map((c) => (
-              <CourseCard key={c.id} offering={toOffering(c)} checked={selected.has(c.id)} disabled={false} onToggle={() => toggle(c.id)} />
+              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={false} onToggle={() => onToggle(c.id)} />
             ))}
           </div>
         )}
@@ -382,18 +385,15 @@ function InternshipSection({ internshipCourses }: { internshipCourses: { p399: I
   );
 }
 
-function MtpSection({ course }: { course: InternshipCourse }) {
-  const [checked, setChecked] = useState(false);
-  const offering: Offering = {
-    id: course.id, courseId: course.id, courseCode: formatCourseCode(course.code),
-    courseName: course.name, instructor: null, instructorEmail: null, school: null,
-    slots: null, ltpc: null, credits: course.credits, curriculumLink: null,
-    resolvedCategory: "MTP", isCompulsory: false, completedInSemester: null,
-  };
+function MtpSection({ course, selected, onToggle }: {
+  course: InternshipCourse;
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+}) {
   return (
     <Section title="Major Technical Project - I (MTP)" count={1} headerBg="bg-error/5">
       <p className="text-xs text-foreground-secondary mb-2">4 credits · DC · Semester 7 onwards</p>
-      <CourseCard offering={offering} checked={checked} disabled={false} onToggle={() => setChecked(v => !v)} />
+      <CourseCard offering={toOffering(course, "MTP")} checked={selected.has(course.id)} disabled={false} onToggle={() => onToggle(course.id)} />
     </Section>
   );
 }
@@ -465,6 +465,8 @@ export default function PreRegistrationPage() {
   const [selectedMinorCode, setSelectedMinorCode] = useState<string>("");
   const [internshipCourses, setInternshipCourses] = useState<{ p399: InternshipCourse[]; p396: InternshipCourse[] }>({ p399: [], p396: [] });
   const [mtp1Course, setMtp1Course] = useState<InternshipCourse | null>(null);
+  const [selectedExtra, setSelectedExtra] = useState<Set<string>>(new Set());
+  const toggleExtra = (id: string) => setSelectedExtra(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); setSaved(false); return s; });
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -573,11 +575,16 @@ export default function PreRegistrationPage() {
     if (!data) return 0;
     let total = 0;
     for (const o of data.offerings) {
-      if (o.completedInSemester !== null) continue; // already done, doesn't count toward new load
+      if (o.completedInSemester !== null) continue;
       if (o.isCompulsory || selected.has(o.id)) total += o.credits;
     }
+    // Add internship / MTP-1 selections
+    const extraCourses = [...internshipCourses.p399, ...internshipCourses.p396, ...(mtp1Course ? [mtp1Course] : [])];
+    for (const c of extraCourses) {
+      if (selectedExtra.has(c.id)) total += c.credits;
+    }
     return total;
-  }, [data, selected]);
+  }, [data, selected, selectedExtra, internshipCourses, mtp1Course]);
 
   // Minor planner: for selected minor, compute per-group offering data
   const minorData = useMemo(() => {
@@ -706,7 +713,7 @@ export default function PreRegistrationPage() {
 
         {/* Show internship section even when no offerings uploaded */}
         {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-          <InternshipSection internshipCourses={internshipCourses} />
+          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} />
         )}
       </div>
     );
@@ -730,7 +737,7 @@ export default function PreRegistrationPage() {
   const creditPct = Math.min(100, (totalCredits / creditLimit) * 100);
   const overLimit = totalCredits > creditLimit;
   const registrationLocked = !!data.registrationOpensAt;
-  const selectedCount = selected.size + compulsory.filter((o) => !o.completedInSemester).length;
+  const selectedCount = selected.size + selectedExtra.size + compulsory.filter((o) => !o.completedInSemester).length;
 
   return (
     <div className="max-w-6xl mx-auto pb-24">
@@ -933,7 +940,7 @@ export default function PreRegistrationPage() {
 
       {/* MTP-1 */}
       {mtp1Course && (
-        <MtpSection course={mtp1Course} />
+        <MtpSection course={mtp1Course} selected={selectedExtra} onToggle={toggleExtra} />
       )}
 
       {/* DE */}
@@ -1021,7 +1028,7 @@ export default function PreRegistrationPage() {
 
       {/* Semester-Long Internship */}
       {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-        <InternshipSection internshipCourses={internshipCourses} />
+        <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} />
       )}
 
       {/* Semester breakdown analysis */}
