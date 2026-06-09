@@ -164,19 +164,22 @@ function CourseCard({
   );
 }
 
-function Section({ title, count, children, defaultOpen = false }: {
+function Section({ title, count, children, defaultOpen = false, headerBg, error }: {
   title: string; count: number; children: React.ReactNode; defaultOpen?: boolean;
+  headerBg?: string; error?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div>
+    <div className={`rounded-xl border overflow-hidden ${error ? "border-error/20 bg-surface" : "border-border bg-surface"}`}>
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between py-2 text-left"
+        className={`w-full flex items-center justify-between px-4 py-3 text-left transition-colors
+          ${open ? (error ? "border-b border-error/20" : "border-b border-border") : ""}
+          ${headerBg ?? (error ? "bg-error/5 hover:bg-error/8" : "hover:bg-surface-secondary")}`}
       >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-foreground">{title}</span>
-          <span className="text-xs text-foreground-secondary bg-surface-secondary px-1.5 py-0.5 rounded-full">{count}</span>
+          <span className={`text-sm font-semibold ${error ? "text-error" : "text-foreground"}`}>{title}</span>
+          <span className="text-xs text-foreground-secondary bg-background-secondary px-1.5 py-0.5 rounded-full">{count}</span>
         </div>
         {open ? <ChevronDown className="w-4 h-4 text-foreground-secondary" /> : <ChevronRight className="w-4 h-4 text-foreground-secondary" />}
       </button>
@@ -189,7 +192,7 @@ function Section({ title, count, children, defaultOpen = false }: {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <div className="space-y-2 pb-2">{children}</div>
+            <div className="p-4 space-y-2">{children}</div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -617,100 +620,85 @@ export default function PreRegistrationPage() {
 
       {/* Compulsory */}
       {compulsory.length > 0 && (
-        <div className="rounded-xl border border-border bg-surface overflow-hidden">
-          <div className="px-4 py-3 border-b border-border bg-primary/5">
-            <p className="text-sm font-semibold text-foreground">Compulsory — IC & DC</p>
-            <p className="text-xs text-foreground-secondary">Auto-selected, cannot be removed</p>
-          </div>
-          <div className="p-4 space-y-2">
-            {compulsory.map((o) => (
-              <CourseCard
-                key={o.id}
-                offering={o}
-                checked={true}
-                disabled={true}
-                onToggle={() => {}}
-                isCompulsory={true}
-              />
-            ))}
-          </div>
-        </div>
+        <Section title="Compulsory — IC & DC" count={compulsory.length} headerBg="bg-primary/5">
+          {compulsory.map((o) => (
+            <CourseCard
+              key={o.id}
+              offering={o}
+              checked={true}
+              disabled={true}
+              onToggle={() => {}}
+              isCompulsory={true}
+            />
+          ))}
+        </Section>
       )}
 
       {/* DE */}
       {de.length > 0 && (
-        <div className="rounded-xl border border-border bg-surface overflow-hidden">
-          <div className="px-4 py-3 border-b border-border">
-            <Section title="Discipline Electives" count={de.length} defaultOpen={false}>
-              {de.map((o) => (
-                <CourseCard
-                  key={o.id}
-                  offering={o}
-                  checked={selected.has(o.id)}
-                  disabled={false}
-                  onToggle={() => handleToggle(o)}
-                  clashWith={interClashMap.get(o.id)}
-                  minorGroupLabel={minorOfferingLabels.get(o.id)}
-                />
-              ))}
-            </Section>
-          </div>
-        </div>
+        <Section title="Discipline Electives" count={de.length}>
+          {de.map((o) => (
+            <CourseCard
+              key={o.id}
+              offering={o}
+              checked={selected.has(o.id)}
+              disabled={false}
+              onToggle={() => handleToggle(o)}
+              clashWith={interClashMap.get(o.id)}
+              minorGroupLabel={minorOfferingLabels.get(o.id)}
+            />
+          ))}
+        </Section>
       )}
 
       {/* HSS */}
       {hss.length > 0 && (
-        <div className="rounded-xl border border-border bg-surface overflow-hidden">
-          <div className="px-4 py-3 border-b border-border">
-            <Section title="Humanities & Social Sciences" count={hss.length} defaultOpen={false}>
-              {hss.map((o) => (
-                <CourseCard
-                  key={o.id}
-                  offering={o}
-                  checked={selected.has(o.id)}
-                  disabled={false}
-                  onToggle={() => handleToggle(o)}
-                  minorGroupLabel={minorOfferingLabels.get(o.id)}
-                />
-              ))}
-            </Section>
-          </div>
-        </div>
+        <Section title="Humanities & Social Sciences" count={hss.length}>
+          {hss.map((o) => (
+            <CourseCard
+              key={o.id}
+              offering={o}
+              checked={selected.has(o.id)}
+              disabled={false}
+              onToggle={() => handleToggle(o)}
+              minorGroupLabel={minorOfferingLabels.get(o.id)}
+            />
+          ))}
+        </Section>
       )}
 
       {/* FE by school */}
       {fe.length > 0 && (
         <div className="rounded-xl border border-border bg-surface overflow-hidden">
-          <div className="px-4 pt-3 pb-0 border-b border-border">
-            <p className="text-sm font-semibold text-foreground pb-3">Free Electives</p>
+          <div className="px-4 py-3 border-b border-border">
+            <p className="text-sm font-semibold text-foreground">Free Electives</p>
+            <p className="text-xs text-foreground-secondary">{fe.length} courses across schools</p>
           </div>
-          {Object.entries(feBySchool).map(([school, courses]) => (
-            <div key={school} className="px-4 py-3 border-b border-border last:border-0">
-              <Section title={school} count={courses.length} defaultOpen={false}>
-                {courses.map((o) => (
-                  <CourseCard
-                    key={o.id}
-                    offering={o}
-                    checked={selected.has(o.id)}
-                    disabled={false}
-                    onToggle={() => handleToggle(o)}
-                    minorGroupLabel={minorOfferingLabels.get(o.id)}
-                  />
-                ))}
-              </Section>
-            </div>
-          ))}
+          <div className="divide-y divide-border">
+            {Object.entries(feBySchool).map(([school, courses]) => (
+              <div key={school} className="px-4 py-2">
+                <Section title={school} count={courses.length}>
+                  {courses.map((o) => (
+                    <CourseCard
+                      key={o.id}
+                      offering={o}
+                      checked={selected.has(o.id)}
+                      disabled={false}
+                      onToggle={() => handleToggle(o)}
+                      minorGroupLabel={minorOfferingLabels.get(o.id)}
+                    />
+                  ))}
+                </Section>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {/* Core Clash */}
       {coreClash.length > 0 && (
-        <div className="rounded-xl border border-error/20 bg-surface overflow-hidden">
-          <div className="px-4 py-3 border-b border-error/20 bg-error/5">
-            <p className="text-sm font-semibold text-error">Core Clash — Cannot Register</p>
-            <p className="text-xs text-foreground-secondary">These courses conflict with your compulsory courses</p>
-          </div>
-          <div className="p-4 space-y-2 opacity-60">
+        <Section title="Core Clash — Cannot Register" count={coreClash.length} error>
+          <div className="space-y-2 opacity-60">
             {coreClash.map((o) => (
               <CourseCard
                 key={o.id}
@@ -722,7 +710,7 @@ export default function PreRegistrationPage() {
               />
             ))}
           </div>
-        </div>
+        </Section>
       )}
 
       {/* Semester breakdown analysis */}
