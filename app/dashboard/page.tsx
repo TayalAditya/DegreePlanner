@@ -195,10 +195,10 @@ export default async function DashboardPage() {
               </p>
             </div>
             <a
-              href="/dashboard/courses"
+              href="/dashboard/pre-registration"
               className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-success text-white text-sm font-medium hover:bg-success/90 transition-colors"
             >
-              Browse Courses
+              Plan Courses
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>

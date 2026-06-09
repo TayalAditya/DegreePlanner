@@ -15,6 +15,7 @@
     "import-users": "tsx scripts/import-users.ts",
     "mappings:dry": "tsx scripts/update-course-mappings-from-docs.ts --dry-run",
     "mappings:update": "tsx scripts/update-course-mappings-from-docs.ts",
+    "seed:mtp": "tsx scripts/seed-mtp-courses.ts",
     "verify:default-dc": "tsx scripts/verify-default-curriculum-dc.ts"
   },
   "prisma": {

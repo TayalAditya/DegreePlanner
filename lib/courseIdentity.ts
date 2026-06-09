@@ -1,3 +1,5 @@
+import { getMtpComponent } from "@/lib/mtpConfig";
+
 export function courseIdentityKey(code: unknown): string {
   const text = String(code ?? "")
     .replace(/\u00a0/g, " ")
@@ -5,6 +7,9 @@ export function courseIdentityKey(code: unknown): string {
     .toUpperCase();
 
   if (!text) return "";
+
+  const mtpComponent = getMtpComponent(text);
+  if (mtpComponent) return `MTP${mtpComponent}`;
 
   const cleaned = text
     // "CS201(P)" -> "CS201P"
@@ -25,4 +30,3 @@ export function courseIdentityKey(code: unknown): string {
   // Fallback: keep special-topic suffixes like "AR-593_2025_01" distinct.
   return cleaned.replace(/[^A-Z0-9]/g, "");
 }
-

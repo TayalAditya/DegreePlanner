@@ -1,9 +1,10 @@
+import { getMtpComponent } from "@/lib/mtpConfig";
+
 export type SpecialDpCategory = "FE" | "ISTP" | "MTP";
 export type SpecialDpCourseType = "FREE_ELECTIVE" | "ISTP" | "MTP";
 
 const DESIGN_PRACTICUM_TWO_CODES = new Set(["DP302P"]);
 const ISTP_CODES = new Set(["DP301P"]);
-const MTP_CODES = new Set(["DP498P", "DP499P"]);
 
 export function normalizeSpecialCourseCode(code: unknown): string {
   return String(code ?? "")
@@ -20,7 +21,7 @@ export function getSpecialDpCategory(code: unknown): SpecialDpCategory | null {
 
   if (DESIGN_PRACTICUM_TWO_CODES.has(normalizedCode)) return "FE";
   if (ISTP_CODES.has(normalizedCode)) return "ISTP";
-  if (MTP_CODES.has(normalizedCode)) return "MTP";
+  if (getMtpComponent(normalizedCode)) return "MTP";
   if (normalizedCode.includes("MTP")) return "MTP";
   if (normalizedCode.includes("ISTP")) return "ISTP";
 

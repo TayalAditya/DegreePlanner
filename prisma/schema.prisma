@@ -50,6 +50,7 @@ model User {
   sessions      Session[]
   announcements Announcement[]
   notifications Notification[]
+  preRegistrationPlans PreRegistrationPlan[]
 
   @@index([email])
   @@index([enrollmentId])
@@ -166,6 +167,7 @@ model Course {
   code            String   @unique
   name            String
   credits         Float
+  ltpc            String?  // e.g. "3-1-0-4" — stored from offering uploads
   department      String
   level           Int      // 100, 200, 300, 400 level
   description     String?
@@ -639,6 +641,22 @@ model CourseOffering {
   @@unique([courseCode, offeringSemester, offeringYear])
   @@index([offeringSemester, offeringYear])
   @@index([courseId])
+}
+
+// Student's saved pre-registration plan (server-persisted)
+model PreRegistrationPlan {
+  id               String   @id @default(cuid())
+  userId           String
+  offeringSemester Int
+  offeringYear     Int
+  selectedIds      String[] // array of CourseOffering ids
+  savedAt          DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, offeringSemester, offeringYear])
+  @@index([offeringSemester, offeringYear])
 }
 
 // Login attempt log — tracks every Google OAuth attempt (approved or rejected)

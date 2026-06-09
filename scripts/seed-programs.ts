@@ -16,7 +16,7 @@ async function seedPrograms() {
   
   const programs = [
     // B.Tech: IC(60) + DC(branch-specific) + DE(branch-specific) + FE(22) + MTP/ISTP(12) = 160
-    // BS-CS: IC(52) + DC(82) + DE(24) + FE(15) + Research(14) = 163
+    // BS-CS: project requirement is MTP(8) + Research & Communication(6).
 
     // School of Computing & Electrical Engineering
     {
@@ -166,21 +166,18 @@ async function seedPrograms() {
       dcCredits: 82,     // Discipline Core (highest of all programs)
       deCredits: 24,     // Discipline Electives
       feCredits: 15,     // Free Electives (lowest of all)
-      mtpIstpCredits: 14, // Research Projects (NOT MTP/ISTP)
+      mtpIstpCredits: 14, // MTP(8) + Research & Communication Projects(6)
     },
   ];
 
   const created = [];
   for (const prog of programs) {
-    // BS program has different MTP requirements
-    const isBSTech = prog.code === "BSCS";
-
     const program = await prisma.program.create({
       data: {
         ...prog,
         type: "MAJOR",
-        minCreditsForMtp: isBSTech ? 0 : 90,   // BS has no MTP requirement
-        minSemesterForMtp: isBSTech ? 0 : 7,   // MTP is in Semester 7 (final year)
+        minCreditsForMtp: 90,
+        minSemesterForMtp: 7,
       },
     });
     created.push(program);

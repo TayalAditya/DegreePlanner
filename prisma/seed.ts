@@ -16,7 +16,7 @@ async function seedPrograms() {
 
   const programs = [
     // B.Tech: IC(60) + DC(branch-specific) + DE(branch-specific) + FE(22) + MTP/ISTP(12) = 160
-    // BS-CS: IC(52) + DC(59) + DE(23) + FE(15) + Research(14) = 163
+    // BS-CS: IC(52) + DC(59) + DE(23) + FE(15) + MTP(8) + Research(6) = 163
 
     // School of Computing & Electrical Engineering
     {
@@ -172,15 +172,12 @@ async function seedPrograms() {
 
   const created = [];
   for (const prog of programs) {
-    // BS program has different MTP requirements
-    const isBSTech = prog.code === "BSCS";
-
     const program = await prisma.program.create({
       data: {
         ...prog,
         type: "MAJOR",
-        minCreditsForMtp: isBSTech ? 0 : 90,
-        minSemesterForMtp: isBSTech ? 0 : 7,
+        minCreditsForMtp: 90,
+        minSemesterForMtp: 7,
       },
     });
     created.push(program);

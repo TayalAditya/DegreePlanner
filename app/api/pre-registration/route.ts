@@ -57,10 +57,10 @@ export async function GET() {
     where: { offeringYear, isActive: true },
     include: {
       course: {
-        include: {
-          branchMappings: {
-            select: { courseCategory: true, branch: true, batch: true },
-          },
+        select: {
+          id: true,
+          ltpc: true,
+          branchMappings: { select: { courseCategory: true, branch: true, batch: true } },
         },
       },
     },
@@ -131,7 +131,7 @@ export async function GET() {
         instructorEmail: o.instructorEmail,
         school: o.school,
         slots: o.slots,
-        ltpc: o.ltpc,
+        ltpc: o.ltpc ?? o.course?.ltpc ?? null,
         credits: o.credits,
         curriculumLink: o.curriculumLink,
         resolvedCategory,
@@ -148,11 +148,6 @@ export async function GET() {
 
   // Tally completed credits by category using the same branchMapping logic
   const completedBreakdown: Record<string, number> = { IC: 0, DC: 0, DE: 0, HSS: 0, FE: 0, IKS: 0, MTP: 0, ISTP: 0 };
-  for (const e of completed) {
-    const code = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    // Fetch mapping for this course
-  }
-  // Simpler: fetch all completed enrollments with branchMappings for credit tally
   const completedWithMappings = await prisma.courseEnrollment.findMany({
     where: { userId: session.user.id, status: EnrollmentStatus.COMPLETED },
     include: {

@@ -20,6 +20,7 @@ import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBask
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
+import { MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
 import { addCredits, formatCourseCode, formatCredits, minCredits, subtractCredits, sumCredits } from "@/lib/utils";
 
 interface Program {
@@ -705,15 +706,15 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                           Project Requirements
                         </p>
                         <div className="flex flex-wrap gap-4 text-sm text-foreground-secondary">
-                          {primaryProgram.program.code !== "BSCS" ? (
-                            <>
-                              <span>MTP: 8 cr (MTP-1: 3cr + MTP-2: 5cr)</span>
-                              <span>ISTP: 4 cr (Sem 6)</span>
-                            </>
-                          ) : (
+                          <span>
+                            MTP: {MTP_TOTAL_CREDITS} cr (MTP-1: {MTP_COMPONENT_CREDITS}cr + MTP-2: {MTP_COMPONENT_CREDITS}cr)
+                          </span>
+                          {primaryProgram.program.code === "BSCS" ? (
                             <span>
-                              Research Projects: {primaryProgram.program.mtpIstpCredits} cr
+                              Research & Communication: {primaryProgram.program.mtpIstpCredits - MTP_TOTAL_CREDITS} cr
                             </span>
+                          ) : (
+                            <span>ISTP: 4 cr (Sem 6)</span>
                           )}
                         </div>
                       </div>

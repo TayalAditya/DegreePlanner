@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { 
   BookOpen, 
   GraduationCap, 
@@ -13,6 +12,7 @@ import {
   CheckCircle,
   Info
 } from "lucide-react";
+import { MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
 
 export default function AcademicsPage() {
   const [activeTab, setActiveTab] = useState("overview");
@@ -84,12 +84,7 @@ export default function AcademicsPage() {
       </div>
 
       {/* Content */}
-      <motion.div
-        key={activeTab}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
+      <div>
         {activeTab === "overview" && <OverviewSection />}
         {activeTab === "credits" && <CreditsSection />}
         {activeTab === "courses" && <CoursesSection />}
@@ -97,7 +92,7 @@ export default function AcademicsPage() {
         {activeTab === "exchange" && <ExchangeSection />}
         {activeTab === "honours" && <HonoursSection />}
         {activeTab === "minors" && <MinorsSection />}
-      </motion.div>
+      </div>
     </div>
   );
 }
@@ -224,13 +219,13 @@ function CreditsSection() {
               </p>
             </div>
             <div>
-              <h4 className="font-semibold text-purple-600 dark:text-purple-400 mb-2">MTP (8 credits total)</h4>
+              <h4 className="font-semibold text-purple-600 dark:text-purple-400 mb-2">MTP ({MTP_TOTAL_CREDITS} credits total)</h4>
               <p className="text-sm text-muted-foreground mb-2">
                 Major Technical Project - Final year project under faculty supervision
               </p>
               <ul className="text-sm space-y-1 text-muted-foreground">
-                <li>• MTP-1: 3 credits (DP-498P)</li>
-                <li>• MTP-2: 5 credits (DP-499P)</li>
+                <li>• MTP-1: {MTP_COMPONENT_CREDITS} credits (branch-498P)</li>
+                <li>• MTP-2: {MTP_COMPONENT_CREDITS} credits (branch-499P)</li>
                 <li>• Minimum GP 7.0 in MTP-1 to continue to MTP-2</li>
               </ul>
             </div>
@@ -593,7 +588,7 @@ function HonoursSection() {
             <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
             <div>
               <p className="font-semibold">MTP Requirement</p>
-              <p className="text-sm text-muted-foreground">8 credits of MTP (DP498P + DP499P) in parent discipline</p>
+              <p className="text-sm text-muted-foreground">{MTP_TOTAL_CREDITS} credits of MTP (branch-498P + branch-499P) in parent discipline</p>
               <p className="text-xs text-muted-foreground mt-1">* Waived for IDD students (required to do PGP)</p>
             </div>
           </div>

@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
   const codes = [...new Set(parsed.map((p) => p!.courseCode))];
   const existingCourses = await prisma.course.findMany({
     where: { code: { in: codes } },
-    select: { id: true, code: true, name: true, credits: true },
+    select: { id: true, code: true, name: true, credits: true, ltpc: true },
   });
   const courseByCode = new Map(existingCourses.map((c) => [c.code.toUpperCase(), c]));
 
@@ -125,6 +125,21 @@ export async function POST(request: NextRequest) {
   // Replace existing offerings if requested
   if (replace) {
     await prisma.courseOffering.deleteMany({ where: { offeringSemester: semester, offeringYear: year } });
+  }
+
+  // Back-fill ltpc on Course catalog for matched courses that have ltpc in this upload
+  const ltpcUpdates = parsed
+    .filter((p) => p!.ltpc && courseByCode.has(p!.courseCode))
+    .filter((p) => courseByCode.get(p!.courseCode)!.ltpc !== p!.ltpc);
+  if (ltpcUpdates.length > 0) {
+    await Promise.all(
+      ltpcUpdates.map((p) =>
+        prisma.course.update({
+          where: { code: p!.courseCode },
+          data: { ltpc: p!.ltpc },
+        })
+      )
+    );
   }
 
   // Upsert all offerings

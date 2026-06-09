@@ -5,6 +5,12 @@ import { normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import {
+  isMtp1CourseCode,
+  isMtp2CourseCode,
+  MTP_COMPONENT_CREDITS,
+  MTP_TOTAL_CREDITS,
+} from "@/lib/mtpConfig";
+import {
   addCredits,
   formatCourseCode,
   formatCredits,
@@ -34,6 +40,11 @@ export interface ProgramProgress {
   remaining: CreditBreakdown;
   percentage: number;
 }
+
+type CreditClassificationState = {
+  icBasketUsed: { ic1: boolean; ic2: boolean };
+  hssCreditsAccumulated: number;
+};
 
 export interface MTPEligibility {
   eligible: boolean;
@@ -157,21 +168,23 @@ export class CreditCalculator {
       e.status === EnrollmentStatus.COMPLETED && (!e.grade || e.grade !== "F");
 
     const mtp1Completed = enrollments.some(
-      (e) => isPassingCompleted(e) && normalizeCourseCode(e.course.code) === "DP498P"
+      (e) => isPassingCompleted(e) && isMtp1CourseCode(e.course.code)
     );
     const mtp2Completed = enrollments.some(
-      (e) => isPassingCompleted(e) && normalizeCourseCode(e.course.code) === "DP499P"
+      (e) => isPassingCompleted(e) && isMtp2CourseCode(e.course.code)
     );
     const istpCompleted = enrollments.some(
       (e) => isPassingCompleted(e) && normalizeCourseCode(e.course.code) === "DP301P"
     );
 
-    // Derive individual MTP/ISTP credits from the combined field (BSCS has Research=14, BTech has 12)
-    // For BTech: MTP=8, ISTP=4. For BSCS: no MTP/ISTP (mtpIstpCredits=14 is Research)
+    // Derive individual project requirements from the combined field.
+    // BTech: MTP=8, ISTP=4. BSCS: MTP=8, Research/Communication=6.
     const isBSProgram = program.code === "BSCS";
-    const mtpCreditsFull = isBSProgram ? 0 : 8;
+    const mtpCreditsFull = MTP_TOTAL_CREDITS;
     const istpCreditsFull = isBSProgram ? 0 : 4;
-    const researchCredits = isBSProgram ? program.mtpIstpCredits : 0;
+    const researchCredits = isBSProgram
+      ? Math.max(0, program.mtpIstpCredits - MTP_TOTAL_CREDITS)
+      : 0;
 
     // Adjust credit requirements based on user preferences (skip logic per IIT Mandi rules)
     let deCredits = program.deCredits;
@@ -188,7 +201,7 @@ export class CreditCalculator {
       feCredits = mergedFe;
     }
 
-    if (!isBSProgram) {
+    {
       const inferredBatch = (() => {
         if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;
         const enrollmentId = String(user?.enrollmentId || "").toUpperCase();
@@ -206,7 +219,7 @@ export class CreditCalculator {
       const effectiveDoingMTP1 = doingMTP1Pref || doingMTP2Pref; // MTP-2 implies MTP-1
 
       // If ISTP is skipped (and not already completed), add 4 credits to FE
-      if (!doingISTPPref && !istpCompleted) {
+      if (!isBSProgram && !doingISTPPref && !istpCompleted) {
         if (isBatch22) {
           deCredits += 3;
           feCredits += 1;
@@ -218,24 +231,19 @@ export class CreditCalculator {
 
       // MTP preferences:
       // - Skip all MTP (MTP-1 unchecked): +8 DE and MTP=0 (only if MTP-1 not already completed)
-      // - Skip MTP-2 (MTP-2 unchecked): +5 DE and MTP=3 (only if MTP-2 not already completed)
+      // - Skip MTP-2 (MTP-2 unchecked): +4 DE and MTP=4 (only if MTP-2 not already completed)
       if (!mtp2Completed) {
         if (mtp1Completed) {
           if (!doingMTP2Pref) {
-            deCredits += 5;
-            mtpCredits = 3;
+            deCredits += MTP_COMPONENT_CREDITS;
+            mtpCredits = MTP_COMPONENT_CREDITS;
           }
         } else if (!effectiveDoingMTP1) {
-          if (isBatch22) {
-            deCredits += 5;
-            feCredits += 3;
-          } else {
-            deCredits += mtpCreditsFull;
-          }
+          deCredits += mtpCreditsFull;
           mtpCredits = 0;
         } else if (!doingMTP2Pref) {
-          deCredits += 5;
-          mtpCredits = 3;
+          deCredits += MTP_COMPONENT_CREDITS;
+          mtpCredits = MTP_COMPONENT_CREDITS;
         }
       }
     }
@@ -268,6 +276,11 @@ export class CreditCalculator {
       return out;
     })();
 
+    const classificationState: CreditClassificationState = {
+      icBasketUsed: { ic1: false, ic2: false },
+      hssCreditsAccumulated: 0,
+    };
+
     const completed = this.calculateCreditsByType(
       enrollments.filter((e) =>
         e.status === EnrollmentStatus.COMPLETED &&
@@ -275,14 +288,16 @@ export class CreditCalculator {
       ),
       user?.branch || undefined,
       minorDeToFeCourseCodes,
-      user?.batch ?? null
+      user?.batch ?? null,
+      classificationState
     );
 
     const inProgress = this.calculateCreditsByType(
       enrollments.filter((e) => e.status === EnrollmentStatus.IN_PROGRESS),
       user?.branch || undefined,
       minorDeToFeCourseCodes,
-      user?.batch ?? null
+      user?.batch ?? null,
+      classificationState
     );
 
     // DE overflow → FE: excess DE credits beyond requirement count as Free Electives
@@ -378,8 +393,7 @@ export class CreditCalculator {
       throw new Error("Program not found");
     }
 
-    // BSCS has no MTP (it uses Research credits instead); minSemesterForMtp=0 means no MTP
-    if (program.code === "BSCS" || !program.minSemesterForMtp) {
+    if (!program.minSemesterForMtp) {
       return {
         eligible: false,
         reason: "MTP is not required for this program",
@@ -459,7 +473,7 @@ export class CreditCalculator {
       throw new Error("Program not found");
     }
 
-    // BSCS has no ISTP; minSemesterForMtp=0 means no MTP/ISTP
+    // BSCS has MTP but no ISTP.
     if (program.code === "BSCS" || !program.minSemesterForMtp) {
       return {
         eligible: false,
@@ -487,7 +501,8 @@ export class CreditCalculator {
     }>,
     branch?: string,
     minorDeToFeCourseCodes?: Set<string>,
-    batchYear?: number | null
+    batchYear?: number | null,
+    classificationState?: CreditClassificationState
   ): CreditBreakdown {
     const breakdown: CreditBreakdown = {
       core: 0,
@@ -524,10 +539,14 @@ export class CreditCalculator {
     const sortedEnrollments = [...enrollments].sort(
       (a, b) => (a.semester || 0) - (b.semester || 0)
     );
-    const icBasketUsed = { ic1: false, ic2: false };
+    const state = classificationState ?? {
+      icBasketUsed: { ic1: false, ic2: false },
+      hssCreditsAccumulated: 0,
+    };
+    const icBasketUsed = state.icBasketUsed;
 
     // HSS cap: first 12 credits → core, next 8 (13–20) → FE, above 20 → don't count
-    let hssCreditsAccumulated = 0;
+    let hssCreditsAccumulated = state.hssCreditsAccumulated;
     const HSS_CORE_CAP = 12;
     const HSS_FE_CAP = 20;
     const addBreakdownCredits = (key: keyof CreditBreakdown, credits: number) => {
@@ -539,6 +558,7 @@ export class CreditCalculator {
     const addHssCredits = (credits: number) => {
       const prev = hssCreditsAccumulated;
       hssCreditsAccumulated = addCredits(hssCreditsAccumulated, credits);
+      state.hssCreditsAccumulated = hssCreditsAccumulated;
       const corePortion = subtractCredits(
         minCredits(HSS_CORE_CAP, hssCreditsAccumulated),
         minCredits(HSS_CORE_CAP, prev)

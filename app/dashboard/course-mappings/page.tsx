@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Save, Search, Filter, Users } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Save, Search, Filter, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 
 interface Course {
@@ -78,6 +78,8 @@ export default function CourseMappingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [changes, setChanges] = useState<Map<MappingKey, Partial<CourseMapping>>>(new Map());
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   useEffect(() => {
     fetchCourses();
@@ -154,15 +156,24 @@ export default function CourseMappingsPage() {
     );
   };
 
-  // Does this course have different mappings across batches?
-  const hasBatchDifference = (courseId: string): boolean => {
-    const batchValues = BATCHES.filter((b) => b.value !== "").map((b) => {
-      const k = mappingKey(courseId, selectedBranch, b.value);
-      return mappings.get(k)?.courseCategory;
-    }).filter(Boolean);
-    const generic = mappings.get(mappingKey(courseId, selectedBranch, ""))?.courseCategory;
-    return batchValues.some((v) => v !== generic);
-  };
+  // Precomputed set of courseIds that have batch-specific overrides — avoids per-row Map lookups in render
+  const batchDiffSet = useMemo(() => {
+    const result = new Set<string>();
+    const genericBatches = BATCHES.filter((b) => b.value !== "");
+    for (const course of courses) {
+      const generic = mappings.get(mappingKey(course.id, selectedBranch, ""))?.courseCategory;
+      for (const b of genericBatches) {
+        const k = mappingKey(course.id, selectedBranch, b.value);
+        const batchCat = mappings.get(k)?.courseCategory;
+        if (batchCat && batchCat !== generic) {
+          result.add(course.id);
+          break;
+        }
+      }
+    }
+    return result;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mappings, selectedBranch, courses]);
 
   const handleCategoryChange = (courseId: string, category: string) => {
     const key = mappingKey(courseId, selectedBranch, selectedBatch);
@@ -273,10 +284,19 @@ export default function CourseMappingsPage() {
     showToast("info", count > 0 ? `Queued ${count} defaults — review and save` : "No new defaults to apply");
   };
 
-  const filteredCourses = courses.filter((course) =>
-    course.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    course.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCourses = useMemo(
+    () =>
+      courses.filter(
+        (course) =>
+          course.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          course.name.toLowerCase().includes(searchQuery.toLowerCase())
+      ),
+    [courses, searchQuery]
   );
+
+  const totalPages = Math.max(1, Math.ceil(filteredCourses.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const pagedCourses = filteredCourses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   const selectedBatchLabel = BATCHES.find((b) => b.value === selectedBatch)?.label ?? "All Batches";
 
@@ -305,6 +325,7 @@ export default function CourseMappingsPage() {
               onChange={(e) => {
                 setSelectedBranch(e.target.value);
                 setChanges(new Map());
+                setCurrentPage(1);
               }}
               className="w-full px-4 py-2 border border-border rounded-md bg-background text-foreground"
             >
@@ -327,6 +348,7 @@ export default function CourseMappingsPage() {
               onChange={(e) => {
                 setSelectedBatch(e.target.value);
                 setChanges(new Map());
+                setCurrentPage(1);
               }}
               className="w-full px-4 py-2 border border-border rounded-md bg-background text-foreground"
             >
@@ -348,7 +370,7 @@ export default function CourseMappingsPage() {
               type="text"
               placeholder="Search by code or name..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
               className="w-full px-4 py-2 border border-border rounded-md bg-background text-foreground"
             />
           </div>
@@ -432,12 +454,12 @@ export default function CourseMappingsPage() {
                   </td>
                 </tr>
               ) : (
-                filteredCourses.map((course) => {
+                pagedCourses.map((course) => {
                   const { category, isOverride } = getEffectiveCategory(course.id);
                   const semester = getDisplaySemester(course.id);
                   const key = mappingKey(course.id, selectedBranch, selectedBatch);
                   const isChanged = changes.has(key);
-                  const hasDiff = selectedBatch === "" && hasBatchDifference(course.id);
+                  const hasDiff = selectedBatch === "" && batchDiffSet.has(course.id);
 
                   // In batch-specific mode: grey out row if no override exists yet
                   const hasSpecificMapping =
@@ -519,18 +541,47 @@ export default function CourseMappingsPage() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="flex flex-wrap gap-4 text-sm text-foreground-secondary">
-        <span>Showing {filteredCourses.length} of {courses.length} courses</span>
-        {changes.size > 0 && (
-          <span className="text-yellow-600 dark:text-yellow-400 font-medium">
-            • {changes.size} unsaved changes
+      {/* Pagination + Stats */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-4 text-sm text-foreground-secondary">
+          <span>
+            Showing {filteredCourses.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}–
+            {Math.min(safePage * PAGE_SIZE, filteredCourses.length)} of {filteredCourses.length} courses
+            {searchQuery ? ` (filtered from ${courses.length})` : ""}
           </span>
-        )}
-        {selectedBatch === "" && (
-          <span className="text-purple-600 dark:text-purple-400">
-            • Purple rows have batch-specific overrides
-          </span>
+          {changes.size > 0 && (
+            <span className="text-yellow-600 dark:text-yellow-400 font-medium">
+              • {changes.size} unsaved changes
+            </span>
+          )}
+          {selectedBatch === "" && (
+            <span className="text-purple-600 dark:text-purple-400">
+              • Purple rows have batch-specific overrides
+            </span>
+          )}
+        </div>
+        {totalPages > 1 && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="p-1.5 rounded-md border border-border text-foreground-secondary hover:bg-background-secondary disabled:opacity-40"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm text-foreground-secondary px-2">
+              Page {safePage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+              className="p-1.5 rounded-md border border-border text-foreground-secondary hover:bg-background-secondary disabled:opacity-40"
+              aria-label="Next page"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
         )}
       </div>
     </div>

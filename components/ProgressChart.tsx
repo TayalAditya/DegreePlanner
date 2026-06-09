@@ -14,6 +14,7 @@ import {
 } from "@/lib/utils";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
+import { getMtpComponent, MTP_COMPONENT_CREDITS } from "@/lib/mtpConfig";
 
 interface ProgressChartProps {
   progress: any;
@@ -644,12 +645,12 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     const fixedDc = byNormalized(allDefault.filter((c) => c.category === "DC"));
 
     const mtpCandidates = byNormalized(allDefault.filter((c) => c.category === "MTP"));
-    const mtpRequiredCodes = (() => {
-      if (requiredMtp <= 0) return new Set<string>();
-      if (requiredMtp <= 3) return new Set(["DP498P"]);
-      return new Set(["DP498P", "DP499P"]);
-    })();
-    const fixedMtp = mtpCandidates.filter((c) => mtpRequiredCodes.has(normalizeCourseCode(c.code)));
+    const fixedMtp = mtpCandidates.filter((course) => {
+      if (requiredMtp <= 0) return false;
+      const component = getMtpComponent(course.code);
+      if (requiredMtp <= MTP_COMPONENT_CREDITS) return component === 1;
+      return component === 1 || component === 2;
+    });
 
     const fixedIstp = requiredIstp > 0 ? byNormalized(allDefault.filter((c) => c.category === "ISTP")) : [];
 
@@ -667,10 +668,34 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
       return { pending, inProg };
     };
 
+    const completedMtpComponents = new Set(
+      (enrollments || [])
+        .filter((enrollment: any) => enrollment?.status === "COMPLETED" && (!enrollment?.grade || enrollment.grade !== "F"))
+        .map((enrollment: any) => getMtpComponent(enrollment?.course?.code))
+        .filter(Boolean)
+    );
+    const inProgressMtpComponents = new Set(
+      (enrollments || [])
+        .filter((enrollment: any) => enrollment?.status === "IN_PROGRESS")
+        .map((enrollment: any) => getMtpComponent(enrollment?.course?.code))
+        .filter(Boolean)
+    );
+    const classifyMtp = (courses: DefaultCourse[]) => {
+      const pending: DefaultCourse[] = [];
+      const inProg: DefaultCourse[] = [];
+      courses.forEach((course) => {
+        const component = getMtpComponent(course.code);
+        if (component && completedMtpComponents.has(component)) return;
+        if (component && inProgressMtpComponents.has(component)) inProg.push(course);
+        else pending.push(course);
+      });
+      return { pending, inProg };
+    };
+
     const ic = classify(fixedIc);
     const iks = classify(fixedIks);
     const dc = classify(fixedDc);
-    const mtp = classify(fixedMtp);
+    const mtp = classifyMtp(fixedMtp);
     const istp = classify(fixedIstp);
 
     const deBaskets = DE_BASKET_CONFIG[normalizeBranchForIcBasket(branch)] || [];
@@ -689,7 +714,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
         ...(requiredMtp > 0 ? [{ id: "mtp", title: "MTP", kind: "list" as const, ...mtp }] : []),
       ],
     };
-  }, [completedCodes, inProgressCodes, isLoading, progress, userBranch, userBatch]);
+  }, [completedCodes, enrollments, inProgressCodes, isLoading, progress, userBranch, userBatch]);
 
   if (isLoading) {
     return (

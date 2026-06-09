@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { courseIdentityKey } from "@/lib/courseIdentity";
 import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
+import { getMtpComponent, isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
 import { EnrollmentStatus } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
@@ -119,9 +120,12 @@ export async function POST(req: NextRequest) {
     const buildCodeCandidates = (code: string) => {
       const normalized = normalizeCourseCode(code);
       const hyphenated = toHyphenatedCode(code);
+      const mtpComponent = getMtpComponent(code);
+      const genericMtpCode = mtpComponent === 1 ? "DP-498P" : mtpComponent === 2 ? "DP-499P" : "";
+      const genericMtpSpacedCode = mtpComponent === 1 ? "DP 498P" : mtpComponent === 2 ? "DP 499P" : "";
       // Also try original case-insensitive
       const original = code.trim();
-      return Array.from(new Set([normalized, hyphenated, original]));
+      return Array.from(new Set([normalized, hyphenated, original, genericMtpCode, genericMtpSpacedCode].filter(Boolean)));
     };
 
     const inferBatchYear = (
@@ -148,12 +152,12 @@ export async function POST(req: NextRequest) {
         doingISTPPref = true;
       }
 
-      if (normalizedCode === "DP498P" && !doingMTP1Pref) {
+      if (isMtp1CourseCode(normalizedCode) && !doingMTP1Pref) {
         updates.doingMTP = true;
         doingMTP1Pref = true;
       }
 
-      if (normalizedCode === "DP499P" && (!doingMTP1Pref || !doingMTP2Pref)) {
+      if (isMtp2CourseCode(normalizedCode) && (!doingMTP1Pref || !doingMTP2Pref)) {
         updates.doingMTP = true;
         updates.doingMTP2 = true;
         doingMTP1Pref = true;

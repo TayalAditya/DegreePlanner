@@ -7,6 +7,7 @@ import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
 import { courseIdentityKey } from "@/lib/courseIdentity";
 import { getBranchCandidates, getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
+import { isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
 import {
   canTakePassFailCourse,
   validateBranchSpecificCourse,
@@ -284,8 +285,8 @@ export async function POST(request: NextRequest) {
     const semesterNumber = typeof semester === "string" ? parseInt(semester, 10) : Number(semester);
 
     const isDpIstp = normalizedCourseCode === "DP301P";
-    const isDpMtp1 = normalizedCourseCode === "DP498P";
-    const isDpMtp2 = normalizedCourseCode === "DP499P";
+    const isDpMtp1 = isMtp1CourseCode(normalizedCourseCode);
+    const isDpMtp2 = isMtp2CourseCode(normalizedCourseCode);
     const isDpMtp = isDpMtp1 || isDpMtp2;
 
     let finalCourseType: CourseType =

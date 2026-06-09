@@ -195,24 +195,23 @@ export default function PreRegistrationPage() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [showApprovalWarning, setShowApprovalWarning] = useState(false);
   const { showToast } = useToast();
-
-  // localStorage key scoped to semester+year once data loads
-  const storageKey = data ? `prereg-${data.offeringSemester}-${data.offeringYear}` : null;
 
   useEffect(() => {
     fetch("/api/pre-registration")
       .then((r) => r.json())
-      .then((d: ApiResponse) => {
+      .then(async (d: ApiResponse) => {
         setData(d);
-        // Restore saved selection from localStorage
-        const key = `prereg-${d.offeringSemester}-${d.offeringYear}`;
-        try {
-          const saved = JSON.parse(localStorage.getItem(key) ?? "[]") as string[];
+        // Load saved plan from server
+        const res = await fetch(`/api/pre-registration/plan?semester=${d.offeringSemester}&year=${d.offeringYear}`);
+        if (res.ok) {
+          const plan = await res.json() as { selectedIds: string[] };
           const validIds = new Set(d.offerings.map((o: Offering) => o.id));
-          setSelected(new Set(saved.filter((id) => validIds.has(id))));
-        } catch { /* ignore */ }
+          setSelected(new Set(plan.selectedIds.filter((id) => validIds.has(id))));
+          if (plan.selectedIds.length > 0) setSaved(true);
+        }
       })
       .catch(() => showToast("error", "Failed to load offerings"))
       .finally(() => setLoading(false));
@@ -325,14 +324,22 @@ export default function PreRegistrationPage() {
     setSaved(false);
   };
 
-  const handleSavePlan = () => {
-    if (!data || !storageKey) return;
+  const handleSavePlan = async () => {
+    if (!data) return;
+    setSaving(true);
     try {
-      localStorage.setItem(storageKey, JSON.stringify([...selected]));
+      const res = await fetch("/api/pre-registration/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ semester: data.offeringSemester, year: data.offeringYear, selectedIds: [...selected] }),
+      });
+      if (!res.ok) throw new Error();
       setSaved(true);
       showToast("success", "Plan saved — this is for your reference only, not the official registration");
     } catch {
       showToast("error", "Could not save plan");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -670,13 +677,17 @@ export default function PreRegistrationPage() {
           </div>
           <button
             onClick={handleSavePlan}
-            disabled={selectedCount === 0}
+            disabled={selectedCount === 0 || saving}
             className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2
               disabled:opacity-50 disabled:cursor-not-allowed
               ${saved ? "bg-success text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
           >
-            <Save className="w-4 h-4" />
-            {saved ? "Saved" : "Save Plan"}
+            {saving ? (
+              <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {saving ? "Saving…" : saved ? "Saved" : "Save Plan"}
           </button>
         </div>
       </div>

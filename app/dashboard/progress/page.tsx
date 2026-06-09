@@ -13,10 +13,15 @@ import {
   sumCredits,
 } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
-import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
+import { getBranchCandidates, getCurriculumBranchCode, isDataScienceBranch } from "@/lib/branchInfo";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
+import {
+  getMtpComponent,
+  MTP_COMPONENT_CREDITS,
+  MTP_TOTAL_CREDITS,
+} from "@/lib/mtpConfig";
 
 interface Enrollment {
   id: string;
@@ -66,6 +71,7 @@ interface ProgressData {
     IC_BASKET: number;
     DC: number;
     DE: number;
+    PE: number;
     FE: number;
     HSS: number;
     IKS: number;
@@ -77,6 +83,7 @@ interface ProgressData {
     IC_BASKET: number;
     DC: number;
     DE: number;
+    PE: number;
     FE: number;
     HSS: number;
     IKS: number;
@@ -88,6 +95,7 @@ interface ProgressData {
     IC_BASKET: number;
     DC: number;
     DE: number;
+    PE: number;
     FE: number;
     HSS: number;
     IKS: number;
@@ -103,6 +111,7 @@ const categoryColors = {
   IC_BASKET: { bg: "bg-accent/10", text: "text-accent", bar: "bg-accent" },
   DC: { bg: "bg-primary/10", text: "text-primary", bar: "bg-primary" },
   DE: { bg: "bg-secondary/10", text: "text-secondary", bar: "bg-secondary" },
+  PE: { bg: "bg-amber-500/10", text: "text-amber-600 dark:text-amber-400", bar: "bg-amber-500" },
   FE: { bg: "bg-success/10", text: "text-success", bar: "bg-success" },
   HSS: { bg: "bg-warning/10", text: "text-warning", bar: "bg-warning" },
   IKS: { bg: "bg-warning/10", text: "text-warning", bar: "bg-warning" },
@@ -116,6 +125,7 @@ const categoryLabels = {
   IC_BASKET: "IC Basket",
   DC: "Discipline Core",
   DE: "Discipline Electives",
+  PE: "Research & Communication",
   FE: "Free Electives",
   HSS: "Humanities & Social Sciences",
   IKS: "Indian Knowledge System",
@@ -136,7 +146,6 @@ export default function ProgressPage() {
   const [includeCurrentSemesterCredits, setIncludeCurrentSemesterCredits] = useState(false);
   const [remainingOpen, setRemainingOpen] = useState(false);
   const [primaryProgramId, setPrimaryProgramId] = useState<string | null>(null);
-  const [progressApiData, setProgressApiData] = useState<any>(null);
   const [deletingEnrollmentId, setDeletingEnrollmentId] = useState<string | null>(null);
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
@@ -322,6 +331,7 @@ export default function ProgressPage() {
       case "DE":
         return applyMinorDeOverride("DE", enrollment);
       case "PE":
+        return getCurriculumBranchCode(user?.branch || "") === "BSCS" ? "PE" : "FE";
       case "FREE_ELECTIVE":
         return "FE";
       case "MTP":
@@ -452,14 +462,6 @@ export default function ProgressPage() {
     }
   };
 
-  useEffect(() => {
-    if (!primaryProgramId) return;
-    fetch(`/api/progress?programId=${encodeURIComponent(primaryProgramId)}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) setProgressApiData(data); })
-      .catch(() => {});
-  }, [primaryProgramId]);
-
   const calculateProgress = (): ProgressData => {
     const completedEnrollments = enrollments.filter(
       (e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F")
@@ -483,6 +485,7 @@ export default function ProgressPage() {
       IC_BASKET: 0,
       DC: 0,
       DE: 0,
+      PE: 0,
       FE: 0,
       HSS: 0,
       IKS: 0,
@@ -495,6 +498,7 @@ export default function ProgressPage() {
       IC_BASKET: 0,
       DC: 0,
       DE: 0,
+      PE: 0,
       FE: 0,
       HSS: 0,
       IKS: 0,
@@ -531,7 +535,7 @@ export default function ProgressPage() {
 
     sortedCompleted.forEach((e) => accumulateSplitAware(creditsByCategory, e, icBasketUsed, hssUsed));
 
-    sortedInProgress.forEach((e) => accumulateSplitAware(creditsInProgressByCategory, e, undefined, hssUsed));
+    sortedInProgress.forEach((e) => accumulateSplitAware(creditsInProgressByCategory, e, icBasketUsed, hssUsed));
 
     const totalCreditsEarned = sumCredits(completedEnrollments.map((e) => e.course.credits));
 
@@ -558,18 +562,23 @@ export default function ProgressPage() {
     const doingISTPPref = user?.doingISTP ?? true;
     const effectiveDoingMTP1 = doingMTP1Pref || doingMTP2Pref; // MTP-2 implies MTP-1
 
-    const mtpCreditsCompleted = creditsByCategory.MTP;
     const istpCreditsCompleted = creditsByCategory.ISTP;
-    const mtp1Completed = mtpCreditsCompleted >= 3;
-    const mtp2Completed = mtpCreditsCompleted >= 8;
+    const completedMtpComponents = new Set(
+      sortedCompleted
+        .map((enrollment) => getMtpComponent(enrollment.course.code))
+        .filter((component): component is 1 | 2 => component !== null)
+    );
+    const mtp1Completed = completedMtpComponents.has(1);
+    const mtp2Completed = completedMtpComponents.has(2);
     const istpCompleted = istpCreditsCompleted >= 4;
+    const isBSProgram = getCurriculumBranchCode(user?.branch || "") === "BSCS";
 
-    let mtpRequired = 8;
-    let istpRequired = 4;
+    let mtpRequired = MTP_TOTAL_CREDITS;
+    let istpRequired = isBSProgram ? 0 : 4;
     let deAdjustment = 0; // DE credit adjustment when skipping MTP/MTP-2
-    let feAdjustment = 0; // FE credit adjustment when skipping ISTP (and batch-specific MTP rules)
+    let feAdjustment = 0; // FE credit adjustment when skipping ISTP
 
-    if (!istpCompleted && !doingISTPPref) {
+    if (!isBSProgram && !istpCompleted && !doingISTPPref) {
       istpRequired = 0;
       if (isBatch22) {
         deAdjustment += 3;
@@ -582,20 +591,15 @@ export default function ProgressPage() {
     if (!mtp2Completed) {
       if (mtp1Completed) {
         if (!doingMTP2Pref) {
-          mtpRequired = 3;
-          deAdjustment += 5;
+          mtpRequired = MTP_COMPONENT_CREDITS;
+          deAdjustment += MTP_COMPONENT_CREDITS;
         }
       } else if (!effectiveDoingMTP1) {
         mtpRequired = 0;
-        if (isBatch22) {
-          deAdjustment += 5;
-          feAdjustment += 3;
-        } else {
-          deAdjustment += 8;
-        }
+        deAdjustment += MTP_TOTAL_CREDITS;
       } else if (!doingMTP2Pref) {
-        mtpRequired = 3;
-        deAdjustment += 5;
+        mtpRequired = MTP_COMPONENT_CREDITS;
+        deAdjustment += MTP_COMPONENT_CREDITS;
       }
     }
 
@@ -604,6 +608,9 @@ export default function ProgressPage() {
       IC_BASKET: icBasketRequired,
       DC: programCredits.dcCredits ?? 0,
       DE: (programCredits.deCredits ?? 0) + deAdjustment,
+      PE: isBSProgram
+        ? Math.max(0, (programCredits.mtpIstpCredits ?? 0) - MTP_TOTAL_CREDITS)
+        : 0,
       FE: (programCredits.feCredits ?? 0) + feAdjustment,
       HSS: hssRequired,
       IKS: iksRequired,
@@ -643,6 +650,9 @@ export default function ProgressPage() {
     };
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const progress = useMemo(() => calculateProgress(), [enrollments, user, nonMgmtMinorCourseCodes, mappingBranchAliases, includeCurrentSemesterCredits]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -650,8 +660,6 @@ export default function ProgressPage() {
       </div>
     );
   }
-
-  const progress = calculateProgress();
   const activeEnrollments = enrollments.filter(
     (e) =>
       (e.status === "COMPLETED" && (!e.grade || e.grade !== "F")) ||

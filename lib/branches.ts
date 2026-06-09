@@ -1,7 +1,7 @@
 // Branch configurations - Based on official IIT Mandi curriculum (PDF: Academic Discussion B.Tech & B.S. 2023)
 // B.Tech: Total 160 credits = IC(60) + DC+DE(66) + FE(22) + MTP/ISTP(12)  [most branches]
 // B.Tech EE: Total 161 credits = IC(60) + DC+DE(72) + FE(17) + MTP/ISTP(12)  [special case]
-// B.S.-CS: Total 163 credits = IC(52) + DC+DE(82) + FE(15) + Research(14)
+// B.S.-CS: Total 163 credits = IC(52) + DC+DE(82) + FE(15) + MTP(8) + Research(6)
 // DC-DE split per branch from PDF page 18 table
 
 export interface BranchConfig {
@@ -274,9 +274,9 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     dcCredits: 59,    // Discipline Core (DC only, per PDF page 18 DC-DE split table)
     deCredits: 23,    // Discipline Electives (DC+DE=82 total per PDF)
     feCredits: 15,    // Free Electives (lowest)
-    mtpIstpCredits: 14, // Research & Communication Projects (not MTP/ISTP)
-    minCreditsForMTP: 0, // No MTP requirement for BS
-    minSemesterForMTP: 0,
+    mtpIstpCredits: 14, // MTP(8) + Research & Communication Projects(6)
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 7,
   },
 };
 

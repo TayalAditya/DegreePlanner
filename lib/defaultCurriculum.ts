@@ -1,4 +1,5 @@
 import { getCurriculumBranchCode } from "@/lib/branchInfo";
+import { getMtpCourseCode, MTP_COMPONENT_CREDITS } from "@/lib/mtpConfig";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 
 // Default curriculum for each branch (B23 batch, IIT Mandi)
@@ -81,11 +82,11 @@ const istpSem6: DefaultCourse[] = [
 ];
 
 const mtpSem7: DefaultCourse[] = [
-  { code: "DP 498P", name: "Major Technical Project - I", credits: 3, category: "MTP", semester: 7 },
+  { code: "DP 498P", name: "Major Technical Project - I", credits: MTP_COMPONENT_CREDITS, category: "MTP", semester: 7 },
 ];
 
 const mtpSem8: DefaultCourse[] = [
-  { code: "DP 499P", name: "Major Technical Project - II", credits: 5, category: "MTP", semester: 8 },
+  { code: "DP 499P", name: "Major Technical Project - II", credits: MTP_COMPONENT_CREDITS, category: "MTP", semester: 8 },
 ];
 
 // ─── CSE  (DC = 38 cr | IC-I: free choice | IC-II: free choice) ──────────────
@@ -625,10 +626,12 @@ const bscsSem6: DefaultCourse[] = [
 const bscsSem7: DefaultCourse[] = [
   { code: "CY514",  name: "Chemical and Statistical Thermodynamics",  credits: 3, category: "DC", semester: 7 },
   { code: "CY535",  name: "Introduction to Organometallic Chemistry", credits: 3, category: "DC", semester: 7 },
+  ...mtpSem7,
 ];
 const bscsSem8: DefaultCourse[] = [
   { code: "CY513", name: "Chemical Kinetics and Reaction Dynamics", credits: 3, category: "DC", semester: 8 },
   { code: "CY504", name: "Heterocyclic Chemistry",                  credits: 2, category: "DC", semester: 8 },
+  ...mtpSem8,
 ];
 
 // ─── Optional HSS electives shown (unchecked) in Semester 2 for all branches ──
@@ -1410,7 +1413,16 @@ const applyBatchOverrides = (
 export function getDefaultCurriculum(branch: string, semester: number, batch?: number | null): DefaultCourse[] {
   const effectiveBranch = getCurriculumBranchCode(branch);
   const key = `${effectiveBranch}_${semester}`;
-  const courses = applyBatchOverrides(effectiveBranch, semester, DEFAULT_CURRICULUM[key] || [], batch);
+  const courses = applyBatchOverrides(effectiveBranch, semester, DEFAULT_CURRICULUM[key] || [], batch)
+    .map((course) => {
+      if (course.category !== "MTP") return course;
+      const component = course.semester === 8 ? 2 : 1;
+      return {
+        ...course,
+        code: getMtpCourseCode(effectiveBranch, component),
+        credits: MTP_COMPONENT_CREDITS,
+      };
+    });
   // Append optional HSS electives to semester 2 (Batch 2023 only)
   if (semester === 2 && (batch == null || batch === 2023)) {
     return [...courses, ...hssOptionalSem2];

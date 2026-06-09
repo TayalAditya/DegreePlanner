@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { MTP_COMPONENT_CREDITS } from "@/lib/mtpConfig";
 import { addCredits, formatCredits, sumCredits } from "@/lib/utils";
 
 /**
@@ -177,9 +178,9 @@ export function calculateAdjustedElectives(
     feCredits += 4;
   }
 
-  // If MTP-2 is skipped: +5 to DE
+  // If MTP-2 is skipped, replace its project credits with DE.
   if (!doingMTP2) {
-    deCredits += 5;
+    deCredits += MTP_COMPONENT_CREDITS;
   }
 
   return { deCredits, feCredits };

@@ -8,6 +8,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { computeEnrollmentCreditBreakdown } from "@/lib/progressCreditBreakdown";
 import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
+import { getMtpCourseCode, MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
 
 interface Program {
   id: string;
@@ -351,9 +352,7 @@ export default function ProgramsPage() {
       const ok = await confirm({
         title: "Skip MTP?",
         message:
-          `Any course enrolled for MTP-1 or MTP-2 will be automatically deregistered. ${
-            isBatch22 ? "+5 DE +3 FE credits" : "+8 DE credits"
-          } will be added to your requirement.`,
+          `Any course enrolled for MTP-1 or MTP-2 will be automatically deregistered. +${MTP_TOTAL_CREDITS} DE credits will be added to your requirement.`,
         confirmText: "Skip MTP",
         cancelText: "Keep MTP",
         variant: "warning",
@@ -375,7 +374,7 @@ export default function ProgramsPage() {
       const ok = await confirm({
         title: "Skip MTP-2?",
         message:
-          "Any course enrolled for MTP-2 will be automatically deregistered. +5 DE credits will be added to your requirement.",
+          `Any course enrolled for MTP-2 will be automatically deregistered. +${MTP_COMPONENT_CREDITS} DE credits will be added to your requirement.`,
         confirmText: "Skip MTP-2",
         cancelText: "Keep MTP-2",
         variant: "warning",
@@ -746,8 +745,7 @@ export default function ProgramsPage() {
                 {/* MTP/ISTP Preferences */}
                 {primaryProgram.program.mtpIstpCredits > 0 && (
                   <div className="mt-6 pt-6 border-t border-border">
-                    {primaryProgram.program.code !== "BSCS" ? (
-                      <>
+                    <>
                         <div className="flex items-center justify-between mb-4">
                           <div>
                             <h4 className="font-semibold text-foreground">Project Preferences</h4>
@@ -768,7 +766,11 @@ export default function ProgramsPage() {
                           </span>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div
+                          className={`grid grid-cols-1 gap-3 ${
+                            primaryProgram.program.code === "BSCS" ? "md:grid-cols-2" : "md:grid-cols-3"
+                          }`}
+                        >
                           {/* MTP-1 */}
                           <label
                             className={`flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-xl border-2 transition-colors hover:border-primary/50 focus-within:ring-4 focus-within:ring-primary/20 ${
@@ -790,11 +792,11 @@ export default function ProgramsPage() {
                                 </span>
                               </div>
                               <p className="text-sm text-foreground-secondary">
-                                3 credits · DP 498P · Semester 7
+                                {MTP_COMPONENT_CREDITS} credits · {getMtpCourseCode(userSettings?.branch, 1)} · Semester 7
                               </p>
                               {!doingMTP1 && (
                                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
-                                  ⚠️ Skipping adds +8 credits to DE
+                                  ⚠️ Skipping adds +{MTP_TOTAL_CREDITS} credits to DE
                                 </p>
                               )}
                             </div>
@@ -821,11 +823,11 @@ export default function ProgramsPage() {
                                 </span>
                               </div>
                               <p className="text-sm text-foreground-secondary">
-                                5 credits · DP 499P · Semester 8 · Requires MTP-1
+                                {MTP_COMPONENT_CREDITS} credits · {getMtpCourseCode(userSettings?.branch, 2)} · Semester 8 · Requires MTP-1
                               </p>
                               {doingMTP1 && !doingMTP2 && (
                                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
-                                  ⚠️ Skipping adds +5 credits to DE
+                                  ⚠️ Skipping adds +{MTP_COMPONENT_CREDITS} credits to DE
                                 </p>
                               )}
                               {!doingMTP1 && (
@@ -837,11 +839,12 @@ export default function ProgramsPage() {
                           </label>
 
                           {/* ISTP */}
-                          <label
-                            className={`flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-xl border-2 transition-colors hover:border-primary/50 focus-within:ring-4 focus-within:ring-primary/20 ${
-                              doingISTP ? "border-primary/40" : "border-border"
-                            } ${savingPrefs ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
-                          >
+                          {primaryProgram.program.code !== "BSCS" && (
+                            <label
+                              className={`flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-xl border-2 transition-colors hover:border-primary/50 focus-within:ring-4 focus-within:ring-primary/20 ${
+                                doingISTP ? "border-primary/40" : "border-border"
+                              } ${savingPrefs ? "opacity-70 cursor-not-allowed" : "cursor-pointer"}`}
+                            >
                             <input
                               type="checkbox"
                               checked={doingISTP}
@@ -865,29 +868,19 @@ export default function ProgramsPage() {
                                 </p>
                               )}
                             </div>
-                          </label>
+                            </label>
+                          )}
                         </div>
 
+                        {primaryProgram.program.code === "BSCS" && (
+                          <p className="mt-3 text-xs text-foreground-secondary">
+                            Research & Communication remains a separate 6-credit requirement.
+                          </p>
+                        )}
                         <p className="mt-3 text-xs text-foreground-secondary">
                           Changes save automatically and update your credit distribution.
                         </p>
-                      </>
-                    ) : (
-                      <>
-                        <h4 className="font-semibold text-foreground mb-3">Project Requirements</h4>
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center">
-                            <Award className="w-5 h-5 text-purple-500" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-foreground">Research Projects</p>
-                            <p className="text-sm text-foreground-secondary">
-                              {primaryProgram.program.mtpIstpCredits} credits
-                            </p>
-                          </div>
-                        </div>
-                      </>
-                    )}
+                    </>
                   </div>
                 )}
               </div>
