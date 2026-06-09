@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail } from "lucide-react";
+import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { formatCredits, formatCourseCode } from "@/lib/utils";
 import { MINORS } from "@/lib/minors";
@@ -33,6 +33,14 @@ interface ApiResponse {
   offerings: Offering[];
   completedBreakdown: Record<string, number>;
   programRequirements: Record<string, number> | null;
+  studentInfo: { name: string | null; branch: string | null; semester: number } | null;
+}
+
+interface InternshipCourse {
+  id: string;
+  code: string;
+  name: string;
+  credits: number;
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -276,6 +284,7 @@ export default function PreRegistrationPage() {
   const [saving, setSaving] = useState(false);
   const [showApprovalWarning, setShowApprovalWarning] = useState(false);
   const [selectedMinorCode, setSelectedMinorCode] = useState<string>("");
+  const [internshipCourses, setInternshipCourses] = useState<{ p399: InternshipCourse[]; p396: InternshipCourse[] }>({ p399: [], p396: [] });
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -305,6 +314,17 @@ export default function PreRegistrationPage() {
       })
       .catch(() => showToast("error", "Failed to load offerings"))
       .finally(() => setLoading(false));
+
+    // Fetch internship courses separately
+    fetch("/api/courses")
+      .then((r) => r.json())
+      .then((courses: InternshipCourse[]) => {
+        if (!Array.isArray(courses)) return;
+        const p399 = courses.filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("399P"));
+        const p396 = courses.filter((c) => c.code.toUpperCase().replace(/[^A-Z0-9]/g, "").endsWith("396P"));
+        setInternshipCourses({ p399, p396 });
+      })
+      .catch(() => {});
   }, []);
 
   // Compulsory course slots (blocked)
@@ -779,6 +799,58 @@ export default function PreRegistrationPage() {
                 clashWith={clashMap.get(o.id)}
               />
             ))}
+          </div>
+        </Section>
+      )}
+
+      {/* Semester-Long Internship */}
+      {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
+        <Section title="Semester-Long Internship" count={internshipCourses.p399.length + internshipCourses.p396.length}>
+          <div className="space-y-4">
+            {internshipCourses.p399.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-foreground mb-1">Onsite (399P) — 9 cr P/F · No other courses · P/F budget → 0 remaining</p>
+                <div className="flex items-start gap-2 p-2 rounded-lg bg-error/5 border border-error/15 mb-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-error flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-error">Cannot enroll alongside any other course in Sem 6/7</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {internshipCourses.p399.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border bg-background">
+                      <div>
+                        <p className="text-xs font-mono font-semibold text-foreground">{formatCourseCode(c.code)}</p>
+                        <p className="text-xs text-foreground-secondary">{formatCredits(c.credits)} cr P/F</p>
+                      </div>
+                      <a href="/dashboard/courses" className="flex-shrink-0 text-xs text-primary hover:underline flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> Add
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {internshipCourses.p396.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-foreground mb-1">Remote (396P) — 6 cr P/F · P/F budget → 3 remaining</p>
+                <div className="flex items-start gap-2 p-2 rounded-lg bg-warning/5 border border-warning/15 mb-2">
+                  <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-warning">Uses 6 of 9 total P/F credits</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {internshipCourses.p396.map((c) => (
+                    <div key={c.id} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-border bg-background">
+                      <div>
+                        <p className="text-xs font-mono font-semibold text-foreground">{formatCourseCode(c.code)}</p>
+                        <p className="text-xs text-foreground-secondary">{formatCredits(c.credits)} cr P/F</p>
+                      </div>
+                      <a href="/dashboard/courses" className="flex-shrink-0 text-xs text-primary hover:underline flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> Add
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Section>
       )}
