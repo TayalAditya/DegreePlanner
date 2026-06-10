@@ -157,13 +157,14 @@ async function seedPrograms() {
       mtpIstpCredits: 12,
     },
     // School of Chemical Sciences
+    // IC136 (Biotechnology, 3cr) is DC for BSCS; IKS waived → HSS+IKS=12 (icCredits = IC+ICB+12).
     {
       code: "BSCS",
       name: "B.S. in Chemical Sciences",
       department: "School of Chemical Sciences",
       totalCreditsRequired: 163,
-      icCredits: 52,
-      dcCredits: 59,
+      icCredits: 49,   // IC_comp(31)+ICB(6)+HSS+IKS(12)
+      dcCredits: 62,   // 59 base + IC136(3)
       deCredits: 23,
       feCredits: 15,
       mtpIstpCredits: 14,
@@ -223,9 +224,9 @@ async function seedPrograms() {
       name: "B.S. in Chemical Sciences (B24)",
       department: "School of Chemical Sciences",
       totalCreditsRequired: 163,
-      icCredits: 48,   // IC_comp(27)+ICB(6)+IKS(3)+HSS(12)
-      dcCredits: 62,   // +CY200(3cr)
-      deCredits: 24,   // 163-48-62-15-14
+      icCredits: 45,   // IC_comp(27)+ICB(6)+HSS+IKS(12); FDP dropped
+      dcCredits: 65,   // 59 base + IC136(3) + CY200(3); FDP(4) replaced by CY200(3)+1DE
+      deCredits: 24,   // +1 from FDP replacement
       feCredits: 15,
       mtpIstpCredits: 14,
     },

@@ -636,10 +636,14 @@ const mevlsiSem8: DefaultCourse[] = [
   ...mtpSem8,
 ];
 
-// ─── BSCS  (B.S. Chemical Sciences | DC = 59 cr) ─────────────────────────────
+// ─── BSCS  (B.S. Chemical Sciences | DC = 62 cr) ─────────────────────────────
 // IC-I: forced IC131 | IC-II: forced IC121
+// IC136 (Biotechnology, 3cr) counts as DC for BSCS (not ICB).
 // BSCS has 31 cr IC Compulsory (vs 39 for BTech); IC272 not included.
-const bscsSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ICB1_IC131];
+const bscsSem1: DefaultCourse[] = [
+  ...icCompSem1, ...icMixedSem1, ICB1_IC131,
+  { code: "IC136", name: "Understanding Biotechnology and its Applications", credits: 3, category: "DC", semester: 1 },
+];
 const bscsSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ICB2_IC121];
 const bscsSem3: DefaultCourse[] = [
   { code: "CY301",  name: "Principles and Theories of Physical Chemistry",        credits: 3, category: "DC", semester: 3 },
