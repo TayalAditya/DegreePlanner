@@ -9,12 +9,6 @@ import {
 import { UserProgramModal } from "@/components/UserProgramModal";
 import { addCredits, formatCredits } from "@/lib/utils";
 
-interface SemesterStat {
-  semester: number;
-  courses: number;
-  credits: number;
-}
-
 interface UserStat {
   id: string;
   name: string | null;
@@ -25,7 +19,6 @@ interface UserStat {
   completedCredits: number;
   inProgressCredits: number;
   totalEnrollments: number;
-  semesterBreakdown: SemesterStat[];
 }
 
 const BRANCH_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
@@ -413,6 +406,7 @@ export default function AdminPage() {
       if (!res.ok) throw new Error("Unauthorized or failed to fetch");
       return res.json();
     },
+    staleTime: 5 * 60 * 1000, // 5 min — don't refetch on every tab switch
   });
 
   const branches = useMemo(
