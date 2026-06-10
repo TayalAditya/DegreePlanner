@@ -1292,11 +1292,16 @@ const applyBatchOverrides = (
         return updated;
       }
       case 3: {
-        // IC222P (Physics Practicum) moves to Sem 3 for B25 — same as all other B25 branches.
-        return addCourseIfMissing(courses, B22_IC222P_SEM3);
+        // IC202P + IC222P both move to Sem 3 for DSAI B25.
+        let updated = addCourseIfMissing(courses, B24_IC202P_SEM3);
+        return addCourseIfMissing(updated, B22_IC222P_SEM3);
+      }
+      case 4: {
+        // IC202P moved to Sem 3 — remove from Sem 4 for DSAI B25.
+        return courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC202P");
       }
       default:
-        // Sems 4-8 are correct in the dedicated dsaiSem* arrays; no further overrides needed.
+        // Sems 5-8 are correct in the dedicated dsaiSem* arrays; no further overrides needed.
         return courses;
     }
   }
@@ -1395,9 +1400,11 @@ const applyBatchOverrides = (
         }
         // GE-ROBO: ME206 now in base; IC241 no longer in base. No changes needed.
         // GE-MECH: ME206/EE203/EE260 now in base. No changes needed.
-        // IC222P (Physics Practicum) moves to Sem-3 for B25 — applies to all branches
-        // including BSCS (they also do Physics Practicum in Sem-3 for B25).
-        // DSAI has its own Sem-1/2 handling and doesn't need IC222P here.
+        // IC202P moves to Sem-3 for DSE, EE, ME in B25 (same as B24).
+        if (effectiveBranch === "DSE" || effectiveBranch === "EE" || effectiveBranch === "ME") {
+          updated = addCourseIfMissing(updated, B24_IC202P_SEM3);
+        }
+        // IC222P (Physics Practicum) moves to Sem-3 for B25 — all branches except DSAI.
         if (effectiveBranch !== "DSAI") {
           updated = addCourseIfMissing(updated, B22_IC222P_SEM3);
         }
@@ -1405,8 +1412,11 @@ const applyBatchOverrides = (
       }
 
       case 4: {
-        // B25 inherits B24's DC restructuring in Sem 4 (IC202P moves excluded).
+        // B25 Sem-4: IC202P removed for DSE/EE/ME (moved to Sem-3). DC restructuring inherited from B24.
         let updated = courses;
+        if (effectiveBranch === "DSE" || effectiveBranch === "EE" || effectiveBranch === "ME") {
+          updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "IC202P");
+        }
         if (effectiveBranch === "DSE") {
           // DS404 (Information Security) removed from DSE Sem 4 (same as B24).
           updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "DS404");
