@@ -1379,8 +1379,7 @@ const applyBatchOverrides = (
           updated = addCourseIfMissing(updated, B24_CE_CE310_SEM3);
           updated = addCourseIfMissing(updated, B24_CE_CE310P_SEM3);
           updated = addCourseIfMissing(updated, B24_CE_CE203P_SEM3);
-          // Show DP as optional FE so students can check it if they choose to do it.
-          updated = addCourseIfMissing(updated, IC202P_OPTIONAL_FE_SEM3);
+          // IC202P removed — DP not in default curriculum for B25 CE.
         }
         if (effectiveBranch === "ME") {
           // ME100/ME205/ME308/ME310 move to Sem 4/5; ME206 added here.
@@ -1443,8 +1442,8 @@ const applyBatchOverrides = (
           updated = addCourseIfMissing(updated, B24_ME_ME205_SEM4);
           updated = addCourseIfMissing(updated, B24_ME_ME215_SEM4);
         }
-        // B25 BE/EP: Design Practicum (IC202P) not compulsory — remove from Sem-4.
-        if (effectiveBranch === "BE" || effectiveBranch === "EP") {
+        // B25 BE/EP/BSCS: Design Practicum (IC202P) not compulsory — remove from default curriculum.
+        if (effectiveBranch === "BE" || effectiveBranch === "EP" || effectiveBranch === "BSCS") {
           updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "IC202P");
         }
         // GE-ROBO: ME100 now in base geRaiSem4. No changes needed here.
