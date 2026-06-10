@@ -491,7 +491,7 @@ const geCeSem3: DefaultCourse[] = [
 const geCeSem4: DefaultCourse[] = [
   // IC222P (2cr) added via B24/B25 override
   { code: "EE201", name: "Electromechanics",                credits: 3, category: "DC", semester: 4 },
-  { code: "EE316", name: "Communication Systems",           credits: 4, category: "DC", semester: 4 },
+  { code: "EE316", name: "Communication Systems",           credits: 3, category: "DC", semester: 4 },
   { code: "ME100", name: "Reverse Engineering",             credits: 1, category: "DC", semester: 4 },
   { code: "IC253", name: "Programming and Data Structures", credits: 3, category: "DC", semester: 4 },
   { code: "DS404", name: "Information Security and Privacy", credits: 3, category: "DC", semester: 4 },
@@ -1338,6 +1338,10 @@ const applyBatchOverrides = (
         }
 
         // MA120 (MNC) and CY200 (BSCS) were B24-only — not carried to B25.
+        // B25 CE: CE202 (Intro to Civil Engineering, 1cr DC) is in Sem-2 (moved from Sem-3).
+        if (effectiveBranch === "CE") {
+          updated = addCourseIfMissing(updated, B24_CE_CE202_SEM2);
+        }
 
         return updated;
       }
@@ -1359,10 +1363,10 @@ const applyBatchOverrides = (
           updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "CS214");
         }
         if (effectiveBranch === "CE") {
-          // CE301/CE301P/CE354P renumbered to CE310/CE310P/CE203P; CE202 moved to Sem 2.
+          // CE301/CE301P/CE354P renumbered to CE310/CE310P/CE203P; CE202 moved to Sem-2; IC202P not compulsory.
           updated = updated.filter((c) => {
             const code = normalizeCurriculumCode(c.code);
-            return !["CE202", "CE301", "CE301P", "CE354P"].includes(code);
+            return !["CE202", "CE301", "CE301P", "CE354P", "IC202P"].includes(code);
           });
           updated = updated.map((c) =>
             normalizeCurriculumCode(c.code) === "CE203" ? { ...c, name: "Civil Engineering Materials" } : c
@@ -1432,6 +1436,10 @@ const applyBatchOverrides = (
           updated = addCourseIfMissing(updated, B24_ME_ME205_SEM4);
           updated = addCourseIfMissing(updated, B24_ME_ME215_SEM4);
         }
+        // B25 BE/EP: Design Practicum (IC202P) not compulsory — remove from Sem-4.
+        if (effectiveBranch === "BE" || effectiveBranch === "EP") {
+          updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "IC202P");
+        }
         // GE-ROBO: ME100 now in base geRaiSem4. No changes needed here.
         return updated;
       }
@@ -1445,6 +1453,13 @@ const applyBatchOverrides = (
         // B25 MNC: MA313 (alias for CS304) in Sem-5 (same as B24).
         if (effectiveBranch === "MNC") {
           return addCourseIfMissing(courses, B24_MNC_MA313_SEM5);
+        }
+        // B25 DSE: DS404 (Info Security & Privacy, 3cr) moved to Sem-5 from Sem-4.
+        if (effectiveBranch === "DSE") {
+          return addCourseIfMissing(courses, {
+            code: "DS404", name: "Information Security and Privacy",
+            credits: 3, category: "DC", semester: 5,
+          });
         }
         return courses;
       }

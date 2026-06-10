@@ -277,7 +277,7 @@ const maybeAutoApproveBatch25 = async (email: string, enrollmentId: string) => {
   const branch = student?.branch || null;
   const department = student?.department || null;
   const name = student?.name || null;
-  const allowedPrograms = branch ? [getProgramLookupBranchCode(branch)] : [];
+  const allowedPrograms = branch ? [getProgramLookupBranchCode(branch, 2025)] : [];
 
   return prisma.approvedUser.upsert({
     where: { enrollmentId: normalizedEnrollmentId },
@@ -504,7 +504,7 @@ export const authOptions: NextAuthOptions = {
                   });
                   if (!program) {
                     program = await prisma.program.findUnique({
-                      where: { code: getProgramLookupBranchCode(approvedUser.branch) },
+                      where: { code: getProgramLookupBranchCode(approvedUser.branch, approvedUser.batch) },
                     });
                   }
                   

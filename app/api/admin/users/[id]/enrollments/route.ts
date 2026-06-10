@@ -81,7 +81,7 @@ export async function POST(
 
   let finalProgramId = user.programs[0]?.programId ?? null;
   if (!finalProgramId && user.branch) {
-    const program = await prisma.program.findUnique({ where: { code: getProgramLookupBranchCode(user.branch) } });
+    const program = await prisma.program.findUnique({ where: { code: getProgramLookupBranchCode(user.branch, user.batch) } });
     if (program) {
       const up = await prisma.userProgram.create({
         data: { userId, programId: program.id, programType: "MAJOR", isPrimary: true, startSemester: 1, status: "ACTIVE" },

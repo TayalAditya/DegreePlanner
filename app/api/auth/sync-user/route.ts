@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
         });
         if (!program) {
           program = await prisma.program.findUnique({
-            where: { code: getProgramLookupBranchCode(session.user.branch) },
+            where: { code: getProgramLookupBranchCode(session.user.branch, session.user.batch) },
           });
         }
 

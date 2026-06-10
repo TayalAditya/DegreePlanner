@@ -21,7 +21,10 @@ export function getCurriculumBranchCode(branch?: string | null): string {
   return normalizeBranchCode(branch);
 }
 
-export function getProgramLookupBranchCode(branch?: string | null): string {
+// Branches that have batch-2024-specific program rows (code = "<branch>_B24").
+const B24_PROGRAM_BRANCHES = new Set(["CE", "BE", "EP", "MNC", "BSCS"]);
+
+export function getProgramLookupBranchCode(branch?: string | null, batch?: number | null): string {
   const normalized = normalizeBranchCode(branch);
   // DSAI students are attached to the DSE degree-program record (no separate
   // DSAI Program row is seeded — the program of study is identical). Keep this
@@ -30,6 +33,9 @@ export function getProgramLookupBranchCode(branch?: string | null): string {
   // GE specialisations (GE-ROBO/GE-MECH/GE-COMM/GE-FIN) all attach to the single
   // "GE" degree-program record; the specialisation lives in User.branch.
   if (normalized.startsWith("GE-")) return "GE";
+  // Batch-2024/2025 branches have dedicated program rows with updated IC/DC/DE/FE credits.
+  if (batch === 2024 && B24_PROGRAM_BRANCHES.has(normalized)) return `${normalized}_B24`;
+  if (batch === 2025 && (normalized === "CE" || normalized === "BE" || normalized === "EP")) return `${normalized}_B25`;
   return normalized;
 }
 

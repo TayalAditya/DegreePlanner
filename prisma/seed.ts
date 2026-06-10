@@ -163,10 +163,108 @@ async function seedPrograms() {
       department: "School of Chemical Sciences",
       totalCreditsRequired: 163,
       icCredits: 52,
-      dcCredits: 59,  // DC only (not DC+DE combined)
-      deCredits: 23,  // DE only
+      dcCredits: 59,
+      deCredits: 23,
       feCredits: 15,
       mtpIstpCredits: 14,
+    },
+
+    // ── Batch 2024 variants ───────────────────────────────────────────────────
+    // CE/BE/EP B24: FDP(4cr) + DP(3cr) dropped from IC compulsory → icCredits 60→53.
+    //   DP is optional for B24 (counts as FE if taken) → feCredits 22→25, deCredits adjust.
+    // MNC B24: FDP(4cr) dropped but replaced by MA120(4cr DC) + CS304 stays → icCredits 60→56, dcCredits 51→55.
+    // BSCS B24: FDP(4cr)+DP(3cr) dropped, IC272 dropped, no project → icCredits 52→48, dcCredits 59→62.
+    {
+      code: "CE_B24",
+      name: "B.Tech in Civil Engineering (B24)",
+      department: "School of Environmental and Natural Sciences",
+      totalCreditsRequired: 160,
+      icCredits: 53,   // IC_comp(32)+ICB(6)+IKS(3)+HSS(12)
+      dcCredits: 49,
+      deCredits: 21,
+      feCredits: 25,   // 22 regular + 3 optional DP (counted as FE if taken)
+      mtpIstpCredits: 12,
+    },
+    {
+      code: "BE_B24",
+      name: "B.Tech in Bioengineering (B24)",
+      department: "School of Bioengineering",
+      totalCreditsRequired: 160,
+      icCredits: 53,
+      dcCredits: 42,
+      deCredits: 28,
+      feCredits: 25,
+      mtpIstpCredits: 12,
+    },
+    {
+      code: "EP_B24",
+      name: "B.Tech in Engineering Physics (B24)",
+      department: "School of Physical Sciences",
+      totalCreditsRequired: 160,
+      icCredits: 53,
+      dcCredits: 37,
+      deCredits: 33,
+      feCredits: 25,
+      mtpIstpCredits: 12,
+    },
+    {
+      code: "MNC_B24",
+      name: "B.Tech in Mathematics & Computing (B24)",
+      department: "School of Mathematics & Statistical Science",
+      totalCreditsRequired: 160,
+      icCredits: 56,   // IC_comp(35)+ICB(6)+IKS(3)+HSS(12)
+      dcCredits: 55,   // +MA120(4); CS304 stays; CS214→CS201+CS201P (same 4cr)
+      deCredits: 15,
+      feCredits: 22,
+      mtpIstpCredits: 12,
+    },
+    {
+      code: "BSCS_B24",
+      name: "B.S. in Chemical Sciences (B24)",
+      department: "School of Chemical Sciences",
+      totalCreditsRequired: 163,
+      icCredits: 48,   // IC_comp(27)+ICB(6)+IKS(3)+HSS(12)
+      dcCredits: 62,   // +CY200(3cr)
+      deCredits: 24,   // 163-48-62-15-14
+      feCredits: 15,
+      mtpIstpCredits: 14,
+    },
+
+    // ── Batch 2025 variants ───────────────────────────────────────────────────
+    // CE/BE/EP B25: FDP(IC102P) back in Sem-2, but DP(IC202P) still optional → feCredits 25.
+    //   IC_comp = 36 (39 − 3 for IC202P); IC_TOT = 57.
+    {
+      code: "CE_B25",
+      name: "B.Tech in Civil Engineering (B25)",
+      department: "School of Environmental and Natural Sciences",
+      totalCreditsRequired: 160,
+      icCredits: 57,   // IC_comp(36)+ICB(6)+IKS(3)+HSS(12)
+      dcCredits: 49,
+      deCredits: 17,
+      feCredits: 25,   // 22 regular + 3 optional DP (counted as FE if taken)
+      mtpIstpCredits: 12,
+    },
+    {
+      code: "BE_B25",
+      name: "B.Tech in Bioengineering (B25)",
+      department: "School of Bioengineering",
+      totalCreditsRequired: 160,
+      icCredits: 57,
+      dcCredits: 42,
+      deCredits: 24,
+      feCredits: 25,
+      mtpIstpCredits: 12,
+    },
+    {
+      code: "EP_B25",
+      name: "B.Tech in Engineering Physics (B25)",
+      department: "School of Physical Sciences",
+      totalCreditsRequired: 160,
+      icCredits: 57,
+      dcCredits: 37,
+      deCredits: 29,
+      feCredits: 25,
+      mtpIstpCredits: 12,
     },
   ];
 

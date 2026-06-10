@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       console.log(`Auto-enrolling user in ${user.branch} program...`);
 
       const program = await prisma.program.findUnique({
-        where: { code: getProgramLookupBranchCode(user.branch) },
+        where: { code: getProgramLookupBranchCode(user.branch, user.batch) },
       });
 
       if (program) {

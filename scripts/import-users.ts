@@ -126,7 +126,7 @@ async function importUsers() {
         const email = `${userInfo.rollNumber.toLowerCase()}@students.iitmandi.ac.in`;
         const branchCode = inferBranchFromProgram(userInfo.branch) || null;
         const department = getDepartmentForBranch(branchCode);
-        const allowedPrograms = branchCode ? [getProgramLookupBranchCode(branchCode)] : [];
+        const allowedPrograms = branchCode ? [getProgramLookupBranchCode(branchCode, batch)] : [];
 
         await prisma.approvedUser.upsert({
           where: { email },

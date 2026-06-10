@@ -148,6 +148,7 @@ export async function POST(request: NextRequest) {
       where: { id: session.user.id },
       select: {
         branch: true,
+        batch: true,
         enrollmentId: true,
         doingMTP: true,
         doingMTP2: true,
@@ -188,7 +189,7 @@ export async function POST(request: NextRequest) {
     if (!finalProgramId && user.branch) {
       // DSAI shares the DSE degree-program record (no separate DSAI Program row).
       const program = await prisma.program.findUnique({
-        where: { code: getProgramLookupBranchCode(user.branch) },
+        where: { code: getProgramLookupBranchCode(user.branch, user.batch) },
       });
 
       if (program) {

@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   //    GE sub-branches (GE-ROBO/GE-MECH/GE-COMM/GE-FIN) all use the single "GE" program;
   //    sub-branch is captured in User.branch for curriculum lookup.
   //    DSAI shares the DSE program record (getProgramLookupBranchCode maps it).
-  const programCode = branch.startsWith("GE-") ? "GE" : getProgramLookupBranchCode(branch);
+  const programCode = branch.startsWith("GE-") ? "GE" : getProgramLookupBranchCode(branch, batch);
   const program = await prisma.program.findFirst({
     where: { code: programCode },
   });
