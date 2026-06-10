@@ -28,8 +28,24 @@ export async function GET(
       select: { branch: true, batch: true, enrollmentId: true },
     });
 
-    // Skip enrollment sync on admin views — sync happens when the student logs in,
-    // not on every admin click (reduces latency and DB write load).
+    // Auto-enroll in the correct program if the student has none yet
+    // (handles students who were approved but haven't logged in).
+    if (user?.branch) {
+      const existingPrimary = await prisma.userProgram.findFirst({
+        where: { userId, isPrimary: true, programType: "MAJOR" },
+      });
+      if (!existingPrimary) {
+        const { getProgramLookupBranchCode } = await import("@/lib/branchInfo");
+        const code = getProgramLookupBranchCode(user.branch, user.batch);
+        const prog = await prisma.program.findUnique({ where: { code } })
+          ?? await prisma.program.findUnique({ where: { code: user.branch } });
+        if (prog) {
+          await prisma.userProgram.create({
+            data: { userId, programId: prog.id, programType: "MAJOR", isPrimary: true, startSemester: 1, status: "ACTIVE" },
+          });
+        }
+      }
+    }
 
     const [programs, enrollments] = await Promise.all([
       prisma.userProgram.findMany({
