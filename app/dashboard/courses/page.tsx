@@ -113,7 +113,7 @@ const SCHOOL_META: Record<SchoolKey, { label: string; order: number; prefixes: s
   SHSS: { label: "SHSS (HS)", order: 80, prefixes: ["HS", "MB"] },
   COMMON: { label: "Common (IC/IKS/DP)", order: 90, prefixes: ["IC", "IK", "IKS", "DP", "RM"] },
   TUM: { label: "TU Munich (Semester Exchange)", order: 95, prefixes: ["IN"] },
-  TUD: { label: "TU Darmstadt (Semester Exchange)", order: 96, prefixes: [] },
+  TUD: { label: "TU Darmstadt (Semester Exchange)", order: 96, prefixes: ["11", "16", "18", "20", "41"] },
   OTHER: { label: "Other", order: 99, prefixes: [] },
 };
 
