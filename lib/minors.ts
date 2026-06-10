@@ -11,6 +11,8 @@ export type MinorDefinition = {
   code: string;
   name: string;
   totalCreditsRequired?: number;
+  /** If set, this can also be pursued as a Specialization requiring this many credits (≥ minor). */
+  specializationCreditsRequired?: number;
   groups: MinorRequirementGroup[];
 };
 
@@ -363,8 +365,9 @@ export const MINORS: MinorDefinition[] = [
   },
   {
     code: "QUANTUM",
-    name: "Minor in Quantum Technologies",
+    name: "Quantum Technologies",
     totalCreditsRequired: 12,
+    specializationCreditsRequired: 18,
     groups: [
       {
         id: "foundation",

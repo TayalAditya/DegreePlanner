@@ -840,8 +840,8 @@ export default function PreRegistrationPage() {
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <BookOpen className="w-4 h-4 text-accent flex-shrink-0" />
           <div className="min-w-0">
-            <p className="text-sm font-medium text-foreground">Minor Planner</p>
-            <p className="text-xs text-foreground-secondary">See which offerings count toward a minor</p>
+            <p className="text-sm font-medium text-foreground">Minor / Specialization Planner</p>
+            <p className="text-xs text-foreground-secondary">See which offerings count toward a minor or specialization</p>
           </div>
         </div>
         <select
@@ -849,7 +849,7 @@ export default function PreRegistrationPage() {
           onChange={(e) => setSelectedMinorCode(e.target.value)}
           className="text-sm bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 w-full sm:w-auto sm:max-w-[220px]"
         >
-          <option value="">— Select a minor —</option>
+          <option value="">— Select a minor / specialization —</option>
           {MINORS.map((m) => (
             <option key={m.code} value={m.code}>{m.name}</option>
           ))}
@@ -863,7 +863,12 @@ export default function PreRegistrationPage() {
             <div>
               <p className="text-sm font-semibold text-foreground">{minorData.minor.name}</p>
               {minorData.minor.totalCreditsRequired && (
-                <p className="text-xs text-foreground-secondary mt-0.5">{minorData.minor.totalCreditsRequired} credits required</p>
+                <p className="text-xs text-foreground-secondary mt-0.5">
+                  Minor: {minorData.minor.totalCreditsRequired}+ cr
+                  {minorData.minor.specializationCreditsRequired && (
+                    <> · Specialization: {minorData.minor.specializationCreditsRequired}+ cr</>
+                  )}
+                </p>
               )}
             </div>
           </div>
