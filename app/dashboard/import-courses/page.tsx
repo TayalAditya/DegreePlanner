@@ -717,12 +717,27 @@ export default function ImportCoursesPage() {
     setLoading(true);
     setErrorMessage(null);
     try {
-      // During pre-reg: silently skip courses for locked semesters (upcoming and beyond)
-      const selectedCourses = courses.filter((c) => {
-        if (!c.selected) return false;
-        if (preRegLockedSemester !== null && c.semester >= preRegLockedSemester) return false;
-        return true;
-      });
+      // During pre-reg: skip courses for locked semesters (upcoming and beyond)
+      const allSelected = courses.filter((c) => c.selected);
+      const lockedOut = preRegLockedSemester !== null
+        ? allSelected.filter((c) => c.semester >= preRegLockedSemester)
+        : [];
+      const selectedCourses = allSelected.filter(
+        (c) => preRegLockedSemester === null || c.semester < preRegLockedSemester
+      );
+
+      if (selectedCourses.length === 0) {
+        const msg = lockedOut.length > 0
+          ? `These courses belong to Sem ${preRegLockedSemester}+ which is locked during pre-registration. Use the Pre-Registration page to plan them instead.`
+          : "No courses selected to import.";
+        setErrorMessage(msg);
+        showToast("error", msg);
+        return;
+      }
+
+      if (lockedOut.length > 0) {
+        showToast("info", `Skipped ${lockedOut.length} Sem ${preRegLockedSemester}+ course${lockedOut.length > 1 ? "s" : ""} — plan those on the Pre-Registration page.`);
+      }
 
       const duplicatesByIdentity = new Map<string, SelectedCourse[]>();
       for (const c of selectedCourses) {
