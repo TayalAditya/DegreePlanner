@@ -497,11 +497,8 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     ? programs.filter((p) => p.id !== primaryProgram.id)
     : [];
 
-  const programEnrollments = primaryProgram?.program?.id
-    ? enrollments.filter(
-        (e) => e.programId === primaryProgram.program.id || e.programId == null
-      )
-    : enrollments;
+  // Show all enrollments — programId on enrollments may be stale/null after program reassignment
+  const programEnrollments = enrollments;
 
   const visibleEnrollments = programEnrollments.filter(
     (e) =>
