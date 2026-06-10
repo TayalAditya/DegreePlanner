@@ -1,10 +1,10 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Users, Search, TrendingUp, GraduationCap, Megaphone, Plus, X,
-  ChevronDown, ChevronUp, CheckCircle2, Clock, LogIn, ShieldCheck, ShieldX,
+  ChevronDown, ChevronRight, CheckCircle2, Clock, LogIn, ShieldCheck, ShieldX,
 } from "lucide-react";
 import { UserProgramModal } from "@/components/UserProgramModal";
 import { addCredits, formatCredits } from "@/lib/utils";
@@ -57,6 +57,140 @@ function BranchBadge({ branch }: { branch: string | null }) {
       <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${c.dot}`} />
       {branch}
     </span>
+  );
+}
+
+// ─── Branch → Batch → Users tree (collapsed by default, lazy render) ─────────
+function BranchBatchTree({
+  users, hasSearch, onViewProgress,
+}: {
+  users: UserStat[];
+  hasSearch: boolean;
+  onViewProgress: (u: UserStat) => void;
+}) {
+  const [openBranches, setOpenBranches] = useState<Set<string>>(new Set());
+  const [openBatches, setOpenBatches] = useState<Set<string>>(new Set());
+
+  // Group users: branch → batch → users[]
+  const tree = useMemo(() => {
+    const map = new Map<string, Map<number, UserStat[]>>();
+    for (const u of users) {
+      const b = u.branch ?? "Unknown";
+      const y = u.batch ?? 0;
+      if (!map.has(b)) map.set(b, new Map());
+      const batchMap = map.get(b)!;
+      if (!batchMap.has(y)) batchMap.set(y, []);
+      batchMap.get(y)!.push(u);
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [users]);
+
+  // When searching, auto-expand all groups that have results
+  const effectiveOpenBranches = hasSearch ? new Set(tree.map(([b]) => b)) : openBranches;
+  const effectiveOpenBatches = hasSearch
+    ? new Set(tree.flatMap(([b, ym]) => [...ym.keys()].map((y) => `${b}|${y}`)))
+    : openBatches;
+
+  const toggleBranch = useCallback((branch: string) => {
+    setOpenBranches((prev) => {
+      const next = new Set(prev);
+      next.has(branch) ? next.delete(branch) : next.add(branch);
+      return next;
+    });
+  }, []);
+
+  const toggleBatch = useCallback((key: string) => {
+    setOpenBatches((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  }, []);
+
+  if (users.length === 0)
+    return <p className="text-center text-foreground-secondary py-8 text-sm">No users found.</p>;
+
+  return (
+    <div className="space-y-2">
+      {tree.map(([branch, batchMap]) => {
+        const branchOpen = effectiveOpenBranches.has(branch);
+        const branchTotal = [...batchMap.values()].reduce((s, a) => s + a.length, 0);
+        const branchDone = [...batchMap.values()].flat().reduce((s, u) => s + u.completedCredits, 0);
+
+        return (
+          <div key={branch} className="rounded-xl border border-border overflow-hidden">
+            {/* Branch header */}
+            <button
+              className="w-full flex items-center gap-3 px-4 py-3 bg-surface hover:bg-surface-secondary transition-colors text-left"
+              onClick={() => toggleBranch(branch)}
+            >
+              {branchOpen
+                ? <ChevronDown className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
+                : <ChevronRight className="w-4 h-4 text-foreground-secondary flex-shrink-0" />}
+              <BranchBadge branch={branch} />
+              <span className="text-xs text-foreground-secondary ml-auto">
+                {branchTotal} student{branchTotal !== 1 ? "s" : ""}
+              </span>
+              <span className="text-xs text-success font-medium ml-3">
+                {formatCredits(branchDone / Math.max(1, branchTotal))} avg
+              </span>
+            </button>
+
+            {/* Batch sub-sections */}
+            {branchOpen && (
+              <div className="border-t border-border divide-y divide-border/60">
+                {[...batchMap.entries()].sort(([a], [b]) => b - a).map(([batch, batchUsers]) => {
+                  const batchKey = `${branch}|${batch}`;
+                  const batchOpen = effectiveOpenBatches.has(batchKey);
+                  const label = batch ? `B${batch}` : "Unknown Batch";
+
+                  return (
+                    <div key={batchKey}>
+                      <button
+                        className="w-full flex items-center gap-3 px-6 py-2.5 bg-background hover:bg-surface/50 transition-colors text-left"
+                        onClick={() => toggleBatch(batchKey)}
+                      >
+                        {batchOpen
+                          ? <ChevronDown className="w-3.5 h-3.5 text-foreground-secondary/70 flex-shrink-0" />
+                          : <ChevronRight className="w-3.5 h-3.5 text-foreground-secondary/70 flex-shrink-0" />}
+                        <span className="text-xs font-semibold text-foreground-secondary">{label}</span>
+                        <span className="text-xs text-foreground-secondary/60 ml-auto">{batchUsers.length} students</span>
+                      </button>
+
+                      {/* User rows — only rendered when expanded */}
+                      {batchOpen && (
+                        <div className="divide-y divide-border/40">
+                          {batchUsers.map((u) => (
+                            <div key={u.id} className="flex items-center gap-3 px-8 py-2.5 bg-background/60 hover:bg-surface/30 transition-colors">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-foreground truncate">{u.name || "—"}</p>
+                                <p className="text-xs text-foreground-secondary">{u.enrollmentId}</p>
+                              </div>
+                              <div className="flex items-center gap-3 flex-shrink-0 text-xs">
+                                <span className="font-bold text-success">{formatCredits(u.completedCredits)} cr</span>
+                                {u.inProgressCredits > 0 && (
+                                  <span className="text-info">{formatCredits(u.inProgressCredits)} wip</span>
+                                )}
+                                <button
+                                  onClick={() => onViewProgress(u)}
+                                  className="px-3 py-1 rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
+                                >
+                                  Progress
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -269,7 +403,6 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"users" | "attempts">("users");
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("ALL");
-  const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [showAnnounceModal, setShowAnnounceModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
 
@@ -286,12 +419,6 @@ export default function AdminPage() {
     () => ["ALL", ...Array.from(new Set(users.map((u) => u.branch).filter((b): b is string => b !== null))).sort()],
     [users]
   );
-
-  const maxSem = useMemo(
-    () => Math.max(0, ...users.flatMap((u) => u.semesterBreakdown.map((s) => s.semester))),
-    [users]
-  );
-  const semColumns = Array.from({ length: maxSem }, (_, i) => i + 1);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -418,175 +545,15 @@ export default function AdminPage() {
       {isLoading ? (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-14 bg-surface border border-border rounded-xl animate-pulse" />
+            <div key={i} className="h-12 bg-surface border border-border rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
-        <>
-          {/* Desktop table */}
-          <div className="hidden md:block overflow-x-auto rounded-xl border border-border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-surface/80 border-b border-border text-foreground-secondary text-xs uppercase tracking-wide">
-                  <th className="px-4 py-3 text-left font-medium w-8">#</th>
-                  <th className="px-4 py-3 text-left font-medium">Student</th>
-                  <th className="px-4 py-3 text-left font-medium">Branch</th>
-                  <th className="px-4 py-3 text-center font-medium">
-                    <span className="inline-flex items-center justify-center gap-1">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-success" /> Done
-                    </span>
-                  </th>
-                  <th className="px-4 py-3 text-center font-medium">
-                    <span className="inline-flex items-center justify-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-info" /> WIP
-                    </span>
-                  </th>
-                  {semColumns.map((s) => (
-                    <th key={s} className="px-3 py-3 text-center font-medium text-foreground-secondary/70">
-                      S{s}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filtered.map((user, idx) => {
-                  const semMap = Object.fromEntries(user.semesterBreakdown.map((s) => [s.semester, s]));
-                  return (
-                    <tr key={user.id} className="bg-background hover:bg-surface/60 transition-colors">
-                      <td className="px-4 py-3 text-foreground-secondary text-xs">{idx + 1}</td>
-                      <td className="px-4 py-3">
-                        <button
-                          className="text-left group"
-                          onClick={() => setSelectedUser({ id: user.id, name: user.name || user.enrollmentId || "—" })}
-                        >
-                          <p className="font-medium text-foreground group-hover:text-primary group-hover:underline transition-colors">
-                            {user.name || "—"}
-                          </p>
-                          <p className="text-xs text-foreground-secondary">{user.enrollmentId}</p>
-                        </button>
-                      </td>
-                      <td className="px-4 py-3">
-                        <BranchBadge branch={user.branch} />
-                      </td>
-                      <td className="px-4 py-3 text-center font-bold text-success">
-                        {formatCredits(user.completedCredits)}
-                      </td>
-                      <td className="px-4 py-3 text-center font-medium text-info">
-                        {user.inProgressCredits ? formatCredits(user.inProgressCredits) : "—"}
-                      </td>
-                      {semColumns.map((s) => {
-                        const sem = semMap[s];
-                        return (
-                          <td key={s} className="px-3 py-3 text-center">
-                            {sem ? (
-                              <div className="flex flex-col items-center leading-none">
-                                <span className="text-foreground font-semibold">{formatCredits(sem.credits)}</span>
-                                <span className="text-[10px] text-foreground-secondary/70">{sem.courses}c</span>
-                              </div>
-                            ) : (
-                              <span className="text-border/60 text-xs">—</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-                {filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={5 + semColumns.length} className="px-4 py-10 text-center text-foreground-secondary text-sm">
-                      No users found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile: expandable cards */}
-          <div className="md:hidden space-y-2">
-            {filtered.map((user) => {
-              const isExpanded = expandedUser === user.id;
-              return (
-                <div key={user.id} className="bg-surface border border-border rounded-xl overflow-hidden">
-                  <button
-                    className="w-full flex items-center gap-3 px-4 py-3 text-left"
-                    onClick={() => setExpandedUser(isExpanded ? null : user.id)}
-                  >
-                    <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-primary">
-                        {(user.name || user.enrollmentId || "?")[0].toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-foreground truncate">{user.name || "—"}</p>
-                        <BranchBadge branch={user.branch} />
-                      </div>
-                      <p className="text-xs text-foreground-secondary">{user.enrollmentId}</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-0.5 flex-shrink-0 mr-1">
-                      <span className="text-sm font-bold text-success">{formatCredits(user.completedCredits)} cr</span>
-                      {user.inProgressCredits > 0 && (
-                        <span className="text-xs text-info">{formatCredits(user.inProgressCredits)} wip</span>
-                      )}
-                    </div>
-                    {isExpanded ? (
-                      <ChevronUp className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-foreground-secondary flex-shrink-0" />
-                    )}
-                  </button>
-
-                  {isExpanded && (
-                    <div className="border-t border-border px-4 py-3 space-y-3 bg-background/40">
-                      <div className="flex gap-4 text-sm">
-                        <div>
-                          <p className="text-xs text-foreground-secondary">Completed</p>
-                          <p className="font-bold text-success">{formatCredits(user.completedCredits)} cr</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-foreground-secondary">In Progress</p>
-                          <p className="font-bold text-info">{formatCredits(user.inProgressCredits || 0)} cr</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-foreground-secondary">Courses</p>
-                          <p className="font-bold text-foreground">{user.totalEnrollments}</p>
-                        </div>
-                      </div>
-
-                      {user.semesterBreakdown.length > 0 && (
-                        <div>
-                          <p className="text-xs font-medium text-foreground-secondary mb-2">Semester Breakdown</p>
-                          <div className="grid grid-cols-4 gap-1.5">
-                            {user.semesterBreakdown.map((s) => (
-                              <div key={s.semester} className="bg-surface border border-border rounded-lg p-2 text-center">
-                                <p className="text-[10px] text-foreground-secondary font-medium">Sem {s.semester}</p>
-                                <p className="text-sm font-bold text-foreground">{formatCredits(s.credits)}</p>
-                                <p className="text-[10px] text-foreground-secondary">{s.courses}c</p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <p className="text-xs text-foreground-secondary/60">{user.email}</p>
-                      <button
-                        onClick={() => setSelectedUser({ id: user.id, name: user.name || user.enrollmentId || "—" })}
-                        className="w-full mt-1 py-2 text-sm rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors"
-                      >
-                        View Progress
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            {filtered.length === 0 && (
-              <p className="text-center text-foreground-secondary py-8 text-sm">No users found.</p>
-            )}
-          </div>
-        </>
+        <BranchBatchTree
+          users={filtered}
+          hasSearch={!!search}
+          onViewProgress={(u) => setSelectedUser({ id: u.id, name: u.name || u.enrollmentId || "—" })}
+        />
       )}
       </>)}
     </div>
