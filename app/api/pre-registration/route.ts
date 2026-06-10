@@ -156,6 +156,14 @@ export async function GET() {
     .filter((o) => {
       // Admins see all offerings regardless of branch or semester restrictions
       if (isAdmin) return true;
+      // B24/B25 CE/BE/EP/BSCS: IC202P (Design Practicum) is optional FE — always show
+      // regardless of the offering's branch list so students can register if they choose.
+      const dpOptionalBranches = new Set(["CE", "BE", "EP", "BSCS"]);
+      const isOptionalDpForBranch =
+        o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "") === "IC202P" &&
+        dpOptionalBranches.has(normalizedBranch) &&
+        batch != null && batch >= 2024;
+      if (isOptionalDpForBranch) return true;
       // Filter by branch eligibility
       const eligible =
         o.branches.includes("ALL") ||
