@@ -28,12 +28,8 @@ export async function GET(
       select: { branch: true, batch: true, enrollmentId: true },
     });
 
-    if (user) {
-      await syncEnrollmentStatusesForUser(userId, {
-        batch: user.batch,
-        enrollmentId: user.enrollmentId,
-      });
-    }
+    // Skip enrollment sync on admin views — sync happens when the student logs in,
+    // not on every admin click (reduces latency and DB write load).
 
     const [programs, enrollments] = await Promise.all([
       prisma.userProgram.findMany({
