@@ -640,10 +640,7 @@ const mevlsiSem8: DefaultCourse[] = [
 // IC-I: forced IC131 | IC-II: forced IC121
 // IC136 (Biotechnology, 3cr) counts as DC for BSCS (not ICB).
 // BSCS has 31 cr IC Compulsory (vs 39 for BTech); IC272 not included.
-const bscsSem1: DefaultCourse[] = [
-  ...icCompSem1, ...icMixedSem1, ICB1_IC131,
-  { code: "IC136", name: "Understanding Biotechnology and its Applications", credits: 3, category: "DC", semester: 1 },
-];
+const bscsSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ICB1_IC131];
 const bscsSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ICB2_IC121];
 const bscsSem3: DefaultCourse[] = [
   { code: "IC136",  name: "Understanding Biotechnology and its Applications",     credits: 3, category: "DC", semester: 3 },
