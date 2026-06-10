@@ -35,6 +35,7 @@ interface ApiResponse {
   completedBreakdown: Record<string, number>;
   programRequirements: Record<string, number> | null;
   incompleteSemesters: number[];
+  completedCourseCodes?: string[];
   studentInfo: { name: string | null; branch: string | null; semester: number; pfCreditsUsed: number } | null;
   savedPlan?: { selectedIds: string[]; updatedAt: string | null };
 }
@@ -614,7 +615,7 @@ export default function PreRegistrationPage() {
     return total;
   }, [data, selected, selectedExtra, internshipCourses, mtp1Course]);
 
-  // Minor planner: for selected minor, compute per-group offering data
+  // Minor planner: for selected minor, compute per-group offering data with completion status
   const minorData = useMemo(() => {
     const minor = MINORS.find((m) => m.code === selectedMinorCode);
     if (!minor || !data) return null;
@@ -624,17 +625,34 @@ export default function PreRegistrationPage() {
       offeringByCode.set(formatCourseCode(o.courseCode), o);
     }
 
-    return {
-      minor,
-      groups: minor.groups.map((group) => ({
-        ...group,
-        courses: group.courseCodes.map((rawCode) => {
-          const norm = formatCourseCode(rawCode);
-          const offering = offeringByCode.get(norm);
-          return { code: norm, offering };
-        }),
-      })),
-    };
+    // Normalize: uppercase strip non-alphanumeric — same as API
+    const completedCodeSet = new Set(
+      (data.completedCourseCodes ?? []).map((c) => c.toUpperCase().replace(/[^A-Z0-9]/g, ""))
+    );
+
+    const groups = minor.groups.map((group) => {
+      const courses = group.courseCodes.map((rawCode) => {
+        const norm = formatCourseCode(rawCode);
+        const offering = offeringByCode.get(norm);
+        const isCompleted =
+          completedCodeSet.has(rawCode.toUpperCase().replace(/[^A-Z0-9]/g, "")) ||
+          (offering?.completedInSemester != null);
+        return { code: norm, offering, isCompleted };
+      });
+
+      const completedCount = group.countsTowardMinor
+        ? courses.filter((c) => c.isCompleted).length
+        : 0;
+      const isGroupSatisfied = group.countsTowardMinor && completedCount >= group.requiredCount;
+
+      return { ...group, courses, completedCount, isGroupSatisfied };
+    });
+
+    const countingGroups = groups.filter((g) => g.countsTowardMinor);
+    const satisfiedBaskets = countingGroups.filter((g) => g.isGroupSatisfied).length;
+    const totalCountingBaskets = countingGroups.length;
+
+    return { minor, satisfiedBaskets, totalCountingBaskets, groups };
   }, [selectedMinorCode, data]);
 
   // Map offeringId → minor group title (for badge on CourseCard)
@@ -859,8 +877,8 @@ export default function PreRegistrationPage() {
       {/* Minor planner breakdown */}
       {minorData && (
         <div className="rounded-xl border border-accent/25 bg-surface overflow-hidden">
-          <div className="px-4 py-3 border-b border-accent/20 bg-accent/5 flex items-center justify-between">
-            <div>
+          <div className="px-4 py-3 border-b border-accent/20 bg-accent/5 flex items-center justify-between gap-3">
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">{minorData.minor.name}</p>
               {minorData.minor.totalCreditsRequired && (
                 <p className="text-xs text-foreground-secondary mt-0.5">
@@ -871,19 +889,39 @@ export default function PreRegistrationPage() {
                 </p>
               )}
             </div>
+            {minorData.totalCountingBaskets > 0 && (
+              minorData.satisfiedBaskets === minorData.totalCountingBaskets ? (
+                <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-semibold text-success bg-success/10 border border-success/20 px-2 py-1 rounded-full">
+                  <CheckCircle className="w-3 h-3" /> All baskets done
+                </span>
+              ) : minorData.satisfiedBaskets > 0 ? (
+                <span className="flex-shrink-0 text-xs font-semibold text-warning bg-warning/10 border border-warning/20 px-2 py-1 rounded-full">
+                  {minorData.satisfiedBaskets}/{minorData.totalCountingBaskets} baskets done
+                </span>
+              ) : null
+            )}
           </div>
           <div className="divide-y divide-border">
             {minorData.groups.map((group) => {
-              const offered = group.courses.filter((c) => c.offering);
+              const completedOffered = group.courses.filter((c) => c.offering && c.isCompleted);
+              const availableOffered = group.courses.filter((c) => c.offering && !c.isCompleted);
               const notOffered = group.courses.filter((c) => !c.offering);
-              const completedOffered = offered.filter((c) => c.offering!.completedInSemester !== null);
-              const availableOffered = offered.filter((c) => c.offering!.completedInSemester === null);
               return (
                 <div key={group.id} className="px-4 py-3 space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-xs font-semibold text-foreground">{group.title}</p>
                     {!group.countsTowardMinor && (
                       <span className="text-xs text-foreground-secondary bg-surface-secondary px-1.5 py-0.5 rounded-full">Prerequisite</span>
+                    )}
+                    {group.countsTowardMinor && group.isGroupSatisfied && (
+                      <span className="inline-flex items-center gap-1 text-xs text-success bg-success/10 border border-success/20 px-1.5 py-0.5 rounded-full">
+                        <CheckCircle className="w-3 h-3" /> Satisfied
+                      </span>
+                    )}
+                    {group.countsTowardMinor && !group.isGroupSatisfied && group.completedCount > 0 && (
+                      <span className="text-xs text-warning bg-warning/10 border border-warning/20 px-1.5 py-0.5 rounded-full">
+                        {group.completedCount}/{group.requiredCount} done
+                      </span>
                     )}
                     <span className="text-xs text-foreground-secondary bg-surface-secondary px-1.5 py-0.5 rounded-full ml-auto">
                       Pick {group.requiredCount}
@@ -923,16 +961,23 @@ export default function PreRegistrationPage() {
                   )}
                   {notOffered.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 pt-1">
-                      {notOffered.map(({ code }) => (
-                        <span key={code} className="font-mono text-xs px-2 py-1 rounded bg-background-secondary text-foreground-secondary border border-border">
+                      {notOffered.map(({ code, isCompleted }) => (
+                        <span
+                          key={code}
+                          className={`inline-flex items-center gap-1 font-mono text-xs px-2 py-1 rounded border ${
+                            isCompleted
+                              ? "bg-success/10 text-success border-success/20"
+                              : "bg-background-secondary text-foreground-secondary border-border"
+                          }`}
+                        >
+                          {isCompleted && <CheckCircle className="w-2.5 h-2.5" />}
                           {code}
                         </span>
                       ))}
-                      <span className="text-xs text-foreground-secondary self-center">not offered this semester</span>
+                      {notOffered.some((c) => !c.isCompleted) && (
+                        <span className="text-xs text-foreground-secondary self-center">not offered this semester</span>
+                      )}
                     </div>
-                  )}
-                  {offered.length === 0 && notOffered.length > 0 && (
-                    <p className="text-xs text-foreground-secondary">None of these courses are offered this semester.</p>
                   )}
                 </div>
               );

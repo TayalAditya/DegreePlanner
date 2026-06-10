@@ -254,6 +254,9 @@ export async function GET() {
     completedBreakdown,
     programRequirements,
     incompleteSemesters,
+    completedCourseCodes: completed
+      .filter((e) => (e as any).grade !== "F")
+      .map((e) => e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "")),
     studentInfo: {
       name: name ?? null,
       branch: branch ?? null,
