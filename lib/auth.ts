@@ -499,20 +499,19 @@ export const authOptions: NextAuthOptions = {
                 });
                 
                 if (dbUser) {
-                  let program = await prisma.program.findUnique({
-                    where: { code: approvedUser.branch || "" },
-                  });
+                  // Use batch-specific program first (e.g. CE_B24), fall back to generic (CE)
+                  const lookupCode = getProgramLookupBranchCode(approvedUser.branch, approvedUser.batch);
+                  let program = await prisma.program.findUnique({ where: { code: lookupCode } });
                   if (!program) {
-                    program = await prisma.program.findUnique({
-                      where: { code: getProgramLookupBranchCode(approvedUser.branch, approvedUser.batch) },
-                    });
+                    program = await prisma.program.findUnique({ where: { code: approvedUser.branch || "" } });
                   }
-                  
+
                   if (program) {
+                    // Check if already enrolled in the correct program
                     const alreadyEnrolled = await prisma.userProgram.findFirst({
-                      where: { userId: dbUser.id, programId: program.id },
+                      where: { userId: dbUser.id, isPrimary: true },
                     });
-                    
+
                     if (!alreadyEnrolled) {
                       await prisma.userProgram.create({
                         data: {
@@ -523,6 +522,12 @@ export const authOptions: NextAuthOptions = {
                           startSemester: 1,
                           status: "ACTIVE",
                         },
+                      });
+                    } else if (alreadyEnrolled.programId !== program.id) {
+                      // Reassign if enrolled in wrong program (e.g. CE instead of CE_B24)
+                      await prisma.userProgram.update({
+                        where: { id: alreadyEnrolled.id },
+                        data: { programId: program.id },
                       });
                     }
                   }
