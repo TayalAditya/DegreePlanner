@@ -438,9 +438,9 @@ const mseSem8: DefaultCourse[] = [
 // ─── GE  (DC = 36 cr | IC-I: free choice | IC-II: free choice) ───────────────
 // Sem 1 is identical for all GE sub-branches.
 // Sem 2 ICB2 options differ per sub-branch based on which IC courses are DC for that branch:
-//   GE-RAI : IC241 DC (sem3) + IC253 DC (sem4) → only IC121, IC240 eligible as ICB2
-//   GE-CE  : IC253 DC (sem4)                   → only IC121, IC240, IC241 eligible
-//   GE-MECH: no ICB2 conflicts                  → all 4 options
+//   GE-RAI : IC253 DC (sem4) → only IC121, IC240 eligible as ICB2 (IC241 also excluded to keep ICB2 small)
+//   GE-CE  : IC253 DC (sem4) → only IC121, IC240, IC241 eligible
+//   GE-MECH: no ICB2 conflicts → all 4 options
 const geSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
 const geRaiICB2: DefaultCourse[]  = [ICB2_IC121, ICB2_IC240];
 const geCeICB2: DefaultCourse[]   = [ICB2_IC121, ICB2_IC240, ICB2_IC241];
@@ -449,90 +449,97 @@ const geCeSem2: DefaultCourse[]   = [...icCompSem2, ...icMixedSem2, ...geCeICB2]
 const geMechSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
 
 // ── GE sub-branch: Robotics & AI ──
+// DC = 36: EE201(3)+ME206(3)+DS201(3)+ME309(4)+AR520(3)+ME305(4)+EE261(3)+IC253(3)+EE301(3)+AR523(3)+AR521(3)+ME100(1) = 36
 const geRaiSem3: DefaultCourse[] = [
   ...icSem3,
-  { code: "DS201", name: "Data Handling and Vizualization", credits: 3, category: "DC", semester: 3 },
   { code: "EE261", name: "Electrical System Around Us",     credits: 3, category: "DC", semester: 3 },
-  { code: "IC241", name: "Material Science for Engineers",  credits: 3, category: "DC", semester: 3 },
+  { code: "ME206", name: "Mechanics of Solids",             credits: 3, category: "DC", semester: 3 },
+  { code: "DS201", name: "Data Handling and Vizualization", credits: 3, category: "DC", semester: 3 },
 ];
 const geRaiSem4: DefaultCourse[] = [
-  { code: "EE201", name: "Electromechanics",                credits: 3, category: "DC", semester: 4 },
+  // IC222P (2cr) added via B24/B25 override
   { code: "IC253", name: "Programming and Data Structures", credits: 3, category: "DC", semester: 4 },
+  { code: "EE201", name: "Electromechanics",                credits: 3, category: "DC", semester: 4 },
+  { code: "ME100", name: "Reverse Engineering",             credits: 1, category: "DC", semester: 4 },
 ];
 const geRaiSem5: DefaultCourse[] = [
-  { code: "AR501", name: "Robot Kinematics, Dynamics and Control", credits: 4, category: "DC", semester: 5 },
-  { code: "AR503", name: "Mechatronics",                           credits: 3, category: "DC", semester: 5 },
-  { code: "AR504", name: "Robot Programming",                      credits: 3, category: "DC", semester: 5 },
-  { code: "EE301", name: "Control Systems",                        credits: 3, category: "DC", semester: 5 },
+  { code: "ME309", name: "Theory of Machines",                       credits: 4, category: "DC", semester: 5 },
+  { code: "ME305", name: "Design of Machine Elements",               credits: 4, category: "DC", semester: 5 },
+  { code: "AR523", name: "Robot Manipulators",                       credits: 3, category: "DC", semester: 5 },
+  { code: "AR521", name: "Control of Robotic Systems",               credits: 3, category: "DC", semester: 5 },
+  { code: "AR520", name: "Design Practicum of Mechatronic Systems",  credits: 3, category: "DC", semester: 5 },
+  { code: "EE301", name: "Control Systems",                          credits: 3, category: "DC", semester: 5 },
 ];
 const geRaiSem6: DefaultCourse[] = [...istpSem6];
 const geRaiSem7: DefaultCourse[] = [
-  { code: "ME305", name: "Design of Machine Elements", credits: 4, category: "DC", semester: 7 },
-  { code: "ME309", name: "Theory of Machines",         credits: 4, category: "DC", semester: 7 },
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 7 },
   ...mtpSem7,
 ];
 const geRaiSem8: DefaultCourse[] = [
-  { code: "GE010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
 // ── GE sub-branch: Communication Engineering ──
+// DC = 36: ME100(1)+EE261(3)+EE231(3)+EE316(4)+EE201(3)+DS404(3)+EE203(3)+IC253(3)+EE260(3)+CS313(4)+EE314(4)+EE202(3) = 37 per sem table; DC list = 36 (EE316 used per B24 semester table)
 const geCeSem3: DefaultCourse[] = [
   ...icSem3,
-  { code: "EE203", name: "Network Theory",              credits: 3, category: "DC", semester: 3 },
   { code: "EE261", name: "Electrical System Around Us", credits: 3, category: "DC", semester: 3 },
+  { code: "EE203", name: "Network Theory",              credits: 3, category: "DC", semester: 3 },
+  { code: "EE260", name: "Signals and Systems",         credits: 3, category: "DC", semester: 3 },
+  { code: "CS313", name: "Computer Networks",           credits: 4, category: "DC", semester: 3 },
 ];
 const geCeSem4: DefaultCourse[] = [
-  { code: "DS404", name: "Information Security and Privacy", credits: 3, category: "DC", semester: 4 },
+  // IC222P (2cr) added via B24/B25 override
   { code: "EE201", name: "Electromechanics",                credits: 3, category: "DC", semester: 4 },
-  { code: "IC253", name: "Programming and Data Structures", credits: 3, category: "DC", semester: 4 },
+  { code: "EE316", name: "Communication Systems",           credits: 4, category: "DC", semester: 4 },
   { code: "ME100", name: "Reverse Engineering",             credits: 1, category: "DC", semester: 4 },
+  { code: "IC253", name: "Programming and Data Structures", credits: 3, category: "DC", semester: 4 },
+  { code: "DS404", name: "Information Security and Privacy", credits: 3, category: "DC", semester: 4 },
+  { code: "EE202", name: "Electromagnetic Theory",          credits: 3, category: "DC", semester: 4 },
 ];
 const geCeSem5: DefaultCourse[] = [
-  { code: "CS313", name: "Computer Networks",                credits: 4, category: "DC", semester: 5 },
-  { code: "EE260", name: "Signals and Systems",              credits: 3, category: "DC", semester: 5 },
+  { code: "EE231", name: "Measurement and Instrumentation", credits: 3, category: "DC", semester: 5 },
+  { code: "EE314", name: "Digital Signal Processing",       credits: 4, category: "DC", semester: 5 },
 ];
 const geCeSem6: DefaultCourse[] = [
-  { code: "EE202", name: "Electromagnetic Theory", credits: 3, category: "DC", semester: 6 },
-  { code: "EE304", name: "Communication Theory",   credits: 3, category: "DC", semester: 6 },
   ...istpSem6,
 ];
 const geCeSem7: DefaultCourse[] = [
-  { code: "EE231", name: "Measurementation and Instrumentation", credits: 3, category: "DC", semester: 7 },
-  { code: "EE314", name: "Digital Signal Processing",            credits: 4, category: "DC", semester: 7 },
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 7 },
   ...mtpSem7,
 ];
 const geCeSem8: DefaultCourse[] = [
-  { code: "GE010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
-// ── GE sub-branch: Mechatronics ──
+// ── GE sub-branch: Mechatronics & AI ──
+// DC = 36: EE261(3)+EE260(3)+EE201(3)+EE211(3)+ME305(4)+AR520(3)+ME206(3)+ME309(4)+EE301(3)+EE203(3)+EE231(3)+ME100(1) = 36
 const geMechSem3: DefaultCourse[] = [
   ...icSem3,
   { code: "EE261", name: "Electrical System Around Us", credits: 3, category: "DC", semester: 3 },
+  { code: "ME206", name: "Mechanics of Solids",         credits: 3, category: "DC", semester: 3 },
+  { code: "EE203", name: "Network Theory",              credits: 3, category: "DC", semester: 3 },
+  { code: "EE260", name: "Signals and Systems",         credits: 3, category: "DC", semester: 3 },
 ];
 const geMechSem4: DefaultCourse[] = [
+  // IC222P (2cr) added via B24/B25 override
   { code: "EE201", name: "Electromechanics",       credits: 3, category: "DC", semester: 4 },
   { code: "EE211", name: "Analog Circuit Design",  credits: 3, category: "DC", semester: 4 },
   { code: "ME100", name: "Reverse Engineering",    credits: 1, category: "DC", semester: 4 },
 ];
 const geMechSem5: DefaultCourse[] = [
-  { code: "AR503", name: "Mechatronics",         credits: 3, category: "DC", semester: 5 },
-  { code: "EE260", name: "Signals and Systems",  credits: 3, category: "DC", semester: 5 },
-  { code: "EE301", name: "Control Systems",      credits: 3, category: "DC", semester: 5 },
-  { code: "ME206", name: "Mechanics of Solids",  credits: 3, category: "DC", semester: 5 },
+  { code: "AR520", name: "Design Practicum of Mechatronic Systems", credits: 3, category: "DC", semester: 5 },
+  { code: "ME305", name: "Design of Machine Elements",              credits: 4, category: "DC", semester: 5 },
+  { code: "ME309", name: "Theory of Machines",                      credits: 4, category: "DC", semester: 5 },
+  { code: "EE301", name: "Control Systems",                         credits: 3, category: "DC", semester: 5 },
+  { code: "EE231", name: "Measurement and Instrumentation",         credits: 3, category: "DC", semester: 5 },
 ];
 const geMechSem6: DefaultCourse[] = [...istpSem6];
 const geMechSem7: DefaultCourse[] = [
-  { code: "EE311", name: "Device Electronics for Integrated Circuits", credits: 3, category: "DC", semester: 7 },
-  { code: "EE326", name: "CO and Processor Architecture Design",       credits: 4, category: "DC", semester: 7 },
-  { code: "ME305", name: "Design of Machine Elements",                 credits: 4, category: "DC", semester: 7 },
-  { code: "ME309", name: "Theory of Machines",                         credits: 4, category: "DC", semester: 7 },
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 7 },
   ...mtpSem7,
 ];
 const geMechSem8: DefaultCourse[] = [
-  { code: "GE010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -746,8 +753,8 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   // Sem 5-8 deferred — only ISTP/MTP slots).
   "GE-FIN_1": geSem1, "GE-FIN_2": geRaiSem2, "GE-FIN_3": geFinSem3,
   "GE-FIN_4": geFinSem4, "GE-FIN_5": [], "GE-FIN_6": [...istpSem6],
-  "GE-FIN_7": [...mtpSem7],
-  "GE-FIN_8": [{ code: "GE010", name: "Internship", credits: 2, category: "IC", semester: 8 }, ...mtpSem8],
+  "GE-FIN_7": [{ code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 7 }, ...mtpSem7],
+  "GE-FIN_8": [...mtpSem8],
   // GE – Open Specialisation (B24 official 4th track; DC = 36 cr).
   "GE-OPEN_1": geSem1, "GE-OPEN_2": geRaiSem2, "GE-OPEN_3": geOpenSem3,
   "GE-OPEN_4": geOpenSem4, "GE-OPEN_5": geOpenSem5, "GE-OPEN_6": geOpenSem6,
@@ -837,17 +844,7 @@ const B24_CE_CE311_SEM4: DefaultCourse  = { code: "CE311",  name: "Geotechnical 
 const B24_CE_CE311P_SEM4: DefaultCourse = { code: "CE311P", name: "Geotechnical Engineering Laboratory",       credits: 1, category: "DC", semester: 4 };
 
 // ─── B24 GE course constants ──────────────────────────────────────────────────
-const B24_GE_ME206_SEM3: DefaultCourse = { code: "ME206", name: "Mechanics of Solids",            credits: 3, category: "DC", semester: 3 };
-const B24_GE_EE203_SEM3: DefaultCourse = { code: "EE203", name: "Network Theory",                 credits: 3, category: "DC", semester: 3 };
-const B24_GE_EE260_SEM3: DefaultCourse = { code: "EE260", name: "Signals and Systems",            credits: 3, category: "DC", semester: 3 };
-const B24_GE_ME100_SEM4: DefaultCourse = { code: "ME100", name: "Reverse Engineering",            credits: 1, category: "DC", semester: 4 };
-// Sem-5 DC courses introduced in B24 (moved from Sem-7 or new)
-const B24_GE_AR520_SEM5: DefaultCourse = { code: "AR520", name: "Design Practicum of Mechatronic Systems", credits: 3, category: "DC", semester: 5 };
-const B24_GE_AR521_SEM5: DefaultCourse = { code: "AR521", name: "Control of Robotic Systems",              credits: 3, category: "DC", semester: 5 };
-const B24_GE_AR523_SEM5: DefaultCourse = { code: "AR523", name: "Robot Manipulators",                      credits: 3, category: "DC", semester: 5 };
-const B24_GE_EE231_SEM5: DefaultCourse = { code: "EE231", name: "Measurement and Instrumentation",         credits: 3, category: "DC", semester: 5 };
-const B24_GE_ME305_SEM5: DefaultCourse = { code: "ME305", name: "Design of Machine Elements",              credits: 4, category: "DC", semester: 5 };
-const B24_GE_ME309_SEM5: DefaultCourse = { code: "ME309", name: "Theory of Machines",                      credits: 4, category: "DC", semester: 5 };
+// (All GE DC changes are now baked into the base arrays; no B24-only constants needed.)
 
 // ─── B24 BSCS course constants ────────────────────────────────────────────────
 const B24_BSCS_CY200_SEM2: DefaultCourse = { code: "CY200", name: "Foundations and Applications of Chemistry", credits: 3, category: "DC", semester: 2 };
@@ -1197,34 +1194,17 @@ const applyBatchOverrides = (
       }
 
       case 3: {
-        if (effectiveBranch === "GE-ROBO") {
-          // B24 GE-ROBO: IC241 (Material Science) → ME206 (Mechanics of Solids).
-          let updated = courses.filter((c) => normalizeCurriculumCode(c.code) !== "IC241");
-          updated = addCourseIfMissing(updated, B24_GE_ME206_SEM3);
-          return updated;
-        }
-        if (effectiveBranch === "GE-MECH") {
-          // B24 GE-MECH: add ME206, EE203, EE260 (additional DC for Mechatronics & AI).
-          let updated = courses;
-          updated = addCourseIfMissing(updated, B24_GE_ME206_SEM3);
-          updated = addCourseIfMissing(updated, B24_GE_EE203_SEM3);
-          updated = addCourseIfMissing(updated, B24_GE_EE260_SEM3);
-          return updated;
-        }
+        // GE-ROBO: ME206 now in base (IC241 removed from base). No additional changes needed.
+        // GE-MECH: ME206/EE203/EE260 now in base. No additional changes needed.
         // GE-FIN: base curriculum (geFinSem3) is already B24-final. Return as-is.
         // GE-COMM: no B24 logic (no student); return B23 base.
         return courses;
       }
 
       case 4: {
-        if (effectiveBranch === "GE-ROBO") {
-          // B24 GE-ROBO: add IC222P (moved from Sem-2) and ME100 (Reverse Engineering, 1cr).
-          let updated = addCourseIfMissing(courses, B24_IC222P_SEM4);
-          updated = addCourseIfMissing(updated, B24_GE_ME100_SEM4);
-          return updated;
-        }
-        if (effectiveBranch === "GE-MECH" || effectiveBranch === "GE-COMM" || effectiveBranch === "GE-OPEN") {
-          // B24 GE-MECH/GE-COMM/GE-OPEN: add IC222P (moved from Sem-2).
+        if (effectiveBranch === "GE-ROBO" || effectiveBranch === "GE-MECH" || effectiveBranch === "GE-COMM" || effectiveBranch === "GE-OPEN") {
+          // B24 GE-ROBO/GE-MECH/GE-COMM/GE-OPEN: add IC222P (moved from Sem-2).
+          // ME100 is now in the base arrays for GE-ROBO/GE-MECH/GE-COMM — no longer added here.
           return addCourseIfMissing(courses, B24_IC222P_SEM4);
         }
         // GE-FIN: base curriculum (geFinSem4) already includes IC222P. Return as-is.
@@ -1232,50 +1212,14 @@ const applyBatchOverrides = (
       }
 
       case 5: {
-        if (effectiveBranch === "GE-ROBO") {
-          // B24 GE-ROBO: AR501/AR503/AR504 replaced by AR523/AR521/AR520; ME305/ME309 moved here from Sem-7.
-          let updated = courses.filter((c) => {
-            const code = normalizeCurriculumCode(c.code);
-            return !["AR501", "AR503", "AR504"].includes(code);
-          });
-          updated = addCourseIfMissing(updated, B24_GE_AR523_SEM5);
-          updated = addCourseIfMissing(updated, B24_GE_AR521_SEM5);
-          updated = addCourseIfMissing(updated, B24_GE_AR520_SEM5);
-          updated = addCourseIfMissing(updated, B24_GE_ME305_SEM5);
-          updated = addCourseIfMissing(updated, B24_GE_ME309_SEM5);
-          return updated;
-        }
-        if (effectiveBranch === "GE-MECH") {
-          // B24 GE-MECH: AR503 replaced by AR520; ME305/ME309 moved here from Sem-7; EE231 added.
-          // EE260/ME206 are already in Sem-3 so filtered out here to avoid double-count in UI.
-          let updated = courses.filter((c) => {
-            const code = normalizeCurriculumCode(c.code);
-            return !["AR503", "EE260", "ME206"].includes(code);
-          });
-          updated = addCourseIfMissing(updated, B24_GE_AR520_SEM5);
-          updated = addCourseIfMissing(updated, B24_GE_ME305_SEM5);
-          updated = addCourseIfMissing(updated, B24_GE_ME309_SEM5);
-          updated = addCourseIfMissing(updated, B24_GE_EE231_SEM5);
-          return updated;
-        }
+        // GE-ROBO: AR523/AR521/AR520/ME305/ME309/EE301 are now in the base geRaiSem5. No changes needed.
+        // GE-MECH: AR520/ME305/ME309/EE301/EE231 are now in the base geMechSem5. No changes needed.
         return courses;
       }
 
       case 7: {
-        if (effectiveBranch === "GE-ROBO") {
-          // B24 GE-ROBO: ME305/ME309 moved to Sem-5; Sem-7 has only MTP + IC010 + DE/FE.
-          return courses.filter((c) => {
-            const code = normalizeCurriculumCode(c.code);
-            return !["ME305", "ME309"].includes(code);
-          });
-        }
-        if (effectiveBranch === "GE-MECH") {
-          // B24 GE-MECH: EE311/EE326/ME305/ME309 removed (ME305/ME309 moved to Sem-5).
-          return courses.filter((c) => {
-            const code = normalizeCurriculumCode(c.code);
-            return !["EE311", "EE326", "ME305", "ME309"].includes(code);
-          });
-        }
+        // GE-ROBO: ME305/ME309 no longer in base geRaiSem7 (now in Sem-5). IC010+MTP-1 in base.
+        // GE-MECH: EE311/EE326/ME305/ME309 no longer in base geMechSem7. IC010+MTP-1 in base.
         return courses;
       }
 
@@ -1435,16 +1379,8 @@ const applyBatchOverrides = (
           });
           updated = addCourseIfMissing(updated, B24_ME_ME206_SEM3);
         }
-        if (effectiveBranch === "GE-ROBO") {
-          // IC241 (Material Science) replaced by ME206 (Mechanics of Solids).
-          updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "IC241");
-          updated = addCourseIfMissing(updated, B24_GE_ME206_SEM3);
-        }
-        if (effectiveBranch === "GE-MECH") {
-          updated = addCourseIfMissing(updated, B24_GE_ME206_SEM3);
-          updated = addCourseIfMissing(updated, B24_GE_EE203_SEM3);
-          updated = addCourseIfMissing(updated, B24_GE_EE260_SEM3);
-        }
+        // GE-ROBO: ME206 now in base; IC241 no longer in base. No changes needed.
+        // GE-MECH: ME206/EE203/EE260 now in base. No changes needed.
         updated = addCourseIfMissing(updated, B22_IC222P_SEM3);
         return updated;
       }
@@ -1496,9 +1432,7 @@ const applyBatchOverrides = (
           updated = addCourseIfMissing(updated, B24_ME_ME205_SEM4);
           updated = addCourseIfMissing(updated, B24_ME_ME215_SEM4);
         }
-        if (effectiveBranch === "GE-ROBO") {
-          updated = addCourseIfMissing(updated, B24_GE_ME100_SEM4);
-        }
+        // GE-ROBO: ME100 now in base geRaiSem4. No changes needed here.
         return updated;
       }
 
