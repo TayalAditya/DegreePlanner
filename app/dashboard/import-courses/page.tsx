@@ -54,7 +54,7 @@ export default function ImportCoursesPage() {
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
   const router = useRouter();
-  const [preRegLocked, setPreRegLocked] = useState(false);
+  const [preRegLockedSemester, setPreRegLockedSemester] = useState<number | null>(null);
   const [branch, setBranch] = useState("CSE");
   const [geSubBranch, setGeSubBranch] = useState("GE-ROBO");
   const [userBatch, setUserBatch] = useState<number | null>(null);
@@ -183,10 +183,9 @@ export default function ImportCoursesPage() {
 
         if (inferredBatch) {
           const state = inferAcademicState(inferredBatch);
-          if (state.phase === "PRE_REGISTRATION") {
-            setPreRegLocked(true);
-            // Set to last completed semester, not the upcoming one
-            setCurrentSemester((state.upcomingSemester ?? state.currentSemester) - 1);
+          if (state.phase === "PRE_REGISTRATION" && state.upcomingSemester) {
+            setPreRegLockedSemester(state.upcomingSemester);
+            setCurrentSemester(state.upcomingSemester - 1);
           } else {
             setCurrentSemester(state.currentSemester);
           }
@@ -715,14 +714,15 @@ export default function ImportCoursesPage() {
   };
 
   const handleSubmit = async () => {
-    if (preRegLocked) {
-      showToast("error", "Course registration is locked during pre-registration. Use the Pre-Registration page to plan your upcoming semester.");
-      return;
-    }
     setLoading(true);
     setErrorMessage(null);
     try {
-      const selectedCourses = courses.filter((c) => c.selected);
+      // During pre-reg: silently skip courses for locked semesters (upcoming and beyond)
+      const selectedCourses = courses.filter((c) => {
+        if (!c.selected) return false;
+        if (preRegLockedSemester !== null && c.semester >= preRegLockedSemester) return false;
+        return true;
+      });
 
       const duplicatesByIdentity = new Map<string, SelectedCourse[]>();
       for (const c of selectedCourses) {
@@ -844,29 +844,21 @@ export default function ImportCoursesPage() {
       .filter(Boolean)
   );
 
-  if (preRegLocked) {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 gap-6 text-center max-w-md mx-auto">
-        <AlertCircle className="w-12 h-12 text-warning" />
-        <div>
-          <p className="text-lg font-semibold text-foreground">Import Locked During Pre-Registration</p>
-          <p className="text-sm text-foreground-secondary mt-2">
-            Course import is disabled while pre-registration is active. Your past semester courses are already saved.
-            Use the Pre-Registration page to plan your upcoming semester.
-          </p>
-        </div>
-        <button
-          onClick={() => router.push("/dashboard/pre-registration")}
-          className="px-6 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition-colors"
-        >
-          Go to Pre-Registration
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
+      {preRegLockedSemester !== null && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-warning/30 bg-warning/5">
+          <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">Pre-Registration is active</p>
+            <p className="text-xs text-foreground-secondary mt-0.5">
+              Sem {preRegLockedSemester}+ courses are locked. You can still add/edit courses from previous semesters.{" "}
+              <a href="/dashboard/pre-registration" className="text-primary hover:underline">Plan Sem {preRegLockedSemester} →</a>
+            </p>
+          </div>
+        </div>
+      )}
       {errorMessage && (
         <div className="bg-error/10 border border-error/20 rounded-lg overflow-hidden">
           <div className="px-4 py-3 flex items-start gap-3">
@@ -1225,7 +1217,7 @@ export default function ImportCoursesPage() {
             </div>
             <button
               onClick={handleSubmit}
-              disabled={loading || selectedCount === 0 || preRegLocked}
+              disabled={loading || selectedCount === 0}
               className="w-full sm:w-auto px-8 py-3 bg-surface-elevated text-foreground rounded-lg font-semibold border border-white/10 hover:border-white/20 hover:bg-surface-hover hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (

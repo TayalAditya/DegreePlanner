@@ -151,7 +151,7 @@ function getCourseSchoolKey(course: Pick<Course, "code" | "department">): School
 }
 
 export default function CoursesPage() {
-  const [preRegLocked, setPreRegLocked] = useState(false);
+  const [preRegLockedSemester, setPreRegLockedSemester] = useState<number | null>(null);
   const [tab, setTab] = useState<"my-courses" | "catalog">("my-courses");
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -188,7 +188,7 @@ export default function CoursesPage() {
     loadData();
     fetch("/api/academic-state")
       .then(r => r.json())
-      .then(d => { if (d.phase === "PRE_REGISTRATION") setPreRegLocked(true); })
+      .then(d => { if (d.phase === "PRE_REGISTRATION" && d.upcomingSemester) setPreRegLockedSemester(d.upcomingSemester); })
       .catch(() => {});
   }, []);
 
@@ -606,10 +606,6 @@ export default function CoursesPage() {
   };
 
   const handleAddCourse = (course: Course) => {
-    if (preRegLocked) {
-      showToast("error", "Course registration for the next semester will open after add-drop period ends");
-      return;
-    }
     const norm = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
     const isInternshipCourse = norm.endsWith("396P") || norm.endsWith("399P");
     setAddingCourse(course);
@@ -633,10 +629,14 @@ export default function CoursesPage() {
       showToast("error", "Please fill in all required fields");
       return;
     }
+    const semNum = parseInt(semester);
+    if (preRegLockedSemester !== null && semNum >= preRegLockedSemester) {
+      showToast("error", `Sem ${semNum} is locked during pre-registration. You can only add courses up to Sem ${preRegLockedSemester - 1}.`);
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const semNum = parseInt(semester);
       const batchYear = inferBatchYear();
       const term = semNum % 2 === 1 ? "FALL" : "SPRING";
 
