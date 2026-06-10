@@ -34,6 +34,7 @@ interface ApiResponse {
   offerings: Offering[];
   completedBreakdown: Record<string, number>;
   programRequirements: Record<string, number> | null;
+  incompleteSemesters: number[];
   studentInfo: { name: string | null; branch: string | null; semester: number; pfCreditsUsed: number } | null;
   savedPlan?: { selectedIds: string[]; updatedAt: string | null };
 }
@@ -466,6 +467,7 @@ export default function PreRegistrationPage() {
   const [progressOpen, setProgressOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showApprovalWarning, setShowApprovalWarning] = useState(false);
+  const [incompleteWarningDismissed, setIncompleteWarningDismissed] = useState(false);
   const [selectedMinorCode, setSelectedMinorCode] = useState<string>("");
   const [internshipCourses, setInternshipCourses] = useState<{ p399: InternshipCourse[]; p396: InternshipCourse[] }>({ p399: [], p396: [] });
   const [mtp1Course, setMtp1Course] = useState<InternshipCourse | null>(null);
@@ -773,8 +775,54 @@ export default function PreRegistrationPage() {
   const registrationLocked = !!data.registrationOpensAt;
   const selectedCount = selected.size + selectedExtra.size + compulsory.filter((o) => !o.completedInSemester).length;
 
+  const incompleteSemesters = data?.incompleteSemesters ?? [];
+  const showIncompleteWarning = incompleteSemesters.length > 0 && !incompleteWarningDismissed;
+
   return (
     <div className="max-w-6xl mx-auto pb-24">
+      {/* Incomplete semester warning modal */}
+      {showIncompleteWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-surface border border-border rounded-2xl shadow-xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-warning/10 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-warning" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold text-foreground">Your course history is incomplete</h2>
+                <p className="text-sm text-foreground-secondary mt-1">
+                  You won&apos;t be able to see your pre-registration correctly without adding your past courses —
+                  compulsory courses, credit limits, and what&apos;s already done won&apos;t show up right.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-warning/5 border border-warning/20 rounded-xl px-4 py-3 text-sm text-foreground-secondary leading-relaxed">
+              {incompleteSemesters.length === 1
+                ? <>Semester <span className="font-semibold text-foreground">{incompleteSemesters[0]}</span> has fewer than 12 credits recorded.</>
+                : <>Semesters <span className="font-semibold text-foreground">{incompleteSemesters.join(", ")}</span> have fewer than 12 credits recorded.</>
+              }
+              {" "}Please import your transcript first so your plan is accurate.
+            </div>
+
+            <div className="flex gap-3 pt-1">
+              <a
+                href="/dashboard/import-courses"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+              >
+                Import courses
+              </a>
+              <button
+                onClick={() => setIncompleteWarningDismissed(true)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-border text-sm font-medium text-foreground-secondary hover:bg-surface-hover transition-colors"
+              >
+                Continue anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex gap-6 items-start">
         <div className="flex-1 min-w-0 space-y-6">
       {/* Header */}

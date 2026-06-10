@@ -1,8 +1,9 @@
 "use client";
 
-import { X, Bell, AlertCircle, Info } from "lucide-react";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { X, Bell, Info } from "lucide-react";
+import { useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
 
 interface Announcement {
   id: string;
@@ -13,21 +14,22 @@ interface Announcement {
 }
 
 export function AnnouncementsSection() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
+  const reducedMotion = useReducedMotion();
 
-  useEffect(() => {
-    fetch("/api/announcements")
-      .then((r) => r.ok ? r.json() : [])
-      .then((data) => setAnnouncements(Array.isArray(data) ? data : []))
-      .catch(() => setAnnouncements([]))
-      .finally(() => setLoading(false));
-  }, []);
+  // Shares cache key with NotificationBell — no duplicate network request
+  const { data: announcements = [], isLoading } = useQuery<Announcement[]>({
+    queryKey: ["announcements"],
+    queryFn: async () => {
+      const res = await fetch("/api/announcements");
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
 
   const visible = announcements.filter((a) => !dismissed.has(a.id));
 
-  if (loading || visible.length === 0) return null;
+  if (isLoading || visible.length === 0) return null;
 
   return (
     <div className="space-y-3">
@@ -40,10 +42,10 @@ export function AnnouncementsSection() {
         {visible.map((a, i) => (
           <motion.div
             key={a.id}
-            initial={{ opacity: 0, y: -8 }}
+            initial={reducedMotion ? {} : { opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97 }}
-            transition={{ duration: 0.2, delay: i * 0.04 }}
+            exit={reducedMotion ? {} : { opacity: 0, scale: 0.97 }}
+            transition={{ duration: 0.15, delay: reducedMotion ? 0 : i * 0.04 }}
             className="flex items-start gap-3 bg-info/8 border border-info/25 rounded-xl px-4 py-3"
           >
             <Info className="w-4 h-4 text-info flex-shrink-0 mt-0.5" />

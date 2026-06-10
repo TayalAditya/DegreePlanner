@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(programs);
+    return NextResponse.json(programs, {
+      headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" },
+    });
   } catch (error) {
     console.error("Error fetching programs:", error);
     return NextResponse.json(

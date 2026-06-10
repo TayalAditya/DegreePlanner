@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ProgressSkeleton } from "./loading";
 import { CheckCircle, ChevronDown, Clock, Loader2, Target, Trash2 } from "lucide-react";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
@@ -666,11 +667,7 @@ export default function ProgressPage() {
   const progress = useMemo(() => calculateProgress(), [enrollments, user, nonMgmtMinorCourseCodes, mappingBranchAliases, includeCurrentSemesterCredits]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <ProgressSkeleton />;
   }
   const activeEnrollments = enrollments.filter(
     (e) =>

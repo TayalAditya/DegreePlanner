@@ -36,12 +36,11 @@ export default async function DashboardPage() {
 
   if (session?.user?.id) {
     try {
-      await syncEnrollmentStatusesForUser(session.user.id, {
-        batch: session.user.batch,
-        enrollmentId: session.user.enrollmentId,
-      });
-
-      const [enrollments, userRecord, primaryProgram] = await Promise.all([
+      const [, enrollments, userRecord, primaryProgram] = await Promise.all([
+        syncEnrollmentStatusesForUser(session.user.id, {
+          batch: session.user.batch,
+          enrollmentId: session.user.enrollmentId,
+        }),
         prisma.courseEnrollment.findMany({
           where: { userId: session.user.id },
           select: { status: true, semester: true, grade: true },

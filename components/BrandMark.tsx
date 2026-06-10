@@ -22,7 +22,7 @@ export function BrandMark({ size = "md", className = "", priority = false }: Bra
           alt=""
           fill
           priority={priority}
-          quality={100}
+          quality={80}
           sizes={`${cropSize}px`}
           className="object-cover object-[center_20%]"
         />

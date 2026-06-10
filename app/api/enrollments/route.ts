@@ -27,11 +27,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    await syncEnrollmentStatusesForUser(session.user.id, {
-      batch: session.user.batch,
-      enrollmentId: session.user.enrollmentId,
-    });
-
     const { searchParams } = new URL(request.url);
     const semester = searchParams.get("semester");
 
@@ -43,28 +38,35 @@ export async function GET(request: NextRequest) {
       where.semester = parseInt(semester);
     }
 
-    const enrollments = await prisma.courseEnrollment.findMany({
-      where,
-      include: {
-        course: {
-          include: {
-            branchMappings: {
-              select: {
-                courseCategory: true,
-                branch: true,
-                batch: true,
-                splitCategory: true,
-                splitAmount: true,
+    // Run sync and fetch in parallel — saves one round-trip vs sequential await
+    const [, enrollments] = await Promise.all([
+      syncEnrollmentStatusesForUser(session.user.id, {
+        batch: session.user.batch,
+        enrollmentId: session.user.enrollmentId,
+      }),
+      prisma.courseEnrollment.findMany({
+        where,
+        include: {
+          course: {
+            include: {
+              branchMappings: {
+                select: {
+                  courseCategory: true,
+                  branch: true,
+                  batch: true,
+                  splitCategory: true,
+                  splitAmount: true,
+                },
               },
             },
           },
         },
-      },
-      orderBy: [
-        { semester: "asc" },
-        { course: { code: "asc" } },
-      ],
-    });
+        orderBy: [
+          { semester: "asc" },
+          { course: { code: "asc" } },
+        ],
+      }),
+    ]);
 
     const enrollmentsWithOverrides = enrollments.map((e) => {
       const key = courseIdentityKey(e.course?.code);

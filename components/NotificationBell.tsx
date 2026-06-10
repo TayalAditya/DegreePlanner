@@ -39,6 +39,8 @@ function setLastSeen() {
 
 export function NotificationBell() {
   const [open, setOpen] = useState(false);
+  // Track whether the panel has ever been opened so queries stay enabled after closing
+  const [everOpened, setEverOpened] = useState(false);
   const [tab, setTab] = useState<"notifications" | "announcements">("notifications");
   const [lastSeen, setLastSeenState] = useState(() =>
     typeof window === "undefined" ? 0 : getLastSeen()
@@ -61,6 +63,7 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  // Only fetch after the panel has been opened at least once — avoids 2 API calls on every page load
   const { data: announcements = [] } = useQuery<Announcement[]>({
     queryKey: ["announcements"],
     queryFn: async () => {
@@ -68,7 +71,8 @@ export function NotificationBell() {
       if (!res.ok) return [];
       return res.json();
     },
-    refetchInterval: 60_000,
+    enabled: everOpened,
+    refetchInterval: everOpened ? 60_000 : false,
   });
 
   const { data: notifications = [], refetch: refetchNotifs } = useQuery<UserNotification[]>({
@@ -78,7 +82,8 @@ export function NotificationBell() {
       if (!res.ok) return [];
       return res.json();
     },
-    refetchInterval: 30_000,
+    enabled: everOpened,
+    refetchInterval: everOpened ? 30_000 : false,
   });
 
   const unreadAnnouncements = announcements.filter(
@@ -135,6 +140,7 @@ export function NotificationBell() {
   function openPanel() {
     panelShiftRef.current = 0;
     setPanelShift(0);
+    setEverOpened(true);
     setOpen(true);
     setLastSeen();
     setLastSeenState(Date.now());

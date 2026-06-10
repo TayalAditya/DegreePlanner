@@ -13,6 +13,7 @@ export async function GET() {
   const announcements = await prisma.announcement.findMany({
     where: { isActive: true },
     orderBy: { createdAt: "desc" },
+    take: 20,
     select: {
       id: true,
       title: true,
@@ -22,7 +23,9 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json(announcements);
+  return NextResponse.json(announcements, {
+    headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" },
+  });
 }
 
 // POST /api/announcements - admin creates announcement

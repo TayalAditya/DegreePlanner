@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { ProgramsSkeleton } from "./loading";
 import { GraduationCap, Award, BookOpen, Target, ChevronDown, AlertCircle } from "lucide-react";
 import { ProgressChart } from "@/components/ProgressChart";
 import { MinorPlannerCard } from "@/components/MinorPlannerCard";
@@ -456,11 +457,7 @@ export default function ProgramsPage() {
   ]);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <ProgramsSkeleton />;
   }
 
   const secondaryPrograms = userPrograms.filter((p) => !p.isPrimary);

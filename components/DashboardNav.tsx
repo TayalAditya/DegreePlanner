@@ -2,6 +2,7 @@
 
 import { signOut } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -194,10 +195,12 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
             <div className="border-t border-border/60 px-4 py-3 flex items-center gap-3">
               {user.image && (
-                <img
+                <Image
                   src={user.image}
                   alt={user.name || "User"}
-                  className="w-9 h-9 rounded-full ring-2 ring-border flex-shrink-0"
+                  width={36}
+                  height={36}
+                  className="rounded-full ring-2 ring-border flex-shrink-0"
                 />
               )}
               <div className="min-w-0 flex-1">
@@ -263,10 +266,12 @@ export function DashboardNav({ user }: DashboardNavProps) {
         <div className="border-t border-border/60 px-4 py-4 space-y-3">
           <div className="flex items-center gap-3">
             {user.image && (
-              <img
+              <Image
                 src={user.image}
                 alt={user.name || "User"}
-                className="w-9 h-9 rounded-full ring-2 ring-border"
+                width={36}
+                height={36}
+                className="rounded-full ring-2 ring-border"
               />
             )}
             <div className="min-w-0">

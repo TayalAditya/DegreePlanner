@@ -106,8 +106,12 @@ export async function GET() {
   const ic182Done = completedByCourseCode.has("IC182");
 
 
+  const isAdmin = session.user.role === "ADMIN";
+
   const result = offerings
     .filter((o) => {
+      // Admins see all offerings regardless of branch or semester restrictions
+      if (isAdmin) return true;
       // Filter by branch eligibility
       const eligible =
         o.branches.includes("ALL") ||
@@ -220,6 +224,26 @@ export async function GET() {
     } catch { /* keep null */ }
   }
 
+  // Detect previous semesters with suspiciously few credits (likely not fully imported).
+  // Exception: semesters where the only courses are semester-long internships (399P / 396P).
+  const semesterMap = new Map<number, { credits: number; codes: string[] }>();
+  for (const e of completed) {
+    if (!e.semester || e.semester >= offeringSemester) continue;
+    const entry = semesterMap.get(e.semester) ?? { credits: 0, codes: [] };
+    const code = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    entry.credits += e.course.credits;
+    entry.codes.push(code);
+    semesterMap.set(e.semester, entry);
+  }
+  const incompleteSemesters: number[] = [];
+  for (const [sem, { credits, codes }] of semesterMap) {
+    if (credits >= 12) continue;
+    const onlyInternship = codes.every((c) => c.endsWith("399P") || c.endsWith("396P"));
+    if (onlyInternship) continue;
+    incompleteSemesters.push(sem);
+  }
+  incompleteSemesters.sort((a, b) => a - b);
+
   return NextResponse.json({
     offeringSemester,
     offeringYear,
@@ -229,6 +253,7 @@ export async function GET() {
     offerings: result,
     completedBreakdown,
     programRequirements,
+    incompleteSemesters,
     studentInfo: {
       name: name ?? null,
       branch: branch ?? null,

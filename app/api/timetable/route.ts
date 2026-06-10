@@ -15,45 +15,46 @@ export async function GET(req: NextRequest) {
 
     const context = await getCurrentTimetableContext(session.user.id);
 
-    const currentEnrollments = await prisma.courseEnrollment.findMany({
-      where: {
-        userId: session.user.id,
-        semester: context.semester,
-        year: context.year,
-        term: context.term,
-        status: EnrollmentStatus.IN_PROGRESS,
-      },
-      include: {
-        course: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            credits: true,
+    const [currentEnrollments, completedEnrollments] = await Promise.all([
+      prisma.courseEnrollment.findMany({
+        where: {
+          userId: session.user.id,
+          semester: context.semester,
+          year: context.year,
+          term: context.term,
+          status: EnrollmentStatus.IN_PROGRESS,
+        },
+        include: {
+          course: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              credits: true,
+            },
           },
         },
-      },
-      orderBy: [{ course: { code: "asc" } }],
-    });
-
-    const completedEnrollments = await prisma.courseEnrollment.findMany({
-      where: {
-        userId: session.user.id,
-        status: EnrollmentStatus.COMPLETED,
-      },
-      include: {
-        course: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            credits: true,
+        orderBy: [{ course: { code: "asc" } }],
+      }),
+      prisma.courseEnrollment.findMany({
+        where: {
+          userId: session.user.id,
+          status: EnrollmentStatus.COMPLETED,
+        },
+        include: {
+          course: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              credits: true,
+            },
           },
         },
-      },
-      orderBy: [{ updatedAt: "desc" }],
-      distinct: ["courseId"],
-    });
+        orderBy: [{ updatedAt: "desc" }],
+        distinct: ["courseId"],
+      }),
+    ]);
 
     const courses = currentEnrollments.map((e) => e.course).sort((a, b) => a.code.localeCompare(b.code));
     const completedCourses = completedEnrollments.map((e) => e.course).sort((a, b) => a.code.localeCompare(b.code));

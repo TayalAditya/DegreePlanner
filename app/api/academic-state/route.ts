@@ -16,10 +16,13 @@ export async function GET() {
 
   const state = inferAcademicState(batchYear);
 
-  return NextResponse.json({
-    phase: state.phase,
-    currentSemester: state.currentSemester,
-    upcomingSemester: state.upcomingSemester ?? null,
-    isInSession: state.isInSession,
-  });
+  return NextResponse.json(
+    {
+      phase: state.phase,
+      currentSemester: state.currentSemester,
+      upcomingSemester: state.upcomingSemester ?? null,
+      isInSession: state.isInSession,
+    },
+    { headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" } }
+  );
 }
