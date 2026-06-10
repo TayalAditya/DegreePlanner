@@ -285,11 +285,18 @@ export async function GET() {
     semesterMap.set(e.semester, entry);
   }
   const incompleteSemesters: number[] = [];
+  // Check semesters that have SOME data but < 12 credits
   for (const [sem, { credits, codes }] of semesterMap) {
     if (credits >= 12) continue;
     const onlyInternship = codes.every((c) => c.endsWith("399P") || c.endsWith("396P"));
     if (onlyInternship) continue;
     incompleteSemesters.push(sem);
+  }
+  // Also flag semesters that have NO data at all (completely missing imports)
+  for (let sem = 1; sem < offeringSemester; sem++) {
+    if (!semesterMap.has(sem) && !incompleteSemesters.includes(sem)) {
+      incompleteSemesters.push(sem);
+    }
   }
   incompleteSemesters.sort((a, b) => a - b);
 
