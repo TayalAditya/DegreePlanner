@@ -542,13 +542,10 @@ export default function ProgressPage() {
 
     const icCredits = programCredits.icCredits ?? 60;
     const icBasketRequired = 6;
-    // BSCS has HSS=9 (IKS=3 counts within their 12 combined); all other branches HSS=12.
-    // Also handle program-based detection: BSCS programs have icCredits ≤ 52 (vs 60 for BTech).
-    const branchNorm = getCurriculumBranchCode(user?.branch || "");
-    const isBscsStudent = branchNorm === "BSCS" || branchNorm === "BS" || branchNorm === "CH"
-      || (programCredits?.icCredits != null && programCredits.icCredits <= 52);
-    const hssRequired = isBscsStudent ? 9 : 12;
     const iksRequired = 3;
+    // BSCS programs have icCredits ≤ 52 (BTech always 53–60+).
+    // HSS=9 for BSCS (HSS+IKS combined = 12, not separate 12+3=15).
+    const hssRequired = icCredits <= 52 ? 9 : 12;
 
     const inferredBatch = (() => {
       if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;
