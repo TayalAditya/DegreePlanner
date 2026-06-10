@@ -62,7 +62,7 @@ export async function GET() {
           select: {
             id: true,
             ltpc: true,
-            branchMappings: { select: { courseCategory: true, branch: true, batch: true } },
+            branchMappings: { select: { courseCategory: true, branch: true, batch: true, semester: true } },
           },
         },
       },
@@ -186,7 +186,26 @@ export async function GET() {
       //  a) no semester restriction OR same as student's current semester
       //  b) OR different semester but student hasn't completed it yet (backlog DC/IC)
       const isCompulsoryCategory = ["IC", "IC_BASKET", "DC", "IKS"].includes(resolvedCategory);
-      const semesterMatches = o.compulsorySem == null || o.compulsorySem === offeringSemester;
+      // Prefer branch-specific semester from branchMapping over the offering-level compulsorySem
+      const branchMappingSem = o.course?.branchMappings
+        ? (() => {
+            const candidates = getBranchCandidates(normalizedBranch);
+            const order = new Map(candidates.map((b, i) => [normalizeBranchCode(b), i]));
+            const batchStr = batch ? String(batch) : "";
+            let best: { semester: number | null } | undefined;
+            let bestScore = Infinity;
+            for (const m of o.course!.branchMappings as Array<{ branch: string; batch: string; semester: number | null }>) {
+              const idx = order.get(normalizeBranchCode(m.branch));
+              if (idx === undefined) continue;
+              const batchPenalty = m.batch && m.batch !== "" ? (m.batch === batchStr ? 0 : 1000) : 0.5;
+              const score = idx + batchPenalty;
+              if (score < bestScore) { best = m; bestScore = score; }
+            }
+            return best?.semester ?? null;
+          })()
+        : null;
+      const effectiveCompulsorySem = branchMappingSem ?? o.compulsorySem;
+      const semesterMatches = effectiveCompulsorySem == null || effectiveCompulsorySem === offeringSemester;
 
       // IC-181/IC-182 mutual exclusion — done either one → other not compulsory
       const iksBlocked =
