@@ -141,7 +141,7 @@ export class CreditCalculator {
     const enrollments = await prisma.courseEnrollment.findMany({
       where: {
         userId,
-        programId,
+        // No programId filter — transcripts are per-user and may have stale/null programIds
       },
       include: {
         course: {
