@@ -1391,7 +1391,11 @@ const applyBatchOverrides = (
         }
         // GE-ROBO: ME206 now in base; IC241 no longer in base. No changes needed.
         // GE-MECH: ME206/EE203/EE260 now in base. No changes needed.
-        updated = addCourseIfMissing(updated, B22_IC222P_SEM3);
+        // IC222P (Physics Practicum) moves to Sem-3 for B25 BTech only.
+        // BSCS and DSAI have their own Sem-3 content — don't inject BTech IC courses.
+        if (effectiveBranch !== "BSCS" && effectiveBranch !== "DSAI") {
+          updated = addCourseIfMissing(updated, B22_IC222P_SEM3);
+        }
         return updated;
       }
 
