@@ -487,15 +487,21 @@ export default function PreRegistrationPage() {
           const offeringById = new Map(d.offerings.map((o: Offering) => [o.id, o]));
           const restoredSlots = new Set<string>();
           const restoredIds = new Set<string>();
+          const restoredExtra = new Set<string>();
           for (const id of plan.selectedIds) {
             const o = offeringById.get(id);
-            if (!o) continue;
+            if (!o) {
+              // Not an offering ID — must be MTP/internship Course ID
+              restoredExtra.add(id);
+              continue;
+            }
             const oSlots = parseSlots(o.slots);
             if (oSlots.some((s) => restoredSlots.has(s))) continue;
             oSlots.forEach((s) => restoredSlots.add(s));
             restoredIds.add(id);
           }
           setSelected(restoredIds);
+          if (restoredExtra.size > 0) setSelectedExtra(restoredExtra);
           setSaved(true);
         }
 

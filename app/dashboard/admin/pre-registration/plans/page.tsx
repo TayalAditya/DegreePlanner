@@ -18,10 +18,6 @@ interface StudentPlan {
   courses: CourseSummary[];
 }
 
-const CURRENT_YEAR = new Date().getFullYear();
-const SEMESTERS = [3, 5, 7];
-const YEARS = [CURRENT_YEAR, CURRENT_YEAR + 1];
-
 function PlanRow({ plan }: { plan: StudentPlan }) {
   const [open, setOpen] = useState(false);
   return (
@@ -73,30 +69,27 @@ function PlanRow({ plan }: { plan: StudentPlan }) {
 }
 
 export default function AdminPlansPage() {
-  const [semester, setSemester] = useState(7);
-  const [year, setYear] = useState(CURRENT_YEAR);
   const [plans, setPlans] = useState<StudentPlan[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [fetched, setFetched] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filterBranch, setFilterBranch] = useState("ALL");
   const [filterBatch, setFilterBatch] = useState("ALL");
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/pre-registration/plans?semester=${semester}&year=${year}`);
-      const data = await res.json();
-      setPlans(data.plans ?? []);
-      setFetched(true);
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => {
+    // Load all plans across all semesters/years
+    Promise.all([
+      fetch(`/api/pre-registration/plans?semester=3&year=${new Date().getFullYear()}`).then(r => r.json()),
+      fetch(`/api/pre-registration/plans?semester=5&year=${new Date().getFullYear()}`).then(r => r.json()),
+      fetch(`/api/pre-registration/plans?semester=7&year=${new Date().getFullYear()}`).then(r => r.json()),
+    ]).then(([s3, s5, s7]) => {
+      const all = [...(s3.plans ?? []), ...(s5.plans ?? []), ...(s7.plans ?? [])];
+      // dedupe by userId (keep latest)
+      const byUser = new Map<string, StudentPlan>();
+      for (const p of all) byUser.set(p.userId, p);
+      setPlans([...byUser.values()].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()));
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
 
-  useEffect(() => { load(); }, [semester, year]);
-
-  // Derive unique branches and batches from plans
   const branches = useMemo(() => {
     const set = new Set(plans.map(p => p.branch).filter(Boolean) as string[]);
     return ["ALL", ...Array.from(set).sort()];
@@ -121,19 +114,16 @@ export default function AdminPlansPage() {
     });
   }, [plans, search, filterBranch, filterBatch]);
 
-  const totalStudents = filtered.length;
-  const avgCredits = totalStudents ? filtered.reduce((s, p) => s + p.totalCredits, 0) / totalStudents : 0;
+  const avgCredits = filtered.length ? filtered.reduce((s, p) => s + p.totalCredits, 0) / filtered.length : 0;
 
-  const coursePop = new Map<string, { name: string; count: number; credits: number }>();
+  const coursePop = new Map<string, { name: string; count: number }>();
   for (const p of filtered) {
     for (const c of p.courses) {
-      const existing = coursePop.get(c.code) ?? { name: c.name, count: 0, credits: c.credits };
-      coursePop.set(c.code, { ...existing, count: existing.count + 1 });
+      const e = coursePop.get(c.code) ?? { name: c.name, count: 0 };
+      coursePop.set(c.code, { ...e, count: e.count + 1 });
     }
   }
-  const popularCourses = [...coursePop.entries()]
-    .sort((a, b) => b[1].count - a[1].count)
-    .slice(0, 10);
+  const popularCourses = [...coursePop.entries()].sort((a, b) => b[1].count - a[1].count).slice(0, 10);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -144,20 +134,6 @@ export default function AdminPlansPage() {
 
       {/* Filters */}
       <div className="flex gap-3 flex-wrap items-end">
-        <div>
-          <label className="block text-xs font-medium text-foreground-secondary mb-1">Semester</label>
-          <select value={semester} onChange={(e) => setSemester(Number(e.target.value))}
-            className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm">
-            {SEMESTERS.map((s) => <option key={s} value={s}>Sem {s}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-foreground-secondary mb-1">Year</label>
-          <select value={year} onChange={(e) => setYear(Number(e.target.value))}
-            className="px-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm">
-            {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
-        </div>
         <div>
           <label className="block text-xs font-medium text-foreground-secondary mb-1">Branch</label>
           <select value={filterBranch} onChange={(e) => setFilterBranch(e.target.value)}
@@ -176,13 +152,9 @@ export default function AdminPlansPage() {
           <label className="block text-xs font-medium text-foreground-secondary mb-1">Search</label>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground-secondary" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Name, roll no, email…"
-              className="w-full pl-8 pr-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm"
-            />
+              className="w-full pl-8 pr-3 py-2 rounded-lg border border-border bg-background text-foreground text-sm" />
           </div>
         </div>
       </div>
@@ -191,16 +163,13 @@ export default function AdminPlansPage() {
         <div className="flex items-center justify-center py-16">
           <div className="w-7 h-7 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         </div>
-      ) : !fetched || plans.length === 0 ? (
-        <div className="text-center py-16 text-foreground-secondary text-sm">
-          No plans saved yet for Semester {semester} {year}.
-        </div>
+      ) : plans.length === 0 ? (
+        <div className="text-center py-16 text-foreground-secondary text-sm">No plans saved yet.</div>
       ) : (
         <>
-          {/* Stats */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Students with plans", value: totalStudents },
+              { label: "Students with plans", value: filtered.length },
               { label: "Avg credits planned", value: formatCredits(avgCredits) + " cr" },
               { label: "Most popular course", value: popularCourses[0]?.[0] ?? "—" },
             ].map(({ label, value }) => (
@@ -211,13 +180,9 @@ export default function AdminPlansPage() {
             ))}
           </div>
 
-          {/* Course popularity */}
           <div className="rounded-xl border border-border bg-surface overflow-hidden">
             <div className="px-4 py-3 border-b border-border">
               <p className="text-sm font-semibold text-foreground">Course Popularity</p>
-              {totalStudents < plans.length && (
-                <p className="text-xs text-foreground-secondary">Filtered: {totalStudents} of {plans.length} students</p>
-              )}
             </div>
             <div className="p-4 space-y-2">
               {popularCourses.map(([code, { name, count }]) => (
@@ -225,7 +190,7 @@ export default function AdminPlansPage() {
                   <span className="font-mono text-xs w-20 flex-shrink-0 text-foreground-secondary">{code}</span>
                   <div className="flex-1 h-2 rounded-full bg-background-secondary overflow-hidden">
                     <div className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${(count / totalStudents) * 100}%` }} />
+                      style={{ width: `${filtered.length ? (count / filtered.length) * 100 : 0}%` }} />
                   </div>
                   <span className="text-sm text-foreground w-8 text-right flex-shrink-0">{count}</span>
                   <span className="text-xs text-foreground-secondary hidden sm:block w-48 truncate">{name}</span>
@@ -234,17 +199,14 @@ export default function AdminPlansPage() {
             </div>
           </div>
 
-          {/* Student plans */}
           <div className="space-y-2">
             <div className="flex items-center gap-2 mb-3">
               <Users className="w-4 h-4 text-foreground-secondary" />
-              <p className="text-sm font-semibold text-foreground">{totalStudents} Student Plan{totalStudents !== 1 ? "s" : ""}</p>
+              <p className="text-sm font-semibold text-foreground">{filtered.length} Student Plan{filtered.length !== 1 ? "s" : ""}</p>
             </div>
             {filtered.length === 0 ? (
               <p className="text-center py-8 text-foreground-secondary text-sm">No students match the current filters.</p>
-            ) : (
-              filtered.map((p) => <PlanRow key={p.userId} plan={p} />)
-            )}
+            ) : filtered.map((p) => <PlanRow key={p.userId} plan={p} />)}
           </div>
         </>
       )}
