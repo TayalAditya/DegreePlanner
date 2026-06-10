@@ -38,21 +38,22 @@ export async function POST(req: NextRequest) {
       });
 
       if (dbUser) {
-        let program = await prisma.program.findUnique({
-          where: { code: session.user.branch || "" },
-        });
+        // Resolve the correct program for this student's branch+batch.
+        // Batch-specific lookup first (e.g. BSCS_B24), then fall back to base branch code.
+        const correctCode = getProgramLookupBranchCode(session.user.branch, session.user.batch);
+        let program = await prisma.program.findUnique({ where: { code: correctCode } });
         if (!program) {
-          program = await prisma.program.findUnique({
-            where: { code: getProgramLookupBranchCode(session.user.branch, session.user.batch) },
-          });
+          program = await prisma.program.findUnique({ where: { code: session.user.branch || "" } });
         }
 
         if (program) {
-          const alreadyEnrolled = await prisma.userProgram.findFirst({
-            where: { userId: dbUser.id, programId: program.id },
+          const existingPrimary = await prisma.userProgram.findFirst({
+            where: { userId: dbUser.id, isPrimary: true, programType: "MAJOR" },
+            include: { program: { select: { code: true } } },
           });
 
-          if (!alreadyEnrolled) {
+          if (!existingPrimary) {
+            // No primary program yet — create one.
             await prisma.userProgram.create({
               data: {
                 userId: dbUser.id,
@@ -62,6 +63,12 @@ export async function POST(req: NextRequest) {
                 startSemester: 1,
                 status: "ACTIVE",
               },
+            });
+          } else if (existingPrimary.programId !== program.id) {
+            // Wrong program (e.g. B24 student on B23 program) — migrate to correct one.
+            await prisma.userProgram.update({
+              where: { id: existingPrimary.id },
+              data: { programId: program.id },
             });
           }
         }
