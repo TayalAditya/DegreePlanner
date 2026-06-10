@@ -646,6 +646,7 @@ const bscsSem1: DefaultCourse[] = [
 ];
 const bscsSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ICB2_IC121];
 const bscsSem3: DefaultCourse[] = [
+  { code: "IC136",  name: "Understanding Biotechnology and its Applications",     credits: 3, category: "DC", semester: 3 },
   { code: "CY301",  name: "Principles and Theories of Physical Chemistry",        credits: 3, category: "DC", semester: 3 },
   { code: "CY302",  name: "Principles of Organic Chemistry",                     credits: 3, category: "DC", semester: 3 },
   { code: "CY303",  name: "Fundamentals of Inorganic Chemistry",                 credits: 3, category: "DC", semester: 3 },
