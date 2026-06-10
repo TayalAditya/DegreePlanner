@@ -22,17 +22,21 @@ export async function GET(req: NextRequest) {
     orderBy: { updatedAt: "desc" },
   });
 
-  // Fetch offerings to resolve names
-  const offerings = await prisma.courseOffering.findMany({
-    where: { offeringSemester: semester, offeringYear: year, isActive: true },
-    select: { id: true, courseCode: true, courseName: true, credits: true },
-  });
+  // Collect all IDs referenced across plans
+  const allIds = [...new Set(plans.flatMap((p) => p.selectedIds))];
+
+  // Look up offerings directly by ID — no year/semester filter so plans
+  // saved in a previous cycle (or before offerings are recreated) still resolve.
+  const offerings = allIds.length > 0
+    ? await prisma.courseOffering.findMany({
+        where: { id: { in: allIds } },
+        select: { id: true, courseCode: true, courseName: true, credits: true },
+      })
+    : [];
   const offeringMap = new Map(offerings.map((o) => [o.id, o]));
 
-  // Also fetch courses by ID for MTP/internship entries (Course IDs, not Offering IDs)
-  const allIds = [...new Set(plans.flatMap((p) => p.selectedIds))];
-  const offeringIds = new Set(offerings.map((o) => o.id));
-  const courseIds = allIds.filter((id) => !offeringIds.has(id));
+  // Any IDs not found as offerings are Course-table IDs (MTP/internship entries)
+  const courseIds = allIds.filter((id) => !offeringMap.has(id));
   const courseMap = new Map<string, { courseCode: string; courseName: string; credits: number }>();
   if (courseIds.length > 0) {
     const courses = await prisma.course.findMany({
