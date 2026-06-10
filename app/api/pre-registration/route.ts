@@ -182,15 +182,20 @@ export async function GET() {
       // Once IC basket requirement is fulfilled (6 cr done), further IC_BASKET offerings become optional FE
       let resolvedCategory = icBasketFulfilled && baseCat === "IC_BASKET" ? "FE" : baseCat;
 
-      // B24/B25 CE/BE/EP/BSCS: IC202P (Design Practicum) is optional — reclassify to FE
-      // so it is neither compulsory nor shown as DC/IC in the UI.
       const normalizedCodeEarly = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+      // B24/B25 CE/BE/EP/BSCS: IC202P (Design Practicum) is optional — reclassify to FE.
       const dpOptionalBranches = new Set(["CE", "BE", "EP", "BSCS"]);
       if (
         normalizedCodeEarly === "IC202P" &&
         dpOptionalBranches.has(normalizedBranch) &&
         batch != null && batch >= 2024
       ) {
+        resolvedCategory = "FE";
+      }
+
+      // BSCS: IC272 (Machine Learning) is a BTech IC course — not compulsory for BSCS.
+      if (normalizedCodeEarly === "IC272" && normalizedBranch === "BSCS") {
         resolvedCategory = "FE";
       }
 
