@@ -112,6 +112,19 @@ export async function GET() {
   const ic181Done = completedByCourseCode.has("IC181");
   const ic182Done = completedByCourseCode.has("IC182");
 
+  // IC Basket: students need 6 cr total. Once fulfilled, further IC_BASKET offerings are optional FE.
+  const IC_BASKET_REQ = 6;
+  let completedIcBasketCredits = 0;
+  for (const e of completed) {
+    if (e.grade === "F") continue;
+    const cat = pickCategory(
+      e.course.branchMappings as Array<{ courseCategory: string; branch: string; batch: string }>,
+      normalizedBranch,
+      batch
+    );
+    if (cat === "IC_BASKET") completedIcBasketCredits += e.course.credits;
+  }
+  const icBasketFulfilled = completedIcBasketCredits >= IC_BASKET_REQ;
 
   const isAdmin = session.user.role === "ADMIN";
 
@@ -133,8 +146,9 @@ export async function GET() {
       const mappingCategory = o.course
         ? pickCategory(o.course.branchMappings, normalizedBranch, batch)
         : undefined;
-      const resolvedCategory =
-        mappingCategory ?? o.categoryOverride ?? "FE";
+      const baseCat = mappingCategory ?? o.categoryOverride ?? "FE";
+      // Once IC basket requirement is fulfilled (6 cr done), further IC_BASKET offerings become optional FE
+      const resolvedCategory = icBasketFulfilled && baseCat === "IC_BASKET" ? "FE" : baseCat;
 
       // Check if already completed — must be declared before isCompulsory
       const normalizedCode = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
