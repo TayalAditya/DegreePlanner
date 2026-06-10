@@ -669,7 +669,7 @@ export default function ProgressPage() {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const progress = useMemo(() => calculateProgress(), [enrollments, user, nonMgmtMinorCourseCodes, mappingBranchAliases, includeCurrentSemesterCredits]);
+  const progress = useMemo(() => calculateProgress(), [enrollments, user, programCredits, nonMgmtMinorCourseCodes, mappingBranchAliases, includeCurrentSemesterCredits]);
 
   if (loading) {
     return <ProgressSkeleton />;
