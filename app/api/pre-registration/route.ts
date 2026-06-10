@@ -69,7 +69,14 @@ export async function GET() {
       orderBy: { courseCode: "asc" },
     }),
     prisma.courseEnrollment.findMany({
-      where: { userId: session.user.id, status: EnrollmentStatus.COMPLETED },
+      where: {
+        userId: session.user.id,
+        OR: [
+          { status: EnrollmentStatus.COMPLETED },
+          // During pre-reg break, sync doesn't run — treat past-semester IN_PROGRESS as done
+          { status: EnrollmentStatus.IN_PROGRESS, semester: { lt: offeringSemester } },
+        ],
+      },
       include: {
         course: {
           select: {
@@ -188,10 +195,10 @@ export async function GET() {
             getBranchCandidates(normalizedBranch).map(b => b.toUpperCase()).includes(m.branch.toUpperCase())) ??
           (() => { const c = pickCategory(e.course.branchMappings as any, normalizedBranch, batch); return c ? { courseCategory: c, splitCategory: null, splitAmount: null } : null; })();
 
-        // IC-181/IC-182 are IKS basket — treat as IKS regardless of branch mapping fallback
         const iksCode = code === "IC181" || code === "IC182";
-        const cat = mapping?.courseCategory ??
+        let cat = mapping?.courseCategory ??
           (code.startsWith("HS") ? "HSS" : iksCode ? "IKS" : code.startsWith("IC") ? "IC" : "FE");
+        if (iksCode) cat = "IKS"; // force to IKS regardless of branch mapping
 
         if (mapping?.splitCategory && mapping.splitAmount) {
           add(cat, cr - mapping.splitAmount);
