@@ -172,10 +172,22 @@ export async function GET() {
         : undefined;
       const baseCat = mappingCategory ?? o.categoryOverride ?? "FE";
       // Once IC basket requirement is fulfilled (6 cr done), further IC_BASKET offerings become optional FE
-      const resolvedCategory = icBasketFulfilled && baseCat === "IC_BASKET" ? "FE" : baseCat;
+      let resolvedCategory = icBasketFulfilled && baseCat === "IC_BASKET" ? "FE" : baseCat;
+
+      // B24/B25 CE/BE/EP/BSCS: IC202P (Design Practicum) is optional — reclassify to FE
+      // so it is neither compulsory nor shown as DC/IC in the UI.
+      const normalizedCodeEarly = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const dpOptionalBranches = new Set(["CE", "BE", "EP", "BSCS"]);
+      if (
+        normalizedCodeEarly === "IC202P" &&
+        dpOptionalBranches.has(normalizedBranch) &&
+        batch != null && batch >= 2024
+      ) {
+        resolvedCategory = "FE";
+      }
 
       // Check if already completed — must be declared before isCompulsory
-      const normalizedCode = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const normalizedCode = normalizedCodeEarly;
       const completedSem =
         (o.courseId ? completedByCourseId.get(o.courseId) : undefined) ??
         completedByCourseCode.get(normalizedCode) ??
@@ -212,15 +224,9 @@ export async function GET() {
         (normalizedCode === "IC181" && (ic182Done || ic181Done)) ||
         (normalizedCode === "IC182" && (ic181Done || ic182Done));
 
-      // B24/B25 CE/BE/EP/BSCS: Design Practicum (IC202P) is optional (goes to FE if taken).
-      // Override to non-compulsory regardless of CourseBranchMapping category.
-      const dpOptionalBranches = new Set(["CE", "BE", "EP", "BSCS"]);
-      const isDpOptional =
-        normalizedCode === "IC202P" &&
-        dpOptionalBranches.has(normalizedBranch) &&
-        batch != null && batch >= 2024;
-
-      const isCompulsory = isCompulsoryCategory && !iksBlocked && !isDpOptional && (semesterMatches || !isCompleted);
+      // Backlog only if due in a PAST semester and not done — future-semester courses are never backlog
+      const isBacklog = effectiveCompulsorySem != null && effectiveCompulsorySem < offeringSemester && !isCompleted;
+      const isCompulsory = isCompulsoryCategory && !iksBlocked && (semesterMatches || isBacklog);
 
       return {
         id: o.id,
