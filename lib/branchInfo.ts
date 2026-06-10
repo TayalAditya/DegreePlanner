@@ -4,6 +4,7 @@ export function normalizeBranchCode(branch?: string | null): string {
   const b = String(branch || "").trim().toUpperCase();
   if (!b) return "";
 
+  if (b === "BIOE") return "BE"; // BioE is stored as BE in the approved-users sheet
   if (b === "GERAI") return "GE-ROBO";
   if (b === "GECE") return "GE-COMM";
   if (b === "GEMECH") return "GE-MECH";
