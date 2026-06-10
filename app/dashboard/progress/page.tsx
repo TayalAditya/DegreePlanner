@@ -542,7 +542,8 @@ export default function ProgressPage() {
 
     const icCredits = programCredits.icCredits ?? 60;
     const icBasketRequired = 6;
-    const hssRequired = 12;
+    // BSCS has HSS=9 (IKS=3 counts within their 12 combined); all other branches HSS=12.
+    const hssRequired = getCurriculumBranchCode(user?.branch || "") === "BSCS" ? 9 : 12;
     const iksRequired = 3;
 
     const inferredBatch = (() => {
