@@ -507,6 +507,8 @@ export default function PreRegistrationPage() {
               restoredExtra.add(id);
               continue;
             }
+            // Skip compulsory courses — they're auto-shown, don't add to selected
+            if (o.isCompulsory) continue;
             const oSlots = parseSlots(o.slots);
             if (oSlots.some((s) => restoredSlots.has(s))) continue;
             oSlots.forEach((s) => restoredSlots.add(s));
@@ -727,7 +729,18 @@ export default function PreRegistrationPage() {
       const res = await fetch("/api/pre-registration/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ semester: data.offeringSemester, year: data.offeringYear, selectedIds: [...selected, ...selectedExtra] }),
+        body: JSON.stringify({
+          semester: data.offeringSemester,
+          year: data.offeringYear,
+          // Include compulsory IC/DC courses so admin plans page shows the full picture
+          selectedIds: [
+            ...selected,
+            ...selectedExtra,
+            ...data.offerings
+              .filter((o) => o.isCompulsory && o.completedInSemester === null)
+              .map((o) => o.id),
+          ],
+        }),
       });
       if (!res.ok) throw new Error();
       setSaved(true);
@@ -1247,7 +1260,7 @@ export default function PreRegistrationPage() {
         <>
           <button
             onClick={() => setProgressOpen(true)}
-            className="lg:hidden fixed bottom-20 right-4 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+            className="lg:hidden fixed bottom-[76px] right-4 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
             aria-label="View progress"
           >
             <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
