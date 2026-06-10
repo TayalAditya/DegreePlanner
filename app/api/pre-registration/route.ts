@@ -212,7 +212,15 @@ export async function GET() {
         (normalizedCode === "IC181" && (ic182Done || ic181Done)) ||
         (normalizedCode === "IC182" && (ic181Done || ic182Done));
 
-      const isCompulsory = isCompulsoryCategory && !iksBlocked && (semesterMatches || !isCompleted);
+      // B24/B25 CE/BE/EP/BSCS: Design Practicum (IC202P) is optional (goes to FE if taken).
+      // Override to non-compulsory regardless of CourseBranchMapping category.
+      const dpOptionalBranches = new Set(["CE", "BE", "EP", "BSCS"]);
+      const isDpOptional =
+        normalizedCode === "IC202P" &&
+        dpOptionalBranches.has(normalizedBranch) &&
+        batch != null && batch >= 2024;
+
+      const isCompulsory = isCompulsoryCategory && !iksBlocked && !isDpOptional && (semesterMatches || !isCompleted);
 
       return {
         id: o.id,
