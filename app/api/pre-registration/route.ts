@@ -54,7 +54,7 @@ export async function GET() {
   const normalizedBranch = normalizeBranchCode(branch);
 
   // Fetch all data in parallel
-  const [offerings, completed, userProgram, savedPlan, userRecord] = await Promise.all([
+  const [offerings, completed, userProgram, savedPlan, userRecord, equivalencies] = await Promise.all([
     prisma.courseOffering.findMany({
       where: { offeringYear, isActive: true },
       include: {
@@ -101,12 +101,27 @@ export async function GET() {
       where: { id: session.user.id },
       select: { totalPassFailCredits: true },
     }),
+    prisma.courseEquivalent.findMany({
+      select: { courseId: true, equivalentId: true,
+        course: { select: { code: true } },
+        equivalent: { select: { id: true, code: true } },
+      },
+    }),
   ]);
 
   const completedByCourseId = new Map(completed.map((e) => [e.courseId, e.semester]));
   const completedByCourseCode = new Map(
     completed.map((e) => [e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, ""), e.semester])
   );
+
+  // Apply course equivalencies from DB: if student completed an exchange course, treat the IIT Mandi equivalent as done
+  for (const eq of equivalencies) {
+    const sem = completedByCourseId.get(eq.courseId);
+    if (sem !== undefined) {
+      completedByCourseId.set(eq.equivalent.id, sem);
+      completedByCourseCode.set(eq.equivalent.code.toUpperCase().replace(/[^A-Z0-9]/g, ""), sem);
+    }
+  }
 
   // IC-181 & IC-182 are IKS basket — only one counts. If either is done, the other is not compulsory.
   const ic181Done = completedByCourseCode.has("IC181");

@@ -197,9 +197,26 @@ model Course {
   branchMappings  CourseBranchMapping[]
   courseSuggestions CourseSuggestion[]
   offerings        CourseOffering[]
+  equivalents      CourseEquivalent[]  @relation("CourseEquivalents")
+  equivalentFor    CourseEquivalent[]  @relation("EquivalentFor")
 
   @@index([code])
   @@index([department])
+}
+
+// Semester-exchange / transfer course equivalencies
+// If a student completed `course`, treat `equivalent` as also completed.
+model CourseEquivalent {
+  id           String @id @default(cuid())
+  courseId     String // exchange course (e.g. IN2406)
+  equivalentId String // IIT Mandi course it replaces (e.g. CS-305)
+
+  course       Course @relation("CourseEquivalents", fields: [courseId], references: [id], onDelete: Cascade)
+  equivalent   Course @relation("EquivalentFor", fields: [equivalentId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, equivalentId])
+  @@index([courseId])
+  @@index([equivalentId])
 }
 
 // Prerequisites
