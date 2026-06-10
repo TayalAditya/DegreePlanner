@@ -846,6 +846,11 @@ const B24_CE_CE311P_SEM4: DefaultCourse = { code: "CE311P", name: "Geotechnical 
 // ─── B24 GE course constants ──────────────────────────────────────────────────
 // (All GE DC changes are now baked into the base arrays; no B24-only constants needed.)
 
+// IC202P as optional FE — used by B24/B25 branches where DP is not compulsory.
+// Shown unchecked; if student selects it, credits count toward Free Electives.
+const IC202P_OPTIONAL_FE_SEM3: DefaultCourse = { code: "IC202P", name: "Design Practicum", credits: 3, category: "FE", semester: 3, optional: true };
+const IC202P_OPTIONAL_FE_SEM4: DefaultCourse = { code: "IC202P", name: "Design Practicum", credits: 3, category: "FE", semester: 4, optional: true };
+
 // ─── B24 BSCS course constants ────────────────────────────────────────────────
 const B24_BSCS_CY200_SEM2: DefaultCourse = { code: "CY200", name: "Foundations and Applications of Chemistry", credits: 3, category: "DC", semester: 2 };
 
@@ -1363,7 +1368,7 @@ const applyBatchOverrides = (
           updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "CS214");
         }
         if (effectiveBranch === "CE") {
-          // CE301/CE301P/CE354P renumbered to CE310/CE310P/CE203P; CE202 moved to Sem-2; IC202P not compulsory.
+          // CE301/CE301P/CE354P renumbered; CE202 moved to Sem-2; IC202P optional FE (DP not compulsory for B25 CE).
           updated = updated.filter((c) => {
             const code = normalizeCurriculumCode(c.code);
             return !["CE202", "CE301", "CE301P", "CE354P", "IC202P"].includes(code);
@@ -1374,6 +1379,8 @@ const applyBatchOverrides = (
           updated = addCourseIfMissing(updated, B24_CE_CE310_SEM3);
           updated = addCourseIfMissing(updated, B24_CE_CE310P_SEM3);
           updated = addCourseIfMissing(updated, B24_CE_CE203P_SEM3);
+          // Show DP as optional FE so students can check it if they choose to do it.
+          updated = addCourseIfMissing(updated, IC202P_OPTIONAL_FE_SEM3);
         }
         if (effectiveBranch === "ME") {
           // ME100/ME205/ME308/ME310 move to Sem 4/5; ME206 added here.
