@@ -227,8 +227,12 @@ export async function GET() {
       tally.DE = Math.min(tally.DE ?? 0, req.deCredits);
       tally.FE = (tally.FE ?? 0) + deOverflow;
 
+      // IC_BASKET overflow → FE (credits beyond 6cr requirement count as FE)
+      const icBasketOverflow = Math.max(0, (tally.IC_BASKET ?? 0) - IC_BASKET_REQ);
+      tally.IC_BASKET = Math.min(tally.IC_BASKET ?? 0, IC_BASKET_REQ);
+      tally.FE = (tally.FE ?? 0) + icBasketOverflow;
+
       completedBreakdown = tally;
-      const IC_BASKET_REQ = 6;
       const HSS_REQ = 12;
       const IKS_REQ = 3;
       programRequirements = {
