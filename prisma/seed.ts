@@ -5,9 +5,10 @@ const prisma = new PrismaClient();
 async function seedPrograms() {
   console.log("🌱 Seeding all IIT Mandi programs...\n");
 
-  // Delete existing user enrollments first
-  await prisma.userProgram.deleteMany({});
-  // Then delete programs
+  // Delete programs only — NOT UserProgram records (those are user data).
+  // UserProgram records point to programs by ID; after recreating programs
+  // with new IDs the sync-user route will re-assign students on next login.
+  // We skip deleting UserPrograms to avoid wiping student program history.
   await prisma.program.deleteMany({});
 
   // IC credits for all B.Tech: 39 (IC Compulsory) + 6 (IC Basket) + 12 (HSS) + 3 (IKS) = 60
