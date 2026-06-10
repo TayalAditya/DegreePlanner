@@ -115,7 +115,7 @@ const cseSem6: DefaultCourse[] = [
 ];
 const cseSem7: DefaultCourse[] = [...mtpSem7];
 const cseSem8: DefaultCourse[] = [
-  { code: "CS010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "CS010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -145,7 +145,7 @@ const dseSem6: DefaultCourse[] = [
 ];
 const dseSem7: DefaultCourse[] = [...mtpSem7];
 const dseSem8: DefaultCourse[] = [
-  { code: "DS010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "DS010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -184,7 +184,7 @@ const dsaiSem7: DefaultCourse[] = [
   ...mtpSem7,
 ];
 const dsaiSem8: DefaultCourse[] = [
-  { code: "DS010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "DS010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -219,7 +219,7 @@ const eeSem6: DefaultCourse[] = [
 ];
 const eeSem7: DefaultCourse[] = [...mtpSem7];
 const eeSem8: DefaultCourse[] = [
-  { code: "EE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "EE010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -260,7 +260,7 @@ const meSem6: DefaultCourse[] = [
 ];
 const meSem7: DefaultCourse[] = [...mtpSem7];
 const meSem8: DefaultCourse[] = [
-  { code: "ME010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "ME010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -301,7 +301,7 @@ const ceSem6: DefaultCourse[] = [
 ];
 const ceSem7: DefaultCourse[] = [...mtpSem7];
 const ceSem8: DefaultCourse[] = [
-  { code: "CE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "CE010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -333,7 +333,7 @@ const beSem6: DefaultCourse[] = [
 ];
 const beSem7: DefaultCourse[] = [...mtpSem7];
 const beSem8: DefaultCourse[] = [
-  { code: "BE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "BE010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -365,7 +365,7 @@ const epSem6: DefaultCourse[] = [
 ];
 const epSem7: DefaultCourse[] = [...mtpSem7];
 const epSem8: DefaultCourse[] = [
-  { code: "EP010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "EP010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -398,7 +398,7 @@ const mncSem6: DefaultCourse[] = [
 ];
 const mncSem7: DefaultCourse[] = [...mtpSem7];
 const mncSem8: DefaultCourse[] = [
-  { code: "MC010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "MC010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -431,7 +431,7 @@ const mseSem5: DefaultCourse[] = [
 const mseSem6: DefaultCourse[] = [...istpSem6];
 const mseSem7: DefaultCourse[] = [...mtpSem7];
 const mseSem8: DefaultCourse[] = [
-  { code: "MS010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "MS010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -472,7 +472,7 @@ const geRaiSem7: DefaultCourse[] = [
   ...mtpSem7,
 ];
 const geRaiSem8: DefaultCourse[] = [
-  { code: "GE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "GE010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -503,7 +503,7 @@ const geCeSem7: DefaultCourse[] = [
   ...mtpSem7,
 ];
 const geCeSem8: DefaultCourse[] = [
-  { code: "GE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "GE010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -532,7 +532,7 @@ const geMechSem7: DefaultCourse[] = [
   ...mtpSem7,
 ];
 const geMechSem8: DefaultCourse[] = [
-  { code: "GE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "GE010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -588,7 +588,7 @@ const mevlsiSem5: DefaultCourse[] = [
 const mevlsiSem6: DefaultCourse[] = [...istpSem6];
 const mevlsiSem7: DefaultCourse[] = [...mtpSem7];
 const mevlsiSem8: DefaultCourse[] = [
-  { code: "VL010", name: "Independent Project", credits: 2, category: "IC", semester: 8 },
+  { code: "VL010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -604,7 +604,7 @@ const bscsSem3: DefaultCourse[] = [
   { code: "CY201P", name: "Physical Chemistry Laboratory",                       credits: 2, category: "DC", semester: 3 },
 ];
 const bscsSem4: DefaultCourse[] = [
-  ...ic202pSem4,
+  { code: "IC202P", name: "Design Practicum", credits: 3, category: "FE", semester: 4 },
   { code: "CY304",  name: "Fundamental Analytical Chemistry",    credits: 3, category: "DC", semester: 4 },
   { code: "CY202P", name: "Organic Chemistry Laboratory",        credits: 2, category: "DC", semester: 4 },
   { code: "CY203P", name: "Inorganic Chemistry Laboratory",      credits: 2, category: "DC", semester: 4 },
@@ -710,7 +710,7 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   "GE-FIN_1": geSem1, "GE-FIN_2": geRaiSem2, "GE-FIN_3": geFinSem3,
   "GE-FIN_4": geFinSem4, "GE-FIN_5": [], "GE-FIN_6": [...istpSem6],
   "GE-FIN_7": [...mtpSem7],
-  "GE-FIN_8": [{ code: "GE010", name: "Independent Project", credits: 2, category: "IC", semester: 8 }, ...mtpSem8],
+  "GE-FIN_8": [{ code: "GE010", name: "Internship", credits: 2, category: "IC", semester: 8 }, ...mtpSem8],
 
   // MEVLSI
   MEVLSI_1: mevlsiSem1, MEVLSI_2: mevlsiSem2, MEVLSI_3: mevlsiSem3,
