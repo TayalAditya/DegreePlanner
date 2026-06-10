@@ -471,6 +471,15 @@ export default function PreRegistrationPage() {
   const [mtp1Course, setMtp1Course] = useState<InternshipCourse | null>(null);
   const [selectedExtra, setSelectedExtra] = useState<Set<string>>(new Set());
   const toggleExtra = (id: string) => setSelectedExtra(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); setSaved(false); return s; });
+
+  // P/F credits consumed by selected internship in THIS plan
+  const pfCreditsFromSelection = useMemo(() => {
+    let used = 0;
+    for (const c of [...internshipCourses.p399, ...internshipCourses.p396]) {
+      if (selectedExtra.has(c.id)) used += c.credits;
+    }
+    return used;
+  }, [selectedExtra, internshipCourses]);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -738,7 +747,7 @@ export default function PreRegistrationPage() {
 
         {/* Show internship section even when no offerings uploaded */}
         {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={data?.studentInfo?.pfCreditsUsed ?? 0} />
+          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={(data?.studentInfo?.pfCreditsUsed ?? 0) + pfCreditsFromSelection} />
         )}
       </div>
     );
@@ -926,7 +935,7 @@ export default function PreRegistrationPage() {
           )}
         </div>
         {(() => {
-          const pfUsed = data.studentInfo?.pfCreditsUsed ?? 0;
+          const pfUsed = (data.studentInfo?.pfCreditsUsed ?? 0) + pfCreditsFromSelection;
           const PF_TOTAL = 9;
           const pfRemaining = Math.max(0, PF_TOTAL - pfUsed);
           const pfPct = Math.min(100, (pfUsed / PF_TOTAL) * 100);
