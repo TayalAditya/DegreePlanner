@@ -113,16 +113,25 @@ export async function GET() {
   const ic182Done = completedByCourseCode.has("IC182");
 
   // IC Basket: students need 6 cr total. Once fulfilled, further IC_BASKET offerings are optional FE.
+  // Use the same per-mapping .find() logic as the tally to avoid score-order issues.
   const IC_BASKET_REQ = 6;
   let completedIcBasketCredits = 0;
   for (const e of completed) {
     if (e.grade === "F") continue;
-    const cat = pickCategory(
-      e.course.branchMappings as Array<{ courseCategory: string; branch: string; batch: string }>,
-      normalizedBranch,
-      batch
-    );
-    if (cat === "IC_BASKET") completedIcBasketCredits += e.course.credits;
+    const bm = e.course.branchMappings as Array<{ courseCategory: string; branch: string; batch: string }>;
+    const mapping =
+      bm.find(
+        (m) =>
+          pickCategory([m], normalizedBranch, batch) !== undefined &&
+          getBranchCandidates(normalizedBranch)
+            .map((b) => b.toUpperCase())
+            .includes(m.branch.toUpperCase())
+      ) ??
+      (() => {
+        const c = pickCategory(bm, normalizedBranch, batch);
+        return c ? { courseCategory: c } : null;
+      })();
+    if (mapping?.courseCategory === "IC_BASKET") completedIcBasketCredits += e.course.credits;
   }
   const icBasketFulfilled = completedIcBasketCredits >= IC_BASKET_REQ;
 
