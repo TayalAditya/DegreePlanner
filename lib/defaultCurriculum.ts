@@ -945,13 +945,25 @@ const applyBatchOverrides = (
         }
         let updated = courses;
         if (effectiveBranch === "EE") {
-          // B24 EE: split combined theory+lab DCs — EE210 4→3 (+EE210P 1), EE261 5→3 (+EE261P 2).
-          updated = updated.map((c) => {
+          // B24 EE: EE-210 replaced by EE-212 (4cr confirmed). EE261 5→3 + EE261P lab.
+          updated = updated.filter((c) => {
             const code = normalizeCurriculumCode(c.code);
-            return code === "EE210" || code === "EE261" ? { ...c, credits: 3 } : c;
+            return code !== "EE210" && code !== "EE210P";
           });
-          updated = addCourseIfMissing(updated, B24_EE_EE210P_SEM3);
+          updated = updated.map((c) =>
+            normalizeCurriculumCode(c.code) === "EE261" ? { ...c, credits: 3 } : c
+          );
+          updated = addCourseIfMissing(updated, { code: "EE-212", name: "Digital System Design", credits: 4, category: "DC" as const, semester: 3 });
           updated = addCourseIfMissing(updated, B24_EE_EE261P_SEM3);
+        }
+        if (effectiveBranch === "MEVLSI") {
+          // B24 MEVLSI Sem3: EE-210→EE-212 and EE-301→EE-302 (both confirmed replacements).
+          updated = updated.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return code !== "EE210" && code !== "EE301";
+          });
+          updated = addCourseIfMissing(updated, { code: "EE-212", name: "Digital System Design", credits: 4, category: "DC" as const, semester: 3 });
+          updated = addCourseIfMissing(updated, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC" as const, semester: 3 });
         }
         // Batch-24: Design Practicum (IC202P) is in Sem-3 for all allowed B24 branches.
         const hasIc202p = updated.some((c) => normalizeCurriculumCode(c.code) === "IC202P");
@@ -1370,6 +1382,15 @@ const applyBatchOverrides = (
           );
           updated = addCourseIfMissing(updated, { code: "EE-212", name: "Digital System Design", credits: 4, category: "DC" as const, semester: 3 });
           updated = addCourseIfMissing(updated, B24_EE_EE261P_SEM3);
+        }
+        if (effectiveBranch === "MEVLSI") {
+          // B25 MEVLSI Sem3: EE-210→EE-212 and EE-301→EE-302 (both confirmed replacements).
+          updated = updated.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return code !== "EE210" && code !== "EE301";
+          });
+          updated = addCourseIfMissing(updated, { code: "EE-212", name: "Digital System Design", credits: 4, category: "DC" as const, semester: 3 });
+          updated = addCourseIfMissing(updated, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC" as const, semester: 3 });
         }
         if (effectiveBranch === "MNC") {
           // CS214 (Computer Organization) deferred to Sem 4 where it's split into CS201+CS201P.
