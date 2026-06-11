@@ -514,6 +514,9 @@ export default function ProgressPage() {
       ISTP: 0,
     };
 
+    // HSS+IKS combined basket: BTech = 15, BSCS = 12 — must be declared before accumulateSplitAware uses it
+    const HSS_CORE_CAP = (programCredits.icCredits ?? 60) <= 52 ? 12 : 15;
+
     const accumulateSplitAware = (
       map: Record<string, number>,
       e: Enrollment,
@@ -555,10 +558,6 @@ export default function ProgressPage() {
     const icCredits = programCredits.icCredits ?? 60;
     const icBasketRequired = 6;
     const iksRequired = 0; // IKS merged into HSS+IKS combined basket
-    // HSS+IKS combined basket: BTech = 15, BSCS = 12
-    const hssRequired = icCredits <= 52 ? 12 : 15;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const HSS_CORE_CAP = hssRequired; // shadows module-level for accumulateSplitAware closure
 
     const inferredBatch = (() => {
       if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;
@@ -618,7 +617,7 @@ export default function ProgressPage() {
     }
 
     const creditsRequiredByCategory = {
-      IC: Math.max(0, icCredits - icBasketRequired - hssRequired - iksRequired),
+      IC: Math.max(0, icCredits - icBasketRequired - HSS_CORE_CAP - iksRequired),
       IC_BASKET: icBasketRequired,
       DC: programCredits.dcCredits ?? 0,
       DE: (programCredits.deCredits ?? 0) + deAdjustment,
@@ -626,7 +625,7 @@ export default function ProgressPage() {
         ? Math.max(0, (programCredits.mtpIstpCredits ?? 0) - MTP_TOTAL_CREDITS)
         : 0,
       FE: (programCredits.feCredits ?? 0) + feAdjustment,
-      HSS: hssRequired,
+      HSS: HSS_CORE_CAP,
       IKS: iksRequired,
       MTP: mtpRequired,
       ISTP: istpRequired,
