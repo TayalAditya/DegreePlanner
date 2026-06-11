@@ -717,6 +717,22 @@ export default function PreRegistrationPage() {
       next.add(offering.id);
       const newTotal = totalCredits + offering.credits;
       if (data && newTotal > data.creditLimit) setShowApprovalWarning(true);
+
+      // Warn if this course is in the selected minor's basket but being picked from DE/FE section.
+      // Exception: MGMT and GERMAN — their HS courses count naturally toward HSS (up to 12 cr).
+      const HSS_MINORS = new Set(["MGMT", "GERMAN"]);
+      if (selectedMinorCode && minorData && !HSS_MINORS.has(selectedMinorCode)) {
+        const inGroup = minorData.groups.find(
+          (g) => g.countsTowardMinor && g.courses.some((c) => c.offering?.id === offering.id)
+        );
+        if (inGroup) {
+          const cat = CATEGORY_LABEL[offering.resolvedCategory] ?? offering.resolvedCategory;
+          showToast(
+            "info",
+            `${offering.courseCode} counts toward your ${minorData.minor.name} minor (${inGroup.title}) — currently categorised as ${cat}`
+          );
+        }
+      }
     }
     setSelected(next);
     setSaved(false);
