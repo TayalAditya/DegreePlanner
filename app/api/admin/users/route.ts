@@ -56,6 +56,7 @@ export async function GET() {
       completedCredits,
       inProgressCredits,
       totalEnrollments: user.enrollments.length,
+      lastActiveAt: user.updatedAt.toISOString(),
     };
   });
 

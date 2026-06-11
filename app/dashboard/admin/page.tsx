@@ -19,6 +19,21 @@ interface UserStat {
   completedCredits: number;
   inProgressCredits: number;
   totalEnrollments: number;
+  lastActiveAt?: string;
+}
+
+function relativeTime(iso?: string): string {
+  if (!iso) return "never";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  return `${months}mo ago`;
 }
 
 const BRANCH_COLORS: Record<string, { bg: string; text: string; dot: string }> = {
@@ -72,9 +87,13 @@ function BranchBatchTree({
       if (!map.has(b)) map.set(b, []);
       map.get(b)!.push(u);
     }
-    // Sort each branch's users by completedCredits desc (recent/active first)
+    // Sort each branch's users by lastActiveAt desc (most recently active first)
     for (const [, arr] of map) {
-      arr.sort((a, b) => b.completedCredits - a.completedCredits);
+      arr.sort((a, b) => {
+        const ta = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
+        const tb = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
+        return tb - ta;
+      });
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [users]);
@@ -126,6 +145,7 @@ function BranchBatchTree({
                       <p className="text-xs text-foreground-secondary">{u.enrollmentId}</p>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0 text-xs">
+                      <span className="text-foreground-secondary/50">{relativeTime(u.lastActiveAt)}</span>
                       <span className="font-bold text-success">{formatCredits(u.completedCredits)} cr</span>
                       {u.inProgressCredits > 0 && (
                         <span className="text-info">{formatCredits(u.inProgressCredits)} wip</span>
