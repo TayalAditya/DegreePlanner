@@ -345,7 +345,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
       // IK-xxx / IKS-mapped courses → HSS+IKS combined basket.
       if (mapping?.courseCategory === "IKS") {
-        if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
+        if (hssUsed) hssUsed.credits = Math.min(HSS_CORE_CAP, addCredits(hssUsed.credits, credits));
         return "HSS";
       }
 
