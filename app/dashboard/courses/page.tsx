@@ -486,6 +486,10 @@ export default function CoursesPage() {
       }
 
       // No branch-specific mapping found — apply hard prefix rules before defaulting to FE.
+      // HS-xxx courses always go to HSS+IKS basket regardless of branch mappings.
+      if (code.startsWith("HS-") || code.startsWith("HS")) return "HSS";
+      // IK-xxx courses always go to HSS+IKS basket.
+      if (isIkCourse) return "HSS";
       // CSE/DSE/DSAI: CS-xxx and DS-xxx are always DE (except internship/project codes).
       const isCSorDS2 = code.startsWith("CS") || code.startsWith("DS");
       const isCsDsException2 = ["396P","399P","010"].some(s => normalizedCode.endsWith(s)) || normalizedCode === "DS302";
