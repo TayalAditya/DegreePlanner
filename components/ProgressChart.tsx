@@ -646,7 +646,10 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     };
 
     const fixedIc = byNormalized(allDefault.filter((c) => c.category === "IC"));
-    const fixedIks = byNormalized(allDefault.filter((c) => c.category === "IKS"));
+    // HSS+IKS basket: IC-181/IC-182 (IKS category) + any IK-xxx courses from default curriculum
+    const fixedIks = byNormalized(allDefault.filter((c) =>
+      c.category === "IKS" || /^IK\d/i.test(c.code.replace(/[^A-Z0-9]/gi, ""))
+    ));
     const fixedDc = byNormalized(allDefault.filter((c) => c.category === "DC"));
 
     const mtpCandidates = byNormalized(allDefault.filter((c) => c.category === "MTP"));
@@ -713,7 +716,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
         { id: "icbasket", title: "IC Basket", kind: "icbasket" as const },
         ...(deBaskets.length > 0 ? [{ id: "debasket", title: "DE Baskets", kind: "debasket" as const }] : []),
         { id: "ic", title: "Institute Core (IC)", kind: "list" as const, ...ic },
-        { id: "iks", title: "IKS", kind: "list" as const, ...iks },
+        { id: "iks", title: "Humanities & Social Sciences + IKS", kind: "list" as const, ...iks },
         { id: "dc", title: "Discipline Core (DC)", kind: "list" as const, ...dc },
         ...(requiredIstp > 0 ? [{ id: "istp", title: "ISTP", kind: "list" as const, ...istp }] : []),
         ...(requiredMtp > 0 ? [{ id: "mtp", title: "MTP", kind: "list" as const, ...mtp }] : []),

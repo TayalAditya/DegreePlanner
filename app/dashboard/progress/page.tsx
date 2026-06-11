@@ -128,7 +128,7 @@ const categoryLabels = {
   DE: "Discipline Electives",
   PE: "Research & Communication",
   FE: "Free Electives",
-  HSS: "Humanities & Social Sciences",
+  HSS: "Humanities & Social Sciences + IKS",
   IKS: "Indian Knowledge System",
   MTP: "Major Technical Project",
   ISTP: "Interactive Socio-Technical Practicum",
