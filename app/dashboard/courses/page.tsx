@@ -495,9 +495,12 @@ export default function CoursesPage() {
     // Fallback to code analysis
     if (isICB1 || isICB2) return "IC_BASKET";
     
-    // Branch-specific course patterns
-    if (user?.branch === "CSE" && code.startsWith("DS")) return applyMinorDeOverride("DE", enrollment);
-    if (isDataScienceBranch(user?.branch) && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE", enrollment);
+    // Hard rule: CSE/DSE/DSAI → all CS-xxx and DS-xxx are DE (except internship/project codes)
+    const isCSorDS = code.startsWith("CS") || code.startsWith("DS");
+    const isCsDsException = ["396P","399P","010"].some(s => normalizedCode.endsWith(s)) || normalizedCode === "DS302";
+    if (isCSorDS && !isCsDsException && (user?.branch === "CSE" || isDataScienceBranch(user?.branch))) {
+      return applyMinorDeOverride("DE", enrollment);
+    }
     
     if (normalizedCode.startsWith("IC")) return "IC";
     if (normalizedCode.startsWith("HS")) return "HSS";
@@ -572,14 +575,11 @@ export default function CoursesPage() {
     const specialDpCourseType = getSpecialDpCourseType(normalizedCode);
     if (specialDpCourseType) return specialDpCourseType;
     
-    // HSS courses (HS-xxx)
+    // HSS+IKS courses — BTech cap = 15, BSCS cap = 12
+    // HSS+IKS basket: BTech cap = 15, BSCS cap = 12
+    const hssIksCap = (user?.branch === "BSCS" || user?.branch === "BS" || user?.branch === "CH") ? 12 : 15;
     if (code.startsWith("HS-")) {
-      // First 12 credits count as HSS/CORE, rest as FE
-      if (hssCreditsCompleted < 12) {
-        return "CORE";
-      } else {
-        return "FREE_ELECTIVE";
-      }
+      return hssCreditsCompleted < hssIksCap ? "CORE" : "FREE_ELECTIVE";
     }
 
     const mappedCategory = dbCourseCategoryMap.get(normalizedCode);
@@ -1726,10 +1726,11 @@ export default function CoursesPage() {
                       const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
 
                       if (code.startsWith("HS-")) {
-                        return hssCreditsCompleted < 12 ? (
-                          <span className="text-success">→ Will count as HSS/Core ({formatCredits(subtractCredits(12, hssCreditsCompleted))} cr remaining)</span>
+                        const cap = (user?.branch === "BSCS" || user?.branch === "BS" || user?.branch === "CH") ? 12 : 15;
+                        return hssCreditsCompleted < cap ? (
+                          <span className="text-success">→ Will count as HSS+IKS/Core ({formatCredits(subtractCredits(cap, hssCreditsCompleted))} cr remaining)</span>
                         ) : (
-                          <span className="text-info">→ Will count as Free Elective (HSS cap reached)</span>
+                          <span className="text-info">→ Will count as Free Elective (HSS+IKS cap reached)</span>
                         );
                       }
 

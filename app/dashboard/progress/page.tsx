@@ -323,11 +323,14 @@ export default function ProgressPage() {
       return "HSS"; // IK-xxx → HSS+IKS combined basket
     }
 
-    if (user?.branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) {
-      return applyMinorDeOverride("DE", enrollment);
-    }
-    if (isDataScienceBranch(user?.branch) && (code.startsWith("DS") || code.startsWith("CS"))) {
-      return applyMinorDeOverride("DE", enrollment);
+    // Hard rule: CSE/DSE/DSAI → all CS-xxx and DS-xxx are DE
+    // Exceptions: internship (396P, 399P), independent project (010), and specific non-DE codes
+    const isCSorDS = code.startsWith("CS") || code.startsWith("DS");
+    const isCsDsException = ["396P","399P","010"].some(s => normalizedCode.endsWith(s)) || normalizedCode === "DS302";
+    if (isCSorDS && !isCsDsException) {
+      if (user?.branch === "CSE" || isDataScienceBranch(user?.branch)) {
+        return applyMinorDeOverride("DE", enrollment);
+      }
     }
 
     if (normalizedCode.startsWith("IC")) return "IC";
