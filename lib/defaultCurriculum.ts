@@ -471,11 +471,9 @@ const geRaiSem5: DefaultCourse[] = [
   { code: "EE301", name: "Control Systems",                          credits: 3, category: "DC", semester: 5 },
 ];
 const geRaiSem6: DefaultCourse[] = [...istpSem6];
-const geRaiSem7: DefaultCourse[] = [
-  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 7 },
-  ...mtpSem7,
-];
+const geRaiSem7: DefaultCourse[] = [...mtpSem7];
 const geRaiSem8: DefaultCourse[] = [
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -504,11 +502,9 @@ const geCeSem5: DefaultCourse[] = [
 const geCeSem6: DefaultCourse[] = [
   ...istpSem6,
 ];
-const geCeSem7: DefaultCourse[] = [
-  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 7 },
-  ...mtpSem7,
-];
+const geCeSem7: DefaultCourse[] = [...mtpSem7];
 const geCeSem8: DefaultCourse[] = [
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -535,11 +531,9 @@ const geMechSem5: DefaultCourse[] = [
   { code: "EE231", name: "Measurement and Instrumentation",         credits: 3, category: "DC", semester: 5 },
 ];
 const geMechSem6: DefaultCourse[] = [...istpSem6];
-const geMechSem7: DefaultCourse[] = [
-  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 7 },
-  ...mtpSem7,
-];
+const geMechSem7: DefaultCourse[] = [...mtpSem7];
 const geMechSem8: DefaultCourse[] = [
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -594,12 +588,9 @@ const geOpenSem6: DefaultCourse[] = [
   { code: "HS541", name: "Technical Communication", credits: 1, category: "DC", semester: 6 },
   ...istpSem6,
 ];
-const geOpenSem7: DefaultCourse[] = [
-  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 7 },
-  ...mtpSem7,
-];
+const geOpenSem7: DefaultCourse[] = [...mtpSem7];
 const geOpenSem8: DefaultCourse[] = [
-  // No independent project in Sem-8 for Open Spec — IC010 internship is in Sem-7.
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 8 },
   ...mtpSem8,
 ];
 
@@ -755,8 +746,8 @@ export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
   // Sem 5-8 deferred — only ISTP/MTP slots).
   "GE-FIN_1": geSem1, "GE-FIN_2": geRaiSem2, "GE-FIN_3": geFinSem3,
   "GE-FIN_4": geFinSem4, "GE-FIN_5": [], "GE-FIN_6": [...istpSem6],
-  "GE-FIN_7": [{ code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 7 }, ...mtpSem7],
-  "GE-FIN_8": [...mtpSem8],
+  "GE-FIN_7": [...mtpSem7],
+  "GE-FIN_8": [{ code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 8 }, ...mtpSem8],
   // GE – Open Specialisation (B24 official 4th track; DC = 36 cr).
   "GE-OPEN_1": geSem1, "GE-OPEN_2": geRaiSem2, "GE-OPEN_3": geOpenSem3,
   "GE-OPEN_4": geOpenSem4, "GE-OPEN_5": geOpenSem5, "GE-OPEN_6": geOpenSem6,
