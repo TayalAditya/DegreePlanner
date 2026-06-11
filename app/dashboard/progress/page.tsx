@@ -136,7 +136,8 @@ const categoryLabels = {
 };
 
 
-const HSS_CORE_CAP = 12;
+// HSS_CORE_CAP is now dynamic (set inside calculateProgress based on program); module-level kept for ProgressChart display only.
+const HSS_CORE_CAP_DEFAULT = 15; // BTech default
 const HSS_FE_CAP = 20;
 
 export default function ProgressPage() {
@@ -285,8 +286,12 @@ export default function ProgressPage() {
     const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
 
     if (normalizedCode === "IK593") return "FE";
-    if (normalizedCode === "IC181") return "IKS";
-    if (normalizedCode === "IC182") return isBatch24Or25 ? "IKS" : "IC";
+    // IC-181/IC-182 → HSS+IKS combined basket
+    if (normalizedCode === "IC181" || (normalizedCode === "IC182" && isBatch24Or25)) {
+      if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
+      return "HSS";
+    }
+    if (normalizedCode === "IC182") return "IC"; // B23 IC182 stays IC
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
       const mapping = pickRelevantBranchMapping(user.branch, enrollment.course.branchMappings);
@@ -296,9 +301,10 @@ export default function ProgressPage() {
       }
 
       if (mapping && mapping.courseCategory in categoryLabels) {
-        // IK-xxx courses should not count towards IKS requirement.
-        if (mapping.courseCategory === "IKS" && isIkCourse) {
-          return "FE";
+        // IK-xxx courses → HSS+IKS basket (merged); plain IKS mapping also goes to HSS.
+        if (mapping.courseCategory === "IKS") {
+          if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
+          return "HSS";
         }
         const resolvedCat = applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
         // Apply HSS cap for non-HS-prefix courses mapped to HSS (e.g. German intensive courses)
@@ -309,7 +315,10 @@ export default function ProgressPage() {
       }
     }
 
-    if (isIkCourse) return "FE";
+    if (isIkCourse) {
+      if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
+      return "HSS"; // IK-xxx → HSS+IKS combined basket
+    }
 
     if (user?.branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) {
       return applyMinorDeOverride("DE", enrollment);
@@ -542,10 +551,11 @@ export default function ProgressPage() {
 
     const icCredits = programCredits.icCredits ?? 60;
     const icBasketRequired = 6;
-    const iksRequired = 3;
-    // BSCS programs have icCredits ≤ 52 (BTech always 53–60+).
-    // HSS=9 for BSCS (HSS+IKS combined = 12, not separate 12+3=15).
-    const hssRequired = icCredits <= 52 ? 9 : 12;
+    const iksRequired = 0; // IKS merged into HSS+IKS combined basket
+    // HSS+IKS combined basket: BTech = 15, BSCS = 12
+    const hssRequired = icCredits <= 52 ? 12 : 15;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const HSS_CORE_CAP = hssRequired; // shadows module-level for accumulateSplitAware closure
 
     const inferredBatch = (() => {
       if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;

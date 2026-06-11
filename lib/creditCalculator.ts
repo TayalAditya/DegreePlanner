@@ -289,7 +289,8 @@ export class CreditCalculator {
       user?.branch || undefined,
       minorDeToFeCourseCodes,
       user?.batch ?? null,
-      classificationState
+      classificationState,
+      program.icCredits
     );
 
     const inProgress = this.calculateCreditsByType(
@@ -297,7 +298,8 @@ export class CreditCalculator {
       user?.branch || undefined,
       minorDeToFeCourseCodes,
       user?.batch ?? null,
-      classificationState
+      classificationState,
+      program.icCredits
     );
 
     // DE overflow → FE: excess DE credits beyond requirement count as Free Electives
@@ -502,7 +504,8 @@ export class CreditCalculator {
     branch?: string,
     minorDeToFeCourseCodes?: Set<string>,
     batchYear?: number | null,
-    classificationState?: CreditClassificationState
+    classificationState?: CreditClassificationState,
+    programIcCredits?: number
   ): CreditBreakdown {
     const breakdown: CreditBreakdown = {
       core: 0,
@@ -545,9 +548,9 @@ export class CreditCalculator {
     };
     const icBasketUsed = state.icBasketUsed;
 
-    // HSS cap: first 12 credits → core, next 8 (13–20) → FE, above 20 → don't count
+    // HSS+IKS combined basket: BTech = 15 core, BSCS = 12 core; above 20 → don't count, 16-20 (BTech) → FE
     let hssCreditsAccumulated = state.hssCreditsAccumulated;
-    const HSS_CORE_CAP = 12;
+    const HSS_CORE_CAP = (programIcCredits ?? 60) <= 52 ? 12 : 15; // BSCS: 12, BTech: 15
     const HSS_FE_CAP = 20;
     const addBreakdownCredits = (key: keyof CreditBreakdown, credits: number) => {
       breakdown[key] = addCredits(breakdown[key], credits);
@@ -690,10 +693,11 @@ export class CreditCalculator {
           case "IC":
           case "IC_BASKET":
           case "DC":
-          case "IKS":
             addBreakdownCredits("core", credits);
             return;
+          case "IKS":
           case "HSS":
+            // IKS and HSS are now one combined basket (BTech=15, BSCS=12 core; cap 20)
             addHssCredits(credits);
             return;
           case "DE":
@@ -730,11 +734,11 @@ export class CreditCalculator {
         return;
       }
       if (normalizedCode === "IC181" || normalizedCode === "IC182") {
-        addBreakdownCredits("core", credits); // IKS
+        addHssCredits(credits); // IKS merged into HSS+IKS basket
         return;
       }
       if (isIkCourse) {
-        addBreakdownCredits("freeElective", credits);
+        addHssCredits(credits); // IK-xxx → HSS+IKS basket
         return;
       }
       if (normalizedCode.startsWith("IC")) {

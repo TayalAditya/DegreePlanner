@@ -120,7 +120,9 @@ const normalizeBranchForIcBasket = (branch?: string) => {
   return upper;
 };
 
-const HSS_CORE_CAP = 12;
+// HSS_CORE_CAP is now dynamic (15 BTech / 12 BSCS) — resolved per-render from progress data.
+// Module-level default for fallback only; actual value computed inside the component.
+const HSS_CORE_CAP_DEFAULT = 15;
 
 const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
 
@@ -190,6 +192,8 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     }
   };
   const [remainingOpen, setRemainingOpen] = useState(false);
+  // Dynamic HSS+IKS cap: 15 for BTech, 12 for BSCS — read from progress required value
+  const HSS_CORE_CAP = Number(progress?.creditsRequiredByCategory?.HSS ?? HSS_CORE_CAP_DEFAULT);
 
   const totals = useMemo(() => {
     const requiredTotal = Number(progress?.required?.total || 0);
@@ -248,8 +252,9 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     // Hard overrides (batch-sensitive)
     const isBatch24Or25 = userBatch === 2024 || userBatch === 2025;
     if (normalizedCode === "IK593") return "FE";
-    if (normalizedCode === "IC181") return "IKS";
-    if (normalizedCode === "IC182") return isBatch24Or25 ? "IKS" : "IC";
+    // IC-181/IC-182 → HSS+IKS combined basket
+    if (normalizedCode === "IC181") return "HSS";
+    if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC";
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && (branch || userBranch)) {
@@ -351,7 +356,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
       return "FE";
     }
 
-    if (isIkCourse) return "FE";
+    if (isIkCourse) return "HSS"; // IK-xxx → HSS+IKS combined basket
 
     if (normalizedCode.startsWith("IC")) return "IC";
 
