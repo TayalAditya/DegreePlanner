@@ -432,9 +432,9 @@ export default function CoursesPage() {
     })();
     const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
 
-    if (normalizedCode === "IK593") return "FE";
-    if (normalizedCode === "IC181") return "IKS";
-    if (normalizedCode === "IC182") return isBatch24Or25 ? "IKS" : "IC";
+    if (normalizedCode === "IK593") return "HSS"; // IK-xxx → HSS+IKS basket
+    if (normalizedCode === "IC181") return "HSS"; // IC-181 → HSS+IKS basket
+    if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC"; // IC-182 B24/B25 → HSS+IKS
 
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
@@ -478,9 +478,9 @@ export default function CoursesPage() {
         if (mapping.courseCategory === "NA") {
           return "FE";
         }
-        // IK-xxx courses should not count towards IKS requirement.
-        if (mapping.courseCategory === "IKS" && isIkCourse) {
-          return "FE";
+        // IKS-mapped courses (incl. IK-xxx) → HSS+IKS basket.
+        if (mapping.courseCategory === "IKS") {
+          return "HSS";
         }
         return applyMinorDeOverride(mapping.courseCategory, enrollment);
       }
@@ -490,7 +490,7 @@ export default function CoursesPage() {
       return "FE";
     }
 
-    if (isIkCourse) return "FE";
+    if (isIkCourse) return "HSS"; // IK-xxx → HSS+IKS basket
 
     // Fallback to code analysis
     if (isICB1 || isICB2) return "IC_BASKET";
@@ -800,8 +800,8 @@ export default function CoursesPage() {
                   DC: "Discipline Core",
                   DE: "Discipline Electives",
                   FE: "Free Electives",
-                  HSS: "HSS",
-                  IKS: "IKS",
+                  HSS: "HSS+IKS",
+                  IKS: "HSS+IKS",
                   MTP: "MTP",
                   ISTP: "ISTP",
                 };

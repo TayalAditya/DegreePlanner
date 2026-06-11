@@ -49,7 +49,7 @@ interface InternshipCourse {
 
 const CATEGORY_LABEL: Record<string, string> = {
   IC: "IC", IC_BASKET: "IC", DC: "DC", DE: "DE",
-  HSS: "HSS", IKS: "IKS", FE: "FE", MTP: "MTP", ISTP: "ISTP",
+  HSS: "HSS+IKS", IKS: "HSS+IKS", FE: "FE", MTP: "MTP", ISTP: "ISTP",
 };
 
 const CATEGORY_COLOR: Record<string, string> = {

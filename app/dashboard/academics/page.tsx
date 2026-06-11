@@ -318,10 +318,10 @@ function CoursesSection() {
       </div>
 
       <div className="bg-card p-6 rounded-xl border">
-        <h3 className="font-semibold text-xl mb-4">HSS & IKS Requirements</h3>
+        <h3 className="font-semibold text-xl mb-4">HSS + IKS Requirements</h3>
         <div className="space-y-3">
           <p className="text-muted-foreground">
-            12 credits from HSS courses covering various domains:
+            15 credits (BTech) / 12 credits (BSCS) from HSS+IKS courses — IKS, HS-xxx and IK-xxx all count here:
           </p>
           <div className="grid gap-2 md:grid-cols-2">
             <div className="p-3 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 border border-blue-500/20 dark:border-blue-500/30">Sociology</div>
@@ -330,8 +330,8 @@ function CoursesSection() {
             <div className="p-3 rounded-lg bg-orange-500/10 dark:bg-orange-500/20 border border-orange-500/20 dark:border-orange-500/30">Entrepreneurship</div>
           </div>
           <div className="mt-4 p-4 rounded-lg bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/20 dark:border-blue-500/30 border-l-4 border-l-blue-500/60 dark:border-l-blue-500/50">
-            <p className="font-semibold">Indian Knowledge System (IKS)</p>
-            <p className="text-sm text-muted-foreground">1 course worth 3 credits is compulsory</p>
+            <p className="font-semibold">Indian Knowledge System (IKS) — merged into HSS+IKS basket</p>
+            <p className="text-sm text-muted-foreground">IC-181/IC-182 and IK-xxx courses all count toward the combined 15 cr (BTech) / 12 cr (BSCS) requirement</p>
           </div>
           <p className="text-sm text-muted-foreground mt-3">
             * Maximum 20 HSS credits count towards 160 credits. Additional HSS credits count outside the requirement.
