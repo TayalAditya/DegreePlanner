@@ -414,7 +414,7 @@ function ProgressPanel({ programRequirements, completedBreakdown, categoryBreakd
       <div className="rounded-xl border border-border bg-surface p-4">
         <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide mb-3">Remaining</p>
         <div className="space-y-2">
-          {(["IC","IC_BASKET","DC","DE","HSS","FE","IKS","MTP","ISTP"] as const).map((key) => {
+          {(["IC","IC_BASKET","DC","DE","HSS","FE","MTP","ISTP"] as const).map((key) => {
             const req  = programRequirements[key] ?? 0;
             const done = completedBreakdown[key] ?? 0;
             if (!req && !done) return null;
@@ -691,7 +691,7 @@ export default function PreRegistrationPage() {
     for (const c of extraCourses) {
       if (selectedExtra.has(c.id)) add(c.category, c.credits);
     }
-    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "IKS", "FE", "MTP", "ISTP"];
+    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP"]; // IKS merged into HSS
     return ORDER.filter((cat) => map.has(cat)).map((cat) => ({ cat, ...map.get(cat)! }));
   }, [data, selected, selectedExtra, internshipCourses, mtp1Course]);
 

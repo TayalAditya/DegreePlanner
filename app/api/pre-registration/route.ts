@@ -199,6 +199,12 @@ export async function GET() {
         resolvedCategory = "FE";
       }
 
+      // IK-xxx and IC-181/IC-182 always go to HSS+IKS basket regardless of branchMappings.
+      if (/^IK\d/.test(normalizedCodeEarly) || normalizedCodeEarly === "IC181" ||
+          (normalizedCodeEarly === "IC182" && batch != null && batch >= 2024)) {
+        resolvedCategory = "HSS";
+      }
+
       // Check if already completed — must be declared before isCompulsory
       const normalizedCode = normalizedCodeEarly;
       const completedSem =
@@ -279,10 +285,12 @@ export async function GET() {
             getBranchCandidates(normalizedBranch).map(b => b.toUpperCase()).includes(m.branch.toUpperCase())) ??
           (() => { const c = pickCategory(e.course.branchMappings as any, normalizedBranch, batch); return c ? { courseCategory: c, splitCategory: null, splitAmount: null } : null; })();
 
-        const iksCode = code === "IC181" || code === "IC182";
-        let cat = mapping?.courseCategory ??
-          (code.startsWith("HS") ? "HSS" : iksCode ? "IKS" : code.startsWith("IC") ? "IC" : "FE");
-        if (iksCode) cat = "IKS"; // force to IKS regardless of branch mapping
+        // IK-xxx, IC-181, IC-182 → HSS+IKS combined basket
+        const isHssIks = /^IK\d/.test(code) || code === "IC181" ||
+          (code === "IC182" && batch != null && batch >= 2024);
+        let cat = isHssIks ? "HSS" :
+          (mapping?.courseCategory ??
+            (code.startsWith("HS") ? "HSS" : code.startsWith("IC") ? "IC" : "FE"));
 
         if (mapping?.splitCategory && mapping.splitAmount) {
           add(cat, cr - mapping.splitAmount);
@@ -302,19 +310,23 @@ export async function GET() {
       tally.IC_BASKET = Math.min(tally.IC_BASKET ?? 0, IC_BASKET_REQ);
       tally.FE = (tally.FE ?? 0) + icBasketOverflow;
 
+      // Merge IKS completed into HSS bucket (combined basket)
+      tally.HSS = (tally.HSS ?? 0) + (tally.IKS ?? 0);
+      tally.IKS = 0;
       completedBreakdown = tally;
-      const HSS_REQ = 12;
-      const IKS_REQ = 3;
+
+      // HSS+IKS combined: BTech = 15, BSCS = 12 (icCredits ≤ 52 → BSCS)
+      const HSS_IKS_REQ = (req.icCredits ?? 60) <= 52 ? 12 : 15;
       programRequirements = {
-        IC:       Math.max(0, req.icCredits - IC_BASKET_REQ - HSS_REQ - IKS_REQ),
+        IC:       Math.max(0, req.icCredits - IC_BASKET_REQ - HSS_IKS_REQ),
         IC_BASKET: IC_BASKET_REQ,
         DC:   req.dcCredits,
         DE:   req.deCredits,
         FE:   req.feCredits,
         MTP:  progress.required.mtp,
         ISTP: progress.required.istp,
-        HSS:  HSS_REQ,
-        IKS:  IKS_REQ,
+        HSS:  HSS_IKS_REQ,
+        IKS:  0, // merged into HSS
       };
     } catch { /* keep null */ }
   }
