@@ -1,11 +1,11 @@
-import { PrismaClient, ProgramType, CourseType } from "@prisma/client";
+﻿import { PrismaClient, ProgramType } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function seedPrograms() {
-  console.log("🌱 Seeding all IIT Mandi programs...\n");
+  console.log("ðŸŒ± Seeding all IIT Mandi programs...\n");
 
-  // Delete programs only — NOT UserProgram records (those are user data).
+  // Delete programs only â€” NOT UserProgram records (those are user data).
   // UserProgram records point to programs by ID; after recreating programs
   // with new IDs the sync-user route will re-assign students on next login.
   // We skip deleting UserPrograms to avoid wiping student program history.
@@ -158,7 +158,7 @@ async function seedPrograms() {
       mtpIstpCredits: 12,
     },
     // School of Chemical Sciences
-    // IC136 (Biotechnology, 3cr) is DC for BSCS; IKS waived → HSS+IKS=12 (icCredits = IC+ICB+12).
+    // IC136 (Biotechnology, 3cr) is DC for BSCS; IKS waived â†’ HSS+IKS=12 (icCredits = IC+ICB+12).
     {
       code: "BSCS",
       name: "B.S. in Chemical Sciences",
@@ -171,11 +171,11 @@ async function seedPrograms() {
       mtpIstpCredits: 14,
     },
 
-    // ── Batch 2024 variants ───────────────────────────────────────────────────
-    // CE/BE/EP B24: FDP(4cr) + DP(3cr) dropped from IC compulsory → icCredits 60→53.
-    //   DP is optional for B24 (counts as FE if taken) → feCredits 22→25, deCredits adjust.
-    // MNC B24: FDP(4cr) dropped but replaced by MA120(4cr DC) + CS304 stays → icCredits 60→56, dcCredits 51→55.
-    // BSCS B24: FDP(4cr)+DP(3cr) dropped, IC272 dropped, no project → icCredits 52→48, dcCredits 59→62.
+    // â”€â”€ Batch 2024 variants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // CE/BE/EP B24: FDP(4cr) + DP(3cr) dropped from IC compulsory â†’ icCredits 60â†’53.
+    //   DP is optional for B24 (counts as FE if taken) â†’ feCredits 22â†’25, deCredits adjust.
+    // MNC B24: FDP(4cr) dropped but replaced by MA120(4cr DC) + CS304 stays â†’ icCredits 60â†’56, dcCredits 51â†’55.
+    // BSCS B24: FDP(4cr)+DP(3cr) dropped, IC272 dropped, no project â†’ icCredits 52â†’48, dcCredits 59â†’62.
     {
       code: "CE_B24",
       name: "B.Tech in Civil Engineering (B24)",
@@ -215,7 +215,7 @@ async function seedPrograms() {
       department: "School of Mathematics & Statistical Science",
       totalCreditsRequired: 160,
       icCredits: 56,   // IC_comp(35)+ICB(6)+IKS(3)+HSS(12)
-      dcCredits: 55,   // +MA120(4); CS304 stays; CS214→CS201+CS201P (same 4cr)
+      dcCredits: 55,   // +MA120(4); CS304 stays; CS214â†’CS201+CS201P (same 4cr)
       deCredits: 15,
       feCredits: 22,
       mtpIstpCredits: 12,
@@ -232,9 +232,9 @@ async function seedPrograms() {
       mtpIstpCredits: 14,
     },
 
-    // ── Batch 2025 variants ───────────────────────────────────────────────────
-    // CE/BE/EP B25: FDP(IC102P) back in Sem-2, but DP(IC202P) still optional → feCredits 25.
-    //   IC_comp = 36 (39 − 3 for IC202P); IC_TOT = 57.
+    // â”€â”€ Batch 2025 variants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // CE/BE/EP B25: FDP(IC102P) back in Sem-2, but DP(IC202P) still optional â†’ feCredits 25.
+    //   IC_comp = 36 (39 âˆ’ 3 for IC202P); IC_TOT = 57.
     {
       code: "CE_B25",
       name: "B.Tech in Civil Engineering (B25)",
@@ -281,451 +281,24 @@ async function seedPrograms() {
       },
     });
     created.push(program);
-    console.log(`✅ ${program.code}: ${program.name}`);
+    console.log(`âœ… ${program.code}: ${program.name}`);
   }
 
-  console.log(`\n✅ Created ${created.length} programs`);
+  console.log(`\nâœ… Created ${created.length} programs`);
   return created;
 }
 
 async function main() {
-  console.log("🌱 Starting database seeding...\n");
+  console.log("ðŸŒ± Starting database seeding...\n");
 
   // Seed programs first
   await seedPrograms();
 
-  // Sample test programs removed — only real IIT Mandi programs are seeded.
-  console.log("✅ Database seeded successfully!\nCreated: " + (await prisma.program.count()) + " programs");
-  return;
-  // (dead code below kept for reference only)
-  console.log("\nCreating sample test programs...");
-
-  const csMajor = await prisma.program.upsert({
-    where: { code: "CS-SAMPLE" },
-    update: {},
-    create: {
-      name: "Computer Science Sample",
-      code: "CS-SAMPLE",
-      type: ProgramType.MAJOR,
-      department: "Computer Science",
-      totalCreditsRequired: 120,
-      icCredits: 60,
-      dcCredits: 30,
-      deCredits: 18,
-      feCredits: 12,
-      mtpIstpCredits: 0,
-      minCreditsForMtp: 90,
-      minSemesterForMtp: 7,
-      description: "Bachelor of Science in Computer Science (Sample)",
-    },
-  });
-
-  const mathMinor = await prisma.program.upsert({
-    where: { code: "MATH-MINOR" },
-    update: {},
-    create: {
-      name: "Mathematics Minor",
-      code: "MATH-MINOR",
-      type: ProgramType.MINOR,
-      department: "Mathematics",
-      totalCreditsRequired: 24,
-      icCredits: 12,
-      dcCredits: 12,
-      deCredits: 0,
-      feCredits: 0,
-      mtpIstpCredits: 0,
-      description: "Minor in Mathematics",
-    },
-  });
-
-  // Create sample courses
-  console.log("Creating courses...");
-
-  const courses = [
-    {
-      code: "CS101",
-      name: "Introduction to Programming",
-      credits: 4,
-      department: "Computer Science",
-      level: 100,
-      description: "Fundamental concepts of programming",
-      offeredInFall: true,
-      offeredInSpring: true,
-    },
-    {
-      code: "CS102",
-      name: "Data Structures",
-      credits: 4,
-      department: "Computer Science",
-      level: 100,
-      description: "Arrays, linked lists, trees, graphs",
-      offeredInFall: true,
-      offeredInSpring: true,
-    },
-    {
-      code: "CS201",
-      name: "Algorithms",
-      credits: 4,
-      department: "Computer Science",
-      level: 200,
-      description: "Algorithm design and analysis",
-      offeredInFall: true,
-      offeredInSpring: false,
-    },
-    {
-      code: "CS301",
-      name: "Database Systems",
-      credits: 4,
-      department: "Computer Science",
-      level: 300,
-      description: "Database design and SQL",
-      offeredInFall: false,
-      offeredInSpring: true,
-    },
-    {
-      code: "CS302",
-      name: "Operating Systems",
-      credits: 4,
-      department: "Computer Science",
-      level: 300,
-      description: "Process management, memory, file systems",
-      offeredInFall: true,
-      offeredInSpring: true,
-    },
-    {
-      code: "CS401",
-      name: "Machine Learning",
-      credits: 4,
-      department: "Computer Science",
-      level: 400,
-      description: "Supervised and unsupervised learning",
-      offeredInFall: true,
-      offeredInSpring: false,
-    },
-    {
-      code: "CS402",
-      name: "Web Development",
-      credits: 3,
-      department: "Computer Science",
-      level: 400,
-      description: "Full-stack web development",
-      offeredInFall: true,
-      offeredInSpring: true,
-    },
-    {
-      code: "MATH201",
-      name: "Calculus I",
-      credits: 4,
-      department: "Mathematics",
-      level: 200,
-      description: "Differential calculus",
-      offeredInFall: true,
-      offeredInSpring: true,
-    },
-    {
-      code: "MATH202",
-      name: "Calculus II",
-      credits: 4,
-      department: "Mathematics",
-      level: 200,
-      description: "Integral calculus",
-      offeredInFall: true,
-      offeredInSpring: true,
-    },
-    {
-      code: "MATH301",
-      name: "Linear Algebra",
-      credits: 4,
-      department: "Mathematics",
-      level: 300,
-      description: "Matrices, vector spaces, eigenvalues",
-      offeredInFall: true,
-      offeredInSpring: false,
-    },
-  ];
-
-  for (const courseData of courses) {
-    await prisma.course.upsert({
-      where: { code: courseData.code },
-      update: {},
-      create: courseData,
-    });
-  }
-
-  // Link courses to programs
-  console.log("Linking courses to programs...");
-
-  const cs101 = await prisma.course.findUnique({ where: { code: "CS101" } });
-  const cs102 = await prisma.course.findUnique({ where: { code: "CS102" } });
-  const cs201 = await prisma.course.findUnique({ where: { code: "CS201" } });
-  const cs301 = await prisma.course.findUnique({ where: { code: "CS301" } });
-  const cs302 = await prisma.course.findUnique({ where: { code: "CS302" } });
-  const cs401 = await prisma.course.findUnique({ where: { code: "CS401" } });
-  const cs402 = await prisma.course.findUnique({ where: { code: "CS402" } });
-
-  // CS Major core courses
-  if (cs101) {
-    await prisma.programCourse.upsert({
-      where: {
-        programId_courseId: {
-          programId: csMajor.id,
-          courseId: cs101.id,
-        },
-      },
-      update: {},
-      create: {
-        programId: csMajor.id,
-        courseId: cs101.id,
-        courseType: CourseType.CORE,
-        isRequired: true,
-        semester: 1,
-      },
-    });
-  }
-
-  if (cs102) {
-    await prisma.programCourse.upsert({
-      where: {
-        programId_courseId: {
-          programId: csMajor.id,
-          courseId: cs102.id,
-        },
-      },
-      update: {},
-      create: {
-        programId: csMajor.id,
-        courseId: cs102.id,
-        courseType: CourseType.CORE,
-        isRequired: true,
-        semester: 2,
-      },
-    });
-
-    // CS102 requires CS101
-    if (cs101) {
-      await prisma.coursePrerequisite.upsert({
-        where: {
-          courseId_prerequisiteId: {
-            courseId: cs102.id,
-            prerequisiteId: cs101.id,
-          },
-        },
-        update: {},
-        create: {
-          courseId: cs102.id,
-          prerequisiteId: cs101.id,
-        },
-      });
-    }
-  }
-
-  if (cs201) {
-    await prisma.programCourse.upsert({
-      where: {
-        programId_courseId: {
-          programId: csMajor.id,
-          courseId: cs201.id,
-        },
-      },
-      update: {},
-      create: {
-        programId: csMajor.id,
-        courseId: cs201.id,
-        courseType: CourseType.CORE,
-        isRequired: true,
-        semester: 3,
-      },
-    });
-
-    // CS201 requires CS102
-    if (cs102) {
-      await prisma.coursePrerequisite.upsert({
-        where: {
-          courseId_prerequisiteId: {
-            courseId: cs201.id,
-            prerequisiteId: cs102.id,
-          },
-        },
-        update: {},
-        create: {
-          courseId: cs201.id,
-          prerequisiteId: cs102.id,
-        },
-      });
-    }
-  }
-
-  // DE courses
-  if (cs301) {
-    await prisma.programCourse.upsert({
-      where: {
-        programId_courseId: {
-          programId: csMajor.id,
-          courseId: cs301.id,
-        },
-      },
-      update: {},
-      create: {
-        programId: csMajor.id,
-        courseId: cs301.id,
-        courseType: CourseType.DE,
-        isRequired: false,
-        semester: 5,
-      },
-    });
-  }
-
-  if (cs302) {
-    await prisma.programCourse.upsert({
-      where: {
-        programId_courseId: {
-          programId: csMajor.id,
-          courseId: cs302.id,
-        },
-      },
-      update: {},
-      create: {
-        programId: csMajor.id,
-        courseId: cs302.id,
-        courseType: CourseType.DE,
-        isRequired: false,
-        semester: 5,
-      },
-    });
-  }
-
-  if (cs401) {
-    await prisma.programCourse.upsert({
-      where: {
-        programId_courseId: {
-          programId: csMajor.id,
-          courseId: cs401.id,
-        },
-      },
-      update: {},
-      create: {
-        programId: csMajor.id,
-        courseId: cs401.id,
-        courseType: CourseType.DE,
-        isRequired: false,
-        semester: 7,
-      },
-    });
-  }
-
-  if (cs402) {
-    await prisma.programCourse.upsert({
-      where: {
-        programId_courseId: {
-          programId: csMajor.id,
-          courseId: cs402.id,
-        },
-      },
-      update: {},
-      create: {
-        programId: csMajor.id,
-        courseId: cs402.id,
-        courseType: CourseType.PE,
-        isRequired: false,
-        semester: 6,
-      },
-    });
-  }
-
-  // Math minor courses
-  const math201 = await prisma.course.findUnique({ where: { code: "MATH201" } });
-  const math202 = await prisma.course.findUnique({ where: { code: "MATH202" } });
-  const math301 = await prisma.course.findUnique({ where: { code: "MATH301" } });
-
-  if (math201) {
-    await prisma.programCourse.upsert({
-      where: {
-        programId_courseId: {
-          programId: mathMinor.id,
-          courseId: math201.id,
-        },
-      },
-      update: {},
-      create: {
-        programId: mathMinor.id,
-        courseId: math201.id,
-        courseType: CourseType.CORE,
-        isRequired: true,
-        semester: 1,
-      },
-    });
-  }
-
-  if (math202) {
-    await prisma.programCourse.upsert({
-      where: {
-        programId_courseId: {
-          programId: mathMinor.id,
-          courseId: math202.id,
-        },
-      },
-      update: {},
-      create: {
-        programId: mathMinor.id,
-        courseId: math202.id,
-        courseType: CourseType.CORE,
-        isRequired: true,
-        semester: 2,
-      },
-    });
-
-    // MATH202 requires MATH201
-    if (math201) {
-      await prisma.coursePrerequisite.upsert({
-        where: {
-          courseId_prerequisiteId: {
-            courseId: math202.id,
-            prerequisiteId: math201.id,
-          },
-        },
-        update: {},
-        create: {
-          courseId: math202.id,
-          prerequisiteId: math201.id,
-        },
-      });
-    }
-  }
-
-  if (math301) {
-    await prisma.programCourse.upsert({
-      where: {
-        programId_courseId: {
-          programId: mathMinor.id,
-          courseId: math301.id,
-        },
-      },
-      update: {},
-      create: {
-        programId: mathMinor.id,
-        courseId: math301.id,
-        courseType: CourseType.DE,
-        isRequired: false,
-        semester: 3,
-      },
-    });
-  }
-
-  console.log("✅ Database seeded successfully!");
-  console.log(`
-Created:
-  - ${courses.length} courses
-  - 2 programs (CS Major, Math Minor)
-  - Course prerequisites
-  - Program-course relationships
-  `);
+  console.log("âœ… Database seeded successfully!\nCreated: " + (await prisma.program.count()) + " programs");
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+  .catch((e) => { console.error(e); process.exit(1); })
+  .finally(async () => { await prisma.$disconnect(); });
+
+// â”€â”€ Intentionally empty below â€” sample programs removed â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
