@@ -15,7 +15,7 @@ interface DashboardOverviewProps {
 }
 
 
-const HSS_CORE_CAP = 12;
+const HSS_CORE_CAP = 15; // Dynamic in practice; 15 BTech / 12 BSCS — component uses program data
 
 const categoryLabels = {
   IC: "Institute Core",
@@ -23,8 +23,8 @@ const categoryLabels = {
   DC: "Discipline Core",
   DE: "Discipline Elective",
   FE: "Free Elective",
-  HSS: "HSS",
-  IKS: "IKS",
+  HSS: "HSS+IKS",
+  IKS: "HSS+IKS",
   MTP: "MTP",
   ISTP: "ISTP",
 } as const;
@@ -247,9 +247,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
     })();
     const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
 
-    if (normalizedCode === "IK593") return "FE";
-    if (normalizedCode === "IC181") return "IKS";
-    if (normalizedCode === "IC182") return isBatch24Or25 ? "IKS" : "IC";
+    if (normalizedCode === "IK593") return "HSS"; // IK-xxx → HSS+IKS
+    if (normalizedCode === "IC181") return "HSS"; // → HSS+IKS
+    if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC";
 
     if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
       const mapping = pickRelevantBranchMapping(userSettings.branch, enrollment.course.branchMappings);
@@ -259,9 +259,9 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       }
 
       if (mapping && ["IC", "IC_BASKET", "DC", "DE", "FE", "HSS", "IKS", "MTP", "ISTP"].includes(mapping.courseCategory)) {
-        // IK-xxx courses should not count towards IKS requirement.
-        if (mapping.courseCategory === "IKS" && isIkCourse) {
-          return "FE";
+        // IKS-mapped / IK-xxx → HSS+IKS combined basket.
+        if (mapping.courseCategory === "IKS") {
+          return "HSS";
         }
         return applyMinorDeOverride(mapping.courseCategory as keyof typeof categoryLabels);
       }
@@ -527,8 +527,7 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
                   <span>DC: {sem.DC}</span>
                   <span>DE: {sem.DE}</span>
                   <span>FE: {sem.FE}</span>
-                  <span>HSS: {sem.HSS}</span>
-                  <span>IKS: {sem.IKS}</span>
+                  {(sem.HSS + sem.IKS > 0) && <span>HSS+IKS: {addCredits(sem.HSS, sem.IKS)}</span>}
                   {(sem.MTP > 0 || sem.ISTP > 0) && (
                     <>
                       {sem.MTP > 0 && <span>MTP: {sem.MTP}</span>}
