@@ -199,8 +199,11 @@ export async function GET() {
         resolvedCategory = "FE";
       }
 
-      // IK-xxx and IC-181/IC-182 always go to HSS+IKS basket regardless of branchMappings.
-      if (/^IK\d/.test(normalizedCodeEarly) || normalizedCodeEarly === "IC181" ||
+      // HS-xxx, IK-xxx, IC-181/IC-182 always go to HSS+IKS basket regardless of branchMappings.
+      const courseCodeRaw = o.courseCode.toUpperCase();
+      if (courseCodeRaw.startsWith("HS-") || courseCodeRaw.startsWith("HS") ||
+          /^IK\d/.test(normalizedCodeEarly) ||
+          normalizedCodeEarly === "IC181" ||
           (normalizedCodeEarly === "IC182" && batch != null && batch >= 2024)) {
         resolvedCategory = "HSS";
       }
