@@ -1003,6 +1003,11 @@ const applyBatchOverrides = (
             credits: 3, category: "DC", semester: 5,
           });
         }
+        // B24 EE: EE-301 replaced by EE-302 (Control Systems, 4cr, confirmed replacement).
+        if (effectiveBranch === "EE") {
+          const upd = courses.filter((c) => normalizeCurriculumCode(c.code) !== "EE301");
+          return addCourseIfMissing(upd, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC" as const, semester: 5 });
+        }
         return courses;
       }
 
@@ -1211,9 +1216,9 @@ const applyBatchOverrides = (
       }
 
       case 5: {
-        // GE-ROBO: AR523/AR521/AR520/ME305/ME309/EE301 are now in the base geRaiSem5. No changes needed.
-        // GE-MECH: AR520/ME305/ME309/EE301/EE231 are now in the base geMechSem5. No changes needed.
-        return courses;
+        // B24 GE: EE-301 replaced by EE-302 (Control Systems, 4cr, confirmed replacement).
+        const upd = courses.filter((c) => normalizeCurriculumCode(c.code) !== "EE301");
+        return addCourseIfMissing(upd, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC" as const, semester: 5 });
       }
 
       case 7: {
@@ -1354,12 +1359,16 @@ const applyBatchOverrides = (
         // B25 inherits B24's DC restructuring in Sem 3. IC222P (Physics Practicum) moves to Sem 3 for B25.
         let updated = courses;
         if (effectiveBranch === "EE") {
-          // EE210 4cr → 3cr + EE210P 1cr lab; EE261 5cr → 3cr + EE261P 2cr lab.
-          updated = updated.map((c) => {
+          // B25: EE-210 replaced by EE-212 (4cr, confirmed). Remove EE210/EE210P split; add EE212.
+          // EE261 keeps 3cr + EE261P lab split.
+          updated = updated.filter((c) => {
             const code = normalizeCurriculumCode(c.code);
-            return code === "EE210" || code === "EE261" ? { ...c, credits: 3 } : c;
+            return code !== "EE210" && code !== "EE210P";
           });
-          updated = addCourseIfMissing(updated, B24_EE_EE210P_SEM3);
+          updated = updated.map((c) =>
+            normalizeCurriculumCode(c.code) === "EE261" ? { ...c, credits: 3 } : c
+          );
+          updated = addCourseIfMissing(updated, { code: "EE-212", name: "Digital System Design", credits: 4, category: "DC" as const, semester: 3 });
           updated = addCourseIfMissing(updated, B24_EE_EE261P_SEM3);
         }
         if (effectiveBranch === "MNC") {
@@ -1475,6 +1484,12 @@ const applyBatchOverrides = (
             code: "DS404", name: "Information Security and Privacy",
             credits: 3, category: "DC", semester: 5,
           });
+        }
+        // B25 EE/GE: EE-301 replaced by EE-302 (Control Systems, 4cr, confirmed replacement).
+        if (effectiveBranch === "EE" || effectiveBranch.startsWith("GE-") || effectiveBranch === "GE") {
+          let upd = courses.filter((c) => normalizeCurriculumCode(c.code) !== "EE301");
+          upd = addCourseIfMissing(upd, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC" as const, semester: 5 });
+          return upd;
         }
         return courses;
       }
