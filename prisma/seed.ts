@@ -294,7 +294,10 @@ async function main() {
   // Seed programs first
   await seedPrograms();
 
-  // Create sample programs for testing
+  // Sample test programs removed — only real IIT Mandi programs are seeded.
+  console.log("✅ Database seeded successfully!\nCreated: " + (await prisma.program.count()) + " programs");
+  return;
+  // (dead code below kept for reference only)
   console.log("\nCreating sample test programs...");
 
   const csMajor = await prisma.program.upsert({
