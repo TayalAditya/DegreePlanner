@@ -12,6 +12,9 @@ import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 
 interface DashboardOverviewProps {
   userId: string;
+  initialEnrollments?: any[];
+  initialUserSettings?: any;
+  initialAcademicState?: any;
 }
 
 
@@ -41,7 +44,7 @@ const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: st
   ISTP: { bg: "bg-accent/10", text: "text-accent" },
 };
 
-export function DashboardOverview({ userId }: DashboardOverviewProps) {
+export function DashboardOverview({ userId, initialEnrollments, initialUserSettings, initialAcademicState }: DashboardOverviewProps) {
   const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({
     queryKey: ["enrollments", userId],
     queryFn: async () => {
@@ -49,6 +52,8 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       if (!res.ok) throw new Error("Failed to fetch enrollments");
       return res.json();
     },
+    initialData: initialEnrollments,
+    staleTime: initialEnrollments ? 30_000 : 0,
   });
 
   const { data: userSettings } = useQuery({
@@ -58,6 +63,8 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       if (!res.ok) throw new Error("Failed to fetch user settings");
       return res.json();
     },
+    initialData: initialUserSettings,
+    staleTime: initialUserSettings ? 60_000 : 0,
   });
 
   const { data: academicState } = useQuery({
@@ -67,6 +74,8 @@ export function DashboardOverview({ userId }: DashboardOverviewProps) {
       if (!res.ok) return null;
       return res.json();
     },
+    initialData: initialAcademicState,
+    staleTime: initialAcademicState ? 60_000 : 0,
   });
 
   const allEnrollments = enrollments || [];

@@ -27,12 +27,14 @@ export default async function DashboardPage() {
   const batchYear = inferBatchYear(session?.user?.batch, session?.user?.enrollmentId);
   const academicState = batchYear ? inferAcademicState(batchYear) : null;
 
-  // Fetch stats directly from DB — no self-fetch
+  // Fetch stats + full enrollment data server-side — eliminates 3 client-side API calls in DashboardOverview
   let currentSemester = 1;
   let activeCoursesCount = 0;
   let completedCoursesCount = 0;
   let totalCreditsRequired = 160;
   let doingMTP = true;
+  let dashboardEnrollments: any[] = [];
+  let dashboardUserSettings: any = null;
 
   if (session?.user?.id) {
     try {
@@ -41,13 +43,32 @@ export default async function DashboardPage() {
           batch: session.user.batch,
           enrollmentId: session.user.enrollmentId,
         }),
+        // Full enrollment data — serves both stats and DashboardOverview (no client re-fetch)
         prisma.courseEnrollment.findMany({
           where: { userId: session.user.id },
-          select: { status: true, semester: true, grade: true },
+          select: {
+            id: true,
+            status: true,
+            semester: true,
+            year: true,
+            term: true,
+            grade: true,
+            isInternship: true,
+            courseType: true,
+            course: {
+              select: {
+                code: true,
+                credits: true,
+                branchMappings: {
+                  select: { courseCategory: true, branch: true, splitCategory: true, splitAmount: true },
+                },
+              },
+            },
+          },
         }),
         prisma.user.findUnique({
           where: { id: session.user.id },
-          select: { doingMTP: true },
+          select: { doingMTP: true, doingMTP2: true, doingISTP: true, totalPassFailCredits: true },
         }),
         prisma.userProgram.findFirst({
           where: { userId: session.user.id, isPrimary: true },
@@ -79,6 +100,18 @@ export default async function DashboardPage() {
       if (userRecord?.doingMTP !== undefined) {
         doingMTP = userRecord.doingMTP;
       }
+
+      dashboardEnrollments = enrollments;
+      dashboardUserSettings = {
+        branch: session.user.branch ?? null,
+        batch: session.user.batch ?? null,
+        enrollmentId: session.user.enrollmentId ?? null,
+        doingMTP: userRecord?.doingMTP ?? true,
+        doingMTP2: userRecord?.doingMTP2 ?? true,
+        doingISTP: userRecord?.doingISTP ?? true,
+        totalPassFailCredits: userRecord?.totalPassFailCredits ?? 0,
+        role: session.user.role ?? "STUDENT",
+      };
     } catch {
       // keep defaults
     }
@@ -284,7 +317,12 @@ export default async function DashboardPage() {
       </div>
 
       {/* Main Overview */}
-      <DashboardOverview userId={session?.user?.id!} />
+      <DashboardOverview
+        userId={session?.user?.id!}
+        initialEnrollments={dashboardEnrollments}
+        initialUserSettings={dashboardUserSettings}
+        initialAcademicState={academicState ? { currentSemester: academicState.currentSemester ?? null } : null}
+      />
 
       {/* Tips & Reminders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
