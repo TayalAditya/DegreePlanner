@@ -30,7 +30,7 @@ export async function GET() {
         },
       },
     },
-    orderBy: { enrollmentId: "asc" },
+    orderBy: { updatedAt: "desc" }, // most recently active first
   });
 
   const result = users.map((user) => {
