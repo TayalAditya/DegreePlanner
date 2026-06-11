@@ -413,9 +413,17 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     const hssUsed = { credits: 0 };
 
     sortedEnrollments.forEach((e: any) => {
+      const code = String(e.course?.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const credits = e.course?.credits || 0;
+      // IKS courses (IC-181, IC-182, IK-xxx) count directly in HSS+IKS basket — no cap consumed
+      const isIksType = code === "IC181" || code === "IK593" || /^IK\d/.test(code) ||
+        (code === "IC182" && (userBatch === 2024 || userBatch === 2025));
+      if (isIksType) {
+        categoryCredits.HSS = addCredits(categoryCredits.HSS, credits);
+        return;
+      }
       const hssBefore = hssUsed.credits;
       const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
-      const credits = e.course?.credits || 0;
       if (category === "HSS") {
         const actualHss = subtractCredits(hssUsed.credits, hssBefore);
         categoryCredits.HSS = addCredits(categoryCredits.HSS, actualHss);

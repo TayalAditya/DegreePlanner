@@ -533,16 +533,22 @@ export default function ProgressPage() {
         map[splitCat] = addCredits(map[splitCat], mapping.splitAmount);
         return;
       }
+      // IKS courses count directly in HSS+IKS basket — not subject to HS cap
+      const eCode = normalizeCode(e.course.code);
+      const isIksType = eCode === "IC181" || eCode === "IK593" || /^IK\d/.test(eCode) ||
+        (eCode === "IC182" && (inferredBatch === 2024 || inferredBatch === 2025));
+      if (isIksType) {
+        map["HSS"] = addCredits(map["HSS"] ?? 0, e.course.credits);
+        return;
+      }
       const hssBefore = hssU?.credits ?? 0;
       const category = getCourseCategory(e, icBkt, hssU);
       const hssAfter = hssU?.credits ?? hssBefore;
       if (category === "HSS") {
-        // [0–12] → HSS core, [12–20] → FE, [20+] → ignored
         const corePortion = Math.max(0, Math.min(HSS_CORE_CAP, hssAfter) - Math.min(HSS_CORE_CAP, hssBefore));
         const fePortion = Math.max(0, Math.min(HSS_FE_CAP, hssAfter) - Math.max(HSS_CORE_CAP, hssBefore));
         if (corePortion > 0) map["HSS"] = addCredits(map["HSS"] ?? 0, corePortion);
         if (fePortion > 0) map["FE"] = addCredits(map["FE"] ?? 0, fePortion);
-        // credits above HSS_FE_CAP=20 are not added to any bucket
       } else {
         map[category] = addCredits(map[category], e.course.credits);
       }
@@ -716,10 +722,14 @@ export default function ProgressPage() {
           splitCredits: undefined as undefined,
         };
       }
+      // IKS courses always count fully in HSS — no cap split for display
+      const eCode2 = normalizeCode(e.course.code);
+      const isIksDisplay = eCode2 === "IC181" || eCode2 === "IK593" || /^IK\d/.test(eCode2) ||
+        (eCode2 === "IC182" && (inferredBatch === 2024 || inferredBatch === 2025));
       const hssBefore = hssUsedForDisplay.credits;
       const category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
       const hssAfter = hssUsedForDisplay.credits;
-      const hssPortionUsed = subtractCredits(hssAfter, hssBefore);
+      const hssPortionUsed = isIksDisplay ? e.course.credits : subtractCredits(hssAfter, hssBefore);
       const splitCredits = category === "HSS" && hssPortionUsed < e.course.credits
         ? subtractCredits(e.course.credits, hssPortionUsed)
         : undefined;
