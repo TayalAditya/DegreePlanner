@@ -377,6 +377,7 @@ const mncSem3: DefaultCourse[] = [
   { code: "CS214", name: "Computer Organisation",                      credits: 4, category: "DC", semester: 3 },
   { code: "MA210", name: "Real and Complex Analysis",                  credits: 3, category: "DC", semester: 3 },
   { code: "MA211", name: "Ordinary Differential Equations",              credits: 4, category: "DC", semester: 3 },
+  { code: "MA312", name: "Design of Algorithms",                         credits: 4, category: "DC", semester: 3 },
 ];
 const mncSem4: DefaultCourse[] = [
   { code: "CS304", name: "Formal Language and Automata Theory", credits: 3, category: "DC", semester: 4 },
