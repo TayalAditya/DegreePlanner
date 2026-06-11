@@ -557,48 +557,45 @@ export default function CoursesPage() {
     }
   };
 
-  const creditsByCategory: Record<string, number> = {
-    IC: 0,
-    IC_BASKET: 0,
-    DC: 0,
-    DE: 0,
-    FE: 0,
-    HSS: 0,
-    IKS: 0,
-    MTP: 0,
-    ISTP: 0,
-  };
-
-  const completedIcBasketUsed = { ic1: false, ic2: false };
-  enrollments
-    .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
-    .sort((a, b) => a.semester - b.semester)
-    .forEach((e) => {
-      // Check for split-credit mapping before using getCourseCategory
-      if (user?.branch && e.course.branchMappings && e.course.branchMappings.length > 0) {
-        const branchCandidates = getBranchCandidates(user.branch);
-        const mapping = branchCandidates
-          .map((b) => e.course.branchMappings?.find((m) => m.branch === b))
-          .find(Boolean);
-        if (mapping?.splitCategory && mapping?.splitAmount != null && mapping.splitAmount > 0) {
-          const mainCr = subtractCredits(e.course.credits, mapping.splitAmount);
-          const mainCat = mapping.courseCategory in creditsByCategory ? mapping.courseCategory : "FE";
-          const splitCat = mapping.splitCategory in creditsByCategory ? mapping.splitCategory : "FE";
-          creditsByCategory[mainCat] = addCredits(creditsByCategory[mainCat], mainCr);
-          creditsByCategory[splitCat] = addCredits(creditsByCategory[splitCat], mapping.splitAmount);
-          return;
+  const { creditsByCategory, completedIcBasketUsed } = useMemo(() => {
+    const credits: Record<string, number> = {
+      IC: 0, IC_BASKET: 0, DC: 0, DE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0,
+    };
+    const icBasketUsed = { ic1: false, ic2: false };
+    enrollments
+      .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
+      .sort((a, b) => a.semester - b.semester)
+      .forEach((e) => {
+        if (user?.branch && e.course.branchMappings && e.course.branchMappings.length > 0) {
+          const branchCandidates = getBranchCandidates(user.branch);
+          const mapping = branchCandidates
+            .map((b) => e.course.branchMappings?.find((m) => m.branch === b))
+            .find(Boolean);
+          if (mapping?.splitCategory && mapping?.splitAmount != null && mapping.splitAmount > 0) {
+            const mainCr = subtractCredits(e.course.credits, mapping.splitAmount);
+            const mainCat = mapping.courseCategory in credits ? mapping.courseCategory : "FE";
+            const splitCat = mapping.splitCategory in credits ? mapping.splitCategory : "FE";
+            credits[mainCat] = addCredits(credits[mainCat], mainCr);
+            credits[splitCat] = addCredits(credits[splitCat], mapping.splitAmount);
+            return;
+          }
         }
-      }
-      const category = getCourseCategory(e, completedIcBasketUsed);
-      if (category in creditsByCategory) {
-        creditsByCategory[category] = addCredits(creditsByCategory[category], e.course.credits);
-      }
-    });
+        const category = getCourseCategory(e, icBasketUsed);
+        if (category in credits) {
+          credits[category] = addCredits(credits[category], e.course.credits);
+        }
+      });
+    return { creditsByCategory: credits, completedIcBasketUsed: icBasketUsed };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enrollments, user?.branch]);
 
   // Calculate HSS credits for smart type detection
-  const hssCreditsCompleted = enrollments
-    .filter((e) => e.course.code.startsWith("HS-") && e.status === "COMPLETED")
-    .reduce((sum, e) => addCredits(sum, e.course.credits), 0);
+  const hssCreditsCompleted = useMemo(
+    () => enrollments
+      .filter((e) => e.course.code.startsWith("HS-") && e.status === "COMPLETED")
+      .reduce((sum, e) => addCredits(sum, e.course.credits), 0),
+    [enrollments]
+  );
 
   const determineCourseType = (course: Course): string => {
     const code = course.code.toUpperCase();
@@ -1299,15 +1296,8 @@ export default function CoursesPage() {
                             </div>
                           </button>
 
-                          <AnimatePresence initial={false}>
-                            {isExpanded && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.2 }}
-                                className="overflow-hidden"
-                              >
+                          {isExpanded && (
+                            <div className="overflow-hidden">
                                 <div className="border-t border-border p-4 space-y-3">
                                   {visibleCourses.map((course) => (
                                     <div
@@ -1402,9 +1392,8 @@ export default function CoursesPage() {
                                     </button>
                                   )}
                                 </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

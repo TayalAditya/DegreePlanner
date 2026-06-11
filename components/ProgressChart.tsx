@@ -251,10 +251,10 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
     // Hard overrides (batch-sensitive)
     const isBatch24Or25 = userBatch === 2024 || userBatch === 2025;
-    if (normalizedCode === "IK593") { if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits)); return "HSS"; }
+    if (normalizedCode === "IK593") { if (hssUsed) hssUsed.credits = Math.min(HSS_CORE_CAP, addCredits(hssUsed.credits, credits)); return "HSS"; }
     // IC-181/IC-182 → HSS+IKS combined basket
-    if (normalizedCode === "IC181") { if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits)); return "HSS"; }
-    if (normalizedCode === "IC182") { if (isBatch24Or25 && hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits)); return isBatch24Or25 ? "HSS" : "IC"; }
+    if (normalizedCode === "IC181") { if (hssUsed) hssUsed.credits = Math.min(HSS_CORE_CAP, addCredits(hssUsed.credits, credits)); return "HSS"; }
+    if (normalizedCode === "IC182") { if (isBatch24Or25 && hssUsed) hssUsed.credits = Math.min(HSS_CORE_CAP, addCredits(hssUsed.credits, credits)); return isBatch24Or25 ? "HSS" : "IC"; }
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && (branch || userBranch)) {

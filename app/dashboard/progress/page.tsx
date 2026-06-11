@@ -40,6 +40,7 @@ interface Enrollment {
     branchMappings?: {
       courseCategory: string;
       branch: string;
+      batch?: string | null;
       splitCategory?: string | null;
       splitAmount?: number | null;
     }[];
