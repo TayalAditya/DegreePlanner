@@ -485,8 +485,15 @@ export default function CoursesPage() {
         return applyMinorDeOverride(mapping.courseCategory, enrollment);
       }
 
-      // Course has branch mappings, but none apply to this branch. Treat it as FE
-      // so exchange courses mapped as DE for one branch do not become core elsewhere.
+      // No branch-specific mapping found — apply hard prefix rules before defaulting to FE.
+      // CSE/DSE/DSAI: CS-xxx and DS-xxx are always DE (except internship/project codes).
+      const isCSorDS2 = code.startsWith("CS") || code.startsWith("DS");
+      const isCsDsException2 = ["396P","399P","010"].some(s => normalizedCode.endsWith(s)) || normalizedCode === "DS302";
+      if (isCSorDS2 && !isCsDsException2 && (user?.branch === "CSE" || isDataScienceBranch(user?.branch))) {
+        return applyMinorDeOverride("DE", enrollment);
+      }
+
+      // Course has branch mappings but none apply → FE
       return "FE";
     }
 
@@ -494,8 +501,8 @@ export default function CoursesPage() {
 
     // Fallback to code analysis
     if (isICB1 || isICB2) return "IC_BASKET";
-    
-    // Hard rule: CSE/DSE/DSAI → all CS-xxx and DS-xxx are DE (except internship/project codes)
+
+    // Hard rule: CSE/DSE/DSAI → all CS-xxx and DS-xxx are DE (no branchMappings at all case)
     const isCSorDS = code.startsWith("CS") || code.startsWith("DS");
     const isCsDsException = ["396P","399P","010"].some(s => normalizedCode.endsWith(s)) || normalizedCode === "DS302";
     if (isCSorDS && !isCsDsException && (user?.branch === "CSE" || isDataScienceBranch(user?.branch))) {
