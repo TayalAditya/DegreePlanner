@@ -285,7 +285,10 @@ export default function ProgressPage() {
     })();
     const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
 
-    if (normalizedCode === "IK593") return "FE";
+    if (normalizedCode === "IK593") {
+      if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
+      return "HSS"; // IK593 also goes to HSS+IKS basket
+    }
     // IC-181/IC-182 → HSS+IKS combined basket
     if (normalizedCode === "IC181" || (normalizedCode === "IC182" && isBatch24Or25)) {
       if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));

@@ -661,9 +661,9 @@ export class CreditCalculator {
       const mappedCategory = matchedMapping?.courseCategory;
 
       if (mappedCategory) {
-        // IK-xxx courses should not count towards IKS requirement.
-        if (mappedCategory === "IKS" && isIkCourse) {
-          addBreakdownCredits("freeElective", credits);
+        // IK-xxx courses (and IKS-mapped courses) → HSS+IKS combined basket.
+        if (mappedCategory === "IKS") {
+          addHssCredits(credits);
           return;
         }
 

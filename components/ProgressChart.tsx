@@ -251,7 +251,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
     // Hard overrides (batch-sensitive)
     const isBatch24Or25 = userBatch === 2024 || userBatch === 2025;
-    if (normalizedCode === "IK593") return "FE";
+    if (normalizedCode === "IK593") return "HSS"; // IK593 → HSS+IKS basket
     // IC-181/IC-182 → HSS+IKS combined basket
     if (normalizedCode === "IC181") return "HSS";
     if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC";
@@ -343,9 +343,9 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
         return "FE";
       }
 
-      // IK-xxx courses should not count towards IKS requirement.
-      if (mapping?.courseCategory === "IKS" && isIkCourse) {
-        return "FE";
+      // IK-xxx / IKS-mapped courses → HSS+IKS combined basket.
+      if (mapping?.courseCategory === "IKS") {
+        return "HSS";
       }
 
       if (mapping && mapping.courseCategory in categoryCredits) {
