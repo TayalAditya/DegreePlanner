@@ -200,19 +200,27 @@ export default function ProgressPage() {
     mappings: Enrollment["course"]["branchMappings"] | undefined
   ) => {
     if (!branch || !mappings || mappings.length === 0) return undefined;
+    const userBatch = typeof user?.batch === "number" ? user.batch :
+      (() => { const m = /B(\d{2})/i.exec(String(user?.enrollmentId ?? "")); return m ? 2000+parseInt(m[1]) : null; })();
+    const batchStr = userBatch ? String(userBatch) : "";
 
-    const exact = mappings.find((m) => m.branch === branch);
-    if (exact) return exact;
+    // Helper: return mapping only if batch matches (exact) or is global (empty/null)
+    // Skips mappings for a different specific batch.
+    const pick = (m: (typeof mappings)[0]) => {
+      if (!m.batch || m.batch === "") return m;   // global — always valid
+      if (m.batch === batchStr) return m;           // exact batch match
+      return null;                                   // different batch — skip
+    };
 
-    const direct = mappings.find((m) => mappingBranchAliases.includes(m.branch));
-    if (direct) return direct;
-
-    if (branch === "GE") {
-      const ge = mappings.find((m) => m.branch.startsWith("GE"));
-      if (ge) return ge;
+    const candidates = [branch, ...mappingBranchAliases, ...(branch === "GE" ? ["GE"] : []), "COMMON"];
+    for (const c of candidates) {
+      // Prefer batch-specific over global for same branch
+      const batchSpecific = mappings.find((m) => m.branch === c && m.batch === batchStr);
+      if (batchSpecific) return batchSpecific;
+      const global = mappings.find((m) => m.branch === c && (!m.batch || m.batch === ""));
+      if (global) return global;
     }
-
-    return mappings.find((m) => m.branch === "COMMON");
+    return undefined;
   };
 
   const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any, hssUsed?: { credits: number }): CourseCategory => {

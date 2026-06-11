@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen,
@@ -54,6 +54,7 @@ interface Enrollment {
     branchMappings?: {
       courseCategory: string;
       branch: string;
+      batch?: string | null;
       splitCategory?: string | null;
       splitAmount?: number | null;
     }[];
@@ -260,10 +261,13 @@ export default function CoursesPage() {
   const normalizeCourseCodeForSearch = (text: string) =>
     text.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
-  const searchNormalized = normalizeCourseCodeForSearch(searchQuery);
-  const searchLower = searchQuery.trim().toLowerCase();
+  const searchNormalized = useMemo(
+    () => normalizeCourseCodeForSearch(searchQuery),
+    [searchQuery]
+  );
+  const searchLower = useMemo(() => searchQuery.trim().toLowerCase(), [searchQuery]);
 
-  const filteredCourses = allCourses.filter((course) => {
+  const filteredCourses = useMemo(() => allCourses.filter((course) => {
     const matchesSearch =
       !searchLower ||
       normalizeCourseCodeForSearch(course.code).includes(searchNormalized) ||
@@ -271,9 +275,10 @@ export default function CoursesPage() {
       course.department.toLowerCase().includes(searchLower);
     const matchesDept = selectedDept === "all" || getCourseSchoolKey(course) === selectedDept;
     return matchesSearch && matchesDept;
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [allCourses, searchLower, searchNormalized, selectedDept]);
 
-  const departmentGroups = (() => {
+  const departmentGroups = useMemo(() => {
     const bySchool: Record<string, Course[]> = {};
     for (const course of filteredCourses) {
       // Internship courses are shown in the dedicated section above — skip them here
@@ -292,18 +297,18 @@ export default function CoursesPage() {
         label: SCHOOL_META[key].label,
         courses: (bySchool[key] ?? []).sort((a, b) => a.code.localeCompare(b.code)),
       }));
-  })();
+  }, [filteredCourses]);
 
-  const toggleDepartment = (dept: string) => {
+  const toggleDepartment = useCallback((dept: string) => {
     setExpandedDepartments((prev) =>
       prev.includes(dept) ? prev.filter((d) => d !== dept) : [...prev, dept]
     );
     setDepartmentVisibleCounts((prev) =>
       prev[dept] ? prev : { ...prev, [dept]: DEPARTMENT_PAGE_SIZE }
     );
-  };
+  }, []);
 
-  const expandAllDepartments = () => {
+  const expandAllDepartments = useCallback(() => {
     const all = departmentGroups.map((g) => g.dept);
     setExpandedDepartments(all);
     setDepartmentVisibleCounts((prev) => {
@@ -313,9 +318,9 @@ export default function CoursesPage() {
       }
       return next;
     });
-  };
+  }, [departmentGroups]);
 
-  const collapseAllDepartments = () => setExpandedDepartments([]);
+  const collapseAllDepartments = useCallback(() => setExpandedDepartments([]), []);
 
   useEffect(() => {
     if (tab !== "catalog") return;
@@ -362,17 +367,24 @@ export default function CoursesPage() {
     [enrollments]
   );
 
-  const availableCourses = filteredCourses.filter(
-    (c) => !enrolledCourseIds.has(c.id)
+  const availableCourses = useMemo(
+    () => filteredCourses.filter((c) => !enrolledCourseIds.has(c.id)),
+    [filteredCourses, enrolledCourseIds]
   );
 
-  const totalCreditsCompleted = enrollments
-    .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
-    .reduce((sum, e) => addCredits(sum, e.course.credits), 0);
+  const totalCreditsCompleted = useMemo(
+    () => enrollments
+      .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
+      .reduce((sum, e) => addCredits(sum, e.course.credits), 0),
+    [enrollments]
+  );
 
-  const totalCreditsInProgress = enrollments
-    .filter((e) => e.status === "IN_PROGRESS" || e.status === "ENROLLED")
-    .reduce((sum, e) => addCredits(sum, e.course.credits), 0);
+  const totalCreditsInProgress = useMemo(
+    () => enrollments
+      .filter((e) => e.status === "IN_PROGRESS" || e.status === "ENROLLED")
+      .reduce((sum, e) => addCredits(sum, e.course.credits), 0),
+    [enrollments]
+  );
 
   const maxPassFailCredits = 9;
   const passFailUsed = user?.totalPassFailCredits ?? 0;
@@ -465,14 +477,23 @@ export default function CoursesPage() {
       return mapping?.courseCategory === "DC" ? "DC" : "FE";
     }
 
-    // First try to get from branchMappings if available
+    // First try to get from branchMappings — batch-aware: prefer exact batch > global > skip wrong-batch
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
+      const batchStr = inferredBatch ? String(inferredBatch) : "";
       const branchCandidates = getBranchCandidates(user.branch);
-      const mapping = branchCandidates
-        .map((branch) => enrollment.course.branchMappings?.find((m) => m.branch === branch))
-        .find(Boolean) || (user.branch === "GE"
-        ? enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE"))
-        : undefined);
+      const allCandidates = [...branchCandidates, ...(user.branch === "GE" ? ["GE"] : [])];
+      let mapping: (typeof enrollment.course.branchMappings)[0] | undefined;
+      for (const c of allCandidates) {
+        const bm = enrollment.course.branchMappings;
+        const specific = bm.find((m) => m.branch === c && m.batch === batchStr);
+        if (specific) { mapping = specific; break; }
+        const global = bm.find((m) => m.branch === c && (!m.batch || m.batch === ""));
+        if (global) { mapping = global; break; }
+        // skip: same branch but different specific batch
+      }
+      if (!mapping && user.branch === "GE") {
+        mapping = enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE") && (!m.batch || m.batch === ""));
+      }
 
       if (mapping) {
         if (mapping.courseCategory === "NA") {
