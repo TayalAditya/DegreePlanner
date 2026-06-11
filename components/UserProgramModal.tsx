@@ -87,8 +87,8 @@ const categoryLabels = {
   DC: "Discipline Core",
   DE: "Discipline Elective",
   FE: "Free Elective",
-  HSS: "Humanities & Social Sciences",
-  IKS: "Indian Knowledge System",
+  HSS: "Humanities & Social Sciences + IKS",
+  IKS: "Humanities & Social Sciences + IKS",
   MTP: "Major Technical Project",
   ISTP: "Interactive Socio-Technical Practicum",
   AUDIT: "Audit (NC)",
@@ -427,9 +427,9 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
 
     // Hard overrides (batch-sensitive)
     const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
-    if (normalizedCode === "IK593") return "FE";
-    if (normalizedCode === "IC181") return "IKS";
-    if (normalizedCode === "IC182") return isBatch24Or25 ? "IKS" : "IC";
+    if (normalizedCode === "IK593") return "HSS"; // IK593 → HSS+IKS basket
+    if (normalizedCode === "IC181") return "HSS"; // IC-181 → HSS+IKS basket
+    if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC"; // IC-182 B24/B25 → HSS+IKS
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && branch) {
       const mapping = pickRelevantBranchMapping(branch, enrollment.course.branchMappings);
@@ -439,9 +439,9 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       }
 
       if (mapping && mapping.courseCategory in categoryLabels) {
-        // IK-xxx courses should not count towards IKS requirement.
-        if (mapping.courseCategory === "IKS" && isIkCourse) {
-          return "FE";
+        // IKS-mapped courses (incl. IK-xxx) → HSS+IKS combined basket.
+        if (mapping.courseCategory === "IKS") {
+          return "HSS";
         }
         const resolvedCat = applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
         // Apply HSS cap for non-HS-prefix courses mapped to HSS (e.g. German intensive courses)
@@ -457,7 +457,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       return "FE";
     }
 
-    if (isIkCourse) return "FE";
+    if (isIkCourse) return "HSS"; // IK-xxx → HSS+IKS basket
 
     if (branch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) {
       return applyMinorDeOverride("DE", enrollment);
