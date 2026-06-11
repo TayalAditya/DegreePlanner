@@ -279,7 +279,7 @@ export function DashboardOverview({ userId, initialEnrollments, initialUserSetti
       return "FE";
     }
 
-    if (isIkCourse) return "FE";
+    if (isIkCourse) return "HSS"; // IK-xxx → HSS+IKS basket, no cap consumed
 
     // Branch-specific course patterns
     if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return applyMinorDeOverride("DE");
