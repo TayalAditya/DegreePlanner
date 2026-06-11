@@ -160,6 +160,15 @@ export default function ProgressPage() {
   // Must ignore Samarth suffix noise like "_New" so course-type matching works consistently
   const normalizeCode = (code: string) => normalizeCourseCode(code);
 
+  // Shared inferredBatch — used in calculateProgress and in render-level display loops
+  const inferredBatch = useMemo(() => {
+    if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;
+    const enrollmentId = String(user?.enrollmentId || "").toUpperCase();
+    const match = /B(\d{2})/i.exec(enrollmentId);
+    if (match) return 2000 + Number.parseInt(match[1], 10);
+    return null;
+  }, [user?.batch, user?.enrollmentId]);
+
   const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
     if (!minorPlanner.enabled) return new Set<string>();
@@ -518,6 +527,7 @@ export default function ProgressPage() {
     // HSS+IKS combined basket: BTech = 15, BSCS = 12 — must be declared before accumulateSplitAware uses it
     const HSS_CORE_CAP = (programCredits.icCredits ?? 60) <= 52 ? 12 : 15;
 
+    // inferredBatch is defined at component level (avoids temporal dead zone in closures)
     const accumulateSplitAware = (
       map: Record<string, number>,
       e: Enrollment,
@@ -550,7 +560,9 @@ export default function ProgressPage() {
         if (corePortion > 0) map["HSS"] = addCredits(map["HSS"] ?? 0, corePortion);
         if (fePortion > 0) map["FE"] = addCredits(map["FE"] ?? 0, fePortion);
       } else {
-        map[category] = addCredits(map[category], e.course.credits);
+        // IKS should always be merged into HSS — safety net for any edge case
+        const effectiveCat = category === "IKS" ? "HSS" : category;
+        map[effectiveCat] = addCredits(map[effectiveCat] ?? 0, e.course.credits);
       }
     };
 
@@ -566,13 +578,6 @@ export default function ProgressPage() {
     const icBasketRequired = 6;
     const iksRequired = 0; // IKS merged into HSS+IKS combined basket
 
-    const inferredBatch = (() => {
-      if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;
-      const enrollmentId = String(user?.enrollmentId || "").toUpperCase();
-      const match = /B(\d{2})/i.exec(enrollmentId);
-      if (match) return 2000 + Number.parseInt(match[1], 10);
-      return null;
-    })();
     const isBatch22 = inferredBatch === 2022;
     
     // Adjust MTP/ISTP based on user preferences (and ignore skips if already completed)
