@@ -294,15 +294,10 @@ export default function ProgressPage() {
     })();
     const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
 
-    if (normalizedCode === "IK593") {
-      if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
-      return "HSS"; // IK593 also goes to HSS+IKS basket
-    }
-    // IC-181/IC-182 → HSS+IKS combined basket
-    if (normalizedCode === "IC181" || (normalizedCode === "IC182" && isBatch24Or25)) {
-      if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
-      return "HSS";
-    }
+    // IKS courses (IC-181, IC-182, IK-xxx) → HSS+IKS basket WITHOUT consuming HS cap space.
+    // HS cap (0-15 core, 15-20 FE, 20+ ignored) applies only to HS-xxx; IKS always count fully.
+    if (normalizedCode === "IK593") return "HSS";
+    if (normalizedCode === "IC181" || (normalizedCode === "IC182" && isBatch24Or25)) return "HSS";
     if (normalizedCode === "IC182") return "IC"; // B23 IC182 stays IC
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
@@ -313,11 +308,8 @@ export default function ProgressPage() {
       }
 
       if (mapping && mapping.courseCategory in categoryLabels) {
-        // IK-xxx courses → HSS+IKS basket (merged); plain IKS mapping also goes to HSS.
-        if (mapping.courseCategory === "IKS") {
-          if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
-          return "HSS";
-        }
+        // IK-xxx / IKS-mapped → HSS+IKS basket without consuming HS cap.
+        if (mapping.courseCategory === "IKS") return "HSS";
         const resolvedCat = applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
         // Apply HSS cap for non-HS-prefix courses mapped to HSS (e.g. German intensive courses)
         if (resolvedCat === "HSS" && hssUsed) {
@@ -327,10 +319,7 @@ export default function ProgressPage() {
       }
     }
 
-    if (isIkCourse) {
-      if (hssUsed) hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
-      return "HSS"; // IK-xxx → HSS+IKS combined basket
-    }
+    if (isIkCourse) return "HSS"; // IK-xxx → HSS+IKS basket without consuming HS cap
 
     // Hard rule: CSE/DSE/DSAI → all CS-xxx and DS-xxx are DE
     // Exceptions: internship (396P, 399P), independent project (010), and specific non-DE codes
