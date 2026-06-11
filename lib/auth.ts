@@ -115,62 +115,10 @@ const loadBatch22Index = async () => {
   return batch22IndexPromise;
 };
 
-const loadBatch24Index = async () => {
-  if (!batch24IndexPromise) {
-    batch24IndexPromise = (async () => {
-      try {
-        const fs = await import("fs/promises");
-        const path = await import("path");
-        const pdfParse = (await import("pdf-parse")).default as any;
-
-        const pdfPath = path.join(process.cwd(), "docs", "batch24.pdf");
-        const buffer = await fs.readFile(pdfPath);
-        const data = await pdfParse(buffer);
-        const text = String(data?.text ?? "");
-
-        const matches: Array<{ enrollmentId: string; index: number }> = [];
-        const rollRe = /B24\d{3,}/gi;
-        let m: RegExpExecArray | null;
-        while ((m = rollRe.exec(text)) !== null) {
-          matches.push({ enrollmentId: m[0].toUpperCase(), index: m.index });
-        }
-
-        const index = new Map<string, Batch24Student>();
-        for (let i = 0; i < matches.length; i++) {
-          const { enrollmentId, index: start } = matches[i];
-          const end = i + 1 < matches.length ? matches[i + 1].index : text.length;
-          const raw = text.slice(start + enrollmentId.length, end);
-          const normalized = raw.replace(/\s+/g, " ").trim();
-
-          const programStart = normalized.search(/B\.?\s*Tech|B\.S\./i);
-          if (programStart < 0) continue;
-
-          const name = normalized.slice(0, programStart).trim();
-          const programAndAfter = normalized.slice(programStart).trim();
-          const closingParen = programAndAfter.indexOf(")");
-          const program = closingParen >= 0 ? programAndAfter.slice(0, closingParen + 1).trim() : programAndAfter;
-
-          const branch = inferBranchFromProgram(program);
-          if (!branch || !B24_ALLOWED_BRANCHES.has(branch)) continue;
-
-          if (!index.has(enrollmentId)) {
-            index.set(enrollmentId, {
-              enrollmentId,
-              name,
-              branch,
-              department: getDepartmentForBranch(branch),
-            });
-          }
-        }
-
-        return index;
-      } catch (err) {
-        console.warn("Failed to load batch24 index:", err);
-        return new Map<string, Batch24Student>();
-      }
-    })();
-  }
-  return batch24IndexPromise;
+// B24 students are fully imported into ApprovedUser — no PDF fallback needed in production.
+// Any B24 student missing from ApprovedUser must be added manually via admin.
+const loadBatch24Index = async (): Promise<Map<string, Batch24Student>> => {
+  return new Map<string, Batch24Student>();
 };
 
 const loadBatch25Index = async () => {
