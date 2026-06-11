@@ -39,6 +39,11 @@ export interface ProgramProgress {
   inProgress: CreditBreakdown;
   remaining: CreditBreakdown;
   percentage: number;
+  /** Per-category required credits — used by ProgressChart for dynamic HSS cap */
+  creditsRequiredByCategory?: {
+    IC?: number; IC_BASKET?: number; DC?: number; DE?: number;
+    FE?: number; HSS?: number; IKS?: number; MTP?: number; ISTP?: number; PE?: number;
+  };
 }
 
 type CreditClassificationState = {
@@ -325,6 +330,7 @@ export class CreditCalculator {
     const percentage =
       required.total > 0 ? (completed.total / required.total) * 100 : 0;
 
+    const hssReq = (program.icCredits ?? 60) <= 52 ? 12 : 15;
     return {
       programId,
       programName: program.name,
@@ -334,6 +340,18 @@ export class CreditCalculator {
       inProgress,
       remaining,
       percentage: Math.min(100, Math.round(percentage * 10) / 10),
+      creditsRequiredByCategory: {
+        IC: Math.max(0, (program.icCredits ?? 60) - 6 - hssReq),
+        IC_BASKET: 6,
+        DC: program.dcCredits ?? 0,
+        DE: deCredits,
+        FE: feCredits,
+        HSS: hssReq,
+        IKS: 0,
+        MTP: mtpCredits,
+        ISTP: istpCredits,
+        PE: researchCredits,
+      },
     };
   }
 
