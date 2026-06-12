@@ -740,7 +740,7 @@ export default function ProgressPage() {
       const hssBefore = hssUsedForDisplay.credits;
       if (isIksDisplay) {
         // Update hssUsed so subsequent courses see the correct remaining cap
-        hssUsedForDisplay.credits = Math.min(HSS_CORE_CAP, hssBefore + (e.course.credits || 0));
+        hssUsedForDisplay.credits = Math.min(hssRequired, hssBefore + (e.course.credits || 0));
       }
       const category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
       const hssAfter = hssUsedForDisplay.credits;
