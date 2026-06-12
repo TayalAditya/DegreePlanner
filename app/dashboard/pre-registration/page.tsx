@@ -680,7 +680,9 @@ export default function PreRegistrationPage() {
     for (const o of data.offerings) {
       if (!o.isCompulsory && !selected.has(o.id)) continue;
       if (o.completedInSemester !== null) continue;
-      add(o.resolvedCategory, o.credits);
+      // IKS is merged into HSS bucket (combined basket)
+      const cat = o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory;
+      add(cat, o.credits);
     }
     // Add internship / MTP-1 selections
     const extraCourses: { id: string; credits: number; category: string }[] = [
