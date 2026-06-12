@@ -301,9 +301,8 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
         const common = mappings.find((m: any) => m.branch === "COMMON");
         const mapping = direct || ge || common;
 
-        if (mapping?.courseCategory === "DC") {
-          return "DC";
-        }
+        if (mapping?.courseCategory === "DC") return "DC";
+        if (mapping?.courseCategory === "DE") return applyMinorDeOverride("DE");
       }
 
       // Additional IC basket courses → FE

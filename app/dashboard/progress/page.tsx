@@ -270,14 +270,13 @@ export default function ProgressPage() {
         }
       }
       
-      // Some IC basket courses are mapped as DC for certain branches (e.g. MSE: IC-240).
+      // Some IC basket courses are mapped as DC or DE for certain branches (e.g. MSE: IC-240 → DC, EP: IC-253 → DE).
       // Respect explicit branch mappings before defaulting to FE.
       if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0) {
         const mapping = pickRelevantBranchMapping(user.branch, enrollment.course.branchMappings);
 
-        if (mapping?.courseCategory === "DC") {
-          return "DC";
-        }
+        if (mapping?.courseCategory === "DC") return "DC";
+        if (mapping?.courseCategory === "DE") return applyMinorDeOverride("DE", enrollment);
       }
 
       return "FE";
