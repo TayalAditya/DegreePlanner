@@ -543,12 +543,18 @@ export default function ProgressPage() {
         map[splitCat] = addCredits(map[splitCat], mapping.splitAmount);
         return;
       }
-      // IKS courses count directly in HSS+IKS basket — not subject to HS cap
+      // IKS courses go through same HSS+IKS cap as HS-xxx — overflow → FE
       const eCode = normalizeCode(e.course.code);
       const isIksType = eCode === "IC181" || eCode === "IK593" || /^IK\d/.test(eCode) ||
         (eCode === "IC182" && (inferredBatch === 2024 || inferredBatch === 2025));
       if (isIksType) {
-        map["HSS"] = addCredits(map["HSS"] ?? 0, e.course.credits);
+        const before = hssU?.credits ?? 0;
+        if (hssU) hssU.credits = Math.min(HSS_CORE_CAP, before + e.course.credits);
+        const after = hssU?.credits ?? before;
+        const corePortion = Math.max(0, Math.min(HSS_CORE_CAP, after) - Math.min(HSS_CORE_CAP, before));
+        const fePortion = Math.max(0, Math.min(HSS_FE_CAP, after) - Math.max(HSS_CORE_CAP, before));
+        if (corePortion > 0) map["HSS"] = addCredits(map["HSS"] ?? 0, corePortion);
+        if (fePortion > 0) map["FE"] = addCredits(map["FE"] ?? 0, fePortion);
         return;
       }
       const hssBefore = hssU?.credits ?? 0;
@@ -732,9 +738,15 @@ export default function ProgressPage() {
       const isIksDisplay = eCode2 === "IC181" || eCode2 === "IK593" || /^IK\d/.test(eCode2) ||
         (eCode2 === "IC182" && (inferredBatch === 2024 || inferredBatch === 2025));
       const hssBefore = hssUsedForDisplay.credits;
+      if (isIksDisplay) {
+        // Update hssUsed so subsequent courses see the correct remaining cap
+        hssUsedForDisplay.credits = Math.min(HSS_CORE_CAP, hssBefore + (e.course.credits || 0));
+      }
       const category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
       const hssAfter = hssUsedForDisplay.credits;
-      const hssPortionUsed = isIksDisplay ? e.course.credits : subtractCredits(hssAfter, hssBefore);
+      const hssPortionUsed = isIksDisplay
+        ? Math.max(0, hssAfter - hssBefore)
+        : subtractCredits(hssAfter, hssBefore);
       const splitCredits = category === "HSS" && hssPortionUsed < e.course.credits
         ? subtractCredits(e.course.credits, hssPortionUsed)
         : undefined;

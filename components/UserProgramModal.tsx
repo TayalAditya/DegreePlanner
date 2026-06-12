@@ -523,7 +523,15 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     const isIksType = eNorm === "IC181" || eNorm === "IK593" || /^IK\d/.test(eNorm) ||
       (eNorm === "IC182" && (inferredBatch === 2024 || inferredBatch === 2025));
     if (isIksType) {
-      categorizedById.set(e.id, { category: "HSS" as CourseCategory, splitCredits: undefined });
+      // Apply cap for IKS courses same as HS-xxx
+      const before = hssUsedForDisplay.credits;
+      hssUsedForDisplay.credits = Math.min(15, before + (e.course?.credits || 0));
+      const actual = hssUsedForDisplay.credits - before;
+      const overflow = (e.course?.credits || 0) - actual;
+      categorizedById.set(e.id, {
+        category: "HSS" as CourseCategory,
+        splitCredits: overflow > 0 ? overflow : undefined,
+      });
       return;
     }
     const hssBefore = hssUsedForDisplay.credits;
