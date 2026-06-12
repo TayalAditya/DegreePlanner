@@ -22,6 +22,7 @@ interface ProgressChartProps {
   enrollments?: any[];
   userBranch?: string;
   userBatch?: number | null;
+  disableMinorPlanner?: boolean; // admin modal: don't apply viewer's minor planner to someone else's courses
 }
 
 const COLORS = {
@@ -126,10 +127,10 @@ const HSS_CORE_CAP_DEFAULT = 15;
 
 const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
 
-export function ProgressChart({ progress, isLoading, enrollments, userBranch, userBatch }: ProgressChartProps) {
+export function ProgressChart({ progress, isLoading, enrollments, userBranch, userBatch, disableMinorPlanner }: ProgressChartProps) {
   const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
-    if (!minorPlanner.enabled) return new Set<string>();
+    if (disableMinorPlanner || !minorPlanner.enabled) return new Set<string>();
     const eligible = buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
     if (!minorPlanner.countedCourseCodesConfigured) return eligible;
 

@@ -348,7 +348,7 @@ const epSem3: DefaultCourse[] = [
 const epSem4: DefaultCourse[] = [
   ...ic202pSem4,
   { code: "EP403", name: "Physics of Atoms and Molecules",         credits: 3, category: "DC", semester: 4 },
-  { code: "EPXXX", name: "Reverse Engineering",                    credits: 1, category: "DC", semester: 4 },
+  { code: "EE223P", name: "Reverse Engineering",                   credits: 1, category: "DC", semester: 4 },
   { code: "PH302", name: "Introduction to Statistical Mechanics",  credits: 3, category: "DC", semester: 4 },
   { code: "PH501", name: "Solid State Physics",                    credits: 3, category: "DC", semester: 4 },
 ];

@@ -744,6 +744,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                         enrollments={programEnrollments}
                         userBranch={userSettings.branch}
                         userBatch={inferredBatch}
+                        disableMinorPlanner={true}
                       />
                     ) : (
                       <div className="bg-surface rounded-lg border border-border p-6 flex items-center justify-center">
