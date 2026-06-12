@@ -51,7 +51,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
       if (!res.ok) throw new Error("Failed to fetch enrollments");
       return res.json();
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 30_000,
   });
 
   const { data: userSettings } = useQuery({

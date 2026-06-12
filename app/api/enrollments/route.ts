@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(enrollmentsWithOverrides, {
-      headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" },
+      headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=30" },
     });
   } catch (error) {
     console.error("Error fetching enrollments:", error);

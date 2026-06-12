@@ -23,6 +23,6 @@ export async function GET() {
       upcomingSemester: state.upcomingSemester ?? null,
       isInSession: state.isInSession,
     },
-    { headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" } }
+    { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" } }
   );
 }

@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       isBatch24 && enrollmentId ? await getBatch24Icb1Course(enrollmentId) : null;
 
     return NextResponse.json({ ...user, batch24Icb1Course }, {
-      headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" },
+      headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" },
     });
   } catch (error) {
     console.error("User fetch error:", error);

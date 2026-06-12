@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(programs, {
-      headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=60" },
+      headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" },
     });
   } catch (error) {
     console.error("Error fetching programs:", error);

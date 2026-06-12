@@ -387,7 +387,7 @@ export default function AdminPage() {
       if (!res.ok) throw new Error("Unauthorized or failed to fetch");
       return res.json();
     },
-    staleTime: 5 * 60 * 1000, // 5 min — don't refetch on every tab switch
+    staleTime: 60_000,
   });
 
   const branches = useMemo(
