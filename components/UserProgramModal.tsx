@@ -398,14 +398,11 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
         }
       }
 
-      // Some IC basket courses are mapped as DC for certain branches (e.g. MSE: IC-240).
-      // Respect explicit branch mappings before defaulting to FE.
+      // Some IC basket courses are mapped as DC/DE for certain branches (MSE: IC-240→DC, EP: IC-253→DE).
       if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0) {
         const mapping = pickRelevantBranchMapping(branch, enrollment.course.branchMappings);
-
-        if (mapping?.courseCategory === "DC") {
-          return "DC";
-        }
+        if (mapping?.courseCategory === "DC") return "DC";
+        if (mapping?.courseCategory === "DE") return applyMinorDeOverride("DE", enrollment);
       }
 
       return "FE";

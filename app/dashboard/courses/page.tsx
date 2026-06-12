@@ -478,7 +478,9 @@ export default function CoursesPage() {
       const mapping = branchCandidates
         .map((branch) => enrollment.course.branchMappings?.find((candidate) => candidate.branch === branch))
         .find(Boolean);
-      return mapping?.courseCategory === "DC" ? "DC" : "FE";
+      if (mapping?.courseCategory === "DC") return "DC";
+      if (mapping?.courseCategory === "DE") return "DE";
+      return "FE";
     }
 
     // First try to get from branchMappings — batch-aware: prefer exact batch > global > skip wrong-batch
