@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ProgramsSkeleton } from "./loading";
 import { GraduationCap, Award, BookOpen, Target, ChevronDown, AlertCircle } from "lucide-react";
-import { ProgressChart } from "@/components/ProgressChart";
+import dynamic from "next/dynamic";
+const ProgressChart = dynamic(() => import("@/components/ProgressChart").then(m => ({ default: m.ProgressChart })), { ssr: false, loading: () => <div className="h-64 animate-pulse bg-surface-elevated rounded-xl" /> });
 import { MinorPlannerCard } from "@/components/MinorPlannerCard";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";

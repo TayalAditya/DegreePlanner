@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen,
   Search,
@@ -885,14 +884,10 @@ export default function CoursesPage() {
       </div>
 
       {/* My Courses Tab */}
-      <AnimatePresence mode="wait">
+      <>
         {tab === "my-courses" && (
-          <motion.div
-            key="my-courses"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-4"
+          <div
+            className="space-y-4 transition-all duration-200"
           >
             {enrollments.length === 0 ? (
               <div className="text-center py-12 bg-surface rounded-xl border border-border">
@@ -937,7 +932,7 @@ export default function CoursesPage() {
                         
                         <div className="grid gap-3 pl-4">
                           {semesterEnrollments.map((enrollment) => (
-                            <motion.div
+                            <div
                               key={enrollment.id}
                               className="group relative overflow-hidden bg-surface rounded-lg border border-border p-4 hover:border-primary hover:shadow-lg transition-all"
                             >
@@ -1003,7 +998,7 @@ export default function CoursesPage() {
                                   </button>
                                 </div>
                               </div>
-                            </motion.div>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -1011,17 +1006,13 @@ export default function CoursesPage() {
                   })}
               </div>
             )}
-          </motion.div>
+          </div>
         )}
 
         {/* Course Catalog Tab */}
         {tab === "catalog" && (
-          <motion.div
-            key="catalog"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-5"
+          <div
+            className="space-y-5 transition-all duration-200"
           >
             {/* Search & Filter */}
             <div className="flex flex-col sm:flex-row gap-4">
@@ -1401,27 +1392,20 @@ export default function CoursesPage() {
                 )}
               </>
             )}
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
 
       {/* Course Details Modal */}
-      <AnimatePresence>
+      <>
         {selectedCourse && (
-          <motion.div
-            key="modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             onClick={() => setSelectedCourse(null)}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-all duration-200"
           >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+            <div
               onClick={(e) => e.stopPropagation()}
-              className="bg-surface rounded-2xl p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl"
+              className="bg-surface rounded-2xl p-4 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl transition-all duration-200"
             >
               <div className="flex items-start justify-between mb-6">
                 <div>
@@ -1513,28 +1497,21 @@ export default function CoursesPage() {
                   </button>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
 
       {/* Add Course Modal */}
-      <AnimatePresence>
+      <>
         {addingCourse && (
-          <motion.div
-            key="add-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             onClick={() => setAddingCourse(null)}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-all duration-200"
           >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+            <div
               onClick={(e) => e.stopPropagation()}
-              className="bg-surface rounded-2xl p-4 sm:p-8 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto mt-[0.8vh]"
+              className="bg-surface rounded-2xl p-4 sm:p-8 max-w-lg w-full shadow-2xl max-h-[90vh] overflow-y-auto mt-[0.8vh] transition-all duration-200"
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold text-foreground">Add Course</h2>
@@ -1869,10 +1846,10 @@ export default function CoursesPage() {
                   {submitting ? "Adding..." : "Add Course"}
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
     </div>
   );
 }
