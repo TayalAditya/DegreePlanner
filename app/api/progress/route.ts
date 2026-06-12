@@ -72,6 +72,8 @@ export async function GET(request: NextRequest) {
       mtpEligibility,
       istpEligibility,
       availableDECourses,
+    }, {
+      headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" },
     });
   } catch (error) {
     console.error("Error calculating progress:", error);

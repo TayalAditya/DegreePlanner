@@ -51,6 +51,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
       if (!res.ok) throw new Error("Failed to fetch enrollments");
       return res.json();
     },
+    staleTime: 5 * 60 * 1000,
   });
 
   const { data: userSettings } = useQuery({
@@ -61,7 +62,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
       return res.json();
     },
     initialData: initialUserSettings,
-    staleTime: initialUserSettings ? 60_000 : 0,
+    staleTime: initialUserSettings ? 3600_000 : 0,
   });
 
   const { data: academicState } = useQuery({
@@ -72,7 +73,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
       return res.json();
     },
     initialData: initialAcademicState,
-    staleTime: initialAcademicState ? 60_000 : 0,
+    staleTime: initialAcademicState ? 3600_000 : 0,
   });
 
   const allEnrollments = enrollments || [];

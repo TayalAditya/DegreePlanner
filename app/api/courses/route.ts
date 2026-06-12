@@ -167,7 +167,9 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json(sanitized);
+    return NextResponse.json(sanitized, {
+      headers: { "Cache-Control": "public, max-age=600, stale-while-revalidate=300" },
+    });
   } catch (error) {
     console.error("Error fetching courses:", error);
     return NextResponse.json(

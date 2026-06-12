@@ -49,6 +49,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         {/* Blocking script: apply saved theme/palette BEFORE React renders to avoid
             a flash of wrong theme AND prevent React hydration mismatch #418.
             The <html> element already has suppressHydrationWarning so the class
