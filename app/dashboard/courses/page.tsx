@@ -192,6 +192,17 @@ export default function CoursesPage() {
       .catch(() => {});
   }, []);
 
+  // Lazy-load course catalog only when the catalog tab is first opened
+  const [catalogLoaded, setCatalogLoaded] = useState(false);
+  useEffect(() => {
+    if (tab !== "catalog" || catalogLoaded || allCourses.length > 0) return;
+    setCatalogLoaded(true);
+    fetch("/api/courses")
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setAllCourses(data))
+      .catch(() => {});
+  }, [tab, catalogLoaded, allCourses.length]);
+
   useEffect(() => {
     const branch = user?.branch;
     if (!branch) return;
@@ -219,20 +230,14 @@ export default function CoursesPage() {
 
   const loadData = async () => {
     try {
-      const [enrollmentsRes, coursesRes, userRes] = await Promise.all([
+      const [enrollmentsRes, userRes] = await Promise.all([
         fetch("/api/enrollments"),
-        fetch("/api/courses"),
         fetch("/api/user/settings"),
       ]);
 
       if (enrollmentsRes.ok) {
         const data = await enrollmentsRes.json();
         setEnrollments(data);
-      }
-
-      if (coursesRes.ok) {
-        const data = await coursesRes.json();
-        setAllCourses(data);
       }
 
       if (userRes.ok) {

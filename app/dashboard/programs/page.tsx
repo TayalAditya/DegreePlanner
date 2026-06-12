@@ -174,22 +174,27 @@ export default function ProgramsPage() {
   ]);
 
   useEffect(() => {
-    fetchPrograms();
-  }, []);
-
-  const fetchPrograms = async () => {
-    try {
-      const res = await fetch("/api/programs");
-      if (res.ok) {
-        const data = await res.json();
-        setUserPrograms(data);
+    // Fetch programs + enrollments + user settings in parallel — eliminates waterfall
+    // (only /api/progress needs programId, so that one still waits)
+    Promise.all([
+      fetch("/api/programs").then(r => r.ok ? r.json() : []),
+      fetch("/api/enrollments").then(r => r.ok ? r.json() : []),
+      fetch("/api/user/settings").then(r => r.ok ? r.json() : null),
+    ]).then(([programs, enrollmentsData, userData]) => {
+      setUserPrograms(programs ?? []);
+      if (Array.isArray(enrollmentsData)) {
+        setEnrollments(enrollmentsData);
+        setEnrollmentsLoading(false);
       }
-    } catch (error) {
-      console.error("Failed to fetch programs:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (userData) {
+        setUserSettings(userData);
+        setDoingMTP1(userData.doingMTP ?? true);
+        const mtp1 = userData.doingMTP ?? true;
+        setDoingMTP2((userData.doingMTP2 ?? mtp1) && mtp1);
+        setDoingISTP(userData.doingISTP ?? true);
+      }
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
 
   const primaryProgram = userPrograms.find((p) => p.isPrimary);
   const programEnrollments = primaryProgram?.program?.id
@@ -203,7 +208,6 @@ export default function ProgramsPage() {
 
     const loadExtras = async () => {
       setProgressLoading(true);
-      setEnrollmentsLoading(true);
       setProgressError(null);
 
       try {
@@ -211,14 +215,11 @@ export default function ProgramsPage() {
         const minorCountedCodesParam = minorPlanner.countedCourseCodesConfigured
           ? `&minorCountedCodes=${encodeURIComponent(minorCountedCodesKey)}`
           : "";
- 
-        const [progressRes, enrollmentsRes, userRes] = await Promise.all([
-          fetch(
-            `/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}${minorCountedCodesParam}`
-          ),
-          fetch("/api/enrollments"),
-          fetch("/api/user/settings"),
-        ]);
+
+        // Only fetch progress here — enrollments+settings already fetched in parallel on mount
+        const progressRes = await fetch(
+          `/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}${minorCountedCodesParam}`
+        );
 
         if (progressRes.ok) {
           const data = await progressRes.json();
@@ -226,48 +227,11 @@ export default function ProgramsPage() {
         } else {
           setProgressError("Failed to load program progress");
         }
-
-        let enrollmentsData: Enrollment[] = [];
-        if (enrollmentsRes.ok) {
-          const data = await enrollmentsRes.json();
-          enrollmentsData = Array.isArray(data) ? data : [];
-          setEnrollments(enrollmentsData);
-        }
-
-        if (userRes.ok) {
-          const data = await userRes.json();
-          setUserSettings(data ?? null);
-          const mtp1 = data?.doingMTP ?? true;
-          const mtp2 = (data?.doingMTP2 ?? mtp1) && mtp1;
-          setDoingMTP1(mtp1);
-          setDoingMTP2(mtp2);
-          const doingISTPFromServer = data?.doingISTP ?? true;
-          setDoingISTP(doingISTPFromServer);
-
-          // Auto-drop ISTP if student is in/past sem 6 but never registered DP-301P
-          if (doingISTPFromServer && enrollmentsData.length > 0) {
-            const maxSem = Math.max(...enrollmentsData.map((e) => e.semester));
-            const hasIstpEnrollment = enrollmentsData.some((e) => {
-              const normalized = e.course.code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
-              return normalized === "DP301P" || normalized.includes("ISTP");
-            });
-            if (maxSem >= 6 && !hasIstpEnrollment) {
-              setDoingISTP(false);
-              // Silent update — no confirmation dialog, no toast
-              fetch("/api/user/settings", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ doingISTP: false }),
-              }).catch(console.error);
-            }
-          }
-        }
       } catch (error) {
         console.error("Failed to load program progress:", error);
         setProgressError("Failed to load program progress");
       } finally {
         setProgressLoading(false);
-        setEnrollmentsLoading(false);
       }
     };
 
