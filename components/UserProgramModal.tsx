@@ -518,6 +518,14 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       categorizedById.set(e.id, { category: "AUDIT" as CourseCategory, splitCredits: undefined });
       return;
     }
+    // IKS courses count fully in HSS+IKS — no cap split
+    const eNorm = (e.course?.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const isIksType = eNorm === "IC181" || eNorm === "IK593" || /^IK\d/.test(eNorm) ||
+      (eNorm === "IC182" && (inferredBatch === 2024 || inferredBatch === 2025));
+    if (isIksType) {
+      categorizedById.set(e.id, { category: "HSS" as CourseCategory, splitCredits: undefined });
+      return;
+    }
     const hssBefore = hssUsedForDisplay.credits;
     const category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
     const hssAfter = hssUsedForDisplay.credits;

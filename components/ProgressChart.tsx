@@ -887,7 +887,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
       {categoryData.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
-          {Object.entries(categoryCredits).map(([key, value]) => (
+          {Object.entries(categoryCredits).filter(([, value]) => value > 0).map(([key, value]) => (
             <span
               key={key}
               className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-surface-hover text-foreground-secondary"
