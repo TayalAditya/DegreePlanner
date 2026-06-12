@@ -443,10 +443,11 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     }
   }
 
+  const DISPLAY_NAMES: Record<string, string> = { HSS: "HSS+IKS", IKS: "HSS+IKS", IC_BASKET: "IC Basket" };
   const categoryData = Object.entries(categoryCredits)
     .filter(([, value]) => value > 0)
     .map(([name, value]) => ({
-      name,
+      name: DISPLAY_NAMES[name] ?? name,
       value,
       color: COLORS[name as keyof typeof COLORS],
     }));
