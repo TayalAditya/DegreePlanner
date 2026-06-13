@@ -15,7 +15,7 @@ async function main() {
     if (!up) { console.log(u.enrollmentId, u.name, "- no program"); continue; }
 
     const prog = await creditCalculator.calculateProgramProgress(u.id, up.programId);
-    const r = prog.creditsRequiredByCategory;
+    const r = prog.creditsRequiredByCategory ?? {};
     const ic = up.program.icCredits;
     const expectedHss = ic <= 52 ? 12 : 15;
     const expectedIc = ic - 6 - expectedHss;
