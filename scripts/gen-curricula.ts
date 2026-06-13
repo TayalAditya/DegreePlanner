@@ -253,7 +253,7 @@ function genTex(branch: string, batch: number, cr: ReturnType<typeof getCredits>
       const {l,t,p} = fmtLtpc(c.code);
       return `${i+1} & ${escape(c.code)} & ${escape(c.name)} & ${l} & ${t} & ${p} & ${c.credits} \\\\\\hline`;
     }).join("\n");
-    const suffix = ord(sem <= 3 ? sem : (sem===11||sem===12?"th":sem));
+    const suffix = (sem===11||sem===12) ? "th" : ord(sem);
     const semLabel = `${sem}\\textsuperscript{${suffix === "th" || sem > 3 ? "th" : suffix}}`;
     return `\\subsection*{B.Tech.~in ${titleName} --- ${semLabel} Semester}
 \\begin{center}\\begin{tabular}{|c|>{\\centering\\arraybackslash}p{1.6cm}|>{\\raggedright\\arraybackslash}p{7cm}|c|c|c|c|}
