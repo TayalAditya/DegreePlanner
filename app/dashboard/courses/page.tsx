@@ -451,6 +451,9 @@ export default function CoursesPage() {
     if (normalizedCode === "IK593") return "HSS"; // IK-xxx → HSS+IKS basket
     if (normalizedCode === "IC181") return "HSS"; // IC-181 → HSS+IKS basket
     if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC"; // IC-182 B24/B25 → HSS+IKS
+    // HS-xxx and IK-xxx always go to HSS+IKS regardless of branchMappings —
+    // consistent with server-side creditCalculator hard rule.
+    if (code.startsWith("HS-") || code.startsWith("HS") || isIkCourse) return "HSS";
 
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
@@ -595,13 +598,26 @@ export default function CoursesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enrollments, user?.branch]);
 
-  // Calculate HSS credits for smart type detection
-  const hssCreditsCompleted = useMemo(
-    () => enrollments
-      .filter((e) => e.course.code.startsWith("HS-") && e.status === "COMPLETED")
-      .reduce((sum, e) => addCredits(sum, e.course.credits), 0),
-    [enrollments]
-  );
+  // Calculate HSS+IKS credits already completed (for cap check).
+  // Includes HS-xxx, IC-181, IC-182 (B24+), and IK-xxx — matching creditCalculator's addHssCredits logic.
+  const hssCreditsCompleted = useMemo(() => {
+    const inferredBatch = (() => {
+      const b = user?.batch; if (typeof b === "number" && b > 2000) return b;
+      const match = /B(\d{2})/i.exec(String(user?.enrollmentId || "").toUpperCase());
+      return match ? 2000 + parseInt(match[1], 10) : null;
+    })();
+    return enrollments
+      .filter((e) => {
+        if (e.status !== "COMPLETED") return false;
+        const c = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g,"");
+        if (e.course.code.toUpperCase().startsWith("HS-")) return true;
+        if (c === "IC181") return true;
+        if (c === "IC182" && inferredBatch != null && inferredBatch >= 2024) return true;
+        if (/^IK\d/.test(c)) return true;
+        return false;
+      })
+      .reduce((sum, e) => addCredits(sum, e.course.credits), 0);
+  }, [enrollments, user?.batch, user?.enrollmentId]);
 
   const determineCourseType = (course: Course): string => {
     const code = course.code.toUpperCase();
