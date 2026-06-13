@@ -79,7 +79,8 @@ interface UserProgramModalProps {
   onClose: () => void;
 }
 
-const HSS_CORE_CAP = 12;
+// HSS cap is branch-aware: BSCS/BS/CH = 12, all BTech = 15
+// Do NOT use this module-level constant directly — use the dynamic hssCoreCap inside the component.
 
 const categoryLabels = {
   IC: "Institute Core",
@@ -303,6 +304,12 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   const userSettings = data?.userSettings ?? {};
   const progressData = data?.progressData ?? null;
 
+  // Branch-aware HSS+IKS cap: BSCS/BS/CH = 12 credits, all BTech = 15 credits
+  const hssCoreCap = useMemo(() => {
+    const b = (userSettings.branch ?? "").toUpperCase();
+    return (b === "BSCS" || b === "BS" || b === "CH") ? 12 : 15;
+  }, [userSettings.branch]);
+
   const inferredBatch = useMemo(() => {
     const batch = userSettings.batch;
     if (typeof batch === "number" && batch > 2000) return batch;
@@ -408,13 +415,13 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       return "FE";
     }
 
-    // HS-xxx courses: first 12 credits count as HSS, remaining HS courses count as FE
+    // HS-xxx courses: first hssCoreCap credits count as HSS, remaining count as FE
     // (never let branch mapping override this)
     if (normalizedCode.startsWith("HS")) {
       if (hssUsed) {
         const before = hssUsed.credits;
-        if (before < HSS_CORE_CAP) {
-          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
+        if (before < hssCoreCap) {
+          hssUsed.credits = minCredits(hssCoreCap, addCredits(before, credits));
           return "HSS";
         }
         return "FE";
@@ -522,7 +529,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     if (isIksType) {
       // Apply cap for IKS courses same as HS-xxx
       const before = hssUsedForDisplay.credits;
-      hssUsedForDisplay.credits = Math.min(15, before + (e.course?.credits || 0));
+      hssUsedForDisplay.credits = Math.min(hssCoreCap, before + (e.course?.credits || 0));
       const actual = hssUsedForDisplay.credits - before;
       const overflow = (e.course?.credits || 0) - actual;
       categorizedById.set(e.id, {
