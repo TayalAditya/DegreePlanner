@@ -337,7 +337,7 @@ export default function ImportCoursesPage() {
             isMTP2,
         };
       });
-    setCourses(coursesWithSelection);
+    startTransition(() => setCourses(coursesWithSelection));
   };
 
   const searchCatalogCourses = async () => {
