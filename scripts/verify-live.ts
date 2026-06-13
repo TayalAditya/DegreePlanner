@@ -28,7 +28,7 @@ async function main() {
     console.log(`  IC  required: ${r.IC}/${expectedIc} ${icOk}`);
     console.log(`  HSS required: ${r.HSS}/${expectedHss} ${hssOk}`);
     console.log(`  IKS required: ${r.IKS ?? 0}/0 ${iksOk}`);
-    console.log(`  HSS done: ${prog.completed?.HSS ?? "n/a"} | IKS done: ${prog.completed?.IKS ?? "n/a"}`);
+    console.log(`  HSS done: ${(prog.completed as Record<string,number>)?.HSS ?? "n/a"} | IKS done: ${(prog.completed as Record<string,number>)?.IKS ?? "n/a"}`);
   }
 
   await prisma.$disconnect();
