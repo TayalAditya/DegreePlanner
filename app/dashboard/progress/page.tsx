@@ -741,7 +741,13 @@ export default function ProgressPage() {
         // Update hssUsed so subsequent courses see the correct remaining cap
         hssUsedForDisplay.credits = Math.min(progress?.creditsRequiredByCategory?.HSS ?? HSS_FE_CAP, hssBefore + (e.course.credits || 0));
       }
-      const category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
+      let category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
+      // Belt-and-suspenders: HS-xxx courses must always be HSS regardless of branchMappings.
+      // getCourseCategory already handles this, but defend against edge cases (e.g. courseType override).
+      if (!isIksDisplay && eCode2.startsWith("HS") && category !== "HSS") {
+        category = "HSS";
+        hssUsedForDisplay.credits = Math.min(HSS_FE_CAP, hssBefore + (e.course.credits || 0));
+      }
       const hssAfter = hssUsedForDisplay.credits;
       const hssPortionUsed = isIksDisplay
         ? Math.max(0, hssAfter - hssBefore)
