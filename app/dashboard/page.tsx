@@ -1,21 +1,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import dynamic from "next/dynamic";
+import { DashboardOverview } from "@/components/DashboardOverviewDynamic";
 import Link from "next/link";
-
-const DashboardOverview = dynamic(
-  () => import("@/components/DashboardOverview").then((m) => ({ default: m.DashboardOverview })),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-48 bg-surface rounded-xl border border-border" />
-        <div className="h-28 bg-surface rounded-xl border border-border" />
-      </div>
-    ),
-  }
-);
 import { TimeGreeting } from "@/components/TimeGreeting";
 import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
