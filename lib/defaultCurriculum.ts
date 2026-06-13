@@ -209,7 +209,7 @@ const eeSem4: DefaultCourse[] = [
 const eeSem5: DefaultCourse[] = [
   { code: "EE231", name: "Measurement and Instrumentation",                         credits: 3, category: "DC", semester: 5 },
   { code: "EE301", name: "Control Systems",                                      credits: 4, category: "DC", semester: 5 },
-  { code: "EE314", name: "Digital Signal Processing",                             credits: 3, category: "DC", semester: 5 },
+  { code: "EE305", name: "Digital Signal Processing",                             credits: 4, category: "DC", semester: 5 }, // B23/B22; B24+ gets EE314 via override
   { code: "EE326", name: "Computer Organization & Processor Architecture Design", credits: 4, category: "DC", semester: 5 },
   { code: "EEXXX", name: "Power and Energy Systems",                               credits: 4, category: "DC", semester: 5 },
 ];
@@ -1015,10 +1015,14 @@ const applyBatchOverrides = (
             credits: 3, category: "DC", semester: 5,
           });
         }
-        // B24 EE: EE-301 replaced by EE-302 (Control Systems, 4cr, confirmed replacement).
+        // B24 EE: EE-301→EE-302 (Control Systems); EE305→EE314 (Digital Signal Processing, 3cr).
         if (effectiveBranch === "EE") {
-          const upd = courses.filter((c) => normalizeCurriculumCode(c.code) !== "EE301");
-          return addCourseIfMissing(upd, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC" as const, semester: 5 });
+          let upd = courses.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return code !== "EE301" && code !== "EE305";
+          });
+          upd = addCourseIfMissing(upd, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC" as const, semester: 5 });
+          return addCourseIfMissing(upd, { code: "EE-314", name: "Digital Signal Processing", credits: 3, category: "DC" as const, semester: 5 });
         }
         return courses;
       }
@@ -1506,10 +1510,16 @@ const applyBatchOverrides = (
             credits: 3, category: "DC", semester: 5,
           });
         }
-        // B25 EE/GE: EE-301 replaced by EE-302 (Control Systems, 4cr, confirmed replacement).
+        // B25 EE/GE: EE-301→EE-302 (Control Systems); EE305→EE314 for EE (from B24+).
         if (effectiveBranch === "EE" || effectiveBranch.startsWith("GE-") || effectiveBranch === "GE") {
-          let upd = courses.filter((c) => normalizeCurriculumCode(c.code) !== "EE301");
+          let upd = courses.filter((c) => {
+            const code = normalizeCurriculumCode(c.code);
+            return code !== "EE301" && code !== "EE305";
+          });
           upd = addCourseIfMissing(upd, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC" as const, semester: 5 });
+          if (effectiveBranch === "EE") {
+            upd = addCourseIfMissing(upd, { code: "EE-314", name: "Digital Signal Processing", credits: 3, category: "DC" as const, semester: 5 });
+          }
           return upd;
         }
         return courses;
