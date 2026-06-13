@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, startTransition } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import {
   CheckCircle,
   Circle,
@@ -532,8 +531,8 @@ export default function ImportCoursesPage() {
     }
   };
 
-  const toggleCourse = (code: string, semester: number) => {
-    setCourses((prev) => {
+  const toggleCourse = useCallback((code: string, semester: number) => {
+    startTransition(() => { setCourses((prev) => {
       const clicked = prev.find((c) => c.code === code && c.semester === semester);
       if (!clicked) return prev;
       const nowSelected = !clicked.selected;
@@ -615,8 +614,8 @@ export default function ImportCoursesPage() {
 
         return c;
       });
-    });
-  };
+    }); });
+  }, [userBatch]);
 
   const toggleAllInSemester = (sem: number) => {
     setCourses((prev) => {
@@ -815,11 +814,7 @@ export default function ImportCoursesPage() {
   if (submitted) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          className="text-center"
-        >
+        <div className="text-center transition-all duration-200">
           <div className="w-24 h-24 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="h-12 w-12 text-success" />
           </div>
@@ -833,7 +828,7 @@ export default function ImportCoursesPage() {
           >
             View Courses
           </a>
-        </motion.div>
+        </div>
       </div>
     );
   }
