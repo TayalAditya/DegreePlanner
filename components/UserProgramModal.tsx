@@ -451,8 +451,8 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
         // Apply HSS cap for non-HS-prefix courses mapped to HSS (e.g. German intensive courses)
         if (resolvedCat === "HSS" && hssUsed) {
           const before = hssUsed.credits;
-          if (before >= HSS_CORE_CAP) return "FE";
-          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
+          if (before >= hssCoreCap) return "FE";
+          hssUsed.credits = minCredits(hssCoreCap, addCredits(before, credits));
         }
         return resolvedCat;
       }
