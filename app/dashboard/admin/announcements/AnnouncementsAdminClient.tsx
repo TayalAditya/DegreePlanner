@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Megaphone, Plus, Search, Pencil, Trash2, RotateCcw, X } from "lucide-react";
 
 import { useToast } from "@/components/ToastProvider";
@@ -24,13 +23,11 @@ type AnnouncementModalState =
 
 function AnnouncementModal({
   state,
-  reducedMotion,
   onClose,
   onSubmit,
   isSubmitting,
 }: {
   state: AnnouncementModalState;
-  reducedMotion: boolean;
   onClose: () => void;
   onSubmit: (payload: { title: string; content: string; isActive?: boolean }) => Promise<void>;
   isSubmitting: boolean;
@@ -41,24 +38,17 @@ function AnnouncementModal({
   const [isActive, setIsActive] = useState(initial?.isActive ?? true);
 
   return (
-    <motion.div
+    <div
       key="announcement-modal"
-      initial={reducedMotion ? { opacity: 1 } : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={reducedMotion ? { opacity: 0 } : { opacity: 0 }}
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-150"
       role="dialog"
       aria-modal="true"
       aria-label={state.mode === "edit" ? "Edit announcement" : "New announcement"}
     >
-      <motion.div
-        initial={reducedMotion ? { opacity: 1 } : { scale: 0.98, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={reducedMotion ? { opacity: 0 } : { scale: 0.98, opacity: 0 }}
-        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 35 }}
+      <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden"
+        className="bg-surface border border-border rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden transition-all duration-150"
       >
         <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-border">
           <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
@@ -125,13 +115,12 @@ function AnnouncementModal({
             {isSubmitting ? "Saving..." : state.mode === "edit" ? "Save" : "Post"}
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
 export default function AnnouncementsAdminClient() {
-  const reducedMotion = useReducedMotion() ?? false;
   const qc = useQueryClient();
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
@@ -240,11 +229,10 @@ export default function AnnouncementsAdminClient() {
 
   return (
     <div className="space-y-5">
-      <AnimatePresence>
+      <>
         {modal && (
           <AnnouncementModal
             state={modal}
-            reducedMotion={reducedMotion}
             onClose={() => setModal(null)}
             isSubmitting={createMutation.isPending || updateMutation.isPending}
             onSubmit={async (payload) => {
@@ -273,7 +261,7 @@ export default function AnnouncementsAdminClient() {
             }}
           />
         )}
-      </AnimatePresence>
+      </>
 
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">

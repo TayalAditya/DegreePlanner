@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Calendar,
   Clock,
@@ -1032,7 +1031,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
         <ListView timetable={entries} onEdit={openEdit} onDelete={handleDelete} onDeleteCalendar={handleDeleteCalendar} />
       )}
 
-      <AnimatePresence>
+      <>
         {calendarPickerOpen && (
           <CalendarPickerModal
             key="calendar-picker"
@@ -1100,7 +1099,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
             onClose={() => setAutofillPickerOpen(false)}
           />
         )}
-      </AnimatePresence>
+      </>
     </div>
   );
 }
@@ -1122,7 +1121,6 @@ function CalendarPickerModal({
   onConfirm: () => void;
   onClose: () => void;
 }) {
-  const reducedMotion = useReducedMotion();
   const allSelected = selected.size === entries.length;
 
   useEffect(() => {
@@ -1145,20 +1143,12 @@ function CalendarPickerModal({
   const syncedCount = entries.filter((e) => e.googleEventId).length;
 
   return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={reducedMotion ? { duration: 0 } : { duration: 0.15 }}
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity duration-150"
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        className="relative z-10 w-full sm:max-w-md bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl flex flex-col max-h-[85vh]"
-        initial={{ y: 40, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 40, opacity: 0 }}
-        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 35 }}
+      <div
+        className="relative z-10 w-full sm:max-w-md bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl flex flex-col max-h-[85vh] transition-all duration-150"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
@@ -1246,8 +1236,8 @@ function CalendarPickerModal({
             Add {selected.size} {selected.size === 1 ? "class" : "classes"}
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
@@ -1283,7 +1273,6 @@ function AutofillPickerModal({
   onConfirm: () => void;
   onClose: () => void;
 }) {
-  const reducedMotion = useReducedMotion();
   const allSelected = selected.size === candidates.length;
 
   useEffect(() => {
@@ -1293,20 +1282,12 @@ function AutofillPickerModal({
   }, [onClose]);
 
   return (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={reducedMotion ? { duration: 0 } : { duration: 0.15 }}
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity duration-150"
     >
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <motion.div
-        className="relative z-10 w-full sm:max-w-md bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl flex flex-col max-h-[85vh]"
-        initial={{ y: 40, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 40, opacity: 0 }}
-        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 35 }}
+      <div
+        className="relative z-10 w-full sm:max-w-md bg-surface rounded-t-2xl sm:rounded-2xl border border-border shadow-2xl flex flex-col max-h-[85vh] transition-all duration-150"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
@@ -1374,8 +1355,8 @@ function AutofillPickerModal({
             Fill {selected.size} {selected.size === 1 ? "course" : "courses"}
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
@@ -1693,7 +1674,6 @@ function TimetableEntryModal({
   deleting: boolean;
   defaultClassType?: ClassType;
 }) {
-  const reducedMotion = useReducedMotion();
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
 
@@ -2006,12 +1986,8 @@ function TimetableEntryModal({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4"
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 transition-opacity duration-150"
       role="dialog"
       aria-modal="true"
       aria-label={title}
@@ -2023,12 +1999,8 @@ function TimetableEntryModal({
         aria-label="Close modal"
       />
 
-      <motion.div
-        initial={reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.98 }}
-        transition={{ duration: 0.18, ease: "easeOut" }}
-        className="relative w-full sm:max-w-xl max-h-[80vh] bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+      <div
+        className="relative w-full sm:max-w-xl max-h-[80vh] bg-surface border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col transition-all duration-150"
       >
             <div className="p-4 sm:p-6 border-b border-border flex items-start justify-between gap-4">
               <div className="min-w-0">
@@ -2491,7 +2463,7 @@ function TimetableEntryModal({
                 Changes update the shared timetable for everyone enrolled in the selected course.
               </p>
             </form>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }

@@ -24,7 +24,6 @@ import {
   Megaphone,
   CalendarCheck,
 } from "lucide-react";
-import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { NotificationBell } from "./NotificationBell";
@@ -42,7 +41,6 @@ interface DashboardNavProps {
 export function DashboardNav({ user }: DashboardNavProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const reducedMotion = useReducedMotion();
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -151,7 +149,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-4 scrollbar-hide flex flex-col gap-4">
-              <LayoutGroup id="dashboard-nav-mobile">
+              <>
                 <div className="space-y-1">
                   {allNavigation.map((item) => {
                     const Icon = item.icon;
@@ -169,10 +167,8 @@ export function DashboardNav({ user }: DashboardNavProps) {
                      }`}
                    >
                         {isActive && (
-                          <motion.span
-                            layoutId="nav-indicator-mobile"
-                            className="absolute inset-0 rounded-xl bg-primary/10 border border-primary/20 shadow-sm"
-                            transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }}
+                          <span
+                            className="absolute inset-0 rounded-xl bg-primary/10 border border-primary/20 shadow-sm transition-all duration-150"
                             aria-hidden="true"
                           />
                         )}
@@ -182,7 +178,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
                     );
                   })}
                 </div>
-              </LayoutGroup>
+              </>
 
               {/* Appearance — inside scroll area so it doesn't crowd the footer */}
               <div className="border-t border-border/60 pt-4">
@@ -222,7 +218,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
 
       {/* Desktop: Sidebar */}
       <aside className="hidden lg:flex lg:flex-col lg:w-64 xl:w-72 bg-surface border-r border-border/60 no-print fixed top-16 left-0 h-[calc(100vh-4rem)] overflow-y-auto z-40 shadow-sm">
-        <LayoutGroup id="dashboard-nav-desktop">
+        <>
           <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4 scrollbar-hide">
             <div className="px-1">
               <p className="text-[11px] font-semibold text-foreground-secondary uppercase tracking-wider px-2 mb-2">
@@ -247,10 +243,8 @@ export function DashboardNav({ user }: DashboardNavProps) {
                    }`}
                  >
                   {isActive && (
-                    <motion.span
-                      layoutId="nav-indicator-desktop"
-                      className="absolute inset-0 rounded-xl bg-primary/10 border border-primary/20 shadow-sm"
-                      transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 500, damping: 40 }}
+                    <span
+                      className="absolute inset-0 rounded-xl bg-primary/10 border border-primary/20 shadow-sm transition-all duration-150"
                       aria-hidden="true"
                     />
                   )}
@@ -261,7 +255,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             })}
             </div>
           </div>
-        </LayoutGroup>
+        </>
 
         <div className="border-t border-border/60 px-4 py-4 space-y-3">
           <div className="flex items-center gap-3">

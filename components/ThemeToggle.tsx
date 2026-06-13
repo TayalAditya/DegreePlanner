@@ -1,9 +1,7 @@
 "use client";
 
 import { useTheme } from "./ThemeProvider";
-import { useId } from "react";
 import { Sun, Moon, Monitor, Check } from "lucide-react";
-import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 
 type ThemeToggleVariant = "full" | "mode" | "palette";
 
@@ -15,8 +13,6 @@ export function ThemeToggle({
   className?: string;
 }) {
   const { theme, setTheme, palette, setPalette } = useTheme();
-  const reducedMotion = useReducedMotion();
-  const instanceId = useId();
 
   const themes = [
     { value: "light" as const, icon: Sun, label: "Light" },
@@ -39,7 +35,7 @@ export function ThemeToggle({
       <div
         className={`inline-flex items-center gap-1 rounded-xl border border-border bg-card/60 backdrop-blur-sm p-1 shadow-sm ${className}`}
       >
-        <LayoutGroup id={`${instanceId}-theme-mode`}>
+        <>
           {themes.map((t) => {
             const Icon = t.icon;
             const selected = theme === t.value;
@@ -55,10 +51,8 @@ export function ThemeToggle({
                 type="button"
               >
                 {selected && (
-                  <motion.span
-                    layoutId={`${instanceId}-theme-toggle-indicator`}
-                    className="absolute inset-0 rounded-lg bg-background shadow-sm border border-border"
-                    transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 42 }}
+                  <span
+                    className="absolute inset-0 rounded-lg bg-background shadow-sm border border-border transition-all duration-150"
                     aria-hidden="true"
                   />
                 )}
@@ -68,7 +62,7 @@ export function ThemeToggle({
               </button>
             );
           })}
-        </LayoutGroup>
+        </>
       </div>
     );
   }
@@ -79,7 +73,7 @@ export function ThemeToggle({
     >
       {showThemeButtons && (
         <div className="flex items-center gap-1 rounded-xl border border-border/60 bg-surface/70 dark:bg-surface/50 p-1">
-          <LayoutGroup id={`${instanceId}-theme-panel`}>
+          <>
             {themes.map((t) => {
               const Icon = t.icon;
               const selected = theme === t.value;
@@ -95,10 +89,8 @@ export function ThemeToggle({
                   type="button"
                 >
                   {selected && (
-                    <motion.span
-                      layoutId={`${instanceId}-theme-toggle-indicator`}
-                      className="absolute inset-0 rounded-lg bg-background shadow-sm border border-border"
-                      transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 520, damping: 42 }}
+                    <span
+                      className="absolute inset-0 rounded-lg bg-background shadow-sm border border-border transition-all duration-150"
                       aria-hidden="true"
                     />
                   )}
@@ -108,7 +100,7 @@ export function ThemeToggle({
                 </button>
               );
             })}
-          </LayoutGroup>
+          </>
         </div>
       )}
 

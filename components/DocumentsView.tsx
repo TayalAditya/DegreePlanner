@@ -15,7 +15,6 @@ import {
   FolderOpen,
   X
 } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useToast } from "./ToastProvider";
 import { useConfirmDialog } from "./ConfirmDialog";
 
@@ -201,7 +200,6 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
   const [isAddLinkOpen, setIsAddLinkOpen] = useState(false);
   const [editingDoc, setEditingDoc] = useState<DocumentRecord | null>(null);
 
-  const reducedMotion = useReducedMotion() ?? false;
   const queryClient = useQueryClient();
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
@@ -446,26 +444,19 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
       )}
 
       {/* Preview Modal */}
-      <AnimatePresence>
+      <>
         {previewDoc && (
-          <motion.div
+          <div
             key="doc-preview"
-            initial={reducedMotion ? { opacity: 1 } : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={reducedMotion ? { opacity: 0 } : { opacity: 0 }}
             onClick={() => setPreviewDoc(null)}
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-150"
             role="dialog"
             aria-modal="true"
             aria-label="Document preview"
           >
-            <motion.div
-              initial={reducedMotion ? { opacity: 1 } : { scale: 0.98, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={reducedMotion ? { opacity: 0 } : { scale: 0.98, opacity: 0 }}
-              transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 35 }}
+            <div
               onClick={(e) => e.stopPropagation()}
-              className="bg-surface rounded-2xl shadow-2xl w-full max-w-5xl border border-border overflow-hidden"
+              className="bg-surface rounded-2xl shadow-2xl w-full max-w-5xl border border-border overflow-hidden transition-all duration-150"
             >
               <div className="flex items-start justify-between gap-4 p-5 sm:p-6 border-b border-border">
                 <div className="min-w-0">
@@ -527,33 +518,31 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
                   </div>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
 
       {/* Edit Document Modal */}
-      <AnimatePresence>
+      <>
         {editingDoc && (
           <EditDocumentModal
-            reducedMotion={reducedMotion}
             document={editingDoc}
             onClose={() => setEditingDoc(null)}
             onSubmit={(payload) => handleUpdateDocument(editingDoc, payload)}
           />
         )}
-      </AnimatePresence>
+      </>
 
       {/* Add Link / Embed Modal */}
-      <AnimatePresence>
+      <>
         {isAddLinkOpen && (
           <AddLinkModal
-            reducedMotion={reducedMotion}
             onClose={() => setIsAddLinkOpen(false)}
             onSubmit={handleCreateLinkDoc}
           />
         )}
-      </AnimatePresence>
+      </>
     </div>
   );
 }
@@ -648,12 +637,10 @@ function DocumentCard({
 }
 
 function EditDocumentModal({
-  reducedMotion,
   document,
   onClose,
   onSubmit,
 }: {
-  reducedMotion: boolean;
   document: DocumentRecord;
   onClose: () => void;
   onSubmit: (payload: { title: string; description?: string; category: string; url?: string; isPublic: boolean }) => void;
@@ -666,24 +653,17 @@ function EditDocumentModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   return (
-    <motion.div
+    <div
       key="edit-doc-modal"
-      initial={reducedMotion ? { opacity: 1 } : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={reducedMotion ? { opacity: 0 } : { opacity: 0 }}
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-150"
       role="dialog"
       aria-modal="true"
       aria-label="Edit document"
     >
-      <motion.div
-        initial={reducedMotion ? { opacity: 1 } : { scale: 0.98, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={reducedMotion ? { opacity: 0 } : { scale: 0.98, opacity: 0 }}
-        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 35 }}
+      <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-surface rounded-2xl shadow-2xl w-full max-w-xl border border-border overflow-hidden"
+        className="bg-surface rounded-2xl shadow-2xl w-full max-w-xl border border-border overflow-hidden transition-all duration-150"
       >
         <div className="flex items-center justify-between gap-4 p-5 border-b border-border">
           <div>
@@ -794,17 +774,15 @@ function EditDocumentModal({
             {isSubmitting ? "Saving..." : "Save"}
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }
 
 function AddLinkModal({
-  reducedMotion,
   onClose,
   onSubmit,
 }: {
-  reducedMotion: boolean;
   onClose: () => void;
   onSubmit: (payload: { title: string; description?: string; category: string; url: string; isPublic: boolean }) => void;
 }) {
@@ -816,24 +794,17 @@ function AddLinkModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   return (
-    <motion.div
+    <div
       key="add-link-modal"
-      initial={reducedMotion ? { opacity: 1 } : { opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={reducedMotion ? { opacity: 0 } : { opacity: 0 }}
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-150"
       role="dialog"
       aria-modal="true"
       aria-label="Add link or embed"
     >
-      <motion.div
-        initial={reducedMotion ? { opacity: 1 } : { scale: 0.98, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={reducedMotion ? { opacity: 0 } : { scale: 0.98, opacity: 0 }}
-        transition={reducedMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 35 }}
+      <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-surface rounded-2xl shadow-2xl w-full max-w-xl border border-border overflow-hidden"
+        className="bg-surface rounded-2xl shadow-2xl w-full max-w-xl border border-border overflow-hidden transition-all duration-150"
       >
         <div className="flex items-center justify-between gap-4 p-5 border-b border-border">
           <div>
@@ -942,7 +913,7 @@ function AddLinkModal({
             {isSubmitting ? "Adding..." : "Add"}
           </button>
         </div>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 }

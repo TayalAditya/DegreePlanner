@@ -1,7 +1,6 @@
 "use client";
 
 import { ReactNode } from "react";
-import { motion, useReducedMotion } from "framer-motion";
 
 interface StatCardProps {
   icon: ReactNode;
@@ -58,17 +57,11 @@ export function StatCard({
   onClick,
   delay = 0,
 }: StatCardProps) {
-  const reducedMotion = useReducedMotion();
   const accentColorKey = valueColor.replace("text-", "") as keyof typeof borderColorMap;
   const borderClass = borderColorMap[accentColorKey] || "hover:border-primary/30";
 
   return (
-    <motion.div
-      initial={reducedMotion ? {} : { opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={reducedMotion ? {} : { duration: 0.18, delay }}
-      className="h-full"
-    >
+    <div className="h-full transition-opacity duration-150">
       <div
         onClick={onClick}
         className={`relative h-full overflow-hidden bg-surface rounded-xl shadow-sm border border-border p-5 sm:p-6 transition-all duration-300 hover:shadow-md ${borderClass} ${
@@ -105,6 +98,6 @@ export function StatCard({
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

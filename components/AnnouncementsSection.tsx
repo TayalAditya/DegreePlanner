@@ -2,7 +2,6 @@
 
 import { X, Bell, Info } from "lucide-react";
 import { useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 
 interface Announcement {
@@ -15,7 +14,6 @@ interface Announcement {
 
 export function AnnouncementsSection() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
-  const reducedMotion = useReducedMotion();
 
   // Shares cache key with NotificationBell — no duplicate network request
   const { data: announcements = [], isLoading } = useQuery<Announcement[]>({
@@ -38,15 +36,11 @@ export function AnnouncementsSection() {
         <p className="text-sm font-semibold text-foreground">Announcements</p>
       </div>
 
-      <AnimatePresence mode="popLayout">
-        {visible.map((a, i) => (
-          <motion.div
+      <>
+        {visible.map((a) => (
+          <div
             key={a.id}
-            initial={reducedMotion ? {} : { opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={reducedMotion ? {} : { opacity: 0, scale: 0.97 }}
-            transition={{ duration: 0.15, delay: reducedMotion ? 0 : i * 0.04 }}
-            className="flex items-start gap-3 bg-info/8 border border-info/25 rounded-xl px-4 py-3"
+            className="flex items-start gap-3 bg-info/8 border border-info/25 rounded-xl px-4 py-3 transition-opacity duration-150"
           >
             <Info className="w-4 h-4 text-info flex-shrink-0 mt-0.5" />
             <div className="min-w-0 flex-1">
@@ -63,9 +57,9 @@ export function AnnouncementsSection() {
             >
               <X className="w-3.5 h-3.5 text-foreground-muted hover:text-foreground" />
             </button>
-          </motion.div>
+          </div>
         ))}
-      </AnimatePresence>
+      </>
     </div>
   );
 }

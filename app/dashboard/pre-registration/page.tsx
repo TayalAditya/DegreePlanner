@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { PreRegistrationSkeleton } from "./loading";
 import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
@@ -324,19 +323,13 @@ function Section({ title, count, children, defaultOpen = false, headerBg, error 
         </div>
         {open ? <ChevronDown className="w-4 h-4 text-foreground-secondary" /> : <ChevronRight className="w-4 h-4 text-foreground-secondary" />}
       </button>
-      <AnimatePresence initial={false}>
+      <>
         {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
+          <div className="overflow-hidden transition-all duration-150">
             <div className="p-4 space-y-2">{children}</div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
     </div>
   );
 }
@@ -1088,13 +1081,10 @@ export default function PreRegistrationPage() {
       </div>
 
       {/* Approval warning popup */}
-      <AnimatePresence>
+      <>
         {showApprovalWarning && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="flex items-start gap-3 p-4 rounded-xl border border-warning/40 bg-warning/8"
+          <div
+            className="flex items-start gap-3 p-4 rounded-xl border border-warning/40 bg-warning/8 transition-opacity duration-150"
           >
             <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
             <div className="flex-1">
@@ -1104,9 +1094,9 @@ export default function PreRegistrationPage() {
               </p>
             </div>
             <button onClick={() => setShowApprovalWarning(false)} className="text-foreground-secondary hover:text-foreground text-lg leading-none">×</button>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
+      </>
 
       {/* Compulsory */}
       {compulsory.length > 0 && (
@@ -1286,18 +1276,15 @@ export default function PreRegistrationPage() {
             </svg>
           </button>
 
-          <AnimatePresence>
+          <>
             {progressOpen && (
               <>
-                <motion.div
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+                <div
+                  className="lg:hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-opacity duration-150"
                   onClick={() => setProgressOpen(false)}
                 />
-                <motion.div
-                  initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-                  transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                  className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl border-t border-border p-4 space-y-3 max-h-[80vh] overflow-y-auto"
+                <div
+                  className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-2xl border-t border-border p-4 space-y-3 max-h-[80vh] overflow-y-auto transition-all duration-150"
                 >
                   <div className="w-10 h-1 bg-border rounded-full mx-auto mb-2" />
                   <ProgressPanel
@@ -1305,10 +1292,10 @@ export default function PreRegistrationPage() {
                     completedBreakdown={data.completedBreakdown}
                     categoryBreakdown={categoryBreakdown}
                   />
-                </motion.div>
+                </div>
               </>
             )}
-          </AnimatePresence>
+          </>
         </>
       )}
 

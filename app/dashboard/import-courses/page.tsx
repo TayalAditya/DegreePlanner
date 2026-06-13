@@ -618,43 +618,47 @@ export default function ImportCoursesPage() {
   }, [userBatch]);
 
   const toggleAllInSemester = (sem: number) => {
-    setCourses((prev) => {
-      const semCourses = prev.filter((c) => c.semester === sem);
-      const allSelected = semCourses.length > 0 && semCourses.every((c) => c.selected);
+    startTransition(() => {
+      setCourses((prev) => {
+        const semCourses = prev.filter((c) => c.semester === sem);
+        const allSelected = semCourses.length > 0 && semCourses.every((c) => c.selected);
 
-      if (allSelected) {
-        return prev.map((c) => (c.semester === sem ? { ...c, selected: false } : c));
-      }
-
-      const selectedElsewhere = new Set(
-        prev
-          .filter((c) => c.selected && c.semester !== sem)
-          .map((c) => courseIdentityKey(c.code))
-          .filter(Boolean)
-      );
-
-      const selectedInSem = new Set<string>();
-
-      return prev.map((c) => {
-        if (c.semester !== sem) return c;
-        const key = courseIdentityKey(c.code);
-
-        // Don't select duplicates across semesters (or within this semester)
-        if (key) {
-          if (selectedElsewhere.has(key)) return { ...c, selected: false };
-          if (selectedInSem.has(key)) return { ...c, selected: false };
-          selectedInSem.add(key);
+        if (allSelected) {
+          return prev.map((c) => (c.semester === sem ? { ...c, selected: false } : c));
         }
 
-        return { ...c, selected: true };
+        const selectedElsewhere = new Set(
+          prev
+            .filter((c) => c.selected && c.semester !== sem)
+            .map((c) => courseIdentityKey(c.code))
+            .filter(Boolean)
+        );
+
+        const selectedInSem = new Set<string>();
+
+        return prev.map((c) => {
+          if (c.semester !== sem) return c;
+          const key = courseIdentityKey(c.code);
+
+          // Don't select duplicates across semesters (or within this semester)
+          if (key) {
+            if (selectedElsewhere.has(key)) return { ...c, selected: false };
+            if (selectedInSem.has(key)) return { ...c, selected: false };
+            selectedInSem.add(key);
+          }
+
+          return { ...c, selected: true };
+        });
       });
     });
   };
 
   const updateGrade = (code: string, grade: string) => {
-    setCourses(
-      courses.map((c) => (c.code === code ? { ...c, grade } : c))
-    );
+    startTransition(() => {
+      setCourses((prev) =>
+        prev.map((c) => (c.code === code ? { ...c, grade } : c))
+      );
+    });
   };
 
   const handleGeSpecChange = async (newSpec: string) => {
