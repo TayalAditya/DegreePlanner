@@ -171,25 +171,28 @@ const BASE_CURRICULUM = {
     [...icCompSem1, ...icMixedSem1, ...allICB1],
     [...icCompSem2, ...icMixedSem2, ...allICB2],
     [...icSem3WithoutIC202P,
-      { code: "EE203", name: "Network Theory",              credits: 3, category: "DC", semester: 3 },
-      { code: "EE210", name: "Digital System Design",       credits: 4, category: "DC", semester: 3 },
-      { code: "EE260", name: "Signals and Systems",         credits: 3, category: "DC", semester: 3 },
-      { code: "EE261", name: "Electrical Systems Around Us", credits: 5, category: "DC", semester: 3 },
-      { code: "EE311", name: "Device Electronics",          credits: 3, category: "DC", semester: 3 },
+      { code: "EE203",  name: "Network Theory",                   credits: 3, category: "DC", semester: 3 },
+      { code: "EE210",  name: "Digital System Design",            credits: 3, category: "DC", semester: 3 },
+      { code: "EE210P", name: "Digital Systems Design Practicum", credits: 1, category: "DC", semester: 3 },
+      { code: "EE260",  name: "Signals and Systems",              credits: 3, category: "DC", semester: 3 },
+      { code: "EE261",  name: "Electrical Systems Around Us",     credits: 3, category: "DC", semester: 3 },
+      { code: "EE261P", name: "Electrical Systems Around Us Lab", credits: 2, category: "DC", semester: 3 },
+      { code: "EE311",  name: "Device Electronics",               credits: 3, category: "DC", semester: 3 },
     ],
     [...ic202pSem4,
-      { code: "EE201",  name: "Electro-Mechanics",      credits: 4, category: "DC", semester: 4 },
-      { code: "EE202",  name: "Electromagnetic Theory", credits: 3, category: "DC", semester: 4 },
-      { code: "EE211",  name: "Analog Circuit Design",  credits: 4, category: "DC", semester: 4 },
-      { code: "EE304",  name: "Communication Systems",  credits: 4, category: "DC", semester: 4 },
-      { code: "EE223P", name: "Reverse Engineering",    credits: 1, category: "DC", semester: 4 },
+      { code: "EE201",  name: "Electro-Mechanics",                   credits: 3, category: "DC", semester: 4 },
+      { code: "EE201P", name: "Electro-Mechanics Lab",               credits: 1, category: "DC", semester: 4 },
+      { code: "EE202",  name: "Electromagnetics & Wave Propagation", credits: 3, category: "DC", semester: 4 },
+      { code: "EE211",  name: "Analog Circuit Design",               credits: 3, category: "DC", semester: 4 },
+      { code: "EE304",  name: "Communication Systems",               credits: 4, category: "DC", semester: 4 },
+      { code: "EE223P", name: "Reverse Engineering",                 credits: 1, category: "DC", semester: 4 },
     ],
     [
-      { code: "EE231",  name: "Measurement and Instrumentation",                         credits: 3, category: "DC", semester: 5 },
-      { code: "EE301",  name: "Control Systems",                                         credits: 4, category: "DC", semester: 5 },
-      { code: "EE314",  name: "Digital Signal Processing",                               credits: 3, category: "DC", semester: 5 },
-      { code: "EE326",  name: "Computer Organization and Processor Architecture Design", credits: 4, category: "DC", semester: 5 },
-      { code: "EEXXX",  name: "Power and Energy Systems",                                credits: 4, category: "DC", semester: 5 },
+      { code: "EE231", name: "Measurement and Instrumentation",                         credits: 3, category: "DC", semester: 5 },
+      { code: "EE302", name: "Control Systems",                                         credits: 4, category: "DC", semester: 5 },
+      { code: "EE303", name: "Power Systems",                                           credits: 4, category: "DC", semester: 5 },
+      { code: "EE314", name: "Digital Signal Processing",                               credits: 4, category: "DC", semester: 5 },
+      { code: "EE326", name: "Computer Organization and Processor Architecture Design", credits: 4, category: "DC", semester: 5 },
     ],
     [...istpSem6],
     [...mtpSem7],
@@ -615,10 +618,9 @@ function applyBatchOverrides(branch, semIdx, courses, batch) {
         }
         let upd = courses;
         if (branch === "EE") {
+          // B24 EE: EE-210/EE210P replaced by EE-212 (4cr). EE261P lab stays (already in B23 base).
           upd = upd.filter(c => !["EE210","EE210P"].includes(norm(c.code)));
-          upd = upd.map(c => norm(c.code) === "EE261" ? { ...c, credits: 3 } : c);
-          upd = addIfMissing(upd, { code: "EE-212",  name: "Digital System Design",             credits: 4, category: "DC", semester: 3 });
-          upd = addIfMissing(upd, { code: "EE261P",  name: "Electrical Systems Around Us Lab",  credits: 2, category: "DC", semester: 3 });
+          upd = addIfMissing(upd, { code: "EE-212", name: "Digital System Design", credits: 4, category: "DC", semester: 3 });
         }
         if (branch === "MEVLSI") {
           upd = upd.filter(c => !["EE210","EE301"].includes(norm(c.code)));
@@ -650,8 +652,8 @@ function applyBatchOverrides(branch, semIdx, courses, batch) {
       if (sem === 5) {
         if (branch === "DSE") return addIfMissing(courses, { code: "DS404", name: "Information Security and Privacy", credits: 3, category: "DC", semester: 5 });
         if (branch === "EE") {
-          const upd = courses.filter(c => norm(c.code) !== "EE301");
-          return addIfMissing(upd, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC", semester: 5 });
+          // B24 EE: EE314 credit changes 4→3cr vs B23.
+          return courses.map(c => norm(c.code) === "EE314" ? { ...c, credits: 3 } : c);
         }
         return courses;
       }
