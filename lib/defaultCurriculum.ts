@@ -201,7 +201,7 @@ const eeSem3: DefaultCourse[] = [
 const eeSem4: DefaultCourse[] = [
   ...ic202pSem4,
   { code: "EE201",  name: "Electro-Mechanics",      credits: 4, category: "DC", semester: 4 },
-  { code: "EE202",  name: "Electromagnetic Theory", credits: 3, category: "DC", semester: 4 },
+  { code: "EE202",  name: "Electromagnetics & Wave Propagation", credits: 3, category: "DC", semester: 4 },
   { code: "EE211",  name: "Analog Circuit Design",  credits: 4, category: "DC", semester: 4 },
   { code: "EE304",  name: "Communication Systems",  credits: 4, category: "DC", semester: 4 },
   { code: "EE223P", name: "Reverse Engineering",    credits: 1, category: "DC", semester: 4 },
@@ -493,7 +493,7 @@ const geCeSem4: DefaultCourse[] = [
   { code: "ME100", name: "Reverse Engineering",             credits: 1, category: "DC", semester: 4 },
   { code: "IC253", name: "Programming and Data Structures", credits: 3, category: "DC", semester: 4 },
   { code: "DS404", name: "Information Security and Privacy", credits: 3, category: "DC", semester: 4 },
-  { code: "EE202", name: "Electromagnetic Theory",          credits: 3, category: "DC", semester: 4 },
+  { code: "EE202", name: "Electromagnetics & Wave Propagation", credits: 3, category: "DC", semester: 4 },
 ];
 const geCeSem5: DefaultCourse[] = [
   { code: "EE231", name: "Measurement and Instrumentation", credits: 3, category: "DC", semester: 5 },
@@ -606,7 +606,7 @@ const mevlsiSem3: DefaultCourse[] = [
   { code: "EE311", name: "Device Electronics",                   credits: 3, category: "DC", semester: 3 },
 ];
 const mevlsiSem4: DefaultCourse[] = [
-  { code: "EE202", name: "Electromagnetic Theory and Transmission Lines", credits: 3, category: "DC", semester: 4 },
+  { code: "EE202", name: "Electromagnetics & Wave Propagation", credits: 3, category: "DC", semester: 4 },
   { code: "EE211", name: "Analog Circuit Design",                         credits: 4, category: "DC", semester: 4 },
   { code: "VL-326", name: "Computer Organization",                    credits: 4, category: "DC", semester: 4 },
   { code: "VL-311", name: "CMOS Processing and Practicum",            credits: 4, category: "DC", semester: 4 },
