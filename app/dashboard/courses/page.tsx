@@ -992,7 +992,7 @@ export default function CoursesPage() {
                                       {enrollment.term} {enrollment.year}
                                     </span>
                                     <span className="px-2 py-1 bg-surface-hover rounded">
-                                      {enrollment.course.department}
+                                      {SCHOOL_META[getCourseSchoolKey(enrollment.course)].label}
                                     </span>
                                   </div>
                                 </button>
@@ -1558,7 +1558,7 @@ export default function CoursesPage() {
                       {formatCredits(addingCourse.credits)} Credits
                     </span>
                     <span className="px-2 py-1 bg-surface text-foreground-secondary text-sm rounded">
-                      {addingCourse.department}
+                      {SCHOOL_META[getCourseSchoolKey(addingCourse)].label}
                     </span>
                   </div>
                 </div>
