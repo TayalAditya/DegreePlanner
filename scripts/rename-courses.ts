@@ -21,7 +21,7 @@ async function main() {
     create: {
       code: "EE581",
       name: "Foundation of Intelligent Communication Systems-2",
-      credits: 3,
+      credits: 4,
       level: 500,
       department: "School of Computing & Electrical Engineering",
       offeredInFall: true,
