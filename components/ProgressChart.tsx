@@ -677,14 +677,31 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
     const fixedIstp = requiredIstp > 0 ? byNormalized(allDefault.filter((c) => c.category === "ISTP")) : [];
 
+    // CS212 (B23 MNC) and MA312 (B24/B25 MNC) are the same course offered under different codes.
+    const COURSE_EQUIV: Record<string, string[]> = {
+      CS212: ["MA312"],
+      MA312: ["CS212"],
+      CS304: ["MA313"],
+      MA313: ["CS304"],
+    };
+    const isCompleted = (code: string) => {
+      const norm = normalizeCourseCode(code);
+      if (completedCodes.has(norm)) return true;
+      return (COURSE_EQUIV[norm] || []).some((alt) => completedCodes.has(normalizeCourseCode(alt)));
+    };
+    const isInProgress = (code: string) => {
+      const norm = normalizeCourseCode(code);
+      if (inProgressCodes.has(norm)) return true;
+      return (COURSE_EQUIV[norm] || []).some((alt) => inProgressCodes.has(normalizeCourseCode(alt)));
+    };
+
     const classify = (courses: DefaultCourse[]) => {
       const pending: DefaultCourse[] = [];
       const inProg: DefaultCourse[] = [];
 
       courses.forEach((c) => {
-        const norm = normalizeCourseCode(c.code);
-        if (completedCodes.has(norm)) return;
-        if (inProgressCodes.has(norm)) inProg.push(c);
+        if (isCompleted(c.code)) return;
+        if (isInProgress(c.code)) inProg.push(c);
         else pending.push(c);
       });
 

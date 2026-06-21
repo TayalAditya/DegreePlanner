@@ -377,7 +377,7 @@ const mncSem3: DefaultCourse[] = [
   { code: "CS214", name: "Computer Organisation",                      credits: 4, category: "DC", semester: 3 },
   { code: "MA210", name: "Real and Complex Analysis",                  credits: 3, category: "DC", semester: 3 },
   { code: "MA211", name: "Ordinary Differential Equations",              credits: 4, category: "DC", semester: 3 },
-  { code: "MA312", name: "Design of Algorithms",                         credits: 4, category: "DC", semester: 3 },
+  { code: "CS212", name: "Design of Algorithms",                         credits: 4, category: "DC", semester: 3 },
 ];
 const mncSem4: DefaultCourse[] = [
   { code: "CS304", name: "Formal Language and Automata Theory", credits: 3, category: "DC", semester: 4 },
@@ -386,7 +386,6 @@ const mncSem4: DefaultCourse[] = [
   { code: "MA222", name: "Applied Linear Programming",    credits: 4, category: "DC", semester: 4 },
 ];
 const mncSem5: DefaultCourse[] = [
-  { code: "MA312",  name: "Design of Algorithms",                 credits: 4, category: "DC", semester: 5 },
   { code: "MA310",  name: "Matrix Computation and Lab",           credits: 4, category: "DC", semester: 5 },
   { code: "MA311",  name: "Mathematical Modelling",               credits: 3, category: "DC", semester: 5 },
   { code: "MA322",  name: "Applied Graph Theory",                 credits: 4, category: "DC", semester: 5 },
@@ -1103,8 +1102,9 @@ const applyBatchOverrides = (
       }
 
       case 5: {
-        // B24 MNC: MA313 (alias for CS304) offered in Sem-5 instead of Sem-4.
-        return addCourseIfMissing(courses, B24_MNC_MA313_SEM5);
+        // B24 MNC: MA313 (alias for CS304) offered in Sem-5; MA312 (Design of Algorithms) is in Sem-5 for B24.
+        const withMA313 = addCourseIfMissing(courses, B24_MNC_MA313_SEM5);
+        return addCourseIfMissing(withMA313, { code: "MA312", name: "Design of Algorithms", credits: 4, category: "DC" as const, semester: 5 });
       }
 
       default:
@@ -1397,8 +1397,9 @@ const applyBatchOverrides = (
           updated = addCourseIfMissing(updated, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC" as const, semester: 3 });
         }
         if (effectiveBranch === "MNC") {
-          // CS214 (Computer Organization) deferred to Sem 4 where it's split into CS201+CS201P.
+          // CS214 deferred to Sem 4; MA312 (Design of Algorithms) moves to Sem-3 for B25 (from Sem-5 in B24).
           updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "CS214");
+          updated = addCourseIfMissing(updated, { code: "MA312", name: "Design of Algorithms", credits: 4, category: "DC" as const, semester: 3 });
         }
         if (effectiveBranch === "CE") {
           // CE301/CE301P/CE354P renumbered; CE202 moved to Sem-2; IC202P optional FE (DP not compulsory for B25 CE).
