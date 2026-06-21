@@ -311,6 +311,29 @@ export default function ProgressPage() {
     if (normalizedCode === "IC181" || (normalizedCode === "IC182" && isBatch24Or25)) return "HSS";
     if (normalizedCode === "IC182") return "IC"; // B23 IC182 stays IC
 
+    // Hard rule: CSE/DSE/DSAI → all CS-xxx and DS-xxx are DE, regardless of how they
+    // were enrolled or what COMMON branchMappings exist. Branch-specific mappings still win
+    // (e.g. a CSE-specific DC override), but COMMON mappings must not override this.
+    const isCSorDS = code.startsWith("CS") || code.startsWith("DS");
+    const isCsDsException = ["396P","399P","010"].some(s => normalizedCode.endsWith(s)) || normalizedCode === "DS302";
+    if (isCSorDS && !isCsDsException && (user?.branch === "CSE" || isDataScienceBranch(user?.branch))) {
+      // Check if there's a branch-specific (non-COMMON) override (e.g. DC for some course)
+      const specificMapping = enrollment.course.branchMappings?.find(
+        m => {
+          const branch = m.branch || "";
+          return branch !== "COMMON" && (
+            branch === (user?.branch || "") ||
+            mappingBranchAliases.includes(branch)
+          );
+        }
+      );
+      if (specificMapping && specificMapping.courseCategory in categoryLabels) {
+        if (specificMapping.courseCategory === "IKS") return "HSS";
+        return applyMinorDeOverride(specificMapping.courseCategory as CourseCategory, enrollment);
+      }
+      return applyMinorDeOverride("DE", enrollment);
+    }
+
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
       const mapping = pickRelevantBranchMapping(user.branch, enrollment.course.branchMappings);
 
@@ -319,7 +342,6 @@ export default function ProgressPage() {
       }
 
       // COMMON mapping should not override an explicit FREE_ELECTIVE enrollment.
-      // Branch-specific mappings (e.g. CSE → DE) are authoritative; COMMON is a fallback.
       if (mapping && mapping.branch === "COMMON" && enrollment.courseType === "FREE_ELECTIVE") {
         return "FE";
       }
@@ -337,16 +359,6 @@ export default function ProgressPage() {
     }
 
     if (isIkCourse) return "HSS"; // IK-xxx → HSS+IKS basket without consuming HS cap
-
-    // Hard rule: CSE/DSE/DSAI → all CS-xxx and DS-xxx are DE
-    // Exceptions: internship (396P, 399P), independent project (010), and specific non-DE codes
-    const isCSorDS = code.startsWith("CS") || code.startsWith("DS");
-    const isCsDsException = ["396P","399P","010"].some(s => normalizedCode.endsWith(s)) || normalizedCode === "DS302";
-    if (isCSorDS && !isCsDsException) {
-      if (user?.branch === "CSE" || isDataScienceBranch(user?.branch)) {
-        return applyMinorDeOverride("DE", enrollment);
-      }
-    }
 
     if (normalizedCode.startsWith("IC")) return "IC";
 
