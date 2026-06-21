@@ -256,13 +256,20 @@ function genTex(branch: string, batch: number, cr: ReturnType<typeof getCredits>
     const suffix = (sem===11||sem===12) ? "th" : ord(sem);
     const semLabel = `${sem}\\textsuperscript{${suffix === "th" || sem > 3 ? "th" : suffix}}`;
     return `\\subsection*{B.Tech.~in ${titleName} --- ${semLabel} Semester}
-\\begin{center}\\begin{tabular}{|c|>{\\centering\\arraybackslash}p{1.6cm}|>{\\raggedright\\arraybackslash}p{7cm}|c|c|c|c|}
+\\begin{center}
+\\begin{longtable}{|c|>{\\centering\\arraybackslash}p{1.6cm}|>{\\raggedright\\arraybackslash}p{7cm}|c|c|c|c|}
 \\hline
 \\textbf{S.No} & \\textbf{Code} & \\multicolumn{1}{c|}{\\textbf{Course Name}} & \\textbf{L} & \\textbf{T} & \\textbf{P} & \\textbf{C} \\\\\\hline
+\\endfirsthead
+\\multicolumn{7}{c}{\\small\\textit{(continued)}}\\\\\\hline
+\\textbf{S.No} & \\textbf{Code} & \\multicolumn{1}{c|}{\\textbf{Course Name}} & \\textbf{L} & \\textbf{T} & \\textbf{P} & \\textbf{C} \\\\\\hline
+\\endhead
+\\hline\\endlastfoot
 ${rows}
-\\end{tabular}\\end{center}
+\\end{longtable}
+\\end{center}
 \\textit{Total Credits: ${total}}
-\\vspace{0.6em}`;
+\\vspace{0.4em}`;
   }).join("\n\n");
 
   // ── DC table (matching reference style) ───────────────────────────────────
