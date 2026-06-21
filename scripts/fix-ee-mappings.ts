@@ -28,6 +28,21 @@ async function main() {
     where: { branch: "EE", course: { code: { in: ["EE205", "EE-205"] } } },
   });
   console.log(`EE-205 EE mapping deleted: ${r205.count} row(s)`);
+
+  // EE-581: ensure DE mapping exists for EE branch
+  const ee581Course = await prisma.course.findFirst({
+    where: { code: { in: ["EE581", "EE-581"] } },
+  });
+  if (ee581Course) {
+    await prisma.courseBranchMapping.upsert({
+      where: { branch_courseId: { branch: "EE", courseId: ee581Course.id } },
+      update: { courseCategory: "DE" },
+      create: { branch: "EE", courseId: ee581Course.id, courseCategory: "DE" },
+    });
+    console.log(`EE-581 DE mapping for EE: upserted`);
+  } else {
+    console.log(`EE-581 not found in courses table — run rename-courses.ts first`);
+  }
 }
 
 main()
