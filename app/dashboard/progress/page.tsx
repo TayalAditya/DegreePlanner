@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ProgressSkeleton } from "./loading";
-import { CheckCircle, ChevronDown, Clock, Loader2, Target, Trash2 } from "lucide-react";
+import { CheckCircle, ChevronDown, ChevronRight, Clock, Loader2, Target, Trash2, X } from "lucide-react";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import {
@@ -151,6 +151,9 @@ export default function ProgressPage() {
   const [remainingOpen, setRemainingOpen] = useState(false);
   const [primaryProgramId, setPrimaryProgramId] = useState<string | null>(null);
   const [deletingEnrollmentId, setDeletingEnrollmentId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [programCourses, setProgramCourses] = useState<any[]>([]);
+  const categoryDetailRef = useRef<HTMLDivElement | null>(null);
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
 
@@ -425,10 +428,11 @@ export default function ProgressPage() {
 
   const fetchProgress = async () => {
     try {
-      const [enrollmentsRes, programsRes, userRes] = await Promise.all([
+      const [enrollmentsRes, programsRes, userRes, programCoursesRes] = await Promise.all([
         fetch("/api/enrollments"),
         fetch("/api/programs"),
         fetch("/api/user/settings"),
+        fetch("/api/programs/courses"),
       ]);
       if (enrollmentsRes.ok) {
         const data = await enrollmentsRes.json();
@@ -471,6 +475,10 @@ export default function ProgressPage() {
       if (userRes.ok) {
         const userData = await userRes.json();
         setUser(userData);
+      }
+      if (programCoursesRes.ok) {
+        const data = await programCoursesRes.json();
+        setProgramCourses(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error("Failed to fetch progress:", error);
@@ -973,54 +981,221 @@ export default function ProgressPage() {
       )}
 
       {/* Credits by Category */}
-      <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
-        <h3 className="text-base sm:text-xl font-semibold text-foreground mb-6">Credits by Category</h3>
-        <div className="space-y-5">
-          {Object.entries(progress.creditsByCategory).map(([category, credits]) => {
-            const inProgress = progress.creditsInProgressByCategory[category as keyof typeof progress.creditsInProgressByCategory];
-            const total = addCredits(credits, inProgress);
-            const colors = categoryColors[category as keyof typeof categoryColors];
-            const label = categoryLabels[category as keyof typeof categoryLabels];
-            const required = progress.creditsRequiredByCategory[category as keyof typeof progress.creditsRequiredByCategory];
-            const denominator = required > 0 ? required : Math.max(total, 1);
-            
-            // Skip if no credits (0 completed and 0 in progress)
-            if (total === 0) return null;
-            
-            return (
-              <div key={category} className="group">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-3 mb-2">
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className={`w-3 h-3 rounded-full ${colors.bar}`}></div>
-                    <span className={`min-w-0 font-semibold ${colors.text} break-words`}>
-                      {label}
-                    </span>
+      {(() => {
+        // Map a ProgramCourse (not yet enrolled) to a display category key
+        const inferProgramCourseCategory = (pc: any): string => {
+          const code = String(pc.course?.code ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+          const ct: string = pc.courseType ?? "";
+          if (ct === "MTP") return "MTP";
+          if (ct === "ISTP") return "ISTP";
+          if (ct === "DE") return "DE";
+          if (ct === "PE") return "PE";
+          if (ct === "FREE_ELECTIVE") return "FE";
+          // CORE: differentiate by code prefix
+          if (code.startsWith("HS")) return "HSS";
+          if (code === "IC181" || code === "IK593" || /^IK\d/.test(code)) return "HSS";
+          const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
+          if (code === "IC182" && isBatch24Or25) return "HSS";
+          if (code.startsWith("IC")) {
+            // Check IC basket
+            const { ICB1_CODES: b1, ICB2_CODES: b2 } = { ICB1_CODES, ICB2_CODES };
+            if ((b1.has(code) || b2.has(code)) && user?.branch) return "IC_BASKET";
+            return "IC";
+          }
+          return "DC";
+        };
+
+        // Enrolled course codes (normalized) for dedup
+        const enrolledCodes = new Set(
+          enrollments
+            .filter(e => e.status === "COMPLETED" || e.status === "IN_PROGRESS")
+            .map(e => normalizeCode(e.course.code))
+        );
+
+        // Build "to be taken" by category from program courses
+        const toBeTakenByCat: Record<string, { code: string; name: string; credits: number; semester: number | null }[]> = {};
+        for (const pc of programCourses) {
+          const code = normalizeCode(pc.course?.code ?? "");
+          if (!code || enrolledCodes.has(code)) continue;
+          const cat = inferProgramCourseCategory(pc);
+          if (!toBeTakenByCat[cat]) toBeTakenByCat[cat] = [];
+          toBeTakenByCat[cat].push({
+            code: formatCourseCode(pc.course.code),
+            name: pc.course.name,
+            credits: pc.course.credits,
+            semester: pc.semester ?? null,
+          });
+        }
+
+        // Build flat list of all courses grouped by their computed category
+        const coursesByCat: Record<string, { code: string; name: string; credits: number; status: string; grade?: string; semester: number; splitCategory?: string; splitCredits?: number }[]> = {};
+        for (const sem of Object.values(semesterCourses)) {
+          for (const c of sem as any[]) {
+            // Primary category
+            if (!coursesByCat[c.category]) coursesByCat[c.category] = [];
+            coursesByCat[c.category].push(c);
+            // Split category (e.g. HSS + FE split)
+            if (c.splitCategory) {
+              if (!coursesByCat[c.splitCategory]) coursesByCat[c.splitCategory] = [];
+              // Avoid duplicate entry; mark as split
+              coursesByCat[c.splitCategory].push({ ...c, _isSplit: true } as any);
+            }
+          }
+        }
+
+        const hasAnyCourses = Object.values(progress.creditsByCategory).some(v => v > 0) ||
+          Object.values(progress.creditsInProgressByCategory).some(v => v > 0);
+
+        return (
+          <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
+            <h3 className="text-base sm:text-xl font-semibold text-foreground mb-2">Credits by Category</h3>
+            <p className="text-xs text-foreground-secondary mb-5">Tap a category to see your courses in that basket.</p>
+            <div className="space-y-3">
+              {Object.entries(progress.creditsByCategory).map(([category, credits]) => {
+                const inProgress = progress.creditsInProgressByCategory[category as keyof typeof progress.creditsInProgressByCategory];
+                const total = addCredits(credits, inProgress);
+                const colors = categoryColors[category as keyof typeof categoryColors];
+                const label = categoryLabels[category as keyof typeof categoryLabels];
+                const required = progress.creditsRequiredByCategory[category as keyof typeof progress.creditsRequiredByCategory];
+                const denominator = required > 0 ? required : Math.max(total, 1);
+                const isSelected = selectedCategory === category;
+
+                if (total === 0) return null;
+
+                const catCourses = coursesByCat[category] ?? [];
+                const doneCourses = catCourses.filter(c => c.status === "COMPLETED");
+                const pendingCourses = catCourses.filter(c => c.status === "IN_PROGRESS");
+                const toBeTaken = toBeTakenByCat[category] ?? [];
+
+                return (
+                  <div key={category}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(isSelected ? null : category);
+                        if (!isSelected) {
+                          setTimeout(() => categoryDetailRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 80);
+                        }
+                      }}
+                      className={`w-full text-left rounded-lg border transition-colors p-3 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${isSelected ? "border-primary/40 bg-primary/5" : "border-transparent hover:bg-surface-hover"}`}
+                      aria-expanded={isSelected}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-3 mb-2">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className={`w-3 h-3 rounded-full flex-shrink-0 ${colors.bar}`}></div>
+                          <span className={`min-w-0 font-semibold ${colors.text} break-words`}>{label}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-foreground font-bold sm:text-right">
+                            {formatCredits(credits)}
+                            {inProgress > 0 && <span className="text-info"> (+{formatCredits(inProgress)})</span>}
+                            {required > 0 ? `/${formatCredits(required)}` : null}
+                          </span>
+                          {isSelected
+                            ? <X className="w-4 h-4 text-foreground-secondary" />
+                            : <ChevronRight className="w-4 h-4 text-foreground-secondary" />}
+                        </div>
+                      </div>
+                      <div className="w-full bg-border rounded-full h-2.5 overflow-hidden">
+                        <div
+                          className={`h-full ${colors.bar} rounded-full transition-all duration-500 ease-out`}
+                          style={{ width: `${Math.min((total / denominator) * 100, 100)}%` }}
+                        />
+                      </div>
+                    </button>
+
+                    {isSelected && (
+                      <div ref={categoryDetailRef} className="mt-1 mb-2 rounded-lg border border-border bg-surface-hover/60 p-4">
+                        {doneCourses.length === 0 && pendingCourses.length === 0 && toBeTaken.length === 0 ? (
+                          <p className="text-sm text-foreground-secondary">No courses in this basket yet.</p>
+                        ) : (
+                          <div className="space-y-5">
+
+                            {/* Completed */}
+                            {doneCourses.length > 0 && (
+                              <div>
+                                <p className="text-xs font-bold text-success mb-2 uppercase tracking-wide flex items-center gap-1.5">
+                                  <CheckCircle className="w-3.5 h-3.5" /> Completed ({doneCourses.length})
+                                </p>
+                                <div className="space-y-1.5">
+                                  {doneCourses.map((c, i) => (
+                                    <div key={`${c.code}-${i}`} className="flex items-center justify-between gap-3 text-sm">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="font-mono text-xs font-semibold text-foreground flex-shrink-0">{c.code}</span>
+                                        <span className="text-foreground-secondary truncate">{c.name}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 flex-shrink-0">
+                                        <span className="text-xs text-foreground-secondary">{formatCredits(c.credits)} cr</span>
+                                        {c.grade && <span className="text-xs font-semibold text-success bg-success/10 px-1.5 py-0.5 rounded">{c.grade}</span>}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* In Progress */}
+                            {pendingCourses.length > 0 && (
+                              <div>
+                                <p className="text-xs font-bold text-info mb-2 uppercase tracking-wide flex items-center gap-1.5">
+                                  <Clock className="w-3.5 h-3.5" /> In Progress ({pendingCourses.length})
+                                </p>
+                                <div className="space-y-1.5">
+                                  {pendingCourses.map((c, i) => (
+                                    <div key={`${c.code}-${i}`} className="flex items-center justify-between gap-3 text-sm">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="font-mono text-xs font-semibold text-foreground flex-shrink-0">{c.code}</span>
+                                        <span className="text-foreground-secondary truncate">{c.name}</span>
+                                      </div>
+                                      <span className="text-xs text-foreground-secondary flex-shrink-0">{formatCredits(c.credits)} cr</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* To Be Taken */}
+                            {toBeTaken.length > 0 && (
+                              <div>
+                                <p className="text-xs font-bold text-foreground-secondary mb-2 uppercase tracking-wide flex items-center gap-1.5">
+                                  <Target className="w-3.5 h-3.5" /> To Be Taken ({toBeTaken.length})
+                                </p>
+                                <div className="space-y-1.5">
+                                  {toBeTaken.map((c, i) => (
+                                    <div key={`${c.code}-${i}`} className="flex items-center justify-between gap-3 text-sm">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="font-mono text-xs font-semibold text-foreground-secondary flex-shrink-0">{c.code}</span>
+                                        <span className="text-foreground-secondary truncate">{c.name}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2 flex-shrink-0">
+                                        <span className="text-xs text-foreground-secondary">{formatCredits(c.credits)} cr</span>
+                                        {c.semester != null && (
+                                          <span className="text-xs text-foreground-secondary bg-border px-1.5 py-0.5 rounded">Sem {c.semester}</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <span className="text-foreground font-bold sm:text-right">
-                    {formatCredits(credits)}
-                    {inProgress > 0 && <span className="text-info"> (+{formatCredits(inProgress)})</span>}
-                    {required > 0 ? `/${formatCredits(required)}` : null}
-                  </span>
-                </div>
-                <div className="w-full bg-border rounded-full h-2.5 overflow-hidden">
-                  <div
-                    className={`h-full ${colors.bar} rounded-full transition-all duration-500 ease-out`}
-                    style={{ width: `${Math.min((total / denominator) * 100, 100)}%` }}
-                  ></div>
-                </div>
+                );
+              })}
+            </div>
+
+            {!hasAnyCourses && (
+              <div className="text-center py-8 text-foreground-secondary">
+                <p>No courses enrolled yet. Start adding courses to see your progress!</p>
               </div>
-            );
-          })}
-        </div>
-        
-        {/* Show helpful message if no credits */}
-        {Object.values(progress.creditsByCategory).every(v => v === 0) && 
-         Object.values(progress.creditsInProgressByCategory).every(v => v === 0) && (
-          <div className="text-center py-8 text-foreground-secondary">
-            <p>No courses enrolled yet. Start adding courses to see your progress!</p>
+            )}
           </div>
-        )}
-      </div>
+        );
+      })()}
 
       {/* Courses by Semester */}
       <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
