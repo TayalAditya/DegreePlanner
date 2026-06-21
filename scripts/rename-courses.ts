@@ -1,20 +1,34 @@
 /**
- * One-time script: rename EE-202 and add/rename EE-581 in the DB.
- * Run: npx ts-node -P tsconfig.json scripts/rename-courses.ts
+ * One-time script: fix EE course names in the DB.
+ * Run: npx tsx scripts/rename-courses.ts
  */
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  // Rename EE-202 variants
+  // EE-202: correct name
   const ee202 = await prisma.course.updateMany({
     where: { code: { in: ["EE202", "EE-202"] } },
     data: { name: "Electromagnetics & Wave Propagation" },
   });
   console.log(`EE-202: updated ${ee202.count} row(s)`);
 
-  // Rename / upsert EE-581
+  // EE-302: correct name
+  const ee302 = await prisma.course.updateMany({
+    where: { code: { in: ["EE302", "EE-302"] } },
+    data: { name: "Control Systems" },
+  });
+  console.log(`EE-302: updated ${ee302.count} row(s)`);
+
+  // EE-303: correct name
+  const ee303 = await prisma.course.updateMany({
+    where: { code: { in: ["EE303", "EE-303"] } },
+    data: { name: "Power Systems" },
+  });
+  console.log(`EE-303: updated ${ee303.count} row(s)`);
+
+  // EE-581: upsert
   const ee581 = await prisma.course.upsert({
     where: { code: "EE581" },
     update: { name: "Foundation of Intelligent Communication Systems-2" },

@@ -212,7 +212,7 @@ const eeSem4: DefaultCourse[] = [
 const eeSem5: DefaultCourse[] = [
   { code: "EE231", name: "Measurement and Instrumentation",                         credits: 3, category: "DC", semester: 5 },
   { code: "EE302", name: "Control Systems",                                         credits: 4, category: "DC", semester: 5 },
-  { code: "EE303", name: "Power and Energy Systems",                                credits: 4, category: "DC", semester: 5 },
+  { code: "EE303", name: "Power Systems",                                           credits: 4, category: "DC", semester: 5 },
   { code: "EE314", name: "Digital Signal Processing",                               credits: 4, category: "DC", semester: 5 },
   { code: "EE326", name: "Computer Organization & Processor Architecture Design",   credits: 4, category: "DC", semester: 5 },
 ];
@@ -982,11 +982,10 @@ const applyBatchOverrides = (
           // DS404 moves to Sem-5 — handled in case 5 below.
         }
         if (effectiveBranch === "EE") {
-          // B24 EE: RE placeholder → EE223P; EE202→EE205, EE304→EE316.
+          // B24 EE: RE placeholder → EE223P; EE304→EE316.
           updated = updated.map((c) => {
             const code = normalizeCurriculumCode(c.code);
             if (code === "EEXXXP") return { ...c, code: "EE223P" };
-            if (code === "EE202") return { ...c, code: "EE205", name: "Electromagnetics and Wave Propagation" };
             if (code === "EE304") return { ...c, code: "EE316" };
             return c;
           });
@@ -1444,10 +1443,9 @@ const applyBatchOverrides = (
           updated = updated.filter((c) => normalizeCurriculumCode(c.code) !== "DS404");
         }
         if (effectiveBranch === "EE") {
-          // EE202 → EE205 (Electromagnetics and Wave Propagation); EE304 → EE316.
+          // B25 EE: EE304 → EE316.
           updated = updated.map((c) => {
             const code = normalizeCurriculumCode(c.code);
-            if (code === "EE202") return { ...c, code: "EE205", name: "Electromagnetics and Wave Propagation" };
             if (code === "EE304") return { ...c, code: "EE316" };
             return c;
           });

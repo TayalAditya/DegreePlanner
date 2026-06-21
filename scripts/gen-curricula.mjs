@@ -637,7 +637,6 @@ function applyBatchOverrides(branch, semIdx, courses, batch) {
         if (branch === "EE") {
           upd = upd.map(c => {
             const code = norm(c.code);
-            if (code === "EE202") return { ...c, code: "EE205", name: "Electromagnetics and Wave Propagation" };
             if (code === "EE304") return { ...c, code: "EE316" };
             return c;
           });
@@ -834,7 +833,6 @@ function applyBatchOverrides(branch, semIdx, courses, batch) {
       if (branch === "EE") {
         upd = upd.map(c => {
           const code = norm(c.code);
-          if (code === "EE202") return { ...c, code: "EE205", name: "Electromagnetics and Wave Propagation" };
           if (code === "EE304") return { ...c, code: "EE316" };
           return c;
         });
