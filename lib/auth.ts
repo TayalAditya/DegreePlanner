@@ -392,6 +392,27 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user, account }) {
+      const tokenEmail = (token as any).email as string | undefined;
+      const isAcadSec = (user?.email || tokenEmail) === ACAD_SEC_EMAIL;
+
+      // For acad sec: re-read branch/batch from DB on every session access so that
+      // impersonation changes (written by /api/user/impersonate) are reflected in the
+      // JWT without requiring a full sign-out/sign-in cycle.
+      if (!user?.email && isAcadSec) {
+        try {
+          const approvedUser = await prisma.approvedUser.findUnique({
+            where: { email: ACAD_SEC_EMAIL },
+          });
+          if (approvedUser) {
+            token.branch = approvedUser.branch;
+            token.batch = approvedUser.batch;
+          }
+        } catch {
+          // non-fatal – stale branch/batch in token is acceptable
+        }
+        return token;
+      }
+
       // On first sign in (user object exists)
       if (user && user.email) {
         console.log("📝 jwt callback - new user:", user.email);

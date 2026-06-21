@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 const BATCHES = [
   { value: 2025, label: "B25" },
@@ -31,7 +30,6 @@ const BRANCHES = [
 ];
 
 export function ImpersonateSelector() {
-  const router = useRouter();
   const [batch, setBatch] = useState<number | null>(null);
   const [branch, setBranch] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,11 +52,10 @@ export function ImpersonateSelector() {
         throw new Error(data.error || "Setup failed");
       }
 
-      // Mark setup done for this browser session
+      // Mark setup done for this browser session, then hard-reload so the
+      // JWT callback re-reads branch/batch from DB and AcadSecGate sees the key.
       sessionStorage.setItem("acadSecSetup", "1");
-      // Full reload so session/layout picks up new branch/batch
-      router.refresh();
-      window.location.href = "/dashboard";
+      window.location.reload();
     } catch (e: any) {
       setError(e.message || "Something went wrong");
       setLoading(false);
