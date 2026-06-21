@@ -192,26 +192,29 @@ const eeSem1: DefaultCourse[] = [...icCompSem1, ...icMixedSem1, ...allICB1];
 const eeSem2: DefaultCourse[] = [...icCompSem2, ...icMixedSem2, ...allICB2];
 const eeSem3: DefaultCourse[] = [
   ...icSem3WithoutIC202P,
-  { code: "EE203", name: "Network Theory",              credits: 3, category: "DC", semester: 3 },
-  { code: "EE210", name: "Digital System Design",       credits: 4, category: "DC", semester: 3 },
-  { code: "EE260", name: "Signals and Systems",         credits: 3, category: "DC", semester: 3 },
-  { code: "EE261", name: "Electrical Systems Around Us", credits: 5, category: "DC", semester: 3 },
-  { code: "EE311", name: "Device Electronics",          credits: 3, category: "DC", semester: 3 },
+  { code: "EE203",  name: "Network Theory",                   credits: 3, category: "DC", semester: 3 },
+  { code: "EE210",  name: "Digital System Design",            credits: 3, category: "DC", semester: 3 },
+  { code: "EE210P", name: "Digital Systems Design Practicum", credits: 1, category: "DC", semester: 3 },
+  { code: "EE260",  name: "Signals and Systems",              credits: 3, category: "DC", semester: 3 },
+  { code: "EE261",  name: "Electrical Systems Around Us",     credits: 3, category: "DC", semester: 3 },
+  { code: "EE261P", name: "Electrical Systems Around Us Lab", credits: 2, category: "DC", semester: 3 },
+  { code: "EE311",  name: "Device Electronics",               credits: 3, category: "DC", semester: 3 },
 ];
 const eeSem4: DefaultCourse[] = [
   ...ic202pSem4,
-  { code: "EE201",  name: "Electro-Mechanics",      credits: 4, category: "DC", semester: 4 },
+  { code: "EE201",  name: "Electro-Mechanics",                   credits: 3, category: "DC", semester: 4 },
+  { code: "EE201P", name: "Electro-Mechanics Lab",               credits: 1, category: "DC", semester: 4 },
   { code: "EE202",  name: "Electromagnetics & Wave Propagation", credits: 3, category: "DC", semester: 4 },
-  { code: "EE211",  name: "Analog Circuit Design",  credits: 4, category: "DC", semester: 4 },
-  { code: "EE304",  name: "Communication Systems",  credits: 4, category: "DC", semester: 4 },
-  { code: "EE223P", name: "Reverse Engineering",    credits: 1, category: "DC", semester: 4 },
+  { code: "EE211",  name: "Analog Circuit Design",               credits: 3, category: "DC", semester: 4 },
+  { code: "EE304",  name: "Communication Systems",               credits: 4, category: "DC", semester: 4 },
+  { code: "EE223P", name: "Reverse Engineering",                 credits: 1, category: "DC", semester: 4 },
 ];
 const eeSem5: DefaultCourse[] = [
   { code: "EE231", name: "Measurement and Instrumentation",                         credits: 3, category: "DC", semester: 5 },
-  { code: "EE301", name: "Control Systems",                                      credits: 4, category: "DC", semester: 5 },
-  { code: "EE305", name: "Digital Signal Processing",                             credits: 4, category: "DC", semester: 5 }, // B23/B22; B24+ gets EE314 via override
-  { code: "EE326", name: "Computer Organization & Processor Architecture Design", credits: 4, category: "DC", semester: 5 },
-  { code: "EEXXX", name: "Power and Energy Systems",                               credits: 4, category: "DC", semester: 5 },
+  { code: "EE302", name: "Control Systems",                                         credits: 4, category: "DC", semester: 5 },
+  { code: "EE303", name: "Power and Energy Systems",                                credits: 4, category: "DC", semester: 5 },
+  { code: "EE314", name: "Digital Signal Processing",                               credits: 4, category: "DC", semester: 5 },
+  { code: "EE326", name: "Computer Organization & Processor Architecture Design",   credits: 4, category: "DC", semester: 5 },
 ];
 const eeSem6: DefaultCourse[] = [
   ...istpSem6,
@@ -944,16 +947,12 @@ const applyBatchOverrides = (
         }
         let updated = courses;
         if (effectiveBranch === "EE") {
-          // B24 EE: EE-210 replaced by EE-212 (4cr confirmed). EE261 5→3 + EE261P lab.
+          // B24 EE: EE-210/EE210P replaced by EE-212 (4cr). EE261P lab stays (already in B23 base).
           updated = updated.filter((c) => {
             const code = normalizeCurriculumCode(c.code);
             return code !== "EE210" && code !== "EE210P";
           });
-          updated = updated.map((c) =>
-            normalizeCurriculumCode(c.code) === "EE261" ? { ...c, credits: 3 } : c
-          );
           updated = addCourseIfMissing(updated, { code: "EE-212", name: "Digital System Design", credits: 4, category: "DC" as const, semester: 3 });
-          updated = addCourseIfMissing(updated, B24_EE_EE261P_SEM3);
         }
         if (effectiveBranch === "MEVLSI") {
           // B24 MEVLSI Sem3: EE-210→EE-212 and EE-301→EE-302 (both confirmed replacements).
@@ -1014,14 +1013,12 @@ const applyBatchOverrides = (
             credits: 3, category: "DC", semester: 5,
           });
         }
-        // B24 EE: EE-301→EE-302 (Control Systems); EE305→EE314 (Digital Signal Processing, 3cr).
+        // B24 EE: EE314 credit changes 4→3cr vs B23.
         if (effectiveBranch === "EE") {
-          let upd = courses.filter((c) => {
-            const code = normalizeCurriculumCode(c.code);
-            return code !== "EE301" && code !== "EE305";
-          });
-          upd = addCourseIfMissing(upd, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC" as const, semester: 5 });
-          return addCourseIfMissing(upd, { code: "EE-314", name: "Digital Signal Processing", credits: 3, category: "DC" as const, semester: 5 });
+          const upd = courses.map((c) =>
+            normalizeCurriculumCode(c.code) === "EE314" ? { ...c, credits: 3 } : c
+          );
+          return upd;
         }
         return courses;
       }
