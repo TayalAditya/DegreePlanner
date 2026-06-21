@@ -318,6 +318,12 @@ export default function ProgressPage() {
         return "FE";
       }
 
+      // COMMON mapping should not override an explicit FREE_ELECTIVE enrollment.
+      // Branch-specific mappings (e.g. CSE → DE) are authoritative; COMMON is a fallback.
+      if (mapping && mapping.branch === "COMMON" && enrollment.courseType === "FREE_ELECTIVE") {
+        return "FE";
+      }
+
       if (mapping && mapping.courseCategory in categoryLabels) {
         // IK-xxx / IKS-mapped → HSS+IKS basket without consuming HS cap.
         if (mapping.courseCategory === "IKS") return "HSS";
