@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma";
 import { DashboardOverview } from "@/components/DashboardOverviewDynamic";
 import Link from "next/link";
 import { TimeGreeting } from "@/components/TimeGreeting";
-import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
+import { loadDashboardEnrollments } from "@/lib/enrollmentsQuery";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import {
   BookOpen,
@@ -33,20 +33,16 @@ export default async function DashboardPage() {
   let completedCoursesCount = 0;
   let totalCreditsRequired = 160;
   let doingMTP = true;
-  // Prefetch cheap server-side data for DashboardOverview (eliminates 2 of 3 client API calls)
+  // Prefetch cheap server-side data for DashboardOverview (eliminates all 3 client API calls)
   let dashboardUserSettings: any = null;
+  // Full enrollment payload (same shape as GET /api/enrollments) so the client
+  // component can hydrate React Query with initialData and skip the fetch.
+  let initialEnrollments: any[] = [];
 
   if (session?.user?.id) {
     try {
-      const [, enrollments, userRecord, primaryProgram] = await Promise.all([
-        syncEnrollmentStatusesForUser(session.user.id, {
-          batch: session.user.batch,
-          enrollmentId: session.user.enrollmentId,
-        }),
-        prisma.courseEnrollment.findMany({
-          where: { userId: session.user.id },
-          select: { status: true, semester: true, grade: true },
-        }),
+      const [enrollments, userRecord, primaryProgram] = await Promise.all([
+        loadDashboardEnrollments(session.user.id),
         prisma.user.findUnique({
           where: { id: session.user.id },
           select: { doingMTP: true, doingMTP2: true, doingISTP: true, totalPassFailCredits: true },
@@ -56,6 +52,8 @@ export default async function DashboardPage() {
           select: { program: { select: { totalCreditsRequired: true } } },
         }),
       ]);
+
+      initialEnrollments = enrollments;
 
       const inProgress = enrollments.filter((e) => e.status === "IN_PROGRESS");
       if (academicState?.currentSemester) {
@@ -302,6 +300,7 @@ export default async function DashboardPage() {
         userId={session?.user?.id!}
         initialUserSettings={dashboardUserSettings}
         initialAcademicState={academicState ? { currentSemester: academicState.currentSemester ?? null } : null}
+        initialEnrollments={initialEnrollments}
       />
 
       {/* Tips & Reminders */}
