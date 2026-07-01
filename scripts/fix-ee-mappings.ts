@@ -35,9 +35,9 @@ async function main() {
   });
   if (ee581Course) {
     await prisma.courseBranchMapping.upsert({
-      where: { branch_courseId: { branch: "EE", courseId: ee581Course.id } },
+      where: { courseId_branch_batch: { courseId: ee581Course.id, branch: "EE", batch: "" } },
       update: { courseCategory: "DE" },
-      create: { branch: "EE", courseId: ee581Course.id, courseCategory: "DE" },
+      create: { courseId: ee581Course.id, branch: "EE", batch: "", courseCategory: "DE" },
     });
     console.log(`EE-581 DE mapping for EE: upserted`);
   } else {
