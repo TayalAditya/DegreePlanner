@@ -255,11 +255,21 @@ interface LoginAttempt {
   createdAt: string;
 }
 
+interface LoginAttemptsResponse {
+  attempts: LoginAttempt[];
+  total: number;
+  approved: number;
+  rejected: number;
+}
+
+const PAGE_SIZE = 50;
+
 function LoginAttemptsTab() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
+  const [page, setPage] = useState(1);
 
-  const { data: attempts = [], isLoading } = useQuery<LoginAttempt[]>({
+  const { data, isLoading } = useQuery<LoginAttemptsResponse>({
     queryKey: ["login-attempts"],
     queryFn: async () => {
       const res = await fetch("/api/admin/login-attempts");
@@ -267,6 +277,12 @@ function LoginAttemptsTab() {
       return res.json();
     },
   });
+
+  const attempts = data?.attempts ?? [];
+  // Real totals from the API (counted across ALL rows, not just the returned slice).
+  const total = data?.total ?? 0;
+  const approved = data?.approved ?? 0;
+  const rejected = data?.rejected ?? 0;
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -277,15 +293,21 @@ function LoginAttemptsTab() {
     });
   }, [attempts, search, filter]);
 
-  const approved = attempts.filter(a => a.outcome === "approved" || a.outcome === "auto_approved").length;
-  const rejected = attempts.filter(a => a.outcome === "rejected").length;
+  // Reset to first page whenever the filtered result set changes.
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const paged = useMemo(
+    () => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
+    [filtered, safePage]
+  );
+  const resetPage = useCallback(() => setPage(1), []);
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-surface border border-border rounded-xl p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs text-foreground-secondary"><LogIn className="w-3.5 h-3.5" /> Total</div>
-          <p className="text-2xl font-bold text-foreground">{attempts.length}</p>
+          <p className="text-2xl font-bold text-foreground">{total}</p>
         </div>
         <div className="bg-surface border border-border rounded-xl p-4 space-y-1">
           <div className="flex items-center gap-1.5 text-xs text-foreground-secondary"><ShieldCheck className="w-3.5 h-3.5 text-success" /> Approved</div>
@@ -304,11 +326,11 @@ function LoginAttemptsTab() {
             type="text"
             placeholder="Search email, enrollment ID, name..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); resetPage(); }}
             className="w-full pl-9 pr-4 py-2 text-sm bg-surface border border-border rounded-lg text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
-        <select value={filter} onChange={(e) => setFilter(e.target.value)}
+        <select value={filter} onChange={(e) => { setFilter(e.target.value); resetPage(); }}
           className="px-3 py-2 text-sm bg-surface border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
           <option value="ALL">All</option>
           <option value="approved">Approved</option>
@@ -333,7 +355,7 @@ function LoginAttemptsTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((a) => (
+              {paged.map((a) => (
                 <tr key={a.id} className="bg-background hover:bg-surface/60 transition-colors">
                   <td className="px-4 py-3">
                     <p className="text-foreground font-medium text-xs">{a.email}</p>
@@ -367,6 +389,33 @@ function LoginAttemptsTab() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!isLoading && filtered.length > PAGE_SIZE && (
+        <div className="flex items-center justify-between gap-3 text-xs text-foreground-secondary">
+          <span>
+            Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
+            {attempts.length < total && <span className="text-foreground-secondary/60"> (latest {attempts.length} of {total} loaded)</span>}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="px-3 py-1.5 rounded-lg border border-border text-foreground hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Prev
+            </button>
+            <span className="font-medium text-foreground">{safePage} / {pageCount}</span>
+            <button
+              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+              disabled={safePage >= pageCount}
+              className="px-3 py-1.5 rounded-lg border border-border text-foreground hover:bg-surface-hover disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>

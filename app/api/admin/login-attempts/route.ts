@@ -9,10 +9,17 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
-  const attempts = await prisma.loginAttempt.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 500,
-  });
+  // Accurate aggregate counts across ALL rows (not just the returned page),
+  // plus the most-recent slice for the table (client paginates + searches it).
+  const [attempts, total, approved, rejected] = await Promise.all([
+    prisma.loginAttempt.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 2000,
+    }),
+    prisma.loginAttempt.count(),
+    prisma.loginAttempt.count({ where: { outcome: { in: ["approved", "auto_approved"] } } }),
+    prisma.loginAttempt.count({ where: { outcome: "rejected" } }),
+  ]);
 
-  return NextResponse.json(attempts);
+  return NextResponse.json({ attempts, total, approved, rejected });
 }
