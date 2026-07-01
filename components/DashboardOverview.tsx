@@ -14,6 +14,7 @@ interface DashboardOverviewProps {
   userId: string;
   initialUserSettings?: any;
   initialAcademicState?: any;
+  initialEnrollments?: any;
 }
 
 
@@ -43,7 +44,8 @@ const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: st
   ISTP: { bg: "bg-accent/10", text: "text-accent" },
 };
 
-export function DashboardOverview({ userId, initialUserSettings, initialAcademicState }: DashboardOverviewProps) {
+export function DashboardOverview({ userId, initialUserSettings, initialAcademicState, initialEnrollments }: DashboardOverviewProps) {
+  const hasInitialEnrollments = Array.isArray(initialEnrollments);
   const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({
     queryKey: ["enrollments", userId],
     queryFn: async () => {
@@ -51,7 +53,10 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
       if (!res.ok) throw new Error("Failed to fetch enrollments");
       return res.json();
     },
-    staleTime: 30_000,
+    // Seeded from the server render so the dashboard paints without a client
+    // fetch; revalidates in the background after staleTime.
+    initialData: hasInitialEnrollments ? initialEnrollments : undefined,
+    staleTime: hasInitialEnrollments ? 30_000 : 0,
   });
 
   const { data: userSettings } = useQuery({
