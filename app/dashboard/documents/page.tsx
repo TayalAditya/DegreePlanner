@@ -1,11 +1,10 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { DocumentsView } from "@/components/DocumentsView";
 import { isDocumentsAdmin } from "@/lib/permissions";
 
 export default async function DocumentsPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
 
   if (!session) {
     redirect("/auth/signin");

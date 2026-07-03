@@ -49,20 +49,48 @@ interface CatalogCourse {
   department: string;
 }
 
-export default function ImportCoursesPage() {
+interface ImportCoursesClientProps {
+  initialBranch?: string;
+  initialBatch?: number | null;
+  initialEnrollmentId?: string | null;
+  initialDoingMTP?: boolean;
+  initialDoingMTP2?: boolean;
+  initialBatch24Icb1Course?: string | null;
+  initialImportedKeys?: string[];
+  initialCurrentSemester?: number;
+  initialPreRegLockedSemester?: number | null;
+}
+
+export default function ImportCoursesPage({
+  initialBranch,
+  initialBatch,
+  initialEnrollmentId,
+  initialDoingMTP,
+  initialDoingMTP2,
+  initialBatch24Icb1Course,
+  initialImportedKeys,
+  initialCurrentSemester,
+  initialPreRegLockedSemester,
+}: ImportCoursesClientProps = {}) {
+  const hasInitialData = initialBranch !== undefined;
+
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
   const router = useRouter();
-  const [preRegLockedSemester, setPreRegLockedSemester] = useState<number | null>(null);
-  const [branch, setBranch] = useState("CSE");
-  const [geSubBranch, setGeSubBranch] = useState("GE-ROBO");
-  const [userBatch, setUserBatch] = useState<number | null>(null);
-  const [batch24Icb1Course, setBatch24Icb1Course] = useState<string | null>(null);
-  const [currentSemester, setCurrentSemester] = useState(6);
-  const [doingMTP, setDoingMTP] = useState(true);
-  const [doingMTP2, setDoingMTP2] = useState(true);
+  const [preRegLockedSemester, setPreRegLockedSemester] = useState<number | null>(initialPreRegLockedSemester ?? null);
+  const [branch, setBranch] = useState(initialBranch ?? "CSE");
+  const [geSubBranch, setGeSubBranch] = useState(
+    initialBranch && (initialBranch === "GE" || initialBranch.startsWith("GE-")) ? initialBranch : "GE-ROBO"
+  );
+  const [userBatch, setUserBatch] = useState<number | null>(initialBatch ?? null);
+  const [batch24Icb1Course, setBatch24Icb1Course] = useState<string | null>(initialBatch24Icb1Course ?? null);
+  const [currentSemester, setCurrentSemester] = useState(initialCurrentSemester ?? 6);
+  const [doingMTP, setDoingMTP] = useState(initialDoingMTP ?? true);
+  const [doingMTP2, setDoingMTP2] = useState(initialDoingMTP2 ?? true);
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
-  const [importedCourseKeys, setImportedCourseKeys] = useState<Set<string>>(new Set());
+  const [importedCourseKeys, setImportedCourseKeys] = useState<Set<string>>(
+    new Set(initialImportedKeys ?? [])
+  );
   const [catalogIndex, setCatalogIndex] = useState<Record<string, CatalogCourse>>({});
   const [catalogCourses, setCatalogCourses] = useState<CatalogCourse[]>([]);
   const [customQuery, setCustomQuery] = useState("");
@@ -123,9 +151,12 @@ export default function ImportCoursesPage() {
   }, [effectiveBranch, dbCourseTypeMap, userBatch]);
 
   useEffect(() => {
-    loadUserSettings();
-    loadExistingEnrollments();
+    if (!hasInitialData) {
+      loadUserSettings();
+      loadExistingEnrollments();
+    }
     loadCatalogIndex();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

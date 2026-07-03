@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, startTransition } from "react";
 import {
   BookOpen,
   Search,
@@ -181,6 +181,7 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
   const [expandedDepartments, setExpandedDepartments] = useState<string[]>([]);
   const [departmentVisibleCounts, setDepartmentVisibleCounts] = useState<Record<string, number>>({});
   const [internshipOpen, setInternshipOpen] = useState(true);
+  const [searchResultsLimit, setSearchResultsLimit] = useState(20);
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
 
@@ -1060,7 +1061,10 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
                   type="text"
                   placeholder="Search by course code or name..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setSearchResultsLimit(20);
+                  }}
                   className="w-full pl-12 pr-4 py-3 bg-surface border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground placeholder-foreground-secondary transition-all shadow-sm"
                 />
               </div>
@@ -1188,7 +1192,7 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
               <>
                 {searchLower ? (
                   <div className="grid gap-3">
-                    {filteredCourses.map((course) => (
+                    {filteredCourses.slice(0, searchResultsLimit).map((course) => (
                       <div
                         key={course.id}
                         role="button"
@@ -1200,7 +1204,7 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
                             setSelectedCourse(course);
                           }
                         }}
-                        className="group relative overflow-hidden bg-surface rounded-lg border border-border p-5 hover:border-primary hover:shadow-xl hover:scale-[1.01] transition-all text-left cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                        className="group relative overflow-hidden bg-surface rounded-lg border border-border p-5 hover:border-primary hover:shadow-xl transition-all text-left cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
                       >
                         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         <div className="relative z-10">
@@ -1273,6 +1277,15 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
                         </div>
                       </div>
                     ))}
+                    {filteredCourses.length > searchResultsLimit && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchResultsLimit((prev) => prev + 20)}
+                        className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors text-sm font-medium text-foreground"
+                      >
+                        Show more ({filteredCourses.length - searchResultsLimit} remaining)
+                      </button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
