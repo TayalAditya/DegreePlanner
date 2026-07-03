@@ -257,50 +257,57 @@ interface LoginAttempt {
 
 interface LoginAttemptsResponse {
   attempts: LoginAttempt[];
+  filteredTotal: number;
   total: number;
   approved: number;
   rejected: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
 }
 
 const PAGE_SIZE = 50;
 
 function LoginAttemptsTab() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [filter, setFilter] = useState("ALL");
   const [page, setPage] = useState(1);
 
+  // Debounce search input
+  const searchTimerRef = useMemo(() => ({ current: undefined as ReturnType<typeof setTimeout> | undefined }), []);
+  const handleSearch = useCallback((value: string) => {
+    setSearch(value);
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    searchTimerRef.current = setTimeout(() => {
+      setDebouncedSearch(value);
+      setPage(1);
+    }, 300);
+  }, [searchTimerRef]);
+
   const { data, isLoading } = useQuery<LoginAttemptsResponse>({
-    queryKey: ["login-attempts"],
+    queryKey: ["login-attempts", page, PAGE_SIZE, debouncedSearch, filter],
     queryFn: async () => {
-      const res = await fetch("/api/admin/login-attempts");
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(PAGE_SIZE),
+      });
+      if (debouncedSearch) params.set("search", debouncedSearch);
+      if (filter !== "ALL") params.set("outcome", filter);
+      const res = await fetch(`/api/admin/login-attempts?${params}`);
       if (!res.ok) throw new Error("Failed");
       return res.json();
     },
+    placeholderData: (prev) => prev,
   });
 
   const attempts = data?.attempts ?? [];
-  // Real totals from the API (counted across ALL rows, not just the returned slice).
   const total = data?.total ?? 0;
   const approved = data?.approved ?? 0;
   const rejected = data?.rejected ?? 0;
-
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return attempts.filter((a) => {
-      const matchSearch = !q || a.email.toLowerCase().includes(q) || (a.enrollmentId||"").toLowerCase().includes(q) || (a.name||"").toLowerCase().includes(q);
-      const matchFilter = filter === "ALL" || a.outcome === filter;
-      return matchSearch && matchFilter;
-    });
-  }, [attempts, search, filter]);
-
-  // Reset to first page whenever the filtered result set changes.
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const filteredTotal = data?.filteredTotal ?? 0;
+  const pageCount = data?.pageCount ?? 1;
   const safePage = Math.min(page, pageCount);
-  const paged = useMemo(
-    () => filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE),
-    [filtered, safePage]
-  );
-  const resetPage = useCallback(() => setPage(1), []);
 
   return (
     <div className="space-y-4">
@@ -326,11 +333,11 @@ function LoginAttemptsTab() {
             type="text"
             placeholder="Search email, enrollment ID, name..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); resetPage(); }}
+            onChange={(e) => handleSearch(e.target.value)}
             className="w-full pl-9 pr-4 py-2 text-sm bg-surface border border-border rounded-lg text-foreground placeholder:text-foreground-secondary focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
-        <select value={filter} onChange={(e) => { setFilter(e.target.value); resetPage(); }}
+        <select value={filter} onChange={(e) => { setFilter(e.target.value); setPage(1); }}
           className="px-3 py-2 text-sm bg-surface border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
           <option value="ALL">All</option>
           <option value="approved">Approved</option>
@@ -355,7 +362,7 @@ function LoginAttemptsTab() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {paged.map((a) => (
+              {attempts.map((a) => (
                 <tr key={a.id} className="bg-background hover:bg-surface/60 transition-colors">
                   <td className="px-4 py-3">
                     <p className="text-foreground font-medium text-xs">{a.email}</p>
@@ -384,8 +391,8 @@ function LoginAttemptsTab() {
                   </td>
                 </tr>
               ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-10 text-center text-foreground-secondary text-sm">No attempts logged yet.</td></tr>
+              {attempts.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-10 text-center text-foreground-secondary text-sm">No attempts found.</td></tr>
               )}
             </tbody>
           </table>
@@ -393,11 +400,11 @@ function LoginAttemptsTab() {
       )}
 
       {/* Pagination */}
-      {!isLoading && filtered.length > PAGE_SIZE && (
+      {!isLoading && pageCount > 1 && (
         <div className="flex items-center justify-between gap-3 text-xs text-foreground-secondary">
           <span>
-            Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length}
-            {attempts.length < total && <span className="text-foreground-secondary/60"> (latest {attempts.length} of {total} loaded)</span>}
+            Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, filteredTotal)} of {filteredTotal}
+            {filteredTotal < total && <span className="text-foreground-secondary/60"> (filtered from {total} total)</span>}
           </span>
           <div className="flex items-center gap-2">
             <button

@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { EnrollmentStatus, CourseType } from "@prisma/client";
 import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
+import { loadDashboardEnrollments } from "@/lib/enrollmentsQuery";
 import { courseIdentityKey } from "@/lib/courseIdentity";
 import { getBranchCandidates, getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
@@ -15,10 +16,6 @@ import {
   PASS_FAIL_LIMITS,
 } from "@/lib/course-validation";
 
-const COURSE_NAME_OVERRIDES: Record<string, string> = {
-  IK593: "Kulhad Economy",
-};
-
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
 
@@ -28,58 +25,17 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const semester = searchParams.get("semester");
-
-    const where: any = {
-      userId: session.user.id,
-    };
-
-    if (semester) {
-      where.semester = parseInt(semester);
-    }
+    const semesterParam = searchParams.get("semester");
+    const semester = semesterParam ? parseInt(semesterParam) : undefined;
 
     // Run sync and fetch in parallel — saves one round-trip vs sequential await
-    const [, enrollments] = await Promise.all([
+    const [, enrollmentsWithOverrides] = await Promise.all([
       syncEnrollmentStatusesForUser(session.user.id, {
         batch: session.user.batch,
         enrollmentId: session.user.enrollmentId,
       }),
-      prisma.courseEnrollment.findMany({
-        where,
-        include: {
-          course: {
-            include: {
-              branchMappings: {
-                select: {
-                  courseCategory: true,
-                  branch: true,
-                  batch: true,
-                  splitCategory: true,
-                  splitAmount: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: [
-          { semester: "asc" },
-          { course: { code: "asc" } },
-        ],
-      }),
+      loadDashboardEnrollments(session.user.id, { semester }),
     ]);
-
-    const enrollmentsWithOverrides = enrollments.map((e) => {
-      const key = courseIdentityKey(e.course?.code);
-      const overrideName = COURSE_NAME_OVERRIDES[key];
-      if (!overrideName) return e;
-      return {
-        ...e,
-        course: {
-          ...e.course,
-          name: overrideName,
-        },
-      };
-    });
 
     return NextResponse.json(enrollmentsWithOverrides, {
       headers: { "Cache-Control": "private, max-age=30, stale-while-revalidate=30" },

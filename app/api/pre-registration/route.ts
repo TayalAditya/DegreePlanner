@@ -164,10 +164,12 @@ export async function GET() {
         dpOptionalBranches.has(normalizedBranch) &&
         batch != null && batch >= 2024;
       if (isOptionalDpForBranch) return true;
-      // Filter by branch eligibility
+      // Filter by branch eligibility — also match parent branches
+      // (e.g. GE-ROBO student matches offerings listed for "GE")
+      const branchCandidates = getBranchCandidates(normalizedBranch);
       const eligible =
         o.branches.includes("ALL") ||
-        o.branches.some((b) => normalizeBranchCode(b) === normalizedBranch);
+        o.branches.some((b) => branchCandidates.includes(normalizeBranchCode(b)));
       if (!eligible) return false;
       // Filter by eligible semester
       if (o.eligibleSems.length > 0 && !o.eligibleSems.includes(offeringSemester)) return false;

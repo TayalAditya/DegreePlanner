@@ -7,59 +7,43 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User management
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  image         String?
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // User validation
-  isApproved    Boolean   @default(false)
-  role          UserRole  @default(STUDENT)
-  
-  // Academic info
-  enrollmentId  String?   @unique
-  department    String?
-  branch        String?   // Branch code (CSE, ECE, etc.)
-  previousBranch String?  // Previous branch (for branch change tracking)
-  batch         Int?      // Year of joining
-
-  // Academic preferences
-  doingMTP      Boolean   @default(true)
-  doingMTP2     Boolean   @default(true)
-  doingISTP     Boolean   @default(true)
-
-  // P/F course tracking
-  totalPassFailCredits Int @default(0) // Total P/F credits taken
-  passFailPerSemester  Int @default(0) // Current semester P/F credits
-  
-  // Relations
-  programs      UserProgram[]
-  enrollments   CourseEnrollment[]
-  createdTimetableEntries TimetableEntry[] @relation("TimetableCreatedBy")
-  updatedTimetableEntries TimetableEntry[] @relation("TimetableUpdatedBy")
-  approvedTimetableEntries TimetableEntry[] @relation("TimetableApprovedBy")
-  documents     Document[]
-  supportTickets SupportTicket[]
-  courseSuggestions CourseSuggestion[]
-  accounts      Account[]
-  sessions      Session[]
-  announcements Announcement[]
-  notifications Notification[]
-  preRegistrationPlans PreRegistrationPlan[]
+  id                       String                @id @default(cuid())
+  email                    String                @unique
+  name                     String?
+  image                    String?
+  emailVerified            DateTime?
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
+  isApproved               Boolean               @default(false)
+  role                     UserRole              @default(STUDENT)
+  enrollmentId             String?               @unique
+  department               String?
+  branch                   String?
+  previousBranch           String?
+  batch                    Int?
+  doingMTP                 Boolean               @default(true)
+  doingISTP                Boolean               @default(true)
+  totalPassFailCredits     Int                   @default(0)
+  passFailPerSemester      Int                   @default(0)
+  doingMTP2                Boolean               @default(true)
+  accounts                 Account[]
+  announcements            Announcement[]
+  enrollments              CourseEnrollment[]
+  courseSuggestions        CourseSuggestion[]
+  documents                Document[]
+  notifications            Notification[]
+  preRegistrationPlans     PreRegistrationPlan[]
+  sessions                 Session[]
+  supportTickets           SupportTicket[]
+  approvedTimetableEntries TimetableEntry[]      @relation("TimetableApprovedBy")
+  createdTimetableEntries  TimetableEntry[]      @relation("TimetableCreatedBy")
+  updatedTimetableEntries  TimetableEntry[]      @relation("TimetableUpdatedBy")
+  programs                 UserProgram[]
 
   @@index([email])
   @@index([enrollmentId])
   @@index([branch])
-}
-
-enum UserRole {
-  STUDENT
-  ADMIN
 }
 
 model Account {
@@ -68,15 +52,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -97,120 +80,85 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// Programs (Major/Minor)
 model Program {
-  id                  String       @id @default(cuid())
-  name                String
-  code                String       @unique
-  type                ProgramType
-  department          String
+  id                   String          @id @default(cuid())
+  name                 String
+  code                 String          @unique
+  type                 ProgramType
+  department           String
   totalCreditsRequired Int
-  description         String?
-  
-  // Credit distribution
-  icCredits           Int          @default(0) // Institute Core (fixed per program type)
-  dcCredits           Int          @default(0) // Discipline Core
-  deCredits           Int          @default(0) // Discipline Electives
-  feCredits           Int          @default(0) // Free Electives
-  mtpIstpCredits      Int          @default(0) // MTP + ISTP combined (or Research for BS)
-  
-  // MTP/ISTP eligibility requirements
-  minCreditsForMtp    Int?
-  minSemesterForMtp   Int?
-  
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-  
-  // Relations
-  courses             ProgramCourse[]
-  userPrograms        UserProgram[]
-  
+  description          String?
+  icCredits            Int             @default(0)
+  dcCredits            Int             @default(0)
+  deCredits            Int             @default(0)
+  feCredits            Int             @default(0)
+  mtpIstpCredits       Int             @default(0)
+  minCreditsForMtp     Int?
+  minSemesterForMtp    Int?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  courses              ProgramCourse[]
+  userPrograms         UserProgram[]
+
   @@index([code])
   @@index([type])
 }
 
-enum ProgramType {
-  MAJOR
-  MINOR
-  DOUBLE_MAJOR
-}
-
-// User's enrolled programs
 model UserProgram {
-  id              String   @id @default(cuid())
-  userId          String
-  programId       String
-  programType     ProgramType
-  isPrimary       Boolean  @default(false)
-  startSemester   Int      // Semester number when started
-  status          ProgramStatus @default(ACTIVE)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  program         Program  @relation(fields: [programId], references: [id])
-  
+  id            String        @id @default(cuid())
+  userId        String
+  programId     String
+  programType   ProgramType
+  isPrimary     Boolean       @default(false)
+  startSemester Int
+  status        ProgramStatus @default(ACTIVE)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  program       Program       @relation(fields: [programId], references: [id])
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, programId])
   @@index([userId])
 }
 
-enum ProgramStatus {
-  ACTIVE
-  COMPLETED
-  DROPPED
-}
-
-// Course catalog
 model Course {
-  id              String   @id @default(cuid())
-  code            String   @unique
-  name            String
-  credits         Float
-  ltpc            String?  // e.g. "3-1-0-4" — stored from offering uploads
-  department      String
-  level           Int      // 100, 200, 300, 400 level
-  description     String?
-
-  // Course offering
-  offeredInFall   Boolean  @default(false)
-  offeredInSpring Boolean  @default(false)
-  offeredInSummer Boolean  @default(false)
-
-  // Special course types
-  isPassFailEligible Boolean @default(false) // Can be taken as P/F
-  isBranchSpecific Boolean  @default(false) // e.g., DP-010P (2 credits for all branches)
-  requiredBranches String[] // If branchSpecific, which branches must take it
-  requiredSemester Int?     // If branchSpecific, which semester (e.g., 8 for DP-010P)
-
-  isActive        Boolean  @default(true)
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  // Relations
-  programCourses  ProgramCourse[]
-  prerequisites   CoursePrerequisite[] @relation("CoursePrerequisites")
-  prerequisiteFor CoursePrerequisite[] @relation("PrerequisiteFor")
-  enrollments     CourseEnrollment[]
-  timetableEntries TimetableEntry[]
-  branchMappings  CourseBranchMapping[]
-  courseSuggestions CourseSuggestion[]
-  offerings        CourseOffering[]
-  equivalents      CourseEquivalent[]  @relation("CourseEquivalents")
-  equivalentFor    CourseEquivalent[]  @relation("EquivalentFor")
+  id                 String                @id @default(cuid())
+  code               String                @unique
+  name               String
+  credits            Float
+  department         String
+  level              Int
+  description        String?
+  offeredInFall      Boolean               @default(false)
+  offeredInSpring    Boolean               @default(false)
+  offeredInSummer    Boolean               @default(false)
+  isPassFailEligible Boolean               @default(false)
+  isBranchSpecific   Boolean               @default(false)
+  requiredBranches   String[]
+  requiredSemester   Int?
+  isActive           Boolean               @default(true)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  ltpc               String?
+  branchMappings     CourseBranchMapping[]
+  enrollments        CourseEnrollment[]
+  equivalents        CourseEquivalent[]    @relation("CourseEquivalents")
+  equivalentFor      CourseEquivalent[]    @relation("EquivalentFor")
+  offerings          CourseOffering[]
+  prerequisites      CoursePrerequisite[]  @relation("CoursePrerequisites")
+  prerequisiteFor    CoursePrerequisite[]  @relation("PrerequisiteFor")
+  courseSuggestions  CourseSuggestion[]
+  programCourses     ProgramCourse[]
+  timetableEntries   TimetableEntry[]
 
   @@index([code])
   @@index([department])
 }
 
-// Semester-exchange / transfer course equivalencies
-// If a student completed `course`, treat `equivalent` as also completed.
 model CourseEquivalent {
   id           String @id @default(cuid())
-  courseId     String // exchange course (e.g. IN2406)
-  equivalentId String // IIT Mandi course it replaces (e.g. CS-305)
-
+  courseId     String
+  equivalentId String
   course       Course @relation("CourseEquivalents", fields: [courseId], references: [id], onDelete: Cascade)
   equivalent   Course @relation("EquivalentFor", fields: [equivalentId], references: [id], onDelete: Cascade)
 
@@ -219,61 +167,43 @@ model CourseEquivalent {
   @@index([equivalentId])
 }
 
-// Prerequisites
 model CoursePrerequisite {
-  id              String   @id @default(cuid())
-  courseId        String
-  prerequisiteId  String
-  
-  course          Course   @relation("CoursePrerequisites", fields: [courseId], references: [id], onDelete: Cascade)
-  prerequisite    Course   @relation("PrerequisiteFor", fields: [prerequisiteId], references: [id], onDelete: Cascade)
-  
+  id             String @id @default(cuid())
+  courseId       String
+  prerequisiteId String
+  course         Course @relation("CoursePrerequisites", fields: [courseId], references: [id], onDelete: Cascade)
+  prerequisite   Course @relation("PrerequisiteFor", fields: [prerequisiteId], references: [id], onDelete: Cascade)
+
   @@unique([courseId, prerequisiteId])
 }
 
-// Courses in a program
 model ProgramCourse {
-  id              String      @id @default(cuid())
-  programId       String
-  courseId        String
-  courseType      CourseType
-  isRequired      Boolean     @default(false)
-  semester        Int?        // Recommended semester
-  
-  program         Program     @relation(fields: [programId], references: [id], onDelete: Cascade)
-  course          Course      @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  
+  id         String     @id @default(cuid())
+  programId  String
+  courseId   String
+  courseType CourseType
+  isRequired Boolean    @default(false)
+  semester   Int?
+  course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  program    Program    @relation(fields: [programId], references: [id], onDelete: Cascade)
+
   @@unique([programId, courseId])
   @@index([programId])
 }
 
-enum CourseType {
-  CORE
-  DE  // Discipline Elective
-  PE  // Program Elective
-  FREE_ELECTIVE
-  MTP
-  ISTP
-}
-
-// Course-Branch Mapping for curriculum management
 model CourseBranchMapping {
-  id              String              @id @default(cuid())
-  courseId        String
-  branch          String              // Branch code (CSE, EE, ME, etc.)
-  batch           String              @default("") // "" = all batches, "2023" = B23, "2024" = B24, etc.
-  courseCategory  CourseCategoryType  // IC, IC-BASKET, DC, DE, FE, HSS, IKS
-  isRequired      Boolean             @default(false)
-  semester        Int?                // Recommended semester for this branch
-  // Split credit support: some courses count partially toward two categories.
-  // splitAmount credits go to splitCategory; remaining go to courseCategory.
-  splitCategory   CourseCategoryType?
-  splitAmount     Float?
-
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
-
-  course          Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  id             String              @id @default(cuid())
+  courseId       String
+  branch         String
+  courseCategory CourseCategoryType
+  isRequired     Boolean             @default(false)
+  semester       Int?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  splitAmount    Float?
+  splitCategory  CourseCategoryType?
+  batch          String              @default("")
+  course         Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([courseId, branch, batch])
   @@index([courseId])
@@ -282,80 +212,50 @@ model CourseBranchMapping {
   @@index([courseCategory])
 }
 
-enum CourseCategoryType {
-  IC              // Institute Core
-  IC_BASKET       // IC Basket
-  DC              // Discipline Core
-  DE              // Discipline Elective
-  FE              // Free Elective
-  HSS             // Humanities & Social Sciences
-  IKS             // Indian Knowledge System
-  MTP             // Major Technical Project
-  ISTP            // Interactive Socio-Technical Practicum
-  INTERNSHIP      // Internship
-  BACKLOG         // Cleared backlog (F/FS grades)
-  NA              // Not Applicable
-}
-
-// When a student overrides a course-type/category, log it for admin review.
-// Note: `id` has no DB default in the existing migration, so Prisma generates it on create.
 model CourseSuggestion {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   userId            String
   courseId          String
   suggestedCategory String
   currentCategory   String
   reason            String?
-  status            String   @default("PENDING")
+  status            String    @default("PENDING")
   reviewedBy        String?
   reviewedAt        DateTime?
-
-  // Extra context (optional)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   enrollmentId      String?
   semester          Int?
-  year              Int?
   term              Term?
-
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  course            Course   @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  year              Int?
+  course            Course    @relation(fields: [courseId], references: [id])
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([courseId])
   @@index([status])
 }
 
-// Student course enrollments
 model CourseEnrollment {
   id              String           @id @default(cuid())
   userId          String
   courseId        String
-  semester        Int              // Which semester number (1, 2, 3...)
-  year            Int              // Academic year
+  semester        Int
+  year            Int
   term            Term
-
   courseType      CourseType
-  programId       String?          // Which program this counts towards
-
+  programId       String?
   grade           String?
   status          EnrollmentStatus @default(IN_PROGRESS)
-
-  // Pass/Fail courses
   isPassFail      Boolean          @default(false)
-  passFailCredits Int              @default(0)  // Credits if Pass/Fail
-
-  // Internship support
+  passFailCredits Int              @default(0)
   isInternship    Boolean          @default(false)
-  internshipType  InternshipType?  // REMOTE or ONSITE
-  internshipDays  Int?             // Number of days (for 6-week, BS doesn't get credits)
-
+  internshipType  InternshipType?
+  internshipDays  Int?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
-
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   course          Course           @relation(fields: [courseId], references: [id])
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId, semester, year, term])
   @@index([userId])
@@ -364,9 +264,265 @@ model CourseEnrollment {
   @@index([isInternship])
 }
 
+model ApprovedUser {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  enrollmentId    String?  @unique
+  name            String?
+  department      String?
+  branch          String?
+  batch           Int?
+  allowedPrograms String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([email])
+  @@index([enrollmentId])
+  @@index([branch])
+}
+
+model TimetableEntry {
+  id            String    @id @default(cuid())
+  courseId      String?
+  semester      Int
+  year          Int
+  term          Term
+  dayOfWeek     DayOfWeek
+  startTime     String
+  endTime       String
+  venue         String?
+  roomNumber    String?
+  building      String?
+  classType     ClassType @default(LECTURE)
+  instructor    String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  createdById   String?
+  slot          String?
+  updatedById   String?
+  approvedAt    DateTime?
+  approvedById  String?
+  isApproved    Boolean   @default(false)
+  googleEventId String?
+  approvedBy    User?     @relation("TimetableApprovedBy", fields: [approvedById], references: [id])
+  course        Course?   @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  createdBy     User?     @relation("TimetableCreatedBy", fields: [createdById], references: [id])
+  updatedBy     User?     @relation("TimetableUpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([courseId])
+  @@index([semester])
+  @@index([dayOfWeek])
+  @@index([term, year])
+  @@index([createdById])
+  @@index([updatedById])
+  @@index([isApproved])
+  @@index([approvedById])
+}
+
+model Venue {
+  id         String    @id @default(cuid())
+  name       String
+  code       String?   @unique
+  building   String?
+  floor      String?
+  capacity   Int?
+  type       VenueType @default(CLASSROOM)
+  facilities String[]
+  isActive   Boolean   @default(true)
+  isCustom   Boolean   @default(false)
+  isPublic   Boolean   @default(true)
+  createdBy  String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([code])
+  @@index([building])
+  @@index([type])
+  @@index([isActive])
+}
+
+model SupportTicket {
+  id          String                    @id @default(cuid())
+  userId      String
+  type        SupportTicketType
+  subject     String
+  message     String
+  pageUrl     String?
+  status      SupportTicketStatus       @default(OPEN)
+  adminNote   String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  user        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments SupportTicketAttachment[]
+
+  @@index([userId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SupportTicketAttachment {
+  id        String        @id @default(cuid())
+  ticketId  String
+  fileName  String
+  mimeType  String
+  fileSize  Int
+  dataUrl   String
+  createdAt DateTime      @default(now())
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+}
+
+model Document {
+  id          String           @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  category    DocumentCategory
+  fileUrl     String?
+  fileName    String?
+  fileSize    Int?
+  mimeType    String?
+  isPublic    Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([category])
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  isActive  Boolean  @default(true)
+  authorId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  author    User     @relation(fields: [authorId], references: [id])
+
+  @@index([isActive, createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  content   String
+  isRead    Boolean  @default(false)
+  ticketId  String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+}
+
+model CourseOffering {
+  id               String              @id @default(cuid())
+  courseId         String?
+  courseCode       String
+  courseName       String
+  instructor       String?
+  school           String?
+  branches         String[]
+  eligibleSems     Int[]
+  slots            String?
+  ltpc             String?
+  credits          Float
+  categoryOverride CourseCategoryType?
+  curriculumLink   String?
+  offeringSemester Int
+  offeringYear     Int
+  isActive         Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  instructorEmail  String?
+  compulsorySem    Int?
+  course           Course?             @relation(fields: [courseId], references: [id])
+
+  @@unique([courseCode, offeringSemester, offeringYear])
+  @@index([offeringSemester, offeringYear])
+  @@index([courseId])
+}
+
+model PreRegistrationPlan {
+  id               String   @id @default(cuid())
+  userId           String
+  offeringSemester Int
+  offeringYear     Int
+  selectedIds      String[]
+  savedAt          DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, offeringSemester, offeringYear])
+  @@index([offeringSemester, offeringYear])
+}
+
+model LoginAttempt {
+  id           String   @id @default(cuid())
+  email        String
+  enrollmentId String?
+  name         String?
+  outcome      String
+  reason       String?
+  batch        Int?
+  branch       String?
+  createdAt    DateTime @default(now())
+
+  @@index([email])
+  @@index([outcome, createdAt])
+  @@index([createdAt])
+}
+
+enum UserRole {
+  STUDENT
+  ADMIN
+}
+
+enum ProgramType {
+  MAJOR
+  MINOR
+  DOUBLE_MAJOR
+}
+
+enum ProgramStatus {
+  ACTIVE
+  COMPLETED
+  DROPPED
+}
+
+enum CourseType {
+  CORE
+  DE
+  PE
+  FREE_ELECTIVE
+  MTP
+  ISTP
+}
+
+enum CourseCategoryType {
+  IC
+  IC_BASKET
+  DC
+  DE
+  FE
+  HSS
+  IKS
+  MTP
+  ISTP
+  INTERNSHIP
+  BACKLOG
+  NA
+}
+
 enum InternshipType {
-  REMOTE          // 6 credits (semester-long)
-  ONSITE          // 9 credits (P/F FE)
+  REMOTE
+  ONSITE
 }
 
 enum Term {
@@ -381,79 +537,6 @@ enum EnrollmentStatus {
   DROPPED
   FAILED
   AUDIT
-}
-
-// Approved users list (from Excel)
-model ApprovedUser {
-  id              String   @id @default(cuid())
-  email           String   @unique
-  enrollmentId    String?  @unique
-  name            String?
-  department      String?
-  branch          String?
-  batch           Int?
-  allowedPrograms String[] // Array of program codes
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@index([email])
-  @@index([enrollmentId])
-  @@index([branch])
-}
-
-// Timetable management
-model TimetableEntry {
-  id              String   @id @default(cuid())
-  courseId        String?  // Optional - for TA duties not tied to a course
-  semester        Int
-  year            Int
-  term            Term
-  
-  // Scheduling details
-  dayOfWeek       DayOfWeek
-  startTime       String   // HH:MM format
-  endTime         String   // HH:MM format
-  slot            String?  // e.g., A1 / B2 (optional)
-  venue           String?
-  roomNumber      String?
-  building        String?
-  
-  // Class type
-  classType       ClassType @default(LECTURE)
-  
-  // Optional notes
-  instructor      String?
-  notes           String?
-
-  // Google Calendar integration
-  googleEventId   String?  // Event ID from Google Calendar API
-
-  // Admin approval for manual changes
-  isApproved      Boolean  @default(false)
-  approvedById    String?
-  approvedAt      DateTime?
-  approvedBy      User?    @relation("TimetableApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
-
-  // Audit (who created/last updated this shared schedule entry)
-  createdById     String?
-  updatedById     String?
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  createdBy       User?    @relation("TimetableCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  updatedBy       User?    @relation("TimetableUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
-  course          Course?  @relation(fields: [courseId], references: [id], onDelete: Restrict)
-  
-  @@index([courseId])
-  @@index([semester])
-  @@index([dayOfWeek])
-  @@index([term, year])
-  @@index([createdById])
-  @@index([updatedById])
-  @@index([isApproved])
-  @@index([approvedById])
 }
 
 enum DayOfWeek {
@@ -475,33 +558,6 @@ enum ClassType {
   TA_DUTY
 }
 
-// Venue management for custom locations
-model Venue {
-  id              String   @id @default(cuid())
-  name            String
-  code            String?  @unique // e.g., "LHC-101", "Lib-201"
-  building        String?
-  floor           String?
-  capacity        Int?
-  type            VenueType @default(CLASSROOM)
-  facilities      String[] // ["Projector", "AC", "Whiteboard"]
-  
-  isActive        Boolean  @default(true)
-  isCustom        Boolean  @default(false) // User-added venues
-  
-  // Who can use this venue
-  isPublic        Boolean  @default(true)
-  createdBy       String?  // User ID for custom venues
-  
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  
-  @@index([code])
-  @@index([building])
-  @@index([type])
-  @@index([isActive])
-}
-
 enum VenueType {
   CLASSROOM
   LAB
@@ -512,43 +568,6 @@ enum VenueType {
   AUDITORIUM
   ONLINE
   OTHER
-}
-
-// Support & feedback (in-app contact / suggestions / issue reports)
-model SupportTicket {
-  id          String              @id @default(cuid())
-  userId      String
-  type        SupportTicketType
-  subject     String
-  message     String
-  pageUrl     String?
-  status      SupportTicketStatus @default(OPEN)
-  adminNote   String?
-
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  attachments SupportTicketAttachment[]
-
-  @@index([userId])
-  @@index([type])
-  @@index([status])
-  @@index([createdAt])
-}
-
-model SupportTicketAttachment {
-  id        String        @id @default(cuid())
-  ticketId  String
-  fileName  String
-  mimeType  String
-  fileSize  Int
-  dataUrl   String        @db.Text
-  createdAt DateTime      @default(now())
-
-  ticket    SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-
-  @@index([ticketId])
 }
 
 enum SupportTicketType {
@@ -565,30 +584,6 @@ enum SupportTicketStatus {
   CLOSED
 }
 
-// Document management
-model Document {
-  id              String       @id @default(cuid())
-  userId          String
-  title           String
-  description     String?
-  category        DocumentCategory
-  fileUrl         String?
-  fileName        String?
-  fileSize        Int?         // in bytes
-  mimeType        String?
-  
-  // Access control
-  isPublic        Boolean      @default(false)
-  
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  
-  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@index([userId])
-  @@index([category])
-}
-
 enum DocumentCategory {
   FORMS
   PROCEDURES
@@ -596,99 +591,4 @@ enum DocumentCategory {
   CERTIFICATES
   TRANSCRIPTS
   OTHER
-}
-
-// Announcements (admin posts, all users can see)
-model Announcement {
-  id        String   @id @default(cuid())
-  title     String
-  content   String   @db.Text
-  isActive  Boolean  @default(true)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([isActive, createdAt])
-}
-
-// Per-user notifications (e.g. admin replied to your support ticket)
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String
-  title     String
-  content   String   @db.Text
-  isRead    Boolean  @default(false)
-  ticketId  String?
-  createdAt DateTime @default(now())
-
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, isRead])
-  @@index([userId, createdAt])
-}
-
-// Pre-registration course offerings (admin uploads per semester)
-model CourseOffering {
-  id               String              @id @default(cuid())
-  courseId         String?             // null if course not yet in catalog
-  courseCode       String
-  courseName       String
-  instructor       String?
-  instructorEmail  String?
-  school           String?             // e.g. "SCEE", "SMSS" — used for FE grouping
-  // If set, this course is only compulsory for students in that specific semester.
-  // Parsed from DC column entries like "CSE S5" — sem 5 students only must take it.
-  compulsorySem    Int?
-  branches         String[]            // ["CSE","EE"] or ["ALL"]
-  eligibleSems     Int[]               // [5, 7] — which student sems can take it
-  slots            String?             // "A1+TA1"
-  ltpc             String?             // "3-1-0-4"
-  credits          Float
-  categoryOverride CourseCategoryType? // fallback if no branchMapping / standalone course
-  curriculumLink   String?
-  offeringSemester Int                 // 7
-  offeringYear     Int                 // 2026
-  isActive         Boolean             @default(true)
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
-
-  course           Course?             @relation(fields: [courseId], references: [id])
-
-  @@unique([courseCode, offeringSemester, offeringYear])
-  @@index([offeringSemester, offeringYear])
-  @@index([courseId])
-}
-
-// Student's saved pre-registration plan (server-persisted)
-model PreRegistrationPlan {
-  id               String   @id @default(cuid())
-  userId           String
-  offeringSemester Int
-  offeringYear     Int
-  selectedIds      String[] // array of CourseOffering ids
-  savedAt          DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, offeringSemester, offeringYear])
-  @@index([offeringSemester, offeringYear])
-}
-
-// Login attempt log — tracks every Google OAuth attempt (approved or rejected)
-model LoginAttempt {
-  id           String   @id @default(cuid())
-  email        String
-  enrollmentId String?
-  name         String?
-  outcome      String   // "approved" | "rejected" | "auto_approved"
-  reason       String?  // rejection reason e.g. "user_not_approved", "batch_not_supported"
-  batch        Int?
-  branch       String?
-  createdAt    DateTime @default(now())
-
-  @@index([email])
-  @@index([outcome, createdAt])
-  @@index([createdAt])
 }
