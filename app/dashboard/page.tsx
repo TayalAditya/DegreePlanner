@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { getSession } from "@/lib/session";
 import prisma from "@/lib/prisma";
 import { DashboardOverview } from "@/components/DashboardOverviewDynamic";
 import Link from "next/link";
@@ -22,7 +21,7 @@ import {
 import { StatCard } from "@/components/StatCard";
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
+  const session = await getSession();
   const firstName = session?.user?.name?.split(" ")[0] || "there";
   const batchYear = inferBatchYear(session?.user?.batch, session?.user?.enrollmentId);
   const academicState = batchYear ? inferAcademicState(batchYear) : null;

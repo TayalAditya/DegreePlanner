@@ -32,6 +32,30 @@ export const syncEnrollmentStatusesForUser = async (
 
   const currentSemester = state.currentSemester;
 
+  // Read-first guard: on the common case nothing needs flipping, so avoid
+  // opening a write transaction on every read. This is purely an optimization —
+  // the atomic $transaction below still runs whenever there IS work to do, so
+  // no update is ever skipped.
+  const pendingCount = await prisma.courseEnrollment.count({
+    where: {
+      userId,
+      status: EnrollmentStatus.IN_PROGRESS,
+      OR: [
+        { grade: { not: null } },
+        { grade: null, semester: { lt: currentSemester } },
+      ],
+    },
+  });
+
+  if (pendingCount === 0) {
+    return {
+      didSync: false as const,
+      phase: state.phase,
+      currentSemester,
+      updatedCount: 0,
+    };
+  }
+
   const [gradeMarkedCompleted, pastSemMarkedCompleted] = await prisma.$transaction([
     prisma.courseEnrollment.updateMany({
       where: {
