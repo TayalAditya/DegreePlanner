@@ -4,7 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
-import { inferBatchYear } from "@/lib/academicCalendar";
+import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { CourseType, EnrollmentStatus, Term } from "@prisma/client";
 
 // Odd semesters start in fall, even in spring
@@ -108,6 +108,10 @@ export async function POST(
   const specialDpCourseType = getSpecialDpCourseType(course.code);
   if (specialDpCourseType) finalCourseType = specialDpCourseType as CourseType;
 
+  const state = inferAcademicState(batchYear);
+  const currentSem = state.currentSemester;
+  const autoStatus = semNum < currentSem ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS;
+
   const enrollment = await prisma.courseEnrollment.create({
     data: {
       userId,
@@ -117,7 +121,7 @@ export async function POST(
       term,
       courseType: finalCourseType,
       programId: finalProgramId,
-      status: EnrollmentStatus.IN_PROGRESS,
+      status: autoStatus,
       grade: null,
       isPassFail: false,
       passFailCredits: 0,
