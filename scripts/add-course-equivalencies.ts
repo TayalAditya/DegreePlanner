@@ -1,19 +1,38 @@
 /**
- * Add course equivalencies:
- *   MA-313 ↔ CS-304  (Formal Languages & Automata Theory)
- *   MA-312 ↔ CS-212  (Design of Algorithms / Design & Analysis of Algorithms)
+ * Add bidirectional course equivalencies from the DC IIT Mandi PDF.
+ * Courses listed as "XX-YYY / XX-ZZZ" in the PDF are equivalent —
+ * if a student completed one, the other should be treated as done.
  *
- * B23 CSE students did CS-304 and CS-212.
- * B24 onwards MNC students get MA-313 and MA-312.
- * These are equivalent — pre-reg should treat either as done.
+ * Pairs where one course doesn't exist in DB yet are skipped automatically.
  */
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
 const PAIRS: [string, string][] = [
-  ["MA-313", "CS-304"],
-  ["MA-312", "CS-212"],
+  // MNC: MA ↔ CS
+  ["MA-313", "CS-304"],   // Formal Languages & Automata Theory
+  ["MA-312", "CS-212"],   // Design of Algorithms
+  // MNC: CS-214 / CS-201 (Computer Organisation)
+  ["CS-214", "CS-201"],
+  // EE: EE-212 / EE-210 (Digital System Design) — already exists but idempotent
+  ["EE-212", "EE-210"],
+  // EE: EE-205 / EE-202 (Electromagnetics & Wave Propagation)
+  ["EE-205", "EE-202"],
+  // EE: EE-316 / EE-304 (Communication Systems) — already exists
+  ["EE-316", "EE-304"],
+  // CE: CE-301 / CE-310 (Strength of Materials and Structures)
+  ["CE-301", "CE-310"],
+  // CE: CE-301P / CE-310P (Strength of Materials Lab)
+  ["CE-301P", "CE-310P"],
+  // CE: CE-302 / CE-311 (Geotechnical Engineering)
+  ["CE-302", "CE-311"],
+  // CE: CE-302P / CE-311P (Geotechnical Engineering Lab)
+  ["CE-302P", "CE-311P"],
+  // CE: CE-203P / CE-354P (Building/Construction Materials Lab)
+  ["CE-203P", "CE-354P"],
+  // ME: ME-308 / ME-215 (Manufacturing Engineering 1)
+  ["ME-308", "ME-215"],
 ];
 
 async function main() {

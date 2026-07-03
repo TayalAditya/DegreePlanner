@@ -677,12 +677,26 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
 
     const fixedIstp = requiredIstp > 0 ? byNormalized(allDefault.filter((c) => c.category === "ISTP")) : [];
 
-    // CS212 (B23 MNC) and MA312 (B24/B25 MNC) are the same course offered under different codes.
+    // Equivalent course codes from DC IIT Mandi PDF — if student did one, the other counts as done.
     const COURSE_EQUIV: Record<string, string[]> = {
       CS212: ["MA312"],
       MA312: ["CS212"],
       CS304: ["MA313"],
       MA313: ["CS304"],
+      CS214: ["CS201"],
+      CS201: ["CS214"],
+      EE205: ["EE202"],
+      EE202: ["EE205"],
+      EE316: ["EE304"],
+      EE304: ["EE316"],
+      CE301: ["CE310"],
+      CE310: ["CE301"],
+      CE301P: ["CE310P"],
+      CE310P: ["CE301P"],
+      CE302: ["CE311"],
+      CE311: ["CE302"],
+      ME308: ["ME215"],
+      ME215: ["ME308"],
     };
     const isCompleted = (code: string) => {
       const norm = normalizeCourseCode(code);
