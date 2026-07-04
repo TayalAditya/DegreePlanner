@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PreRegistrationSkeleton } from "./loading";
-import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus } from "lucide-react";
+import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { formatCredits, formatCourseCode } from "@/lib/utils";
 import { MINORS } from "@/lib/minors";
@@ -466,6 +466,7 @@ export default function PreRegistrationPage() {
   const [internshipCourses, setInternshipCourses] = useState<{ p399: InternshipCourse[]; p396: InternshipCourse[] }>({ p399: [], p396: [] });
   const [mtp1Course, setMtp1Course] = useState<InternshipCourse | null>(null);
   const [selectedExtra, setSelectedExtra] = useState<Set<string>>(new Set());
+  const [copied, setCopied] = useState(false);
   const toggleExtra = (id: string) => setSelectedExtra(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); setSaved(false); return s; });
 
   // P/F credits consumed by selected internship in THIS plan
@@ -760,6 +761,70 @@ export default function PreRegistrationPage() {
       showToast("error", "Could not save plan");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCopyCourses = async () => {
+    if (!data) return;
+
+    const allCourses: { code: string; name: string; credits: number; slots: string | null; category: string }[] = [];
+
+    for (const o of data.offerings) {
+      if (o.completedInSemester !== null) continue;
+      if (!o.isCompulsory && !selected.has(o.id)) continue;
+      allCourses.push({ code: o.courseCode, name: o.courseName, credits: o.credits, slots: o.slots, category: o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory });
+    }
+
+    const extraItems = [
+      ...internshipCourses.p399.map(c => ({ ...c, category: "FE" })),
+      ...internshipCourses.p396.map(c => ({ ...c, category: "FE" })),
+      ...(mtp1Course ? [{ ...mtp1Course, category: "MTP" }] : []),
+    ];
+    for (const c of extraItems) {
+      if (selectedExtra.has(c.id)) {
+        allCourses.push({ code: formatCourseCode(c.code), name: c.name, credits: c.credits, slots: null, category: c.category });
+      }
+    }
+
+    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP"];
+    const grouped = new Map<string, typeof allCourses>();
+    for (const c of allCourses) {
+      const list = grouped.get(c.category) ?? [];
+      list.push(c);
+      grouped.set(c.category, list);
+    }
+
+    const studentName = data.studentInfo?.name ?? "Student";
+    const branch = data.studentInfo?.branch ?? "";
+    const sem = data.offeringSemester;
+
+    let text = `${studentName} | ${branch} | Semester ${sem}\nPre-Registration Plan\n`;
+    let totalCourses = 0;
+    let totalCredits = 0;
+
+    for (const cat of ORDER) {
+      const courses = grouped.get(cat);
+      if (!courses || courses.length === 0) continue;
+      const catLabel = CATEGORY_LABEL[cat] ?? cat;
+      const catCredits = courses.reduce((s, c) => s + c.credits, 0);
+      totalCourses += courses.length;
+      totalCredits += catCredits;
+      text += `\n${catLabel} (${courses.length} course${courses.length !== 1 ? "s" : ""}, ${formatCredits(catCredits)} cr)\n`;
+      for (const c of courses) {
+        const slot = c.slots ? ` [${c.slots}]` : "";
+        text += `• ${c.code} — ${c.name} (${formatCredits(c.credits)} cr)${slot}\n`;
+      }
+    }
+
+    text += `\nTotal: ${totalCourses} courses, ${formatCredits(totalCredits)} cr`;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      showToast("success", "Courses copied to clipboard");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      showToast("error", "Could not copy to clipboard");
     }
   };
 
@@ -1308,20 +1373,31 @@ export default function PreRegistrationPage() {
             </p>
             <p className="text-xs text-foreground-secondary">Planning only · not official registration</p>
           </div>
-          <button
-            onClick={handleSavePlan}
-            disabled={saving}
-            className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2
-              disabled:opacity-50 disabled:cursor-not-allowed
-              ${saved ? "bg-success text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
-          >
-            {saving ? (
-              <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
+          <div className="flex items-center gap-2">
+            {saved && (
+              <button
+                onClick={handleCopyCourses}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-border bg-surface hover:bg-surface-hover text-foreground"
+              >
+                {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+                {copied ? "Copied!" : "Copy Courses"}
+              </button>
             )}
-            {saving ? "Saving…" : saved ? "Saved" : "Save Plan"}
-          </button>
+            <button
+              onClick={handleSavePlan}
+              disabled={saving}
+              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2
+                disabled:opacity-50 disabled:cursor-not-allowed
+                ${saved ? "bg-success text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
+            >
+              {saving ? (
+                <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {saving ? "Saving…" : saved ? "Saved" : "Save Plan"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
