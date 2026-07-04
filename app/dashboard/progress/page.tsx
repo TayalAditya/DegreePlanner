@@ -741,6 +741,8 @@ export default function ProgressPage() {
 
   const icBasketUsedForDisplay: ICBasketUsed = { ic1: false, ic2: false };
   const hssUsedForDisplay = { credits: 0 };
+  const deUsedForDisplay = { credits: 0 };
+  const deCapForDisplay = progress?.creditsRequiredByCategory?.DE ?? 28;
 
   const semesterCourses = sortedActiveEnrollments
     .map((e) => {
@@ -754,33 +756,108 @@ export default function ProgressPage() {
           status: e.status,
           grade: e.grade,
           category: "AUDIT" as CourseCategory,
-          splitCategory: undefined as undefined,
-          splitCredits: undefined as undefined,
+          splitCategory: undefined as string | undefined,
+          splitCredits: undefined as number | undefined,
         };
       }
+
+      // Check for branch-mapping-defined splits (e.g. 12.45308: 3cr DC + 1.66cr FE)
+      const mapping = pickRelevantBranchMapping(user?.branch, e.course.branchMappings);
+      if (mapping?.splitCategory && mapping.splitAmount != null && mapping.splitAmount > 0) {
+        const mainCr = subtractCredits(e.course.credits, mapping.splitAmount);
+        const mainCat = (mapping.courseCategory in categoryLabels ? mapping.courseCategory : "FE") as CourseCategory;
+        const splitCat = (mapping.splitCategory in categoryLabels ? mapping.splitCategory : "FE") as string;
+        if (mainCat === "DE" && e.status === "COMPLETED" && (!e.grade || e.grade !== "F")) {
+          deUsedForDisplay.credits = addCredits(deUsedForDisplay.credits, mainCr);
+        }
+        return {
+          id: e.id,
+          semester: e.semester,
+          code: formatCourseCode(e.course.code),
+          name: e.course.name,
+          credits: e.course.credits,
+          status: e.status,
+          grade: e.grade,
+          category: mainCat,
+          splitCategory: splitCat,
+          splitCredits: mapping.splitAmount,
+        };
+      }
+
       // IKS courses always count fully in HSS — no cap split for display
       const eCode2 = normalizeCode(e.course.code);
       const isIksDisplay = eCode2 === "IC181" || eCode2 === "IK593" || /^IK\d/.test(eCode2) ||
         (eCode2 === "IC182" && (inferredBatch === 2024 || inferredBatch === 2025));
       const hssBefore = hssUsedForDisplay.credits;
       if (isIksDisplay) {
-        // Update hssUsed so subsequent courses see the correct remaining cap
         hssUsedForDisplay.credits = Math.min(progress?.creditsRequiredByCategory?.HSS ?? HSS_FE_CAP, hssBefore + (e.course.credits || 0));
       }
       let category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
-      // Belt-and-suspenders: HS-xxx courses must always be HSS regardless of branchMappings.
-      // getCourseCategory already handles this, but defend against edge cases (e.g. courseType override).
       if (!isIksDisplay && eCode2.startsWith("HS") && category !== "HSS") {
         category = "HSS";
         hssUsedForDisplay.credits = Math.min(HSS_FE_CAP, hssBefore + (e.course.credits || 0));
       }
+
+      // HSS overflow split
       const hssAfter = hssUsedForDisplay.credits;
       const hssPortionUsed = isIksDisplay
         ? Math.max(0, hssAfter - hssBefore)
         : subtractCredits(hssAfter, hssBefore);
-      const splitCredits = category === "HSS" && hssPortionUsed < e.course.credits
+      const hssSplitCredits = category === "HSS" && hssPortionUsed < e.course.credits
         ? subtractCredits(e.course.credits, hssPortionUsed)
         : undefined;
+      if (hssSplitCredits !== undefined) {
+        return {
+          id: e.id,
+          semester: e.semester,
+          code: formatCourseCode(e.course.code),
+          name: e.course.name,
+          credits: e.course.credits,
+          status: e.status,
+          grade: e.grade,
+          category,
+          splitCategory: "FE" as string,
+          splitCredits: hssSplitCredits,
+        };
+      }
+
+      // DE overflow split: when cumulative DE exceeds the cap, extra goes to FE
+      const isCompleted = e.status === "COMPLETED" && (!e.grade || e.grade !== "F");
+      if (category === "DE" && isCompleted) {
+        const deBefore = deUsedForDisplay.credits;
+        deUsedForDisplay.credits = addCredits(deBefore, e.course.credits);
+        if (deBefore >= deCapForDisplay) {
+          return {
+            id: e.id,
+            semester: e.semester,
+            code: formatCourseCode(e.course.code),
+            name: e.course.name,
+            credits: e.course.credits,
+            status: e.status,
+            grade: e.grade,
+            category: "FE" as CourseCategory,
+            splitCategory: undefined as string | undefined,
+            splitCredits: undefined as number | undefined,
+          };
+        }
+        if (deUsedForDisplay.credits > deCapForDisplay) {
+          const dePortionUsed = subtractCredits(deCapForDisplay, deBefore);
+          const deSplitCredits = subtractCredits(e.course.credits, dePortionUsed);
+          return {
+            id: e.id,
+            semester: e.semester,
+            code: formatCourseCode(e.course.code),
+            name: e.course.name,
+            credits: e.course.credits,
+            status: e.status,
+            grade: e.grade,
+            category,
+            splitCategory: "FE" as string,
+            splitCredits: deSplitCredits,
+          };
+        }
+      }
+
       return {
         id: e.id,
         semester: e.semester,
@@ -790,8 +867,8 @@ export default function ProgressPage() {
         status: e.status,
         grade: e.grade,
         category,
-        splitCategory: splitCredits !== undefined ? ("FE" as const) : undefined,
-        splitCredits,
+        splitCategory: undefined as string | undefined,
+        splitCredits: undefined as number | undefined,
       };
     })
     .reduce<Record<number, any[]>>((acc, course) => {
@@ -1306,21 +1383,30 @@ export default function ProgressPage() {
                                 </span>
                               </td>
                               <td className="py-2 whitespace-nowrap">
-                                {c.splitCategory ? (
-                                  <span className="inline-flex items-center gap-1">
-                                    <span className={`inline-flex items-center px-2 py-1 rounded-full border border-border ${categoryColors.HSS.bg}`}>
-                                      <span className={`font-semibold text-xs ${categoryColors.HSS.text}`}>
-                                        HSS ({formatCredits(subtractCredits(c.credits, c.splitCredits ?? 0))})
+                                {c.splitCategory ? (() => {
+                                  const mainCat = c.category as CourseCategory;
+                                  const splitCat = c.splitCategory as CourseCategory;
+                                  const mainColors = categoryColors[mainCat] ?? categoryColors.FE;
+                                  const splitColors = categoryColors[splitCat] ?? categoryColors.FE;
+                                  const mainLabel = categoryLabels[mainCat] ?? mainCat;
+                                  const splitLabel = categoryLabels[splitCat] ?? splitCat;
+                                  const mainCr = subtractCredits(c.credits, c.splitCredits ?? 0);
+                                  return (
+                                    <span className="inline-flex items-center gap-1">
+                                      <span className={`inline-flex items-center px-2 py-1 rounded-full border border-border ${mainColors.bg}`}>
+                                        <span className={`font-semibold text-xs ${mainColors.text}`}>
+                                          {mainLabel} ({formatCredits(mainCr)})
+                                        </span>
+                                      </span>
+                                      <span className="text-foreground-secondary text-xs">&amp;</span>
+                                      <span className={`inline-flex items-center px-2 py-1 rounded-full border border-border ${splitColors.bg}`}>
+                                        <span className={`font-semibold text-xs ${splitColors.text}`}>
+                                          {splitLabel} ({formatCredits(c.splitCredits ?? 0)})
+                                        </span>
                                       </span>
                                     </span>
-                                    <span className="text-foreground-secondary text-xs">&amp;</span>
-                                    <span className={`inline-flex items-center px-2 py-1 rounded-full border border-border ${categoryColors.FE.bg}`}>
-                                      <span className={`font-semibold text-xs ${categoryColors.FE.text}`}>
-                                        FE ({formatCredits(c.splitCredits ?? 0)})
-                                      </span>
-                                    </span>
-                                  </span>
-                                ) : (
+                                  );
+                                })() : (
                                   <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}>
                                     <span className={`font-semibold ${colors.text}`}>{label}</span>
                                   </span>
