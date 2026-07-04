@@ -530,6 +530,118 @@ async function main() {
   });
   console.log("✓ All XX-396P / XX-399P → isPassFailEligible: true");
 
+  // ─── RWTH Aachen – Semester Exchange courses (CSE) ─────────────────────
+  const rwthDescription =
+    "Available via Semester Exchange (RWTH Aachen) only. Can be taken in Semester 5, 6, or 7.";
+
+  // Pure FE courses
+  const rwthFECourses = [
+    { code: "81.00003", name: "Entrepreneurship 101 - Thinking & Acting Like an Entrepreneur 1", credits: 0.66 },
+    { code: "81.00102", name: "Entrepreneurship 101 - Thinking & Acting Like an Entrepreneur 2", credits: 0.66 },
+    { code: "81.00103", name: "Entrepreneurship 101 - Thinking & Acting Like an Entrepreneur 3", credits: 0.66 },
+    { code: "81.00104", name: "Entrepreneurship 101 - Thinking & Acting Like an Entrepreneur 4", credits: 0.66 },
+  ];
+
+  for (const c of rwthFECourses) {
+    const course = await prisma.course.upsert({
+      where: { code: c.code },
+      update: { name: c.name, credits: c.credits },
+      create: {
+        code: c.code,
+        name: c.name,
+        credits: c.credits,
+        department: "RWTH Aachen (Semester Exchange)",
+        level: 100,
+        description: rwthDescription,
+        offeredInFall: true,
+        offeredInSpring: true,
+        isActive: true,
+      },
+    });
+
+    await prisma.courseBranchMapping.upsert({
+      where: { courseId_branch_batch: { courseId: course.id, branch: "CSE", batch: "" } },
+      update: { courseCategory: CourseCategoryType.FE, isRequired: false },
+      create: {
+        courseId: course.id,
+        branch: "CSE",
+        courseCategory: CourseCategoryType.FE,
+        isRequired: false,
+      },
+    });
+
+    console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → CSE:FE`);
+  }
+
+  // 12.45308 Introduction to AI — replaces CS-305, split: 3cr DC + 1.66cr FE
+  const rwthAI = await prisma.course.upsert({
+    where: { code: "12.45308" },
+    update: { name: "Introduction to Artificial Intelligence", credits: 4.66 },
+    create: {
+      code: "12.45308",
+      name: "Introduction to Artificial Intelligence",
+      credits: 4.66,
+      department: "RWTH Aachen (Semester Exchange)",
+      level: 300,
+      description: `${rwthDescription} Replaces CS-305. Credits split: 3 cr count as DC, 1.66 cr counts as FE.`,
+      offeredInFall: true,
+      offeredInSpring: true,
+      isActive: true,
+    },
+  });
+
+  await prisma.courseBranchMapping.upsert({
+    where: { courseId_branch_batch: { courseId: rwthAI.id, branch: "CSE", batch: "" } },
+    update: { courseCategory: CourseCategoryType.DC, splitCategory: CourseCategoryType.FE, splitAmount: 1.66 },
+    create: {
+      courseId: rwthAI.id,
+      branch: "CSE",
+      courseCategory: CourseCategoryType.DC,
+      isRequired: false,
+      splitCategory: CourseCategoryType.FE,
+      splitAmount: 1.66,
+    },
+  });
+  console.log("✓ 12.45308 Introduction to Artificial Intelligence (4.66 cr) → CSE: 3cr DC + 1.66cr FE");
+
+  // DE courses
+  const rwthDECourses = [
+    { code: "12.00148", name: "Research Focus Class Industrial Applications for LLM-driven Agentic Systems", credits: 4 },
+    { code: "42.00017", name: "Seminar Societal Challenges Datathon", credits: 2 },
+    { code: "12.04574", name: "Virtual Reality I", credits: 4 },
+  ];
+
+  for (const c of rwthDECourses) {
+    const course = await prisma.course.upsert({
+      where: { code: c.code },
+      update: { name: c.name, credits: c.credits },
+      create: {
+        code: c.code,
+        name: c.name,
+        credits: c.credits,
+        department: "RWTH Aachen (Semester Exchange)",
+        level: 300,
+        description: rwthDescription,
+        offeredInFall: true,
+        offeredInSpring: true,
+        isActive: true,
+      },
+    });
+
+    await prisma.courseBranchMapping.upsert({
+      where: { courseId_branch_batch: { courseId: course.id, branch: "CSE", batch: "" } },
+      update: { courseCategory: CourseCategoryType.DE, isRequired: false },
+      create: {
+        courseId: course.id,
+        branch: "CSE",
+        courseCategory: CourseCategoryType.DE,
+        isRequired: false,
+      },
+    });
+
+    console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → CSE:DE`);
+  }
+
   console.log("\nDone!");
 }
 
