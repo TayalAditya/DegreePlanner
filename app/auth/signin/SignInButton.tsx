@@ -1,10 +1,14 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 
 export function SignInButton() {
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const rawCallbackUrl = searchParams.get("callbackUrl");
+  const callbackUrl = rawCallbackUrl?.startsWith("/") ? rawCallbackUrl : "/dashboard";
 
   useEffect(() => {
     sessionStorage.removeItem("acadSecSetup");
@@ -13,7 +17,7 @@ export function SignInButton() {
   const handleSignIn = async () => {
     setIsLoading(true);
     try {
-      await signIn("google", { callbackUrl: "/dashboard" });
+      await signIn("google", { callbackUrl });
     } catch (error) {
       console.error("Sign in error:", error);
     } finally {

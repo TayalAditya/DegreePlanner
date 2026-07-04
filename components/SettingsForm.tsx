@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Mail, BookOpen, Save, Palette, Check } from "lucide-react";
+import { User, Mail, BookOpen, Save, Palette, Check, Share2, Copy, RefreshCw, Link as LinkIcon } from "lucide-react";
 import { getAllBranches } from "@/lib/branches";
 import { useTheme } from "./ThemeProvider";
+import { useToast } from "./ToastProvider";
+import { copyToClipboard } from "@/lib/utils";
 
 interface SettingsFormProps {
   user: any;
@@ -13,6 +15,7 @@ interface SettingsFormProps {
 
 export function SettingsForm({ user }: SettingsFormProps) {
   const { palette, setPalette } = useTheme();
+  const { showToast } = useToast();
   const router = useRouter();
   const queryClient = useQueryClient();
   const branches = getAllBranches();
@@ -23,6 +26,19 @@ export function SettingsForm({ user }: SettingsFormProps) {
     enrollmentId: user.enrollmentId || "",
     branch: user.branch || "",
   });
+  const [shareState, setShareState] = useState<{
+    isProfileShared: boolean;
+    shareToken: string | null;
+  }>({
+    isProfileShared: false,
+    shareToken: null,
+  });
+  const [shareLoading, setShareLoading] = useState(true);
+  const [shareOrigin, setShareOrigin] = useState("");
+  const shareUrl =
+    shareOrigin && shareState.shareToken
+      ? `${shareOrigin}/share/${shareState.shareToken}`
+      : "";
 
   const paletteOptions = [
     { value: "default" as const, label: "Default", swatches: ["#4f46e5", "#7c3aed", "#14b8a6"] },
@@ -32,6 +48,8 @@ export function SettingsForm({ user }: SettingsFormProps) {
   ];
 
   useEffect(() => {
+    setShareOrigin(window.location.origin);
+
     const loadSettings = async () => {
       try {
         const res = await fetch("/api/user/settings");
@@ -48,7 +66,24 @@ export function SettingsForm({ user }: SettingsFormProps) {
       }
     };
 
+    const loadShareSettings = async () => {
+      try {
+        const res = await fetch("/api/user/share", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        setShareState({
+          isProfileShared: Boolean(data.isProfileShared),
+          shareToken: data.shareToken ?? null,
+        });
+      } catch {
+        // ignore fetch errors, keep default off state
+      } finally {
+        setShareLoading(false);
+      }
+    };
+
     loadSettings();
+    loadShareSettings();
   }, []);
 
   const updateMutation = useMutation({
@@ -67,9 +102,44 @@ export function SettingsForm({ user }: SettingsFormProps) {
     },
   });
 
+  const shareMutation = useMutation({
+    mutationFn: async (action: "toggle" | "regenerate") => {
+      const res = await fetch("/api/user/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      if (!res.ok) throw new Error("Failed to update profile sharing");
+      return {
+        action,
+        data: await res.json(),
+      };
+    },
+    onSuccess: ({ action, data }) => {
+      setShareState({
+        isProfileShared: Boolean(data.isProfileShared),
+        shareToken: data.shareToken ?? null,
+      });
+      if (action === "regenerate") {
+        showToast("success", "Share link regenerated");
+      } else {
+        showToast("success", data.isProfileShared ? "Profile sharing enabled" : "Profile sharing disabled");
+      }
+    },
+    onError: () => {
+      showToast("error", "Could not update profile sharing");
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateMutation.mutate(formData);
+  };
+
+  const handleCopyShareLink = async () => {
+    if (!shareUrl) return;
+    const copied = await copyToClipboard(shareUrl);
+    showToast(copied ? "success" : "error", copied ? "Link copied!" : "Could not copy link");
   };
 
   const isGeFamily = (b: string) => b === "GE" || b.startsWith("GE-");
@@ -143,6 +213,99 @@ export function SettingsForm({ user }: SettingsFormProps) {
           <p className="mt-3 text-xs text-foreground-secondary">
             Tip: You can also switch palettes from the sidebar appearance buttons.
           </p>
+        </div>
+
+        {/* Profile Sharing */}
+        <div className="bg-surface dark:bg-surface rounded-lg border border-border p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="text-lg font-semibold text-foreground mb-1 flex items-center gap-2">
+                <Share2 className="w-4 h-4" />
+                Profile Sharing
+              </h3>
+              <p className="text-sm text-foreground-secondary">
+                Create a login-protected read-only profile link for IIT Mandi students.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={shareState.isProfileShared}
+              onClick={() => shareMutation.mutate("toggle")}
+              disabled={shareLoading || shareMutation.isPending}
+              className={`relative inline-flex h-7 w-12 flex-shrink-0 items-center rounded-full border transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 disabled:opacity-60 ${
+                shareState.isProfileShared
+                  ? "border-primary bg-primary"
+                  : "border-border bg-background-secondary"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                  shareState.isProfileShared ? "translate-x-5" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-border bg-background-secondary/50 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {shareLoading
+                    ? "Loading share status"
+                    : shareState.isProfileShared
+                      ? "Sharing is on"
+                      : "Sharing is off"}
+                </p>
+                <p className="text-xs text-foreground-secondary">
+                  {shareState.isProfileShared
+                    ? "Anyone with the link must sign in with a student Google account."
+                    : "Enable sharing to generate a stable profile link."}
+                </p>
+              </div>
+              {shareMutation.isPending && (
+                <RefreshCw className="w-4 h-4 animate-spin text-primary flex-shrink-0" />
+              )}
+            </div>
+
+            {shareState.isProfileShared && (
+              <div className="mt-4 space-y-3">
+                <label className="block text-sm font-medium text-foreground">
+                  Share link
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="relative flex-1 min-w-0">
+                    <LinkIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-secondary" />
+                    <input
+                      type="text"
+                      readOnly
+                      value={shareUrl}
+                      className="w-full rounded-md border border-border bg-surface py-2 pl-9 pr-3 text-sm text-foreground focus:ring-2 focus:ring-primary focus:border-transparent"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyShareLink}
+                    disabled={!shareUrl}
+                    className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => shareMutation.mutate("regenerate")}
+                    disabled={shareMutation.isPending}
+                    className="inline-flex items-center justify-center gap-2 rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground hover:bg-surface-hover disabled:opacity-50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${shareMutation.isPending ? "animate-spin" : ""}`} />
+                    Regenerate
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Personal Information */}

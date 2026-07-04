@@ -355,6 +355,13 @@ export const authOptions: NextAuthOptions = {
       };
 
       if (!approvedUser) {
+        const domain = user.email.split("@")[1]?.toLowerCase();
+        if (domain === "students.iitmandi.ac.in") {
+          console.log("Login allowed for unapproved IIT Mandi student:", user.email);
+          await logAttempt("allowed_unapproved", "student_share_access");
+          return true;
+        }
+
         console.log("❌ Login rejected: User not in approved list");
         await logAttempt("rejected", "user_not_approved");
         return "/auth/error?error=user_not_approved";

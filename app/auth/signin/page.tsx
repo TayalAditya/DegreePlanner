@@ -1,4 +1,5 @@
 import { Shield, LogIn } from "lucide-react";
+import { Suspense } from "react";
 import { SignInButton } from "./SignInButton";
 
 export default function SignInPage() {
@@ -19,7 +20,13 @@ export default function SignInPage() {
           </div>
 
           <div className="space-y-4">
-            <SignInButton />
+            <Suspense fallback={
+              <div className="w-full rounded-xl border border-border bg-background-secondary px-6 py-3 text-center text-foreground-secondary">
+                Loading sign in...
+              </div>
+            }>
+              <SignInButton />
+            </Suspense>
 
             <div className="pt-4 border-t border-border">
               <div className="flex items-start gap-2 text-sm text-foreground-secondary">

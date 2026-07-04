@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { DashboardOverview } from "@/components/DashboardOverviewDynamic";
 import Link from "next/link";
 import { TimeGreeting } from "@/components/TimeGreeting";
+import { ShareProfileButton } from "@/components/ShareProfileButton";
 import { loadDashboardEnrollments } from "@/lib/enrollmentsQuery";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import {
@@ -32,6 +33,8 @@ export default async function DashboardPage() {
   let completedCoursesCount = 0;
   let totalCreditsRequired = 160;
   let doingMTP = true;
+  let isProfileShared = false;
+  let shareToken: string | null = null;
   // Prefetch cheap server-side data for DashboardOverview (eliminates all 3 client API calls)
   let dashboardUserSettings: any = null;
   // Full enrollment payload (same shape as GET /api/enrollments) so the client
@@ -44,7 +47,14 @@ export default async function DashboardPage() {
         loadDashboardEnrollments(session.user.id),
         prisma.user.findUnique({
           where: { id: session.user.id },
-          select: { doingMTP: true, doingMTP2: true, doingISTP: true, totalPassFailCredits: true },
+          select: {
+            doingMTP: true,
+            doingMTP2: true,
+            doingISTP: true,
+            totalPassFailCredits: true,
+            isProfileShared: true,
+            shareToken: true,
+          },
         }),
         prisma.userProgram.findFirst({
           where: { userId: session.user.id, isPrimary: true },
@@ -78,6 +88,8 @@ export default async function DashboardPage() {
       if (userRecord?.doingMTP !== undefined) {
         doingMTP = userRecord.doingMTP;
       }
+      isProfileShared = userRecord?.isProfileShared ?? false;
+      shareToken = userRecord?.shareToken ?? null;
 
       // Pass user settings + academic state — cheap, already in memory, saves 2 client API calls
       dashboardUserSettings = {
@@ -175,6 +187,7 @@ export default async function DashboardPage() {
                   {session.user.enrollmentId}
                 </span>
               )}
+              <ShareProfileButton isShared={isProfileShared} shareToken={shareToken} />
             </div>
           ) : (
             <p className="mt-3 text-sm sm:text-base text-foreground-secondary max-w-2xl">

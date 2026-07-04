@@ -27,6 +27,8 @@ model User {
   totalPassFailCredits     Int                   @default(0)
   passFailPerSemester      Int                   @default(0)
   doingMTP2                Boolean               @default(true)
+  shareToken               String?               @unique
+  isProfileShared          Boolean               @default(false)
   accounts                 Account[]
   announcements            Announcement[]
   enrollments              CourseEnrollment[]
@@ -44,6 +46,7 @@ model User {
   @@index([email])
   @@index([enrollmentId])
   @@index([branch])
+  @@index([shareToken])
 }
 
 model Account {
