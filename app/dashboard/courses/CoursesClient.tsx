@@ -16,6 +16,7 @@ import {
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { StatCard } from "@/components/StatCard";
+import { getAllBranches } from "@/lib/branches";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { getSpecialDpCategory, getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { addCredits, formatCourseCode, formatCredits, subtractCredits, sumCredits } from "@/lib/utils";
@@ -576,6 +577,15 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
           credits[category] = addCredits(credits[category], e.course.credits);
         }
       });
+
+    const branchConfig = getAllBranches().find((b) => b.code === user?.branch);
+    const deCap = branchConfig?.deCredits ?? 28;
+    if (credits.DE > deCap) {
+      const overflow = subtractCredits(credits.DE, deCap);
+      credits.DE = deCap;
+      credits.FE = addCredits(credits.FE, overflow);
+    }
+
     return { creditsByCategory: credits, completedIcBasketUsed: icBasketUsed };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enrollments, user?.branch]);
@@ -600,6 +610,54 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
       })
       .reduce((sum, e) => addCredits(sum, e.course.credits), 0);
   }, [enrollments, user?.batch, user?.enrollmentId]);
+
+  const enrollmentSplits = useMemo(() => {
+    const splits = new Map<string, { category: string; splitCategory: string; splitCredits: number }>();
+    const branchConfig = getAllBranches().find((b) => b.code === user?.branch);
+    const deCap = branchConfig?.deCredits ?? 28;
+    let deUsed = 0;
+    const icBasketUsed = { ic1: false, ic2: false };
+
+    enrollments
+      .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
+      .sort((a, b) => a.semester - b.semester)
+      .forEach((e) => {
+        if (user?.branch && e.course.branchMappings && e.course.branchMappings.length > 0) {
+          const branchCandidates = getBranchCandidates(user.branch);
+          const mapping = branchCandidates
+            .map((b) => e.course.branchMappings?.find((m) => m.branch === b))
+            .find(Boolean);
+          if (mapping?.splitCategory && mapping?.splitAmount != null && mapping.splitAmount > 0) {
+            const mainCat = mapping.courseCategory || "FE";
+            splits.set(e.id, {
+              category: mainCat,
+              splitCategory: mapping.splitCategory,
+              splitCredits: mapping.splitAmount,
+            });
+            if (mainCat === "DE") deUsed = addCredits(deUsed, subtractCredits(e.course.credits, mapping.splitAmount));
+            return;
+          }
+        }
+
+        const category = getCourseCategory(e, icBasketUsed);
+        if (category === "DE") {
+          const deBefore = deUsed;
+          deUsed = addCredits(deUsed, e.course.credits);
+          if (deBefore >= deCap) {
+            splits.set(e.id, { category: "FE", splitCategory: "", splitCredits: 0 });
+          } else if (deUsed > deCap) {
+            const dePortionUsed = subtractCredits(deCap, deBefore);
+            splits.set(e.id, {
+              category: "DE",
+              splitCategory: "FE",
+              splitCredits: subtractCredits(e.course.credits, dePortionUsed),
+            });
+          }
+        }
+      });
+    return splits;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enrollments, user?.branch]);
 
   const determineCourseType = (course: Course): string => {
     const code = course.code.toUpperCase();
@@ -976,6 +1034,60 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
                                       {SCHOOL_META[getCourseSchoolKey(enrollment.course)].label}
                                     </span>
                                   </div>
+                                  {(() => {
+                                    const split = enrollmentSplits.get(enrollment.id);
+                                    if (split && split.splitCategory) {
+                                      const mainCat = split.category as keyof typeof categoryColors;
+                                      const splitCat = split.splitCategory as keyof typeof categoryColors;
+                                      const mainColors = categoryColors[mainCat] ?? categoryColors.FE;
+                                      const splitColors = categoryColors[splitCat] ?? categoryColors.FE;
+                                      const mainLabels: Record<string, string> = {
+                                        IC: "IC", IC_BASKET: "IC Basket", DC: "DC", DE: "DE",
+                                        FE: "FE", HSS: "HSS", IKS: "IKS", MTP: "MTP", ISTP: "ISTP",
+                                      };
+                                      const mainCr = subtractCredits(enrollment.course.credits, split.splitCredits);
+                                      return (
+                                        <div className="flex items-center gap-1 mb-1">
+                                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full border border-border ${mainColors.bg}`}>
+                                            <span className={`font-semibold text-[10px] ${mainColors.text}`}>
+                                              {mainLabels[mainCat] ?? mainCat} ({formatCredits(mainCr)})
+                                            </span>
+                                          </span>
+                                          <span className="text-foreground-secondary text-[10px]">&</span>
+                                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full border border-border ${splitColors.bg}`}>
+                                            <span className={`font-semibold text-[10px] ${splitColors.text}`}>
+                                              {mainLabels[splitCat] ?? splitCat} ({formatCredits(split.splitCredits)})
+                                            </span>
+                                          </span>
+                                        </div>
+                                      );
+                                    }
+                                    if (split && !split.splitCategory) {
+                                      const feColors = categoryColors.FE;
+                                      return (
+                                        <div className="mb-1">
+                                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full border border-border ${feColors.bg}`}>
+                                            <span className={`font-semibold text-[10px] ${feColors.text}`}>Free Elective</span>
+                                          </span>
+                                        </div>
+                                      );
+                                    }
+                                    const cat = getCourseCategory(enrollment) as keyof typeof categoryColors;
+                                    const colors = categoryColors[cat];
+                                    if (!colors) return null;
+                                    const catLabels: Record<string, string> = {
+                                      IC: "Institute Core", IC_BASKET: "IC Basket", DC: "Discipline Core",
+                                      DE: "Discipline Elective", FE: "Free Elective", HSS: "HSS+IKS",
+                                      IKS: "HSS+IKS", MTP: "MTP", ISTP: "ISTP",
+                                    };
+                                    return (
+                                      <div className="mb-1">
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full border border-border ${colors.bg}`}>
+                                          <span className={`font-semibold text-[10px] ${colors.text}`}>{catLabels[cat] ?? cat}</span>
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
                                 </button>
                                 <div className="flex flex-col gap-2">
                                   {enrollment.grade && (
