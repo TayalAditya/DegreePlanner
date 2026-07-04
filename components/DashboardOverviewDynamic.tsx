@@ -1,20 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-// SSR is enabled (no `ssr: false`) so the dashboard content is server-rendered
-// into the initial HTML instead of appearing only after client hydration + a
-// client fetch. Still code-split via dynamic() to keep it out of shared chunks.
-const DashboardOverviewInner = dynamic(
-  () => import("@/components/DashboardOverview").then((m) => ({ default: m.DashboardOverview })),
-  {
-    loading: () => (
-      <div className="space-y-4 animate-pulse">
-        <div className="h-48 bg-surface rounded-xl border border-border" />
-        <div className="h-28 bg-surface rounded-xl border border-border" />
-      </div>
-    ),
-  }
-);
-
-export { DashboardOverviewInner as DashboardOverview };
+// Direct re-export (no next/dynamic). The dashboard's main content is the LCP
+// element, so keeping it in a lazy chunk forced mobile clients to download the
+// page JS, THEN discover + fetch a second chunk before it could paint. Importing
+// it directly folds it into the server-rendered HTML and the main client chunk,
+// which paints the LCP block sooner. The component has no browser-only top-level
+// code (localStorage reads are SSR-guarded), so SSR is safe.
+export { DashboardOverview } from "@/components/DashboardOverview";

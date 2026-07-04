@@ -301,74 +301,94 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     return "FE";
   };
 
-  const activeEnrollmentsForCategory = allEnrollments.filter(
-    (e: any) =>
-      (e.status === "COMPLETED" && (!e.grade || e.grade !== "F")) ||
-      e.status === "IN_PROGRESS"
-  );
+  // All course categorization is O(enrollments) with stateful IC-basket/HSS
+  // accumulators. It's pure over (enrollments, userSettings, minor overrides),
+  // so memoize it — otherwise every background refetch or minor-planner storage
+  // event re-runs the whole categorization on the main thread, hurting INP/LCP
+  // on mobile. getCourseCategory closes over the same inputs listed as deps.
+  const {
+    currentSemesterCourses,
+    currentSemesterBreakdown,
+    currentSemesterTotalCredits,
+    semesterStatsList,
+  } = useMemo(() => {
+    const activeEnrollmentsForCategory = allEnrollments.filter(
+      (e: any) =>
+        (e.status === "COMPLETED" && (!e.grade || e.grade !== "F")) ||
+        e.status === "IN_PROGRESS"
+    );
 
-  const sortedActiveEnrollments = [...activeEnrollmentsForCategory].sort(compareEnrollments);
-  const icBasketUsedForCategory = { ic1: false, ic2: false };
-  const hssUsedForCategory = { credits: 0 };
-  const categorizedById = new Map<string, keyof typeof categoryLabels>();
+    const sortedActiveEnrollments = [...activeEnrollmentsForCategory].sort(compareEnrollments);
+    const icBasketUsedForCategory = { ic1: false, ic2: false };
+    const hssUsedForCategory = { credits: 0 };
+    const categorizedById = new Map<string, keyof typeof categoryLabels>();
 
-  sortedActiveEnrollments.forEach((e: any) => {
-    categorizedById.set(e.id, getCourseCategory(e, icBasketUsedForCategory, hssUsedForCategory));
-  });
+    sortedActiveEnrollments.forEach((e: any) => {
+      categorizedById.set(e.id, getCourseCategory(e, icBasketUsedForCategory, hssUsedForCategory));
+    });
 
-  const currentSemesterCourses = currentSemesterEnrollments
-    .map((e: any) => ({
-      ...e,
-      category: categorizedById.get(e.id) || getCourseCategory(e),
-    }))
-    .sort(compareEnrollments);
+    const curSemCourses = currentSemesterEnrollments
+      .map((e: any) => ({
+        ...e,
+        category: categorizedById.get(e.id) || getCourseCategory(e),
+      }))
+      .sort(compareEnrollments);
 
-  const currentSemesterBreakdown = currentSemesterCourses.reduce(
-    (acc: Record<string, { credits: number; count: number }>, e: any) => {
-      const category = e.category as keyof typeof categoryLabels;
-      const credits = e.course?.credits || 0;
-      const existing = acc[category] || { credits: 0, count: 0 };
-      acc[category] = { credits: addCredits(existing.credits, credits), count: existing.count + 1 };
+    const curSemBreakdown = curSemCourses.reduce(
+      (acc: Record<string, { credits: number; count: number }>, e: any) => {
+        const category = e.category as keyof typeof categoryLabels;
+        const credits = e.course?.credits || 0;
+        const existing = acc[category] || { credits: 0, count: 0 };
+        acc[category] = { credits: addCredits(existing.credits, credits), count: existing.count + 1 };
+        return acc;
+      },
+      {}
+    );
+
+    const curSemTotalCredits = sumCredits(
+      curSemCourses.map((e: any) => e.course?.credits || 0)
+    );
+
+    const icBasketUsedForSemesterStats = { ic1: false, ic2: false };
+    const hssUsedForSemesterStats = { credits: 0 };
+
+    const semesterStats = sortedEnrollments.reduce((acc: Record<number, any>, e: any) => {
+      const sem = e.semester || 0;
+      if (!acc[sem]) {
+        acc[sem] = {
+          semester: sem,
+          total: 0,
+          IC: 0,
+          IC_BASKET: 0,
+          DC: 0,
+          DE: 0,
+          FE: 0,
+          HSS: 0,
+          IKS: 0,
+          MTP: 0,
+          ISTP: 0,
+        };
+        // Reset HSS tracking for each new semester
+        hssUsedForSemesterStats.credits = 0;
+      }
+      const category = getCourseCategory(e, icBasketUsedForSemesterStats, hssUsedForSemesterStats);
+      acc[sem][category] = addCredits(acc[sem][category] || 0, e.course?.credits || 0);
+      acc[sem].total = addCredits(acc[sem].total, e.course?.credits || 0);
       return acc;
-    },
-    {}
-  );
+    }, {});
 
-  const currentSemesterTotalCredits = sumCredits(
-    currentSemesterCourses.map((e: any) => e.course?.credits || 0)
-  );
+    const semStatsList = Object.values(semesterStats).sort(
+      (a: any, b: any) => a.semester - b.semester
+    );
 
-  const icBasketUsedForSemesterStats = { ic1: false, ic2: false };
-  const hssUsedForSemesterStats = { credits: 0 };
-
-  const semesterStats = sortedEnrollments.reduce((acc: Record<number, any>, e: any) => {
-    const sem = e.semester || 0;
-    if (!acc[sem]) {
-      acc[sem] = {
-        semester: sem,
-        total: 0,
-        IC: 0,
-        IC_BASKET: 0,
-        DC: 0,
-        DE: 0,
-        FE: 0,
-        HSS: 0,
-        IKS: 0,
-        MTP: 0,
-        ISTP: 0,
-      };
-      // Reset HSS tracking for each new semester
-      hssUsedForSemesterStats.credits = 0;
-    }
-    const category = getCourseCategory(e, icBasketUsedForSemesterStats, hssUsedForSemesterStats);
-    acc[sem][category] = addCredits(acc[sem][category] || 0, e.course?.credits || 0);
-    acc[sem].total = addCredits(acc[sem].total, e.course?.credits || 0);
-    return acc;
-  }, {});
-
-  const semesterStatsList = Object.values(semesterStats).sort(
-    (a: any, b: any) => a.semester - b.semester
-  );
+    return {
+      currentSemesterCourses: curSemCourses,
+      currentSemesterBreakdown: curSemBreakdown,
+      currentSemesterTotalCredits: curSemTotalCredits,
+      semesterStatsList: semStatsList,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allEnrollments, userSettings, nonMgmtMinorCourseCodes, mappingBranchAliases, currentSemester]);
 
   return (
     <div className="space-y-6">

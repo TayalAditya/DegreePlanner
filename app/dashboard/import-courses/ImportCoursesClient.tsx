@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo, startTransition } from "react";
+import { memo, useState, useEffect, useRef, useCallback, useMemo, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle,
@@ -60,6 +60,93 @@ interface ImportCoursesClientProps {
   initialCurrentSemester?: number;
   initialPreRegLockedSemester?: number | null;
 }
+
+// Memoized so toggling/grading one course only re-renders that row (and any row
+// whose `selected`/`grade` actually changed) instead of the entire course list.
+// This is the main INP win on this page.
+const CourseRow = memo(function CourseRow({
+  course,
+  onToggle,
+  onGrade,
+}: {
+  course: SelectedCourse;
+  onToggle: (code: string, semester: number) => void;
+  onGrade: (code: string, grade: string) => void;
+}) {
+  return (
+    <div
+      className={`p-4 rounded-lg border transition-all ${
+        course.selected
+          ? course.category === "ICB"
+            ? "bg-warning/5 border-warning/40"
+            : "bg-primary/5 border-primary/20"
+          : "bg-background-secondary/60 border-border"
+      }`}
+    >
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+        <button onClick={() => onToggle(course.code, course.semester)} className="mt-1">
+          {course.selected ? (
+            <CheckCircle className="h-5 w-5 text-primary" />
+          ) : (
+            <Circle className="h-5 w-5 text-foreground-secondary" />
+          )}
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 gap-1 mb-2">
+            <span className="font-mono text-sm font-semibold text-primary whitespace-nowrap">
+              {formatCourseCode(course.code)}
+            </span>
+            <span className="text-sm text-foreground break-words">{course.name}</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span
+              className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                course.category === "ICB"
+                  ? "bg-warning/10 text-warning"
+                  : "bg-primary/10 text-primary"
+              }`}
+            >
+              {course.category === "ICB" ? "IC Basket" : course.category}
+            </span>
+            <span className="text-xs text-foreground-secondary">
+              {formatCredits(course.credits)} credits
+            </span>
+            {course.tag && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 font-medium">
+                {course.tag}
+              </span>
+            )}
+            {course.optional && (
+              <span className="text-[10px] text-foreground-secondary italic">
+                optional — tick if you took this
+              </span>
+            )}
+          </div>
+        </div>
+        {course.selected && (
+          <div className="w-full sm:w-32 sm:shrink-0">
+            <select
+              value={course.grade || ""}
+              onChange={(e) => onGrade(course.code, e.target.value)}
+              className="w-full px-2 py-1 text-sm rounded-lg border bg-background"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="">Grade</option>
+              <option value="A">A (10)</option>
+              <option value="A-">A- (9)</option>
+              <option value="B">B (8)</option>
+              <option value="B-">B- (7)</option>
+              <option value="C">C (6)</option>
+              <option value="C-">C- (5)</option>
+              <option value="D">D (4)</option>
+              <option value="P">P (Pass)</option>
+            </select>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
 
 export default function ImportCoursesPage({
   initialBranch,
@@ -550,13 +637,11 @@ export default function ImportCoursesPage({
     setShowOcrModal(false);
   };
 
-  const toggleSemester = (sem: number) => {
-    if (expandedSemesters.includes(sem)) {
-      setExpandedSemesters(expandedSemesters.filter((s) => s !== sem));
-    } else {
-      setExpandedSemesters([...expandedSemesters, sem]);
-    }
-  };
+  const toggleSemester = useCallback((sem: number) => {
+    setExpandedSemesters((prev) =>
+      prev.includes(sem) ? prev.filter((s) => s !== sem) : [...prev, sem]
+    );
+  }, []);
 
   const toggleCourse = useCallback((code: string, semester: number) => {
     startTransition(() => { setCourses((prev) => {
@@ -644,7 +729,7 @@ export default function ImportCoursesPage({
     }); });
   }, [userBatch]);
 
-  const toggleAllInSemester = (sem: number) => {
+  const toggleAllInSemester = useCallback((sem: number) => {
     startTransition(() => {
       setCourses((prev) => {
         const semCourses = prev.filter((c) => c.semester === sem);
@@ -678,15 +763,15 @@ export default function ImportCoursesPage({
         });
       });
     });
-  };
+  }, []);
 
-  const updateGrade = (code: string, grade: string) => {
+  const updateGrade = useCallback((code: string, grade: string) => {
     startTransition(() => {
       setCourses((prev) =>
         prev.map((c) => (c.code === code ? { ...c, grade } : c))
       );
     });
-  };
+  }, []);
 
   const handleGeSpecChange = async (newSpec: string) => {
     if (newSpec === geSubBranch && newSpec === branch) return;
@@ -842,6 +927,27 @@ export default function ImportCoursesPage({
     }
   };
 
+  // Derived per-render values memoized so a single course toggle doesn't rebuild
+  // the semester grouping + summary for the whole list on every keystroke/click.
+  // Declared before the early return below so hook order stays unconditional.
+  const { semesterGroups, selectedCount, totalCredits, pendingKeys } = useMemo(() => {
+    const groups: Record<number, SelectedCourse[]> = {};
+    courses.forEach((course) => {
+      (groups[course.semester] ||= []).push(course);
+    });
+
+    const selected = courses.filter((c) => c.selected);
+    const count = selected.length;
+    const credits = selected.reduce((sum, c) => addCredits(sum, c.credits), 0);
+
+    // Pending keys = courses already in the current in-memory list (not yet imported)
+    const keys = new Set(
+      selected.map((c) => courseIdentityKey(c.code)).filter(Boolean)
+    );
+
+    return { semesterGroups: groups, selectedCount: count, totalCredits: credits, pendingKeys: keys };
+  }, [courses]);
+
   if (submitted) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -863,27 +969,6 @@ export default function ImportCoursesPage({
       </div>
     );
   }
-
-  const semesterGroups: Record<number, SelectedCourse[]> = {};
-  courses.forEach((course) => {
-    if (!semesterGroups[course.semester]) {
-      semesterGroups[course.semester] = [];
-    }
-    semesterGroups[course.semester].push(course);
-  });
-
-  const selectedCount = courses.filter((c) => c.selected).length;
-  const totalCredits = courses
-    .filter((c) => c.selected)
-    .reduce((sum, c) => addCredits(sum, c.credits), 0);
-
-  // Pending keys = courses already in the current in-memory list (not yet imported)
-  const pendingKeys = new Set(
-    courses
-      .filter((c) => c.selected)
-      .map((c) => courseIdentityKey(c.code))
-      .filter(Boolean)
-  );
 
 
   return (
@@ -1335,81 +1420,12 @@ export default function ImportCoursesPage({
                       </p>
                     )}
                     {semCourses.map((course) => (
-                      <div
+                      <CourseRow
                         key={`${course.code}-${course.semester}`}
-                        className={`p-4 rounded-lg border transition-all ${
-                              course.selected
-                            ? course.category === "ICB"
-                              ? "bg-warning/5 border-warning/40"
-                              : "bg-primary/5 border-primary/20"
-                            : "bg-background-secondary/60 border-border"
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                          <button
-                            onClick={() => toggleCourse(course.code, course.semester)}
-                            className="mt-1"
-                          >
-                            {course.selected ? (
-                              <CheckCircle className="h-5 w-5 text-primary" />
-                            ) : (
-                              <Circle className="h-5 w-5 text-foreground-secondary" />
-                            )}
-                          </button>
-                           <div className="flex-1 min-w-0">
-                             <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 gap-1 mb-2">
-                               <span className="font-mono text-sm font-semibold text-primary whitespace-nowrap">
-                                 {formatCourseCode(course.code)}
-                               </span>
-                               <span className="text-sm text-foreground break-words">
-                                 {course.name}
-                               </span>
-                             </div>
-                            <div className="flex flex-wrap items-center gap-2 mb-2">
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                                course.category === "ICB"
-                                  ? "bg-warning/10 text-warning"
-                                  : "bg-primary/10 text-primary"
-                              }`}>
-                                {course.category === "ICB" ? "IC Basket" : course.category}
-                              </span>
-                              <span className="text-xs text-foreground-secondary">
-                                {formatCredits(course.credits)} credits
-                              </span>
-                              {course.tag && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 font-medium">
-                                  {course.tag}
-                                </span>
-                              )}
-                              {course.optional && (
-                                <span className="text-[10px] text-foreground-secondary italic">
-                                  optional — tick if you took this
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          {course.selected && (
-                            <div className="w-full sm:w-32 sm:shrink-0">
-                              <select
-                                value={course.grade || ""}
-                                onChange={(e) => updateGrade(course.code, e.target.value)}
-                                className="w-full px-2 py-1 text-sm rounded-lg border bg-background"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <option value="">Grade</option>
-                                <option value="A">A (10)</option>
-                                <option value="A-">A- (9)</option>
-                                <option value="B">B (8)</option>
-                                <option value="B-">B- (7)</option>
-                                <option value="C">C (6)</option>
-                                <option value="C-">C- (5)</option>
-                                <option value="D">D (4)</option>
-                                <option value="P">P (Pass)</option>
-                              </select>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                        course={course}
+                        onToggle={toggleCourse}
+                        onGrade={updateGrade}
+                      />
                     ))}
                   </div>
                 )}
