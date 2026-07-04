@@ -408,6 +408,24 @@ export function ProgressChart({
     return set;
   }, [enrollments]);
 
+  const dbEquivMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    (enrollments || []).forEach((e: any) => {
+      const eqList: { code: string }[] = e?.course?.equivalentCourses;
+      if (!eqList || eqList.length === 0) return;
+      const enrolledNorm = normalizeCourseCode(e?.course?.code);
+      for (const eq of eqList) {
+        const eqNorm = normalizeCourseCode(eq.code);
+        if (eqNorm === enrolledNorm) continue;
+        if (!map[eqNorm]) map[eqNorm] = [];
+        if (!map[eqNorm].includes(enrolledNorm)) map[eqNorm].push(enrolledNorm);
+        if (!map[enrolledNorm]) map[enrolledNorm] = [];
+        if (!map[enrolledNorm].includes(eqNorm)) map[enrolledNorm].push(eqNorm);
+      }
+    });
+    return map;
+  }, [enrollments]);
+
   if (enrollments && enrollments.length > 0) {
     const shouldCount = (e: any) => {
       if (e?.status === "COMPLETED") return !e?.grade || e.grade !== "F";
@@ -427,6 +445,28 @@ export function ProgressChart({
     sortedEnrollments.forEach((e: any) => {
       const code = String(e.course?.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
       const credits = e.course?.credits || 0;
+
+      // Check for branch-mapping-defined splits (e.g. 12.45308: 3cr DC + 1.66cr FE)
+      const mappings: any[] = e.course?.branchMappings || [];
+      if (mappings.length > 0 && userBranch) {
+        const rawBranch = String(userBranch).trim().toUpperCase();
+        const aliasList = getBranchCandidates(rawBranch).filter((b) => b !== "COMMON");
+        const candidates = [rawBranch, ...aliasList, "COMMON"];
+        let splitMapping: any = null;
+        for (const c of candidates) {
+          const m = mappings.find((m: any) => m.branch === c && (!m.batch || m.batch === ""));
+          if (m) { splitMapping = m; break; }
+        }
+        if (splitMapping?.splitCategory && splitMapping.splitAmount != null && splitMapping.splitAmount > 0) {
+          const mainCr = subtractCredits(credits, splitMapping.splitAmount);
+          const mainCat = splitMapping.courseCategory in categoryCredits ? splitMapping.courseCategory : "FE";
+          const splitCat = splitMapping.splitCategory in categoryCredits ? splitMapping.splitCategory : "FE";
+          categoryCredits[mainCat] = addCredits(categoryCredits[mainCat], mainCr);
+          categoryCredits[splitCat] = addCredits(categoryCredits[splitCat], splitMapping.splitAmount);
+          return;
+        }
+      }
+
       // IKS courses go through the same HSS+IKS cap (max 15/12) — overflow → FE
       const isIksType = code === "IC181" || code === "IK593" || /^IK\d/.test(code) ||
         (code === "IC182" && (userBatch === 2024 || userBatch === 2025));
@@ -725,12 +765,14 @@ export function ProgressChart({
     const isCompleted = (code: string) => {
       const norm = normalizeCourseCode(code);
       if (completedCodes.has(norm)) return true;
-      return (COURSE_EQUIV[norm] || []).some((alt) => completedCodes.has(normalizeCourseCode(alt)));
+      const allEquivs = [...(COURSE_EQUIV[norm] || []), ...(dbEquivMap[norm] || [])];
+      return allEquivs.some((alt) => completedCodes.has(normalizeCourseCode(alt)));
     };
     const isInProgress = (code: string) => {
       const norm = normalizeCourseCode(code);
       if (inProgressCodes.has(norm)) return true;
-      return (COURSE_EQUIV[norm] || []).some((alt) => inProgressCodes.has(normalizeCourseCode(alt)));
+      const allEquivs = [...(COURSE_EQUIV[norm] || []), ...(dbEquivMap[norm] || [])];
+      return allEquivs.some((alt) => inProgressCodes.has(normalizeCourseCode(alt)));
     };
 
     const classify = (courses: DefaultCourse[]) => {
@@ -788,6 +830,7 @@ export function ProgressChart({
     };
   }, [
     completedCodes,
+    dbEquivMap,
     doingMTP,
     doingMTP2,
     enrollments,

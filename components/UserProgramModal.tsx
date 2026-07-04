@@ -18,7 +18,6 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
-import { getAllBranches } from "@/lib/branches";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
@@ -545,8 +544,9 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   const icBasketUsedForDisplay: ICBasketUsed = { ic1: false, ic2: false };
   const hssUsedForDisplay = { credits: 0 };
   const deUsedForDisplay = { credits: 0 };
-  const branchConfig = getAllBranches().find((b) => b.code === userSettings.branch);
-  const deCapForDisplay = branchConfig?.deCredits ?? 28;
+  const deCapForDisplay = Number(
+    progressData?.creditsRequiredByCategory?.DE ?? progressData?.required?.de ?? primaryProgram?.program.deCredits ?? 28
+  );
   const categorizedById = new Map<string, { category: CourseCategory; splitCategory?: string; splitCredits?: number }>();
 
   sortedVisibleEnrollments.forEach((e) => {

@@ -514,6 +514,18 @@ export default function ProgressPage() {
       (e) => e.status === "IN_PROGRESS"
     );
 
+    if (!user?.branch && enrollments.length > 0) {
+      return {
+        totalCreditsEarned: 0,
+        totalCreditsInProgress: 0,
+        totalCreditsRequired,
+        creditsByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0 },
+        creditsInProgressByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0 },
+        creditsRequiredByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0 },
+        semesterWiseCredits: [],
+      };
+    }
+
     const compareEnrollments = (a: Enrollment, b: Enrollment) =>
       (a.semester || 0) - (b.semester || 0) ||
       normalizeCode(a.course.code).localeCompare(normalizeCode(b.course.code));

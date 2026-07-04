@@ -278,6 +278,8 @@ export async function GET() {
     try {
       const progress = await creditCalculator.calculateProgramProgress(session.user.id, userProgram.programId);
       const req = userProgram.program;
+      const adjustedDeCredits = Number(progress?.required?.de ?? req.deCredits);
+      const adjustedFeCredits = Number(progress?.required?.freeElective ?? req.feCredits);
 
       const tally: Record<string, number> = { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, HSS: 0, IKS: 0, FE: 0, MTP: 0, ISTP: 0 };
       const add = (cat: string, cr: number) => { tally[cat] = (tally[cat] ?? 0) + cr; };
@@ -307,8 +309,8 @@ export async function GET() {
       }
 
       // DE overflow → FE (same as creditCalculator)
-      const deOverflow = Math.max(0, (tally.DE ?? 0) - req.deCredits);
-      tally.DE = Math.min(tally.DE ?? 0, req.deCredits);
+      const deOverflow = Math.max(0, (tally.DE ?? 0) - adjustedDeCredits);
+      tally.DE = Math.min(tally.DE ?? 0, adjustedDeCredits);
       tally.FE = (tally.FE ?? 0) + deOverflow;
 
       // IC_BASKET overflow → FE (credits beyond 6cr requirement count as FE)
@@ -327,8 +329,8 @@ export async function GET() {
         IC:       Math.max(0, req.icCredits - IC_BASKET_REQ - HSS_IKS_REQ),
         IC_BASKET: IC_BASKET_REQ,
         DC:   req.dcCredits,
-        DE:   req.deCredits,
-        FE:   req.feCredits,
+        DE:   adjustedDeCredits,
+        FE:   adjustedFeCredits,
         MTP:  progress.required.mtp,
         ISTP: progress.required.istp,
         HSS:  HSS_IKS_REQ,
