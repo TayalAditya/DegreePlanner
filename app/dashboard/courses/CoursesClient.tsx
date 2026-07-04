@@ -12,9 +12,6 @@ import {
   X,
   Award,
   ChevronDown,
-  ChevronRight,
-  Briefcase,
-  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
@@ -180,7 +177,6 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
   const [submitting, setSubmitting] = useState(false);
   const [expandedDepartments, setExpandedDepartments] = useState<string[]>([]);
   const [departmentVisibleCounts, setDepartmentVisibleCounts] = useState<Record<string, number>>({});
-  const [internshipOpen, setInternshipOpen] = useState(true);
   const [searchResultsLimit, setSearchResultsLimit] = useState(20);
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
@@ -353,39 +349,6 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
   }, [selectedDept, tab]);
 
   const enrolledCourseIds = new Set(enrollments.map((e) => e.courseId));
-
-  const internshipCourses399P = useMemo(() => {
-    const BRANCH_PREFIX: Record<string, string> = {
-      CSE: "CS", CS: "CS", DSE: "DS", DSAI: "DS",
-      EE: "EE", ME: "ME", CE: "CE", EP: "EP",
-      BE: "BE", BIO: "BE", MNC: "MC", MC: "MC",
-      MS: "MS", MSE: "MS", GE: "GE", VLSI: "VL",
-    };
-    const branch = (user?.branch ?? "").toUpperCase();
-    const prefix = BRANCH_PREFIX[branch] ?? null;
-    const keep = new Set(["DP399P", ...(prefix ? [`${prefix}399P`] : [])]);
-    return allCourses.filter((c) => keep.has(c.code.toUpperCase().replace(/[^A-Z0-9]/g, "")));
-  }, [allCourses, user?.branch]);
-
-  const internshipCourses396P = useMemo(() => {
-    const BRANCH_PREFIX: Record<string, string> = {
-      CSE: "CS", CS: "CS", DSE: "DS", DSAI: "DS",
-      EE: "EE", ME: "ME", CE: "CE", EP: "EP",
-      BE: "BE", BIO: "BE", MNC: "MC", MC: "MC",
-      MS: "MS", MSE: "MS", GE: "GE", VLSI: "VL",
-    };
-    const branch = (user?.branch ?? "").toUpperCase();
-    const prefix = BRANCH_PREFIX[branch] ?? null;
-    const keep = new Set(["DP396P", ...(prefix ? [`${prefix}396P`] : [])]);
-    return allCourses.filter((c) => keep.has(c.code.toUpperCase().replace(/[^A-Z0-9]/g, "")));
-  }, [allCourses, user?.branch]);
-  const hasEnrolledInternship = useMemo(() =>
-    enrollments.some((e) => {
-      const n = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-      return (n.endsWith("399P") || n.endsWith("396P")) && e.status !== "DROPPED";
-    }),
-    [enrollments]
-  );
 
   const availableCourses = useMemo(
     () => filteredCourses.filter((c) => !enrolledCourseIds.has(c.id)),
@@ -926,7 +889,7 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
       <>
         {tab === "my-courses" && (
           <div
-            className="space-y-4 transition-all duration-200"
+            className="space-y-4"
           >
             {enrollments.length === 0 ? (
               <div className="text-center py-12 bg-surface rounded-xl border border-border">
@@ -973,10 +936,9 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
                           {semesterEnrollments.map((enrollment) => (
                             <div
                               key={enrollment.id}
-                              className="group relative overflow-hidden bg-surface rounded-lg border border-border p-4 hover:border-primary hover:shadow-lg transition-all"
+                              className="group bg-surface rounded-lg border border-border p-4 hover:border-primary transition-colors"
                             >
-                              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                              <div className="relative z-10 flex items-start justify-between gap-4">
+                              <div className="flex items-start justify-between gap-4">
                                 <button
                                   onClick={() => setSelectedCourse(enrollment.course)}
                                   className="flex-1 min-w-0 text-left"
@@ -1051,7 +1013,7 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
         {/* Course Catalog Tab */}
         {tab === "catalog" && (
           <div
-            className="space-y-5 transition-all duration-200"
+            className="space-y-5"
           >
             {/* Search & Filter */}
             <div className="flex flex-col sm:flex-row gap-4">
@@ -1082,106 +1044,6 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
               </select>
             </div>
 
-            {/* Semester-Long Internship Section */}
-            {(internshipCourses399P.length > 0 || internshipCourses396P.length > 0) && (
-              <div className="rounded-xl border border-border bg-surface overflow-hidden">
-                <button
-                  onClick={() => setInternshipOpen((o) => !o)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-surface hover:bg-surface-secondary transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <Briefcase className="w-4 h-4 text-foreground-secondary" />
-                    <span className="text-sm font-semibold text-foreground">Semester-Long Internship</span>
-                    <span className="text-xs text-foreground-secondary bg-background-secondary px-1.5 py-0.5 rounded-full">
-                      {internshipCourses399P.length + internshipCourses396P.length}
-                    </span>
-                    {hasEnrolledInternship && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-success/10 text-success border border-success/20">✓ Enrolled</span>
-                    )}
-                  </div>
-                  {internshipOpen ? <ChevronDown className="w-4 h-4 text-foreground-secondary" /> : <ChevronRight className="w-4 h-4 text-foreground-secondary" />}
-                </button>
-
-                {internshipOpen && (
-                  <div className="border-t border-border divide-y divide-border">
-                    {/* 399P — Onsite */}
-                    {internshipCourses399P.length > 0 && (
-                      <div className="p-4">
-                        <div className="flex items-start gap-2 mb-3">
-                          <div>
-                            <p className="text-sm font-semibold text-foreground">Onsite Internship (399P) — 9 credits P/F</p>
-                            <p className="text-xs text-foreground-secondary mt-0.5">Min 14 weeks · Sem 6 or 7 · No other courses allowed</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-error/5 border border-error/20 mb-3">
-                          <AlertTriangle className="w-3.5 h-3.5 text-error flex-shrink-0 mt-0.5" />
-                          <p className="text-xs text-error">
-                            Cannot enroll alongside any other course · Consumes entire P/F budget → <strong>0 cr remaining</strong>
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {internshipCourses399P.map((c) => (
-                            <div key={c.id} className="flex items-center justify-between gap-2 p-3 rounded-lg border border-border bg-background">
-                              <div>
-                                <p className="text-sm font-medium text-foreground font-mono">{formatCourseCode(c.code)}</p>
-                                <p className="text-xs text-foreground-secondary">{c.name}</p>
-                              </div>
-                              {enrolledCourseIds.has(c.id) ? (
-                                <span className="text-xs px-2 py-1 rounded bg-success/10 text-success border border-success/20 flex-shrink-0">✓ Enrolled</span>
-                              ) : (
-                                <button
-                                  onClick={() => handleAddCourse(c)}
-                                  className="flex-shrink-0 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-1"
-                                >
-                                  <Plus className="w-3.5 h-3.5" /> Add
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 396P — Remote */}
-                    {internshipCourses396P.length > 0 && (
-                      <div className="p-4">
-                        <div className="mb-3">
-                          <p className="text-sm font-semibold text-foreground">Remote Internship (396P) — 6 credits P/F</p>
-                          <p className="text-xs text-foreground-secondary mt-0.5">Min 14 weeks · Sem 6, 7, or 8 · Other courses allowed</p>
-                        </div>
-                        <div className="flex items-start gap-2 p-2.5 rounded-lg bg-warning/5 border border-warning/20 mb-3">
-                          <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
-                          <p className="text-xs text-warning">
-                            Uses 6 of 9 P/F credits → <strong>3 cr P/F remaining</strong> after enrollment
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {internshipCourses396P.map((c) => (
-                            <div key={c.id} className="flex items-center justify-between gap-2 p-3 rounded-lg border border-border bg-background">
-                              <div>
-                                <p className="text-sm font-medium text-foreground font-mono">{formatCourseCode(c.code)}</p>
-                                <p className="text-xs text-foreground-secondary">{c.name}</p>
-                              </div>
-                              {enrolledCourseIds.has(c.id) ? (
-                                <span className="text-xs px-2 py-1 rounded bg-success/10 text-success border border-success/20 flex-shrink-0">✓ Enrolled</span>
-                              ) : (
-                                <button
-                                  onClick={() => handleAddCourse(c)}
-                                  className="flex-shrink-0 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-medium rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-1"
-                                >
-                                  <Plus className="w-3.5 h-3.5" /> Add
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-
             {/* Course List */}
             {filteredCourses.length === 0 ? (
               <div className="text-center py-12 bg-surface rounded-xl border border-border">
@@ -1204,10 +1066,9 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
                             setSelectedCourse(course);
                           }
                         }}
-                        className="group relative overflow-hidden bg-surface rounded-lg border border-border p-5 hover:border-primary hover:shadow-xl transition-all text-left cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                        className="group bg-surface rounded-lg border border-border p-5 hover:border-primary transition-colors text-left cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
                       >
-                        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <div className="relative z-10">
+                        <div>
                           <div className="flex items-start justify-between gap-4 mb-2">
                             <div className="min-w-0">
                               <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors mb-1 truncate">
@@ -1353,10 +1214,9 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
                                           setSelectedCourse(course);
                                         }
                                       }}
-                                      className="group relative overflow-hidden bg-card rounded-lg border border-border p-4 hover:border-primary hover:shadow-lg hover:scale-[1.01] transition-all text-left w-full cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+                                      className="group bg-card rounded-lg border border-border p-4 hover:border-primary transition-colors text-left w-full cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
                                     >
-                                      <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                      <div className="relative z-10">
+                                              <div>
                                         <div className="flex items-start justify-between gap-4 mb-2">
                                           <div className="min-w-0">
                                             <h3 className="text-sm sm:text-base font-bold text-foreground group-hover:text-primary transition-colors mb-1 truncate">
