@@ -41,8 +41,7 @@ export default async function ImportCoursesPage() {
         initialBatch = userRecord.batch ?? null;
         initialEnrollmentId = userRecord.enrollmentId ?? null;
         initialDoingMTP = userRecord.doingMTP ?? true;
-        const mtp2 = (userRecord.doingMTP2 ?? initialDoingMTP) && initialDoingMTP;
-        initialDoingMTP2 = mtp2;
+        initialDoingMTP2 = userRecord.doingMTP2 ?? true;
 
         const batchYear = inferBatchYear(userRecord.batch, userRecord.enrollmentId);
         if (batchYear) {

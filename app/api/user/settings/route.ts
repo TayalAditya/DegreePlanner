@@ -108,41 +108,32 @@ export async function PATCH(req: NextRequest) {
     const updatingISTPPref = doingISTP !== undefined;
 
     let nextDoingMTP = currentUser.doingMTP;
-    let nextDoingMTP2 = currentUser.doingMTP2 ?? currentUser.doingMTP;
+    let nextDoingMTP2 = currentUser.doingMTP2 ?? true;
     let nextDoingISTP = currentUser.doingISTP;
 
     if (doingMTP !== undefined) nextDoingMTP = Boolean(doingMTP);
     if (doingMTP2 !== undefined) nextDoingMTP2 = Boolean(doingMTP2);
     if (doingISTP !== undefined) nextDoingISTP = Boolean(doingISTP);
 
-    // Enforce dependency:
-    // - Explicitly enabling MTP-2 implies MTP-1
-    // - Disabling MTP-1 always disables MTP-2
-    if (doingMTP2 !== undefined && nextDoingMTP2) nextDoingMTP = true;
-    if (!nextDoingMTP) nextDoingMTP2 = false;
+    const currentDoingMTP2 = currentUser.doingMTP2 ?? true;
 
-    const currentDoingMTP2 = (currentUser.doingMTP2 ?? currentUser.doingMTP) && currentUser.doingMTP;
-
-    const skippingMTPAll = updatingMTPPrefs && currentUser.doingMTP && !nextDoingMTP;
-    const skippingMTP2Only = updatingMTPPrefs && !skippingMTPAll && currentDoingMTP2 && !nextDoingMTP2;
+    const skippingMTP1 = updatingMTPPrefs && currentUser.doingMTP && !nextDoingMTP;
+    const skippingMTP2 = updatingMTPPrefs && currentDoingMTP2 && !nextDoingMTP2;
     const skippingISTP = updatingISTPPref && currentUser.doingISTP && !nextDoingISTP;
 
     const user = await prisma.$transaction(async (tx) => {
       // Auto-deregister enrolled courses for skipped components (only IN_PROGRESS)
-      if (skippingMTPAll) {
+      if (skippingMTP1) {
         await tx.courseEnrollment.deleteMany({
           where: {
             userId: session.user.id,
             status: EnrollmentStatus.IN_PROGRESS,
-            OR: [
-              { courseType: CourseType.MTP },
-              { course: { code: { endsWith: "498P" } } },
-              { course: { code: { endsWith: "499P" } } },
-              { course: { code: { contains: "MTP" } } },
-            ],
+            course: { code: { endsWith: "498P" } },
           },
         });
-      } else if (skippingMTP2Only) {
+      }
+
+      if (skippingMTP2) {
         await tx.courseEnrollment.deleteMany({
           where: {
             userId: session.user.id,

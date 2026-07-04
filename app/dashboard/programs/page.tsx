@@ -10,7 +10,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { computeEnrollmentCreditBreakdown } from "@/lib/progressCreditBreakdown";
 import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
-import { getMtpCourseCode, MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
+import { getMtpCourseCode, MTP_COMPONENT_CREDITS } from "@/lib/mtpConfig";
 
 interface Program {
   id: string;
@@ -189,8 +189,7 @@ export default function ProgramsPage() {
       if (userData) {
         setUserSettings(userData);
         setDoingMTP1(userData.doingMTP ?? true);
-        const mtp1 = userData.doingMTP ?? true;
-        setDoingMTP2((userData.doingMTP2 ?? mtp1) && mtp1);
+        setDoingMTP2(userData.doingMTP2 ?? true);
         setDoingISTP(userData.doingISTP ?? true);
       }
     }).catch(() => {}).finally(() => setLoading(false));
@@ -280,9 +279,8 @@ export default function ProgramsPage() {
         const data = await userRes.json();
         setUserSettings(data ?? null);
         const mtp1 = data?.doingMTP ?? true;
-        const mtp2 = (data?.doingMTP2 ?? mtp1) && mtp1;
         setDoingMTP1(mtp1);
-        setDoingMTP2(mtp2);
+        setDoingMTP2(data?.doingMTP2 ?? true);
         setDoingISTP(data?.doingISTP ?? true);
       }
     } catch (error) {
@@ -316,18 +314,17 @@ export default function ProgramsPage() {
   const handleMTP1Change = async (checked: boolean) => {
     if (!checked) {
       const ok = await confirm({
-        title: "Skip MTP?",
+        title: "Skip MTP-1?",
         message:
-          `Any course enrolled for MTP-1 or MTP-2 will be automatically deregistered. +${MTP_TOTAL_CREDITS} DE credits will be added to your requirement.`,
-        confirmText: "Skip MTP",
-        cancelText: "Keep MTP",
+          `Any course enrolled for MTP-1 will be automatically deregistered. +${MTP_COMPONENT_CREDITS} DE credits will be added to your requirement.`,
+        confirmText: "Skip MTP-1",
+        cancelText: "Keep MTP-1",
         variant: "warning",
       });
       if (!ok) return;
 
       setDoingMTP1(false);
-      setDoingMTP2(false);
-      saveProjectPrefs(false, false, doingISTP);
+      saveProjectPrefs(false, doingMTP2, doingISTP);
       return;
     }
 
@@ -352,10 +349,8 @@ export default function ProgramsPage() {
       return;
     }
 
-    // MTP-2 implies MTP-1
-    if (!doingMTP1) setDoingMTP1(true);
     setDoingMTP2(true);
-    saveProjectPrefs(true, true, doingISTP);
+    saveProjectPrefs(doingMTP1, true, doingISTP);
   };
 
   const handleISTPChange = async (checked: boolean) => {
@@ -758,7 +753,7 @@ export default function ProgramsPage() {
                               </p>
                               {!doingMTP1 && (
                                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
-                                  ⚠️ Skipping adds +{MTP_TOTAL_CREDITS} credits to DE
+                                  ⚠️ Skipping adds +{MTP_COMPONENT_CREDITS} credits to DE
                                 </p>
                               )}
                             </div>
@@ -785,16 +780,11 @@ export default function ProgramsPage() {
                                 </span>
                               </div>
                               <p className="text-sm text-foreground-secondary">
-                                {MTP_COMPONENT_CREDITS} credits · {getMtpCourseCode(userSettings?.branch, 2)} · Semester 8 · Requires MTP-1
+                                {MTP_COMPONENT_CREDITS} credits · {getMtpCourseCode(userSettings?.branch, 2)} · Semester 8
                               </p>
-                              {doingMTP1 && !doingMTP2 && (
+                              {!doingMTP2 && (
                                 <p className="text-xs text-orange-600 dark:text-orange-400 mt-2 font-medium">
                                   ⚠️ Skipping adds +{MTP_COMPONENT_CREDITS} credits to DE
-                                </p>
-                              )}
-                              {!doingMTP1 && (
-                                <p className="text-xs text-foreground-secondary mt-2">
-                                  Enabling MTP-2 will automatically enable MTP-1.
                                 </p>
                               )}
                             </div>
@@ -871,6 +861,8 @@ export default function ProgramsPage() {
                     enrollments={programEnrollments}
                     userBranch={userSettings?.branch}
                     userBatch={inferredBatch}
+                    doingMTP={doingMTP1}
+                    doingMTP2={doingMTP2}
                   />
                 ) : (
                   <div className="bg-surface rounded-lg border border-border p-6">

@@ -221,10 +221,8 @@ export default function ImportCoursesPage({
           }
         }
 
-        const mtp1 = data.doingMTP ?? true;
-        const mtp2 = (data.doingMTP2 ?? mtp1) && mtp1;
-        setDoingMTP(mtp1);
-        setDoingMTP2(mtp2);
+        setDoingMTP(data.doingMTP ?? true);
+        setDoingMTP2(data.doingMTP2 ?? true);
       }
     } catch (error) {
       console.error("Failed to load settings:", error);
@@ -318,12 +316,10 @@ export default function ImportCoursesPage({
         const isISTP = ISTP_CODES.some((code) => normalize(code) === normalizedCode);
         const isMTP1 = isMtp1CourseCode(normalizedCode);
         const isMTP2 = isMtp2CourseCode(normalizedCode);
-        // Filter out MTP-1/2 if user disabled MTP entirely
-        if (!doingMTP && (isMTP1 || isMTP2)) {
+        if (!doingMTP && isMTP1) {
           return false;
         }
-        // Filter out MTP-2 if user disabled it (but still doing MTP-1)
-        if (doingMTP && !doingMTP2 && isMTP2) {
+        if (!doingMTP2 && isMTP2) {
           return false;
         }
         // Filter out already imported courses

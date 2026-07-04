@@ -376,8 +376,7 @@ export async function POST(request: NextRequest) {
     const preferenceUpdates: { doingMTP?: boolean; doingMTP2?: boolean; doingISTP?: boolean } = {};
     if (isDpIstp && user.doingISTP === false) preferenceUpdates.doingISTP = true;
     if (isDpMtp1 && user.doingMTP === false) preferenceUpdates.doingMTP = true;
-    if (isDpMtp2 && (user.doingMTP === false || user.doingMTP2 === false)) {
-      preferenceUpdates.doingMTP = true;
+    if (isDpMtp2 && user.doingMTP2 === false) {
       preferenceUpdates.doingMTP2 = true;
     }
 

@@ -18,6 +18,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
+import { getAllBranches } from "@/lib/branches";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
@@ -62,14 +63,21 @@ interface Enrollment {
     name: string;
     credits: number;
     department: string;
-    branchMappings?: { courseCategory: string; branch: string }[];
+    branchMappings?: { courseCategory: string; branch: string; batch?: string | null; splitCategory?: string | null; splitAmount?: number | null }[];
   };
 }
 
 interface UserProgramData {
   programs: UserProgram[];
   enrollments: Enrollment[];
-  userSettings: { branch?: string; batch?: number | null; enrollmentId?: string | null };
+  userSettings: {
+    branch?: string;
+    batch?: number | null;
+    enrollmentId?: string | null;
+    doingMTP?: boolean;
+    doingMTP2?: boolean;
+    doingISTP?: boolean;
+  };
   progressData: any | null;
 }
 
@@ -225,6 +233,27 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     },
     onError: (err) => {
       showToast("error", err instanceof Error ? err.message : "Failed to add course");
+    },
+  });
+
+  const projectSettingsMutation = useMutation({
+    mutationFn: async (patch: { doingMTP?: boolean; doingMTP2?: boolean; doingISTP?: boolean }) => {
+      const res = await fetch(`/api/admin/users/${userId}/programs`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(body?.error || "Failed to update project settings");
+      return body;
+    },
+    onSuccess: () => {
+      showToast("success", "Project settings updated");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-programs", userId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+    },
+    onError: (err) => {
+      showToast("error", err instanceof Error ? err.message : "Failed to update project settings");
     },
   });
 
@@ -719,19 +748,83 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                     {/* MTP / ISTP */}
                     {primaryProgram.program.mtpIstpCredits > 0 && (
                       <div className="mt-4 pt-4 border-t border-border">
-                        <p className="text-sm font-semibold text-foreground mb-2">
-                          Project Requirements
-                        </p>
-                        <div className="flex flex-wrap gap-4 text-sm text-foreground-secondary">
-                          <span>
-                            MTP: {MTP_TOTAL_CREDITS} cr (MTP-1: {MTP_COMPONENT_CREDITS}cr + MTP-2: {MTP_COMPONENT_CREDITS}cr)
-                          </span>
+                        <div className="flex items-center justify-between gap-3 mb-3">
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">
+                              Project Requirements
+                            </p>
+                            <p className="text-xs text-foreground-secondary">
+                              Toggle project credits for this student.
+                            </p>
+                          </div>
+                          {projectSettingsMutation.isPending && (
+                            <Loader2 className="w-4 h-4 animate-spin text-primary flex-shrink-0" />
+                          )}
+                        </div>
+
+                        <div
+                          className={`grid grid-cols-1 gap-3 ${
+                            primaryProgram.program.code === "BSCS" ? "sm:grid-cols-2" : "sm:grid-cols-3"
+                          }`}
+                        >
+                          <label className="flex items-start gap-3 rounded-lg border border-border bg-background-secondary p-3 text-sm text-foreground hover:border-primary/40">
+                            <input
+                              type="checkbox"
+                              checked={userSettings.doingMTP ?? true}
+                              onChange={(event) => projectSettingsMutation.mutate({ doingMTP: event.target.checked })}
+                              disabled={projectSettingsMutation.isPending}
+                              className="mt-0.5 h-4 w-4 accent-primary disabled:cursor-not-allowed"
+                            />
+                            <span>
+                              <span className="font-semibold text-foreground">MTP-1</span>
+                              <span className="block text-xs text-foreground-secondary">
+                                {MTP_COMPONENT_CREDITS} cr
+                              </span>
+                            </span>
+                          </label>
+
+                          <label className="flex items-start gap-3 rounded-lg border border-border bg-background-secondary p-3 text-sm text-foreground hover:border-primary/40">
+                            <input
+                              type="checkbox"
+                              checked={userSettings.doingMTP2 ?? true}
+                              onChange={(event) => projectSettingsMutation.mutate({ doingMTP2: event.target.checked })}
+                              disabled={projectSettingsMutation.isPending}
+                              className="mt-0.5 h-4 w-4 accent-primary disabled:cursor-not-allowed"
+                            />
+                            <span>
+                              <span className="font-semibold text-foreground">MTP-2</span>
+                              <span className="block text-xs text-foreground-secondary">
+                                {MTP_COMPONENT_CREDITS} cr
+                              </span>
+                            </span>
+                          </label>
+
+                          {primaryProgram.program.code !== "BSCS" && (
+                            <label className="flex items-start gap-3 rounded-lg border border-border bg-background-secondary p-3 text-sm text-foreground hover:border-primary/40">
+                              <input
+                                type="checkbox"
+                                checked={userSettings.doingISTP ?? true}
+                                onChange={(event) => projectSettingsMutation.mutate({ doingISTP: event.target.checked })}
+                                disabled={projectSettingsMutation.isPending}
+                                className="mt-0.5 h-4 w-4 accent-primary disabled:cursor-not-allowed"
+                              />
+                              <span>
+                                <span className="font-semibold text-foreground">ISTP</span>
+                                <span className="block text-xs text-foreground-secondary">
+                                  4 cr
+                                </span>
+                              </span>
+                            </label>
+                          )}
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap gap-4 text-xs text-foreground-secondary">
                           {primaryProgram.program.code === "BSCS" ? (
                             <span>
                               Research & Communication: {primaryProgram.program.mtpIstpCredits - MTP_TOTAL_CREDITS} cr
                             </span>
                           ) : (
-                            <span>ISTP: 4 cr (Sem 6)</span>
+                            <span>Unchecked MTP credits move to DE; unchecked ISTP credits move to FE.</span>
                           )}
                         </div>
                       </div>
@@ -751,6 +844,8 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                         enrollments={programEnrollments}
                         userBranch={userSettings.branch}
                         userBatch={inferredBatch}
+                        doingMTP={userSettings.doingMTP}
+                        doingMTP2={userSettings.doingMTP2}
                         disableMinorPlanner={true}
                       />
                     ) : (

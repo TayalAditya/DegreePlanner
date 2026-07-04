@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
     };
 
     let doingMTP1Pref = user.doingMTP ?? true;
-    let doingMTP2Pref = user.doingMTP2 ?? doingMTP1Pref;
+    let doingMTP2Pref = user.doingMTP2 ?? true;
     let doingISTPPref = user.doingISTP ?? true;
 
     const maybeEnableProjectPrefsForCourse = async (normalizedCode: string) => {
@@ -157,10 +157,8 @@ export async function POST(req: NextRequest) {
         doingMTP1Pref = true;
       }
 
-      if (isMtp2CourseCode(normalizedCode) && (!doingMTP1Pref || !doingMTP2Pref)) {
-        updates.doingMTP = true;
+      if (isMtp2CourseCode(normalizedCode) && !doingMTP2Pref) {
         updates.doingMTP2 = true;
-        doingMTP1Pref = true;
         doingMTP2Pref = true;
       }
 

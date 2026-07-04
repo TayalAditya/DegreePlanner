@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { creditCalculator } from "@/lib/creditCalculator";
-import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
 import { courseIdentityKey } from "@/lib/courseIdentity";
 
 const COURSE_NAME_OVERRIDES: Record<string, string> = {
@@ -25,7 +24,14 @@ export async function GET(
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { branch: true, batch: true, enrollmentId: true },
+      select: {
+        branch: true,
+        batch: true,
+        enrollmentId: true,
+        doingMTP: true,
+        doingMTP2: true,
+        doingISTP: true,
+      },
     });
 
     // Auto-enroll in the correct program if the student has none yet
@@ -97,13 +103,67 @@ export async function GET(
     return NextResponse.json({
       programs,
       enrollments: enrollmentsWithOverrides,
-      userSettings: { branch: user?.branch, batch: user?.batch, enrollmentId: user?.enrollmentId },
+      userSettings: {
+        branch: user?.branch,
+        batch: user?.batch,
+        enrollmentId: user?.enrollmentId,
+        doingMTP: user?.doingMTP,
+        doingMTP2: user?.doingMTP2,
+        doingISTP: user?.doingISTP,
+      },
       progressData,
     });
   } catch (error) {
     console.error("Error fetching user programs for admin:", error);
     return NextResponse.json(
       { error: "Failed to fetch user programs" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  const { id: userId } = await params;
+
+  try {
+    const body = await request.json().catch(() => null);
+    const data: { doingMTP?: boolean; doingMTP2?: boolean; doingISTP?: boolean } = {};
+
+    if (body?.doingMTP !== undefined) data.doingMTP = Boolean(body.doingMTP);
+    if (body?.doingMTP2 !== undefined) data.doingMTP2 = Boolean(body.doingMTP2);
+    if (body?.doingISTP !== undefined) data.doingISTP = Boolean(body.doingISTP);
+
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: "No project settings provided" }, { status: 400 });
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        branch: true,
+        batch: true,
+        enrollmentId: true,
+        doingMTP: true,
+        doingMTP2: true,
+        doingISTP: true,
+      },
+    });
+
+    return NextResponse.json({ userSettings: updated });
+  } catch (error) {
+    console.error("Error updating user project settings for admin:", error);
+    return NextResponse.json(
+      { error: "Failed to update project settings" },
       { status: 500 }
     );
   }

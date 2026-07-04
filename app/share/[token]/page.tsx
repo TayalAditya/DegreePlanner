@@ -208,10 +208,8 @@ function buildRequiredCredits(
   const istpCompleted = categoryCredits.ISTP >= 4;
 
   const doingMTP1Pref = user.doingMTP ?? true;
-  const rawDoingMTP2Pref = user.doingMTP2 ?? doingMTP1Pref;
-  const doingMTP2Pref = doingMTP1Pref ? rawDoingMTP2Pref : false;
+  const doingMTP2Pref = user.doingMTP2 ?? true;
   const doingISTPPref = user.doingISTP ?? true;
-  const effectiveDoingMTP1 = doingMTP1Pref || doingMTP2Pref;
 
   let mtpRequired = MTP_TOTAL_CREDITS;
   let istpRequired = isBSProgram ? 0 : 4;
@@ -228,19 +226,14 @@ function buildRequiredCredits(
     }
   }
 
-  if (!mtp2Completed) {
-    if (mtp1Completed) {
-      if (!doingMTP2Pref) {
-        mtpRequired = MTP_COMPONENT_CREDITS;
-        deAdjustment += MTP_COMPONENT_CREDITS;
-      }
-    } else if (!effectiveDoingMTP1) {
-      mtpRequired = 0;
-      deAdjustment += MTP_TOTAL_CREDITS;
-    } else if (!doingMTP2Pref) {
-      mtpRequired = MTP_COMPONENT_CREDITS;
-      deAdjustment += MTP_COMPONENT_CREDITS;
-    }
+  if (!doingMTP1Pref && !mtp1Completed) {
+    mtpRequired = Math.max(0, mtpRequired - MTP_COMPONENT_CREDITS);
+    deAdjustment += MTP_COMPONENT_CREDITS;
+  }
+
+  if (!doingMTP2Pref && !mtp2Completed) {
+    mtpRequired = Math.max(0, mtpRequired - MTP_COMPONENT_CREDITS);
+    deAdjustment += MTP_COMPONENT_CREDITS;
   }
 
   return {

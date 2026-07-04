@@ -613,10 +613,8 @@ export default function ProgressPage() {
     
     // Adjust MTP/ISTP based on user preferences (and ignore skips if already completed)
     const doingMTP1Pref = user?.doingMTP ?? true;
-    const rawDoingMTP2Pref = user?.doingMTP2 ?? doingMTP1Pref;
-    const doingMTP2Pref = doingMTP1Pref ? rawDoingMTP2Pref : false;
+    const doingMTP2Pref = user?.doingMTP2 ?? true;
     const doingISTPPref = user?.doingISTP ?? true;
-    const effectiveDoingMTP1 = doingMTP1Pref || doingMTP2Pref; // MTP-2 implies MTP-1
 
     const istpCreditsCompleted = creditsByCategory.ISTP;
     const completedMtpComponents = new Set(
@@ -644,19 +642,14 @@ export default function ProgressPage() {
       }
     }
 
-    if (!mtp2Completed) {
-      if (mtp1Completed) {
-        if (!doingMTP2Pref) {
-          mtpRequired = MTP_COMPONENT_CREDITS;
-          deAdjustment += MTP_COMPONENT_CREDITS;
-        }
-      } else if (!effectiveDoingMTP1) {
-        mtpRequired = 0;
-        deAdjustment += MTP_TOTAL_CREDITS;
-      } else if (!doingMTP2Pref) {
-        mtpRequired = MTP_COMPONENT_CREDITS;
-        deAdjustment += MTP_COMPONENT_CREDITS;
-      }
+    if (!doingMTP1Pref && !mtp1Completed) {
+      mtpRequired = Math.max(0, subtractCredits(mtpRequired, MTP_COMPONENT_CREDITS));
+      deAdjustment += MTP_COMPONENT_CREDITS;
+    }
+
+    if (!doingMTP2Pref && !mtp2Completed) {
+      mtpRequired = Math.max(0, subtractCredits(mtpRequired, MTP_COMPONENT_CREDITS));
+      deAdjustment += MTP_COMPONENT_CREDITS;
     }
 
     const creditsRequiredByCategory = {

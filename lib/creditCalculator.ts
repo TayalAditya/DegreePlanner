@@ -217,11 +217,8 @@ export class CreditCalculator {
       const isBatch22 = inferredBatch === 2022;
 
       const doingMTP1Pref = user?.doingMTP ?? true;
-      const rawDoingMTP2Pref = user?.doingMTP2 ?? doingMTP1Pref;
-      const doingMTP2Pref = doingMTP1Pref ? rawDoingMTP2Pref : false;
+      const doingMTP2Pref = user?.doingMTP2 ?? true;
       const doingISTPPref = user?.doingISTP ?? true;
-
-      const effectiveDoingMTP1 = doingMTP1Pref || doingMTP2Pref; // MTP-2 implies MTP-1
 
       // If ISTP is skipped (and not already completed), add 4 credits to FE
       if (!isBSProgram && !doingISTPPref && !istpCompleted) {
@@ -234,22 +231,15 @@ export class CreditCalculator {
         istpCredits = 0;
       }
 
-      // MTP preferences:
-      // - Skip all MTP (MTP-1 unchecked): +8 DE and MTP=0 (only if MTP-1 not already completed)
-      // - Skip MTP-2 (MTP-2 unchecked): +4 DE and MTP=4 (only if MTP-2 not already completed)
-      if (!mtp2Completed) {
-        if (mtp1Completed) {
-          if (!doingMTP2Pref) {
-            deCredits += MTP_COMPONENT_CREDITS;
-            mtpCredits = MTP_COMPONENT_CREDITS;
-          }
-        } else if (!effectiveDoingMTP1) {
-          deCredits += mtpCreditsFull;
-          mtpCredits = 0;
-        } else if (!doingMTP2Pref) {
-          deCredits += MTP_COMPONENT_CREDITS;
-          mtpCredits = MTP_COMPONENT_CREDITS;
-        }
+      // MTP-1 and MTP-2 preferences are independent.
+      if (!doingMTP1Pref && !mtp1Completed) {
+        deCredits += MTP_COMPONENT_CREDITS;
+        mtpCredits = Math.max(0, subtractCredits(mtpCredits, MTP_COMPONENT_CREDITS));
+      }
+
+      if (!doingMTP2Pref && !mtp2Completed) {
+        deCredits += MTP_COMPONENT_CREDITS;
+        mtpCredits = Math.max(0, subtractCredits(mtpCredits, MTP_COMPONENT_CREDITS));
       }
     }
 

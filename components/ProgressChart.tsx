@@ -22,6 +22,8 @@ interface ProgressChartProps {
   enrollments?: any[];
   userBranch?: string;
   userBatch?: number | null;
+  doingMTP?: boolean;
+  doingMTP2?: boolean;
   disableMinorPlanner?: boolean; // admin modal: don't apply viewer's minor planner to someone else's courses
 }
 
@@ -127,7 +129,16 @@ const HSS_CORE_CAP_DEFAULT = 15;
 
 const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
 
-export function ProgressChart({ progress, isLoading, enrollments, userBranch, userBatch, disableMinorPlanner }: ProgressChartProps) {
+export function ProgressChart({
+  progress,
+  isLoading,
+  enrollments,
+  userBranch,
+  userBatch,
+  doingMTP,
+  doingMTP2,
+  disableMinorPlanner,
+}: ProgressChartProps) {
   const minorPlanner = useMinorPlannerSelection();
   const nonMgmtMinorCourseCodes = useMemo(() => {
     if (disableMinorPlanner || !minorPlanner.enabled) return new Set<string>();
@@ -146,6 +157,7 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     });
     return out;
   }, [
+    disableMinorPlanner,
     minorPlanner.enabled,
     minorPlanner.codes,
     minorPlanner.countedCourseCodes,
@@ -667,10 +679,22 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
     ));
     const fixedDc = byNormalized(allDefault.filter((c) => c.category === "DC"));
 
+    const completedMtpComponents = new Set(
+      (enrollments || [])
+        .filter((enrollment: any) => enrollment?.status === "COMPLETED" && (!enrollment?.grade || enrollment.grade !== "F"))
+        .map((enrollment: any) => getMtpComponent(enrollment?.course?.code))
+        .filter(Boolean)
+    );
+    const hasExplicitMtpPrefs = doingMTP !== undefined || doingMTP2 !== undefined;
     const mtpCandidates = byNormalized(allDefault.filter((c) => c.category === "MTP"));
     const fixedMtp = mtpCandidates.filter((course) => {
       if (requiredMtp <= 0) return false;
       const component = getMtpComponent(course.code);
+      if (hasExplicitMtpPrefs) {
+        if (component === 1) return (doingMTP ?? true) || completedMtpComponents.has(1);
+        if (component === 2) return (doingMTP2 ?? true) || completedMtpComponents.has(2);
+        return false;
+      }
       if (requiredMtp <= MTP_COMPONENT_CREDITS) return component === 1;
       return component === 1 || component === 2;
     });
@@ -722,12 +746,6 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
       return { pending, inProg };
     };
 
-    const completedMtpComponents = new Set(
-      (enrollments || [])
-        .filter((enrollment: any) => enrollment?.status === "COMPLETED" && (!enrollment?.grade || enrollment.grade !== "F"))
-        .map((enrollment: any) => getMtpComponent(enrollment?.course?.code))
-        .filter(Boolean)
-    );
     const inProgressMtpComponents = new Set(
       (enrollments || [])
         .filter((enrollment: any) => enrollment?.status === "IN_PROGRESS")
@@ -768,7 +786,17 @@ export function ProgressChart({ progress, isLoading, enrollments, userBranch, us
         ...(requiredMtp > 0 ? [{ id: "mtp", title: "MTP", kind: "list" as const, ...mtp }] : []),
       ],
     };
-  }, [completedCodes, enrollments, inProgressCodes, isLoading, progress, userBranch, userBatch]);
+  }, [
+    completedCodes,
+    doingMTP,
+    doingMTP2,
+    enrollments,
+    inProgressCodes,
+    isLoading,
+    progress,
+    userBranch,
+    userBatch,
+  ]);
 
   if (isLoading) {
     return (
