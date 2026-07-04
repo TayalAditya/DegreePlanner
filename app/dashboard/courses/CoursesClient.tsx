@@ -155,9 +155,10 @@ function getCourseSchoolKey(course: Pick<Course, "code" | "department">): School
 interface CoursesClientProps {
   initialEnrollments?: Enrollment[];
   initialUser?: User | null;
+  initialCatalogCount?: number;
 }
 
-export default function CoursesPage({ initialEnrollments, initialUser }: CoursesClientProps = {}) {
+export default function CoursesPage({ initialEnrollments, initialUser, initialCatalogCount }: CoursesClientProps = {}) {
   // Whether the server pre-seeded first-paint data. When true we skip the
   // initial /api/enrollments + /api/user/settings fetch (mutations still refetch).
   const hasInitialData = Array.isArray(initialEnrollments);
@@ -934,7 +935,7 @@ export default function CoursesPage({ initialEnrollments, initialUser }: Courses
                 : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
             }`}
           >
-            Course Catalog ({allCourses.length})
+            Course Catalog ({allCourses.length || initialCatalogCount || 0})
           </button>
         </div>
         <button

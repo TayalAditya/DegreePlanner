@@ -16,10 +16,15 @@ export default async function CoursesPage() {
     batch?: number | null;
     enrollmentId?: string | null;
   } | null = null;
+  // Cheap count so the "Course Catalog (N)" tab shows a real number on first
+  // paint instead of "(0)" (the catalog list itself is lazy-loaded on tab open).
+  // This is the pre-dedup count — off by at most a handful of section-splits —
+  // and is replaced by the exact deduped count once the catalog loads.
+  let initialCatalogCount = 0;
 
   if (session?.user?.id) {
     try {
-      const [enrollments, userRecord] = await Promise.all([
+      const [enrollments, userRecord, catalogCount] = await Promise.all([
         loadDashboardEnrollments(session.user.id),
         prisma.user.findUnique({
           where: { id: session.user.id },
@@ -30,9 +35,11 @@ export default async function CoursesPage() {
             totalPassFailCredits: true,
           },
         }),
+        prisma.course.count({ where: { isActive: true } }),
       ]);
 
       initialEnrollments = enrollments;
+      initialCatalogCount = catalogCount;
       if (userRecord) {
         initialUser = {
           branch: userRecord.branch ?? undefined,
@@ -52,6 +59,7 @@ export default async function CoursesPage() {
     <CoursesClient
       initialEnrollments={initialEnrollments as any}
       initialUser={initialUser}
+      initialCatalogCount={initialCatalogCount}
     />
   );
 }
