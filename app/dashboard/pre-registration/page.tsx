@@ -63,6 +63,12 @@ const CATEGORY_COLOR: Record<string, string> = {
   ISTP: "bg-accent/10 text-accent border-accent/20",
 };
 
+const CATEGORY_BAR_COLOR: Record<string, string> = {
+  DC: "bg-primary", IC: "bg-info", IC_BASKET: "bg-info",
+  DE: "bg-secondary", HSS: "bg-warning", IKS: "bg-warning",
+  FE: "bg-success", MTP: "bg-error", ISTP: "bg-accent",
+};
+
 // Parse slot string — handles +, &, , separators e.g. "B & L4" → ["B","L4"]
 function parseSlots(slots: string | null): string[] {
   if (!slots) return [];
@@ -671,11 +677,19 @@ export default function PreRegistrationPage() {
       const e = map.get(cat) ?? { credits: 0, count: 0 };
       map.set(cat, { credits: e.credits + credits, count: e.count + 1 });
     };
+
+    const req = data.programRequirements;
+    const done = data.completedBreakdown;
+
     for (const o of data.offerings) {
       if (!o.isCompulsory && !selected.has(o.id)) continue;
       if (o.completedInSemester !== null) continue;
-      // IKS is merged into HSS bucket (combined basket)
-      const cat = o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory;
+      let cat = o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory;
+      // Overflow: if requirement already met, reclassify to FE
+      if (req && done && ["DE", "HSS"].includes(cat)) {
+        const remaining = (req[cat] ?? 0) - (done[cat] ?? 0);
+        if (remaining <= 0) cat = "FE";
+      }
       add(cat, o.credits);
     }
     // Add internship / MTP-1 selections
@@ -772,7 +786,8 @@ export default function PreRegistrationPage() {
     for (const o of data.offerings) {
       if (o.completedInSemester !== null) continue;
       if (!o.isCompulsory && !selected.has(o.id)) continue;
-      allCourses.push({ code: o.courseCode, name: o.courseName, credits: o.credits, slots: o.slots, category: o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory });
+      const cat = o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory;
+      allCourses.push({ code: o.courseCode, name: o.courseName, credits: o.credits, slots: o.slots, category: cat });
     }
 
     const extraItems = [
@@ -1287,12 +1302,12 @@ export default function PreRegistrationPage() {
               const pct = Math.min(100, (credits / totalCredits) * 100);
               return (
                 <div key={cat} className="flex items-center gap-3">
-                  <span className={`flex-shrink-0 w-12 text-center px-1.5 py-0.5 text-xs font-semibold rounded border ${color}`}>
+                  <span className={`flex-shrink-0 w-16 text-center px-1.5 py-0.5 text-xs font-semibold rounded border ${color}`}>
                     {label}
                   </span>
                   <div className="flex-1 h-2 rounded-full bg-background-secondary overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${color.includes("primary") ? "bg-primary" : color.includes("secondary") ? "bg-secondary" : color.includes("warning") ? "bg-warning" : color.includes("success") ? "bg-success" : color.includes("info") ? "bg-info" : color.includes("error") ? "bg-error" : color.includes("accent") ? "bg-accent" : "bg-foreground-secondary"}`}
+                      className={`h-full rounded-full ${CATEGORY_BAR_COLOR[cat] ?? "bg-foreground-secondary"}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
