@@ -66,6 +66,12 @@ export async function GET(
               branchMappings: {
                 select: { courseCategory: true, branch: true, batch: true, splitCategory: true, splitAmount: true },
               },
+              equivalents: {
+                select: { equivalent: { select: { code: true, name: true } } },
+              },
+              equivalentFor: {
+                select: { course: { select: { code: true, name: true } } },
+              },
             },
           },
         },
@@ -90,12 +96,19 @@ export async function GET(
     const enrollmentsWithOverrides = enrollments.map((e) => {
       const key = courseIdentityKey(e.course?.code);
       const overrideName = COURSE_NAME_OVERRIDES[key];
-      if (!overrideName) return e;
+
+      const equivCodes = [
+        ...e.course.equivalents.map((eq) => ({ code: eq.equivalent.code, name: eq.equivalent.name })),
+        ...e.course.equivalentFor.map((eq) => ({ code: eq.course.code, name: eq.course.name })),
+      ];
+
+      const { equivalents, equivalentFor, ...courseRest } = e.course;
       return {
         ...e,
         course: {
-          ...e.course,
-          name: overrideName,
+          ...courseRest,
+          ...(overrideName ? { name: overrideName } : {}),
+          ...(equivCodes.length > 0 ? { equivalentCourses: equivCodes } : {}),
         },
       };
     });
