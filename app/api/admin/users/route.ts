@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { normalizeBranchCode } from "@/lib/branchInfo";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -51,7 +52,7 @@ export async function GET() {
       name: user.name,
       email: user.email,
       enrollmentId: user.enrollmentId,
-      branch: user.branch,
+      branch: normalizeBranchCode(user.branch) || user.branch,
       batch: user.batch,
       completedCredits,
       inProgressCredits,
