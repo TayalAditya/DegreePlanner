@@ -44,6 +44,7 @@ interface Enrollment {
       splitCategory?: string | null;
       splitAmount?: number | null;
     }[];
+    equivalentCourses?: { code: string; name: string }[];
   };
 }
 
@@ -1101,10 +1102,14 @@ export default function ProgressPage() {
         );
 
         // Build "to be taken" by category from program courses
-        const toBeTakenByCat: Record<string, { code: string; name: string; credits: number; semester: number | null }[]> = {};
+        const toBeTakenByCat: Record<string, { code: string; name: string; credits: number; semester: number | null; fulfilledBy?: string }[]> = {};
         for (const pc of programCourses) {
           const code = normalizeCode(pc.course?.code ?? "");
           if (!code || enrolledCodes.has(code)) continue;
+          // Check if an equivalent course is enrolled (e.g. 12.45308 fulfils CS305)
+          const equivCodes: string[] = pc.course?.equivalentCodes ?? [];
+          const fulfillingEquiv = equivCodes.find((ec: string) => enrolledCodes.has(normalizeCode(ec)));
+          if (fulfillingEquiv) continue;
           const cat = inferProgramCourseCategory(pc);
           if (!toBeTakenByCat[cat]) toBeTakenByCat[cat] = [];
           toBeTakenByCat[cat].push({
@@ -1286,6 +1291,17 @@ export default function ProgressPage() {
       })()}
 
       {/* Courses by Semester */}
+      {(() => {
+        // Build equivalency lookup: normalized code → list of equivalent course codes
+        const equivLookup = new Map<string, string[]>();
+        for (const e of enrollments) {
+          const ec = (e.course as any).equivalentCourses as { code: string; name: string }[] | undefined;
+          if (ec && ec.length > 0) {
+            equivLookup.set(normalizeCode(e.course.code), ec.map((x) => formatCourseCode(x.code)));
+          }
+        }
+
+        return (
       <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
         <h3 className="text-base sm:text-xl font-semibold text-foreground mb-2">
           Courses (Semester-wise)
@@ -1366,6 +1382,11 @@ export default function ProgressPage() {
                               </td>
                               <td className="py-2 pr-4 text-foreground-secondary">
                                 {c.name}
+                                {equivLookup.has(normalizeCode(c.code)) && (
+                                  <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-accent/10 text-accent border border-accent/20">
+                                    ≡ {equivLookup.get(normalizeCode(c.code))!.join(", ")}
+                                  </span>
+                                )}
                               </td>
                               <td className={`py-2 pr-4 text-right whitespace-nowrap ${c.status === "AUDIT" ? "text-foreground-muted line-through" : "text-foreground"}`}>
                                 {formatCredits(c.credits)}
@@ -1436,6 +1457,8 @@ export default function ProgressPage() {
           Note: IC Basket courses can show up as FE based on your branch compulsion + first-course logic.
         </p>
       </div>
+        );
+      })()}
 
       {/* Semester-wise Progress */}
       {progress.semesterWiseCredits.length > 0 && (

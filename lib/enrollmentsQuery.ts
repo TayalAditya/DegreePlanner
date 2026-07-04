@@ -46,6 +46,12 @@ export async function loadDashboardEnrollments(
               splitAmount: true,
             },
           },
+          equivalents: {
+            select: { equivalent: { select: { code: true, name: true } } },
+          },
+          equivalentFor: {
+            select: { course: { select: { code: true, name: true } } },
+          },
         },
       },
     },
@@ -55,13 +61,19 @@ export async function loadDashboardEnrollments(
   return enrollments.map((e) => {
     const key = courseIdentityKey(e.course?.code);
     const overrideName = COURSE_NAME_OVERRIDES[key];
-    if (!overrideName) return e;
-    return {
-      ...e,
-      course: {
-        ...e.course,
-        name: overrideName,
-      },
+
+    const equivCodes = [
+      ...e.course.equivalents.map((eq) => ({ code: eq.equivalent.code, name: eq.equivalent.name })),
+      ...e.course.equivalentFor.map((eq) => ({ code: eq.course.code, name: eq.course.name })),
+    ];
+
+    const { equivalents, equivalentFor, ...courseRest } = e.course;
+    const course = {
+      ...courseRest,
+      ...(overrideName ? { name: overrideName } : {}),
+      ...(equivCodes.length > 0 ? { equivalentCourses: equivCodes } : {}),
     };
+
+    return { ...e, course };
   });
 }

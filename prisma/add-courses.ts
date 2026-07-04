@@ -642,6 +642,23 @@ async function main() {
     console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → CSE:DE`);
   }
 
+  // ── Course Equivalencies ─────────────────────────────────────────────────
+  // 12.45308 (RWTH AI) replaces CS305 (IIT Mandi AI)
+  const cs305ForEquiv = await prisma.course.findUnique({ where: { code: "CS305" } });
+  if (cs305ForEquiv && rwthAI) {
+    await prisma.courseEquivalent.upsert({
+      where: { courseId_equivalentId: { courseId: rwthAI.id, equivalentId: cs305ForEquiv.id } },
+      update: {},
+      create: { courseId: rwthAI.id, equivalentId: cs305ForEquiv.id },
+    });
+    await prisma.courseEquivalent.upsert({
+      where: { courseId_equivalentId: { courseId: cs305ForEquiv.id, equivalentId: rwthAI.id } },
+      update: {},
+      create: { courseId: cs305ForEquiv.id, equivalentId: rwthAI.id },
+    });
+    console.log("✓ Equivalency: 12.45308 ↔ CS305");
+  }
+
   console.log("\nDone!");
 }
 

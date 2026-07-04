@@ -35,13 +35,34 @@ export async function GET() {
             branchMappings: {
               select: { branch: true, batch: true, courseCategory: true, splitCategory: true, splitAmount: true },
             },
+            equivalents: {
+              select: { equivalent: { select: { code: true } } },
+            },
+            equivalentFor: {
+              select: { course: { select: { code: true } } },
+            },
           },
         },
       },
       orderBy: [{ semester: "asc" }, { course: { code: "asc" } }],
     });
 
-    return NextResponse.json(programCourses, {
+    const result = programCourses.map((pc) => {
+      const equivCodes = [
+        ...pc.course.equivalents.map((e) => e.equivalent.code),
+        ...pc.course.equivalentFor.map((e) => e.course.code),
+      ];
+      const { equivalents, equivalentFor, ...courseRest } = pc.course;
+      return {
+        ...pc,
+        course: {
+          ...courseRest,
+          equivalentCodes: equivCodes.length > 0 ? equivCodes : undefined,
+        },
+      };
+    });
+
+    return NextResponse.json(result, {
       headers: { "Cache-Control": "private, max-age=120, stale-while-revalidate=60" },
     });
   } catch (error) {
