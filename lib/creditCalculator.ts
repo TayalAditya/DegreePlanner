@@ -668,7 +668,7 @@ export class CreditCalculator {
         // Non-compulsory IC basket course → check branch mapping before defaulting to FE
         // (e.g. IC-240 is ICB2 but mapped as DC for MSE)
         const basketFallbackCategory = pickBranchMappingCategory(enrollment.course.branchMappings, branch, batchYear);
-        if (basketFallbackCategory === "DC" || basketFallbackCategory === "IC" || basketFallbackCategory === "IC_BASKET") {
+        if (basketFallbackCategory === "DC") {
           addBreakdownCredits("core", credits);
         } else if (basketFallbackCategory === "DE") {
           addDeCredits(credits, enrollment.course.code);

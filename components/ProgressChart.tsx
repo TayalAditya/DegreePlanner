@@ -587,33 +587,66 @@ export function ProgressChart({
       }
     };
 
-    completedEnrollments.forEach((e: any) => {
-      const hssBefore = hssUsed.credits;
-      const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
+    const addEnrollment = (bucket: typeof completed, e: any) => {
+      const code = String(e.course?.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
       const credits = e.course?.credits || 0;
-      if (category === "HSS") {
-        const actualHss = subtractCredits(hssUsed.credits, hssBefore);
-        add(completed, "HSS", actualHss);
-        const feOverflow = subtractCredits(credits, actualHss);
-        if (feOverflow > 0) add(completed, "FE", feOverflow);
-      } else {
-        add(completed, category, credits);
-      }
-    });
 
-    inProgressEnrollments.forEach((e: any) => {
+      const mappings: any[] = e.course?.branchMappings || [];
+      if (mappings.length > 0 && userBranch) {
+        const rawBranch = String(userBranch).trim().toUpperCase();
+        const aliasList = getBranchCandidates(rawBranch).filter((branch) => branch !== "COMMON");
+        const candidates = [rawBranch, ...aliasList, "COMMON"];
+        let splitMapping: any = null;
+        for (const c of candidates) {
+          const batchSpecific = mappings.find((m: any) => m.branch === c && userBatch && m.batch === String(userBatch));
+          if (batchSpecific) {
+            splitMapping = batchSpecific;
+            break;
+          }
+
+          const global = mappings.find((m: any) => m.branch === c && (!m.batch || m.batch === ""));
+          if (global) {
+            splitMapping = global;
+            break;
+          }
+        }
+
+        if (splitMapping?.splitCategory && splitMapping.splitAmount != null && splitMapping.splitAmount > 0) {
+          const mainCr = subtractCredits(credits, splitMapping.splitAmount);
+          const mainCat = splitMapping.courseCategory in categoryCredits ? splitMapping.courseCategory : "FE";
+          const splitCat = splitMapping.splitCategory in categoryCredits ? splitMapping.splitCategory : "FE";
+          add(bucket, mainCat, mainCr);
+          add(bucket, splitCat, splitMapping.splitAmount);
+          return;
+        }
+      }
+
+      const isIksType = code === "IC181" || code === "IK593" || /^IK\d/.test(code) ||
+        (code === "IC182" && (userBatch === 2024 || userBatch === 2025));
+      if (isIksType) {
+        const before = hssUsed.credits;
+        hssUsed.credits = Math.min(HSS_CORE_CAP, addCredits(before, credits));
+        const actualHss = subtractCredits(hssUsed.credits, before);
+        if (actualHss > 0) add(bucket, "HSS", actualHss);
+        const feOverflow = subtractCredits(credits, actualHss);
+        if (feOverflow > 0) add(bucket, "FE", feOverflow);
+        return;
+      }
+
       const hssBefore = hssUsed.credits;
       const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
-      const credits = e.course?.credits || 0;
       if (category === "HSS") {
         const actualHss = subtractCredits(hssUsed.credits, hssBefore);
-        add(inProgress, "HSS", actualHss);
+        add(bucket, "HSS", actualHss);
         const feOverflow = subtractCredits(credits, actualHss);
-        if (feOverflow > 0) add(inProgress, "FE", feOverflow);
+        if (feOverflow > 0) add(bucket, "FE", feOverflow);
       } else {
-        add(inProgress, category, credits);
+        add(bucket, category, credits);
       }
-    });
+    };
+
+    completedEnrollments.forEach((e: any) => addEnrollment(completed, e));
+    inProgressEnrollments.forEach((e: any) => addEnrollment(inProgress, e));
 
     // DE overflow â†’ FE: excess DE beyond requirement counts as Free Electives
     if (requiredDE > 0) {
