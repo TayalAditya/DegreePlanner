@@ -46,11 +46,18 @@ export async function POST(req: NextRequest) {
   const ctx = offeringContext(session.user.batch, session.user.enrollmentId);
   if (!ctx) return NextResponse.json({ error: "Unknown batch" }, { status: 400 });
 
-  const offering = await prisma.courseOffering.findUnique({
+  // Prefer a real CourseOffering; fall back to a Course row so synthetic cards
+  // (internship 399P/396P, MTP) — whose id is a Course.id — can also be reported.
+  const offeringRow = await prisma.courseOffering.findUnique({
     where: { id: offeringId },
     select: { id: true, courseCode: true, courseName: true },
   });
-  if (!offering) return NextResponse.json({ error: "Offering not found" }, { status: 404 });
+  const offering =
+    offeringRow ??
+    (await prisma.course
+      .findUnique({ where: { id: offeringId }, select: { id: true, code: true, name: true } })
+      .then((c) => (c ? { id: c.id, courseCode: c.code, courseName: c.name } : null)));
+  if (!offering) return NextResponse.json({ error: "Course not found" }, { status: 404 });
 
   const roll = (session.user.enrollmentId || "").toUpperCase();
   const name = session.user.name || "Unknown";

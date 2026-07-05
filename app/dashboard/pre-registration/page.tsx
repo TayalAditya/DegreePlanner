@@ -368,11 +368,13 @@ function toOffering(c: InternshipCourse, category: string): Offering {
   };
 }
 
-function InternshipSection({ internshipCourses, selected, onToggle, pfCreditsUsed }: {
+function InternshipSection({ internshipCourses, selected, onToggle, pfCreditsUsed, samarthReported, onToggleSamarth }: {
   internshipCourses: { p399: InternshipCourse[]; p396: InternshipCourse[] };
   selected: Set<string>;
   onToggle: (id: string) => void;
   pfCreditsUsed: number;
+  samarthReported?: Set<string>;
+  onToggleSamarth?: (offeringId: string) => void;
 }) {
   const PF_TOTAL = 9;
   const pfRemaining399 = Math.max(0, PF_TOTAL - pfCreditsUsed - 9);
@@ -388,7 +390,7 @@ function InternshipSection({ internshipCourses, selected, onToggle, pfCreditsUse
               <p className="text-xs text-error">Cannot enroll alongside any other course in Sem 6/7</p>
             </div>
             {internshipCourses.p399.map((c) => (
-              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={false} onToggle={() => onToggle(c.id)} />
+              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={false} onToggle={() => onToggle(c.id)} samarthReported={samarthReported?.has(c.id)} onToggleSamarth={onToggleSamarth} />
             ))}
           </div>
         )}
@@ -400,7 +402,7 @@ function InternshipSection({ internshipCourses, selected, onToggle, pfCreditsUse
               <p className="text-xs text-warning">Uses {Math.min(6, PF_TOTAL - pfCreditsUsed)} of {PF_TOTAL} total P/F credits</p>
             </div>
             {internshipCourses.p396.map((c) => (
-              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={false} onToggle={() => onToggle(c.id)} />
+              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={false} onToggle={() => onToggle(c.id)} samarthReported={samarthReported?.has(c.id)} onToggleSamarth={onToggleSamarth} />
             ))}
           </div>
         )}
@@ -409,15 +411,17 @@ function InternshipSection({ internshipCourses, selected, onToggle, pfCreditsUse
   );
 }
 
-function MtpSection({ course, selected, onToggle }: {
+function MtpSection({ course, selected, onToggle, samarthReported, onToggleSamarth }: {
   course: InternshipCourse;
   selected: Set<string>;
   onToggle: (id: string) => void;
+  samarthReported?: Set<string>;
+  onToggleSamarth?: (offeringId: string) => void;
 }) {
   return (
     <Section title="Major Technical Project - I (MTP)" count={1} headerBg="bg-error/5">
       <p className="text-xs text-foreground-secondary mb-2">4 credits · DC · Semester 7 onwards</p>
-      <CourseCard offering={toOffering(course, "MTP")} checked={selected.has(course.id)} disabled={false} onToggle={() => onToggle(course.id)} />
+      <CourseCard offering={toOffering(course, "MTP")} checked={selected.has(course.id)} disabled={false} onToggle={() => onToggle(course.id)} samarthReported={samarthReported?.has(course.id)} onToggleSamarth={onToggleSamarth} />
     </Section>
   );
 }
@@ -928,7 +932,7 @@ export default function PreRegistrationPage() {
 
         {/* Show internship section even when no offerings uploaded */}
         {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={(data?.studentInfo?.pfCreditsUsed ?? 0) + pfCreditsFromSelection} />
+          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={(data?.studentInfo?.pfCreditsUsed ?? 0) + pfCreditsFromSelection} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} />
         )}
       </div>
     );
@@ -1258,7 +1262,7 @@ export default function PreRegistrationPage() {
 
       {/* MTP-1 */}
       {mtp1Course && (
-        <MtpSection course={mtp1Course} selected={selectedExtra} onToggle={toggleExtra} />
+        <MtpSection course={mtp1Course} selected={selectedExtra} onToggle={toggleExtra} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} />
       )}
 
       {/* DE */}
@@ -1352,7 +1356,7 @@ export default function PreRegistrationPage() {
 
       {/* Semester-Long Internship */}
       {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-        <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={data.studentInfo?.pfCreditsUsed ?? 0} />
+        <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={data.studentInfo?.pfCreditsUsed ?? 0} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} />
       )}
 
       {/* Semester breakdown analysis */}
