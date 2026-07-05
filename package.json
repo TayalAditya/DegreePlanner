@@ -35,6 +35,7 @@
     "lucide-react": "^0.469.0",
     "next": "^16.1.6",
     "next-auth": "^4.24.11",
+    "nodemailer": "^7.0.13",
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^5.4.530",
     "react": "^19.0.0",
@@ -47,6 +48,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.35",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.24",

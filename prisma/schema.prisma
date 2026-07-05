@@ -36,6 +36,7 @@ model User {
   documents                Document[]
   notifications            Notification[]
   preRegistrationPlans     PreRegistrationPlan[]
+  samarthReports           SamarthReport[]
   sessions                 Session[]
   supportTickets           SupportTicket[]
   approvedTimetableEntries TimetableEntry[]      @relation("TimetableApprovedBy")
@@ -464,6 +465,26 @@ model PreRegistrationPlan {
 
   @@unique([userId, offeringSemester, offeringYear])
   @@index([offeringSemester, offeringYear])
+}
+
+model SamarthReport {
+  id               String    @id @default(cuid())
+  userId           String
+  rollNumber       String
+  studentName      String
+  branch           String
+  batchYear        Int
+  courseOfferingId String
+  courseCode       String
+  courseName       String
+  offeringSemester Int
+  offeringYear     Int
+  sentAt           DateTime?
+  createdAt        DateTime  @default(now())
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseOfferingId, offeringSemester, offeringYear])
+  @@index([sentAt, createdAt])
 }
 
 model LoginAttempt {

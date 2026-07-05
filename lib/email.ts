@@ -1,0 +1,95 @@
+import nodemailer from "nodemailer";
+
+/**
+ * Gmail SMTP transport backed by an app password.
+ * GMAIL_USER + GMAIL_APP_PASSWORD must be set (app password stored with spaces stripped).
+ * Created lazily so a missing config doesn't crash the app on import.
+ */
+let cachedTransport: nodemailer.Transporter | null = null;
+
+function getTransport(): nodemailer.Transporter {
+  if (cachedTransport) return cachedTransport;
+
+  const user = process.env.GMAIL_USER;
+  const pass = (process.env.GMAIL_APP_PASSWORD || "").replace(/\s+/g, "");
+  if (!user || !pass) {
+    throw new Error(
+      "Email not configured — set GMAIL_USER and GMAIL_APP_PASSWORD environment variables."
+    );
+  }
+
+  cachedTransport = nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,
+    secure: true,
+    auth: { user, pass },
+  });
+  return cachedTransport;
+}
+
+export interface SamarthReportRow {
+  rollNumber: string;
+  studentName: string;
+  batchYear: number;
+  branch: string;
+  courseCode: string;
+  courseName: string;
+}
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
+ * Send a digest of "not on Samarth" course reports to the academic secretary.
+ * Body is a tab-separated table so rows paste straight into Excel columns.
+ */
+export async function sendSamarthDigest(rows: SamarthReportRow[]): Promise<void> {
+  if (rows.length === 0) return;
+
+  const to = process.env.SAMARTH_DIGEST_TO || "b23243@students.iitmandi.ac.in";
+  const from = process.env.GMAIL_USER!;
+
+  const header = ["Roll", "Name", "Year", "Branch", "Course"];
+  const tsvRows = rows.map((r) => [
+    r.rollNumber,
+    r.studentName,
+    String(r.batchYear),
+    r.branch,
+    `${r.courseCode} ${r.courseName}`.trim(),
+  ]);
+
+  const text =
+    [header, ...tsvRows].map((cols) => cols.join("\t")).join("\n") + "\n";
+
+  const htmlRows = tsvRows
+    .map(
+      (cols) =>
+        "<tr>" +
+        cols.map((c) => `<td style="padding:4px 10px;border:1px solid #ddd">${escapeHtml(c)}</td>`).join("") +
+        "</tr>"
+    )
+    .join("");
+  const html = `
+    <p>Courses students report as <strong>not visible on Samarth</strong> (${rows.length}):</p>
+    <table style="border-collapse:collapse;font-family:sans-serif;font-size:13px">
+      <thead>
+        <tr>${header.map((h) => `<th style="padding:4px 10px;border:1px solid #ddd;background:#f4f4f4;text-align:left">${h}</th>`).join("")}</tr>
+      </thead>
+      <tbody>${htmlRows}</tbody>
+    </table>
+    <p style="color:#888;font-size:12px">Tip: copy the plain-text version below to paste directly into Excel columns.</p>
+    <pre style="font-family:monospace;font-size:12px;background:#f8f8f8;padding:10px;border:1px solid #eee;white-space:pre">${escapeHtml(text)}</pre>
+  `;
+
+  await getTransport().sendMail({
+    from: `Degree Planner <${from}>`,
+    to,
+    subject: `Samarth pre-reg gaps — ${rows.length} course${rows.length !== 1 ? "s" : ""}`,
+    text,
+    html,
+  });
+}
