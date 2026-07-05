@@ -17,7 +17,7 @@ import { ProgressChart } from "@/components/ProgressChart";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
-import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
+import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
@@ -496,6 +496,16 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     }
     if (isDataScienceBranch(branch) && (code.startsWith("DS") || code.startsWith("CS"))) {
       return applyMinorDeOverride("DE", enrollment);
+    }
+
+    // IC202P (Design Practicum) is NOT compulsory for CE/EP/BE(bio)/CH(chemical/BSCS)
+    // from Batch-24 onwards — for those students it's a Free Elective, not Institute Core.
+    if (
+      normalizedCode === "IC202P" &&
+      inferredBatch != null && inferredBatch >= 2024 &&
+      ["CE", "EP", "BE", "CH", "BSCS", "BS"].includes(normalizeBranchCode(branch))
+    ) {
+      return "FE";
     }
 
     if (normalizedCode.startsWith("IC")) return "IC";
