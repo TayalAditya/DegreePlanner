@@ -53,10 +53,8 @@ export async function sendSamarthDigest(rows: SamarthReportRow[]): Promise<void>
   const to = process.env.SAMARTH_DIGEST_TO || "b23243@students.iitmandi.ac.in";
   const from = process.env.GMAIL_USER!;
 
-  const header = ["Roll", "Name", "Year", "Branch", "Course"];
+  const header = ["Year", "Branch", "Course"];
   const tsvRows = rows.map((r) => [
-    r.rollNumber,
-    r.studentName,
     String(r.batchYear),
     r.branch,
     `${r.courseCode} ${r.courseName}`.trim(),
