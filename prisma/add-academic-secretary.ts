@@ -3,23 +3,28 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const email = "academic_secretary@students.iitmandi.ac.in";
+  const emails = [
+    "academic_secretary@students.iitmandi.ac.in",
+    "sae@iitmandi.ac.in",
+  ];
 
-  await prisma.approvedUser.upsert({
-    where: { email },
-    update: { name: "Academic Secretary" },
-    create: {
-      email,
-      name: "Academic Secretary",
-      enrollmentId: null,
-      department: null,
-      branch: null,
-      batch: null,
-      allowedPrograms: [],
-    },
-  });
+  for (const email of emails) {
+    await prisma.approvedUser.upsert({
+      where: { email },
+      update: { name: "Academic Secretary" },
+      create: {
+        email,
+        name: "Academic Secretary",
+        enrollmentId: null,
+        department: null,
+        branch: null,
+        batch: null,
+        allowedPrograms: [],
+      },
+    });
 
-  console.log(`✓ ApprovedUser entry created/updated for ${email}`);
+    console.log(`✓ ApprovedUser entry created/updated for ${email}`);
+  }
 }
 
 main()

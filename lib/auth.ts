@@ -4,12 +4,11 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import type { Adapter } from "next-auth/adapters";
 import { getDepartmentForBranch, getProgramLookupBranchCode, inferBranchFromProgram } from "@/lib/branchInfo";
-import { DOCS_ADMIN_ENROLLMENT_ID } from "@/lib/permissions";
+import { DOCS_ADMIN_ENROLLMENT_ID, isAcadSec as isAcadSecEmail } from "@/lib/permissions";
 
 const SUPPORTED_BATCHES = new Set([2022, 2023, 2024, 2025]);
 const B22_ALLOWED_BRANCHES = new Set(["CSE"]);
 const B24_ALLOWED_BRANCHES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "BioE", "CE", "EP", "GE", "ME", "MNC", "BSCS"]);
-const ACAD_SEC_EMAIL = "academic_secretary@students.iitmandi.ac.in";
 const ENROLLMENT_FALLBACK_ALLOWED_DOMAINS = new Set([
   "students.iitmandi.ac.in",
   "iitmandi.ac.in",
@@ -378,7 +377,7 @@ export const authOptions: NextAuthOptions = {
       // Acad secretary is exempt — they use impersonation to preview any branch/batch
       // and must never lock themselves out by picking an unimplemented combo.
       const enrollmentId = (approvedUser.enrollmentId || "").toUpperCase();
-      const isAcadSec = user.email === ACAD_SEC_EMAIL;
+      const isAcadSec = isAcadSecEmail(user.email);
 
       const isB24 = approvedUser.batch === 2024 || /^B24\d+$/i.test(enrollmentId);
       if (!isAcadSec && isB24 && !B24_ALLOWED_BRANCHES.has(approvedUser.branch || "")) {
@@ -400,15 +399,16 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token, user, account }) {
       const tokenEmail = (token as any).email as string | undefined;
-      const isAcadSec = (user?.email || tokenEmail) === ACAD_SEC_EMAIL;
+      const acadSecEmail = user?.email || tokenEmail;
+      const isAcadSec = isAcadSecEmail(acadSecEmail);
 
       // For acad sec: re-read branch/batch from DB on every session access so that
       // impersonation changes (written by /api/user/impersonate) are reflected in the
       // JWT without requiring a full sign-out/sign-in cycle.
-      if (!user?.email && isAcadSec) {
+      if (!user?.email && isAcadSec && acadSecEmail) {
         try {
           const approvedUser = await prisma.approvedUser.findUnique({
-            where: { email: ACAD_SEC_EMAIL },
+            where: { email: acadSecEmail },
           });
           if (approvedUser) {
             token.branch = approvedUser.branch;

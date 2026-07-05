@@ -3,8 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getProgramLookupBranchCode } from "@/lib/branchInfo";
-
-const ACAD_SEC_EMAIL = "academic_secretary@students.iitmandi.ac.in";
+import { isAcadSec } from "@/lib/permissions";
 
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -13,7 +12,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user.email !== ACAD_SEC_EMAIL) {
+  if (!isAcadSec(session.user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -44,7 +43,7 @@ export async function POST(request: NextRequest) {
 
   // 3. Also update ApprovedUser so branch/batch are reflected in session refresh
   await prisma.approvedUser.update({
-    where: { email: ACAD_SEC_EMAIL },
+    where: { email: session.user.email! },
     data: { branch, batch },
   }).catch(() => {}); // non-fatal if not found
 
