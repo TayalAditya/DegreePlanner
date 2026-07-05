@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PreRegistrationSkeleton } from "./loading";
-import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check } from "lucide-react";
+import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check, EyeOff } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { formatCredits, formatCourseCode } from "@/lib/utils";
 import { MINORS } from "@/lib/minors";
@@ -189,6 +189,7 @@ function slotsClash(a: string | null, b: string | null): boolean {
 
 function CourseCard({
   offering, checked, disabled, onToggle, clashWith, isCompulsory, minorGroupLabel, studentInfo,
+  samarthReported, onToggleSamarth,
 }: {
   offering: Offering & { instructorEmail?: string | null };
   checked: boolean;
@@ -198,6 +199,8 @@ function CourseCard({
   isCompulsory?: boolean;
   minorGroupLabel?: string;
   studentInfo?: { name: string | null; branch: string | null; semester: number } | null;
+  samarthReported?: boolean;
+  onToggleSamarth?: (offeringId: string) => void;
 }) {
   const isCompleted = offering.completedInSemester !== null;
   const catColor = CATEGORY_COLOR[offering.resolvedCategory] ?? "bg-surface-secondary text-foreground-secondary";
@@ -304,6 +307,22 @@ function CourseCard({
               </a>
             );
           })()}
+          {onToggleSamarth && offering.courseId && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleSamarth(offering.id); }}
+              className={`inline-flex items-center gap-1 text-xs transition-colors ${
+                samarthReported
+                  ? "text-warning font-medium"
+                  : "text-foreground-secondary hover:text-warning"
+              }`}
+              title="Report that this course is not visible on the Samarth portal"
+            >
+              {samarthReported
+                ? <><Check className="w-3 h-3" /> Reported to Acad Sec</>
+                : <><EyeOff className="w-3 h-3" /> Not on Samarth</>}
+            </button>
+          )}
         </div>
       </div>
     </label>
@@ -473,6 +492,7 @@ export default function PreRegistrationPage() {
   const [mtp1Course, setMtp1Course] = useState<InternshipCourse | null>(null);
   const [selectedExtra, setSelectedExtra] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
+  const [samarthReported, setSamarthReported] = useState<Set<string>>(new Set());
   const toggleExtra = (id: string) => setSelectedExtra(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); setSaved(false); return s; });
 
   // P/F credits consumed by selected internship in THIS plan
@@ -489,9 +509,16 @@ export default function PreRegistrationPage() {
     Promise.all([
       fetch("/api/pre-registration").then((r) => r.json() as Promise<ApiResponse>),
       fetch("/api/courses").then((r) => r.json()).catch(() => [] as InternshipCourse[]),
+      fetch("/api/pre-registration/samarth-report")
+        .then((r) => r.json())
+        .then((j) => (j?.reportedOfferingIds as string[]) ?? [])
+        .catch(() => [] as string[]),
     ])
-      .then(([d, courses]) => {
+      .then(([d, courses, reportedIds]) => {
         setData(d);
+        if (Array.isArray(reportedIds) && reportedIds.length > 0) {
+          setSamarthReported(new Set(reportedIds));
+        }
 
         // Restore saved plan from embedded response — no second round-trip
         const plan = d.savedPlan;
@@ -778,6 +805,36 @@ export default function PreRegistrationPage() {
     }
   };
 
+  const handleToggleSamarth = async (offeringId: string) => {
+    const wasReported = samarthReported.has(offeringId);
+    // Optimistic flip
+    setSamarthReported((prev) => {
+      const s = new Set(prev);
+      wasReported ? s.delete(offeringId) : s.add(offeringId);
+      return s;
+    });
+    try {
+      const res = await fetch("/api/pre-registration/samarth-report", {
+        method: wasReported ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offeringId }),
+      });
+      if (!res.ok) throw new Error();
+      showToast(
+        "success",
+        wasReported ? "Removed from Samarth report" : "Reported — the Academic Secretary will be notified"
+      );
+    } catch {
+      // Revert on failure
+      setSamarthReported((prev) => {
+        const s = new Set(prev);
+        wasReported ? s.add(offeringId) : s.delete(offeringId);
+        return s;
+      });
+      showToast("error", "Could not update Samarth report");
+    }
+  };
+
   const handleCopyCourses = async () => {
     if (!data) return;
 
@@ -1045,6 +1102,8 @@ export default function PreRegistrationPage() {
                           onToggle={() => handleToggle(offering!)}
                           clashWith={clashMap.get(offering!.id) ?? interClashMap.get(offering!.id)}
                           studentInfo={data.studentInfo}
+                          samarthReported={samarthReported.has(offering!.id)}
+                          onToggleSamarth={handleToggleSamarth}
                         />
                       ))}
                     </div>
@@ -1190,6 +1249,8 @@ export default function PreRegistrationPage() {
               onToggle={() => {}}
               isCompulsory={true}
               studentInfo={data.studentInfo}
+              samarthReported={samarthReported.has(o.id)}
+              onToggleSamarth={handleToggleSamarth}
             />
           ))}
         </Section>
@@ -1213,6 +1274,8 @@ export default function PreRegistrationPage() {
               clashWith={interClashMap.get(o.id)}
               minorGroupLabel={minorOfferingLabels.get(o.id)}
               studentInfo={data.studentInfo}
+              samarthReported={samarthReported.has(o.id)}
+              onToggleSamarth={handleToggleSamarth}
             />
           ))}
         </Section>
@@ -1230,6 +1293,8 @@ export default function PreRegistrationPage() {
               onToggle={() => handleToggle(o)}
               minorGroupLabel={minorOfferingLabels.get(o.id)}
               studentInfo={data.studentInfo}
+              samarthReported={samarthReported.has(o.id)}
+              onToggleSamarth={handleToggleSamarth}
             />
           ))}
         </Section>
@@ -1255,6 +1320,8 @@ export default function PreRegistrationPage() {
                       onToggle={() => handleToggle(o)}
                       minorGroupLabel={minorOfferingLabels.get(o.id)}
                       studentInfo={data.studentInfo}
+                      samarthReported={samarthReported.has(o.id)}
+                      onToggleSamarth={handleToggleSamarth}
                     />
                   ))}
                 </Section>
