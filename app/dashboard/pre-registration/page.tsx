@@ -307,7 +307,7 @@ function CourseCard({
               </a>
             );
           })()}
-          {onToggleSamarth && offering.courseId && (
+          {onToggleSamarth && (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleSamarth(offering.id); }}
