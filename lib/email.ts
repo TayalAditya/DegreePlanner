@@ -53,17 +53,27 @@ export async function sendSamarthDigest(rows: SamarthReportRow[]): Promise<void>
   const to = process.env.SAMARTH_DIGEST_TO || "b23243@students.iitmandi.ac.in";
   const from = process.env.GMAIL_USER!;
 
-  const header = ["Year", "Branch", "Course"];
-  const tsvRows = rows.map((r) => [
+  // HTML grid (top): full detail incl. Roll + Name.
+  const htmlHeader = ["Roll", "Name", "Year", "Branch", "Course"];
+  const htmlDataRows = rows.map((r) => [
+    r.rollNumber,
+    r.studentName,
     String(r.batchYear),
     r.branch,
     `${r.courseCode} ${r.courseName}`.trim(),
   ]);
 
+  // Excel-paste block (bottom): only Year / Branch / Course.
+  const pasteHeader = ["Year", "Branch", "Course"];
+  const pasteRows = rows.map((r) => [
+    String(r.batchYear),
+    r.branch,
+    `${r.courseCode} ${r.courseName}`.trim(),
+  ]);
   const text =
-    [header, ...tsvRows].map((cols) => cols.join("\t")).join("\n") + "\n";
+    [pasteHeader, ...pasteRows].map((cols) => cols.join("\t")).join("\n") + "\n";
 
-  const htmlRows = tsvRows
+  const htmlRows = htmlDataRows
     .map(
       (cols) =>
         "<tr>" +
@@ -75,11 +85,11 @@ export async function sendSamarthDigest(rows: SamarthReportRow[]): Promise<void>
     <p>Courses students report as <strong>not visible on Samarth</strong> (${rows.length}):</p>
     <table style="border-collapse:collapse;font-family:sans-serif;font-size:13px">
       <thead>
-        <tr>${header.map((h) => `<th style="padding:4px 10px;border:1px solid #ddd;background:#f4f4f4;text-align:left">${h}</th>`).join("")}</tr>
+        <tr>${htmlHeader.map((h) => `<th style="padding:4px 10px;border:1px solid #ddd;background:#f4f4f4;text-align:left">${h}</th>`).join("")}</tr>
       </thead>
       <tbody>${htmlRows}</tbody>
     </table>
-    <p style="color:#888;font-size:12px">Tip: copy the plain-text version below to paste directly into Excel columns.</p>
+    <p style="color:#888;font-size:12px">Tip: copy the plain-text version below to paste directly into Excel columns (Year / Branch / Course).</p>
     <pre style="font-family:monospace;font-size:12px;background:#f8f8f8;padding:10px;border:1px solid #eee;white-space:pre">${escapeHtml(text)}</pre>
   `;
 
