@@ -1,8 +1,8 @@
 // Service Worker for PWA functionality
 
-const CACHE_NAME = "degree-planner-v1";
-const STATIC_CACHE = "static-v1";
-const DYNAMIC_CACHE = "dynamic-v1";
+const CACHE_NAME = "degree-planner-v2";
+const STATIC_CACHE = "static-v2";
+const DYNAMIC_CACHE = "dynamic-v2";
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
