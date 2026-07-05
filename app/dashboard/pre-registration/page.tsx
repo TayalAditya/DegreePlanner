@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PreRegistrationSkeleton } from "./loading";
 import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check, EyeOff } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
+import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { formatCredits, formatCourseCode } from "@/lib/utils";
 import { MINORS } from "@/lib/minors";
 
@@ -207,12 +208,24 @@ function CourseCard({
   const catLabel = CATEGORY_LABEL[offering.resolvedCategory] ?? offering.resolvedCategory;
 
   return (
-    <label
+    // Plain div, not <label>: nested interactive elements (the "Not on Samarth"
+    // button, Contact/Curriculum links) inside a <label> caused clicks on them
+    // to also trigger the label's default activation, so tapping report/select
+    // fired the wrong action. A div with an explicit onClick has no such quirk.
+    <div
+      role="button"
+      tabIndex={isCompleted ? -1 : 0}
       className={`flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer
         ${isCompleted ? "opacity-50 cursor-default" : ""}
         ${clashWith ? "border-error/30 bg-error/5" : checked ? "border-primary/30 bg-primary/5" : "border-border bg-surface hover:border-border-hover"}
       `}
       onClick={isCompleted ? undefined : onToggle}
+      onKeyDown={isCompleted ? undefined : (e) => {
+        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onToggle?.();
+        }
+      }}
     >
       {/* Checkbox */}
       <div className={`mt-0.5 flex-shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors
@@ -325,7 +338,7 @@ function CourseCard({
           )}
         </div>
       </div>
-    </label>
+    </div>
   );
 }
 
@@ -508,6 +521,7 @@ export default function PreRegistrationPage() {
     return used;
   }, [selectedExtra, internshipCourses]);
   const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
 
   useEffect(() => {
     Promise.all([
@@ -811,6 +825,20 @@ export default function PreRegistrationPage() {
 
   const handleToggleSamarth = async (offeringId: string) => {
     const wasReported = samarthReported.has(offeringId);
+
+    // Reporting notifies the Academic Secretary, so guard against accidental
+    // taps with a confirmation. Un-reporting is harmless and needs no confirm.
+    if (!wasReported) {
+      const offering = data?.offerings.find((o) => o.id === offeringId);
+      const ok = await confirm({
+        title: "Report to Academic Secretary?",
+        message: `This will notify the Academic Secretary that ${offering?.courseCode ?? "this course"} is not visible on the Samarth portal. Only do this if you've actually checked Samarth and it's missing.`,
+        confirmText: "Yes, report it",
+        cancelText: "Cancel",
+      });
+      if (!ok) return;
+    }
+
     // Optimistic flip
     setSamarthReported((prev) => {
       const s = new Set(prev);
