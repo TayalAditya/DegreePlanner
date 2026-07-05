@@ -124,6 +124,17 @@ function pickBranchMappingCategory(
   return pickBranchMapping(mappings, branch, batchYear)?.courseCategory;
 }
 
+// Branches for which Design Practicum (IC202P) is NOT a compulsory Institute Core
+// from Batch-24 onwards: Civil (CE), Engineering Physics (EP), Bioengineering (BE),
+// and Chemical (CH / BSCS / BS). For these students IC202P is a Free Elective.
+const DP_EXEMPT_BRANCHES = new Set(["CE", "EP", "BE", "CH", "BSCS", "BS"]);
+
+function isDpExemptBranchBatch(branch?: string, batchYear?: number | null): boolean {
+  if (!batchYear || batchYear < 2024) return false;
+  const normalized = normalizeBranchCode(branch);
+  return DP_EXEMPT_BRANCHES.has(normalized);
+}
+
 export class CreditCalculator {
   async calculateProgramProgress(
     userId: string,
@@ -617,6 +628,14 @@ export class CreditCalculator {
       const isICB1 = ICB1_CODES.has(normalizedCode);
       const isICB2 = ICB2_CODES.has(normalizedCode);
       const isIkCourse = /^IK\d/.test(normalizedCode);
+
+      // IC202P (Design Practicum) is NOT compulsory for CE/EP/BE(bio)/CH(chemical/BSCS)
+      // from Batch-24 onwards — for those students it's a Free Elective, not Institute Core.
+      // Checked BEFORE branchMappings so a stale IC mapping can't override it.
+      if (normalizedCode === "IC202P" && isDpExemptBranchBatch(branch, batchYear)) {
+        addBreakdownCredits("freeElective", credits);
+        return;
+      }
 
       // IC Basket compulsion logic - check BEFORE branchMappings
       if ((isICB1 || isICB2) && branch) {
