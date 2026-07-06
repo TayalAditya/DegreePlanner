@@ -29,8 +29,9 @@ export async function POST(request: NextRequest) {
   await prisma.userProgram.deleteMany({ where: { userId } });
 
   // 2. Set branch/batch on User — fake enrollmentId so batch inference works
+  //    Append userId suffix to guarantee uniqueness (enrollmentId has a UNIQUE constraint)
   const batchSuffix = String(batch).slice(-2); // e.g. 2024 → "24"
-  const fakeEnrollmentId = `B${batchSuffix}ACADSEC`;
+  const fakeEnrollmentId = `B${batchSuffix}ACADSEC-${userId.slice(-8)}`;
 
   await prisma.user.update({
     where: { id: userId },
