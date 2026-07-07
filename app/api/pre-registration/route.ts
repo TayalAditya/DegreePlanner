@@ -321,10 +321,16 @@ export async function GET() {
       // Merge IKS completed into HSS bucket (combined basket)
       tally.HSS = (tally.HSS ?? 0) + (tally.IKS ?? 0);
       tally.IKS = 0;
-      completedBreakdown = tally;
 
       // HSS+IKS combined: BTech = 15, BSCS = 12 (icCredits ≤ 52 → BSCS)
       const HSS_IKS_REQ = (req.icCredits ?? 60) <= 52 ? 12 : 15;
+
+      // HSS overflow → FE (credits beyond HSS requirement count as FE)
+      const hssOverflow = Math.max(0, (tally.HSS ?? 0) - HSS_IKS_REQ);
+      tally.HSS = Math.min(tally.HSS ?? 0, HSS_IKS_REQ);
+      tally.FE = (tally.FE ?? 0) + hssOverflow;
+
+      completedBreakdown = tally;
       programRequirements = {
         IC:       Math.max(0, req.icCredits - IC_BASKET_REQ - HSS_IKS_REQ),
         IC_BASKET: IC_BASKET_REQ,
@@ -384,6 +390,7 @@ export async function GET() {
       branch: branch ?? null,
       semester: offeringSemester,
       pfCreditsUsed: userRecord?.totalPassFailCredits ?? 0,
+      batch: batchYear,
     },
     savedPlan: {
       selectedIds: savedPlan?.selectedIds ?? [],

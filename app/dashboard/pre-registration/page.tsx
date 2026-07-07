@@ -36,7 +36,7 @@ interface ApiResponse {
   programRequirements: Record<string, number> | null;
   incompleteSemesters: number[];
   completedCourseCodes?: string[];
-  studentInfo: { name: string | null; branch: string | null; semester: number; pfCreditsUsed: number } | null;
+  studentInfo: { name: string | null; branch: string | null; semester: number; pfCreditsUsed: number; batch: number | null } | null;
   savedPlan?: { selectedIds: string[]; updatedAt: string | null };
 }
 
@@ -1061,7 +1061,7 @@ export default function PreRegistrationPage() {
           className="text-sm bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 w-full sm:w-auto sm:max-w-[220px]"
         >
           <option value="">— Select a minor / specialization —</option>
-          {MINORS.map((m) => (
+          {MINORS.filter((m) => !m.eligibleBatches || (data?.studentInfo?.batch && m.eligibleBatches.includes(data.studentInfo.batch))).map((m) => (
             <option key={m.code} value={m.code}>{m.name}</option>
           ))}
         </select>

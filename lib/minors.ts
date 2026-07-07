@@ -13,6 +13,8 @@ export type MinorDefinition = {
   totalCreditsRequired?: number;
   /** If set, this can also be pursued as a Specialization requiring this many credits (≥ minor). */
   specializationCreditsRequired?: number;
+  /** If set, only students from these batch years see this minor. */
+  eligibleBatches?: number[];
   groups: MinorRequirementGroup[];
 };
 
@@ -21,6 +23,7 @@ export const MINORS: MinorDefinition[] = [
     code: "MGMT",
     name: "Minor in Management",
     totalCreditsRequired: 12,
+    eligibleBatches: [2023],
     groups: [
       {
         id: "prereq-ic252",
