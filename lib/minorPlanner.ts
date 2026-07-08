@@ -1,7 +1,7 @@
 import { MINORS } from "@/lib/minors";
 import { formatCourseCode } from "@/lib/utils";
 
-export const MANAGEMENT_MINOR_CODE = "MGMT";
+export const MANAGEMENT_MINOR_CODES = new Set(["MGMT", "MGMT_B24"]);
 
 const KNOWN_MINOR_CODES = new Set(MINORS.map((m) => m.code));
 
@@ -12,7 +12,8 @@ function normalizeMinorCode(code: unknown): string {
 export function buildNonMgmtMinorCountedCourseCodeSet(minorCodes: string[]): Set<string> {
   const selected = new Set(minorCodes.map(normalizeMinorCode).filter(Boolean));
   const knownSelected = new Set(Array.from(selected).filter((c) => KNOWN_MINOR_CODES.has(c)));
-  knownSelected.delete(MANAGEMENT_MINOR_CODE);
+  knownSelected.delete("MGMT");
+  knownSelected.delete("MGMT_B24");
 
   const courseCodes = new Set<string>();
   if (knownSelected.size === 0) return courseCodes;

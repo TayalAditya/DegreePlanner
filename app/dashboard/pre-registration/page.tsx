@@ -774,8 +774,8 @@ export default function PreRegistrationPage() {
       if (data && newTotal > data.creditLimit) setShowApprovalWarning(true);
 
       // Warn if this course is in the selected minor's basket but being picked from DE/FE section.
-      // Exception: MGMT and GERMAN — their HS courses count naturally toward HSS (up to 12 cr).
-      const HSS_MINORS = new Set(["MGMT", "GERMAN"]);
+      // Exception: MGMT minors and GERMAN — their HS/MB courses count naturally toward HSS (up to 12 cr).
+      const HSS_MINORS = new Set(["MGMT", "MGMT_B24", "GERMAN"]);
       if (selectedMinorCode && minorData && !HSS_MINORS.has(selectedMinorCode)) {
         const inGroup = minorData.groups.find(
           (g) => g.countsTowardMinor && g.courses.some((c) => c.offering?.id === offering.id)

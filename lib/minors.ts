@@ -21,7 +21,7 @@ export type MinorDefinition = {
 export const MINORS: MinorDefinition[] = [
   {
     code: "MGMT",
-    name: "Minor in Management",
+    name: "Minor in Management (B23)",
     totalCreditsRequired: 12,
     eligibleBatches: [2023],
     groups: [
@@ -82,6 +82,38 @@ export const MINORS: MinorDefinition[] = [
         ],
         countsTowardMinor: true,
         note: "Any 2 courses (6 credits) from the electives basket.",
+      },
+    ],
+  },
+  {
+    code: "MGMT_B24",
+    name: "Minor in Management (B24 onwards)",
+    totalCreditsRequired: 12,
+    eligibleBatches: [2024, 2025, 2026],
+    groups: [
+      {
+        id: "core",
+        title: "Compulsory Core Courses (both required)",
+        requiredCount: 2,
+        courseCodes: ["MB-311", "MB-312"],
+        countsTowardMinor: true,
+        note: "Both core courses must be completed before taking electives. Sem 5-6 recommended.",
+      },
+      {
+        id: "electives",
+        title: "Electives (pick 2)",
+        requiredCount: 2,
+        courseCodes: [
+          "MB-410",
+          "MB-411",
+          "MB-412",
+          "MB-413",
+          "MB-414",
+          "MB-415",
+          "MB-416",
+        ],
+        countsTowardMinor: true,
+        note: "Any 2 elective courses (6 credits). Sem 7-8 recommended, after core completion.",
       },
     ],
   },

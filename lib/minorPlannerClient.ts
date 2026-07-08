@@ -4,7 +4,7 @@ import { useSyncExternalStore } from "react";
 import { MINORS } from "@/lib/minors";
 import { formatCourseCode } from "@/lib/utils";
 
-export { MANAGEMENT_MINOR_CODE, buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
+export { MANAGEMENT_MINOR_CODES, buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
 
 export const MINOR_PLANNER_STORAGE_KEYS = {
   enabled: "degreePlanner.minorPlanner.enabled",
