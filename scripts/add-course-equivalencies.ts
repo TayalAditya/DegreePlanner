@@ -33,6 +33,8 @@ const PAIRS: [string, string][] = [
   ["CE-203P", "CE-354P"],
   // ME: ME-308 / ME-215 (Manufacturing Engineering 1)
   ["ME-308", "ME-215"],
+  // VLSI: EE-311 / VL-201 (Device Electronics / Semiconductor Device for ICs)
+  ["EE-311", "VL-201"],
 ];
 
 async function main() {

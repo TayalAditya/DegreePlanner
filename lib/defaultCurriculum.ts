@@ -1384,13 +1384,14 @@ const applyBatchOverrides = (
           updated = addCourseIfMissing(updated, B24_EE_EE261P_SEM3);
         }
         if (effectiveBranch === "MEVLSI") {
-          // B25 MEVLSI Sem3: EE-210→EE-212 and EE-301→EE-302 (both confirmed replacements).
+          // B25 MEVLSI Sem3: EE-210→EE-212, EE-301→EE-302, EE-311→VL-201.
           updated = updated.filter((c) => {
             const code = normalizeCurriculumCode(c.code);
-            return code !== "EE210" && code !== "EE301";
+            return code !== "EE210" && code !== "EE301" && code !== "EE311";
           });
           updated = addCourseIfMissing(updated, { code: "EE-212", name: "Digital System Design", credits: 4, category: "DC" as const, semester: 3 });
           updated = addCourseIfMissing(updated, { code: "EE-302", name: "Control Systems", credits: 4, category: "DC" as const, semester: 3 });
+          updated = addCourseIfMissing(updated, { code: "VL-201", name: "Semiconductor Device for ICs", credits: 3, category: "DC" as const, semester: 3 });
         }
         if (effectiveBranch === "MNC") {
           // CS214 deferred to Sem 4; MA312 (Design of Algorithms) moves to Sem-3 for B25 (from Sem-5 in B24).

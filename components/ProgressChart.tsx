@@ -794,6 +794,8 @@ export function ProgressChart({
       CE311: ["CE302"],
       ME308: ["ME215"],
       ME215: ["ME308"],
+      EE311: ["VL201"],
+      VL201: ["EE311"],
     };
     const isCompleted = (code: string) => {
       const norm = normalizeCourseCode(code);
