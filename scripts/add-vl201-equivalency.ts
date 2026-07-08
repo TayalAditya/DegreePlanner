@@ -51,23 +51,31 @@ async function main() {
     }
   }
 
-  // 3. DC branch mapping: VL-201 → MEVLSI, B25, sem=3
-  const mapping = await prisma.courseBranchMapping.findUnique({
-    where: { courseId_branch_batch: { courseId: vl201.id, branch: "MEVLSI", batch: "B25" } },
-  });
-  if (!mapping) {
-    await prisma.courseBranchMapping.create({
-      data: {
-        courseId: vl201.id,
-        branch: "MEVLSI",
-        batch: "B25",
-        courseCategory: "DC",
-        semester: 3,
-      },
+  // 3. B25 MEVLSI sem=3 DC mappings: VL-201, EE-212, EE-212P
+  //    (base mappings have these at sem=4; B25 moves them to sem=3)
+  const b25Sem3Mappings: Array<{ code: string; courseId?: string }> = [
+    { code: "VL-201" },
+    { code: "EE-212" },
+    { code: "EE-212P" },
+  ];
+
+  for (const entry of b25Sem3Mappings) {
+    const course = await prisma.course.findFirst({ where: { code: entry.code } });
+    if (!course) {
+      console.log(`  SKIP  ${entry.code} — not found in DB`);
+      continue;
+    }
+    const existing = await prisma.courseBranchMapping.findUnique({
+      where: { courseId_branch_batch: { courseId: course.id, branch: "MEVLSI", batch: "B25" } },
     });
-    console.log("CREATED mapping VL-201 MEVLSI B25 DC sem=3");
-  } else {
-    console.log(`OK      mapping VL-201 MEVLSI already exists (${mapping.courseCategory} sem=${mapping.semester})`);
+    if (!existing) {
+      await prisma.courseBranchMapping.create({
+        data: { courseId: course.id, branch: "MEVLSI", batch: "B25", courseCategory: "DC", semester: 3 },
+      });
+      console.log(`CREATED mapping ${entry.code} MEVLSI B25 DC sem=3`);
+    } else {
+      console.log(`OK      mapping ${entry.code} MEVLSI B25 already exists (${existing.courseCategory} sem=${existing.semester})`);
+    }
   }
 
   console.log("\nDone.");
