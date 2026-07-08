@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { sent } = await flushSamarthReports();
+    const { sent } = await flushSamarthReports({ force: true });
     return NextResponse.json({ ok: true, sent }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     console.error("[samarth-digest] cron flush failed:", e);
