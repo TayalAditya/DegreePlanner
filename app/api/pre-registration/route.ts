@@ -13,6 +13,13 @@ const PRE_REG_OPEN = new Date("2026-07-15T00:00:00+05:30");
 const CREDIT_LIMIT: Record<number, number> = { 3: 22, 5: 25, 7: 25 };
 const DEFAULT_CREDIT_LIMIT = 25;
 
+// Compute the credit limit for a given semester and batch. B25 got a one-time
+// 25-credit cap in semester 3; other batches use the standard limits.
+function getCreditLimit(offeringSemester: number, batchYear: number): number {
+  if (offeringSemester === 3 && batchYear === 2025) return 25;
+  return CREDIT_LIMIT[offeringSemester] ?? DEFAULT_CREDIT_LIMIT;
+}
+
 function pickCategory(
   branchMappings: Array<{ courseCategory: string; branch: string; batch: string }> | undefined,
   branch: string,
@@ -48,7 +55,7 @@ export async function GET() {
   const state = inferAcademicState(batchYear);
   const offeringSemester = state.upcomingSemester ?? state.currentSemester;
   const offeringYear = new Date().getFullYear();
-  const creditLimit = CREDIT_LIMIT[offeringSemester] ?? DEFAULT_CREDIT_LIMIT;
+  const creditLimit = getCreditLimit(offeringSemester, batchYear);
   const registrationOpensAt = new Date() < PRE_REG_OPEN ? PRE_REG_OPEN.toISOString() : null;
 
   const normalizedBranch = normalizeBranchCode(branch);
