@@ -49,6 +49,17 @@ export interface ProgramProgress {
 type CreditClassificationState = {
   icBasketUsed: { ic1: boolean; ic2: boolean };
   hssCreditsAccumulated: number;
+  /** Canonical codes already counted — used to skip duplicate/equivalent enrollments. */
+  seenCanonicalCodes?: Set<string>;
+};
+
+/**
+ * Same course offered under two codes (renumbered / theory-lab renames).
+ * Both map to a single canonical code so only one enrollment of the pair counts.
+ * e.g. EE-205 is the same course as EE-202 (Electromagnetics & Wave Propagation).
+ */
+const COURSE_EQUIVALENTS: Record<string, string> = {
+  EE205: "EE202",
 };
 
 export interface MTPEligibility {
@@ -285,6 +296,7 @@ export class CreditCalculator {
     const classificationState: CreditClassificationState = {
       icBasketUsed: { ic1: false, ic2: false },
       hssCreditsAccumulated: 0,
+      seenCanonicalCodes: new Set<string>(),
     };
 
     const completed = this.calculateCreditsByType(
@@ -564,8 +576,10 @@ export class CreditCalculator {
     const state = classificationState ?? {
       icBasketUsed: { ic1: false, ic2: false },
       hssCreditsAccumulated: 0,
+      seenCanonicalCodes: new Set<string>(),
     };
     const icBasketUsed = state.icBasketUsed;
+    const seenCanonicalCodes = (state.seenCanonicalCodes ??= new Set<string>());
 
     // HSS+IKS combined basket: BTech = 15 core, BSCS = 12 core; above 20 → don't count, 16-20 (BTech) → FE
     let hssCreditsAccumulated = state.hssCreditsAccumulated;
@@ -615,6 +629,16 @@ export class CreditCalculator {
 
     sortedEnrollments.forEach((enrollment) => {
       const credits = enrollment.course.credits;
+
+      // Skip duplicate/equivalent enrollments: same course counted once only.
+      // (e.g. EE-202 and EE-205 are the same Electromagnetics course.)
+      const rawCode = enrollment.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const canonicalCode = COURSE_EQUIVALENTS[rawCode] ?? rawCode;
+      if (seenCanonicalCodes.has(canonicalCode)) {
+        return; // already counted an enrollment of this course — don't double-count
+      }
+      seenCanonicalCodes.add(canonicalCode);
+
       addBreakdownCredits("total", credits);
 
       // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
