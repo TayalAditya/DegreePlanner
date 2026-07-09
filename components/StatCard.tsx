@@ -68,9 +68,10 @@ export function StatCard({
           onClick ? "cursor-pointer hover:-translate-y-1" : ""
         }`}
       >
-        {/* Gradient background blur effect */}
+        {/* Gradient background blur effect — desktop only; blur-2xl is an
+            expensive mobile paint and three cards render above the fold. */}
         <div
-          className={`pointer-events-none absolute -top-10 -right-10 w-28 h-28 ${accentBgColor} rounded-full blur-2xl opacity-50`}
+          className={`pointer-events-none absolute -top-10 -right-10 w-28 h-28 ${accentBgColor} rounded-full blur-2xl opacity-50 hidden sm:block`}
           aria-hidden="true"
         />
 
