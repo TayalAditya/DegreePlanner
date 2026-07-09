@@ -2,7 +2,7 @@ import prisma from "@/lib/prisma";
 import { sendSamarthDigest, type SamarthReportRow } from "@/lib/email";
 
 /** Send a digest immediately when at least this many reports are pending. */
-export const SAMARTH_BATCH_THRESHOLD = 10;
+export const SAMARTH_BATCH_THRESHOLD = 5;
 
 /**
  * Flush pending Samarth reports to the digest email.
