@@ -266,15 +266,22 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     }
   };
 
-  const schoolCounts: Record<string, number> = {};
-  for (const course of allCourses) {
-    const key = getCourseSchoolKey(course);
-    schoolCounts[key] = (schoolCounts[key] ?? 0) + 1;
-  }
+  const schoolCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const course of allCourses) {
+      const key = getCourseSchoolKey(course);
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return counts;
+  }, [allCourses]);
 
-  const schoolOptions = SCHOOL_ORDER
-    .map((key) => ({ key, label: SCHOOL_META[key].label, count: schoolCounts[key] ?? 0 }))
-    .filter((o) => o.count > 0);
+  const schoolOptions = useMemo(
+    () =>
+      SCHOOL_ORDER
+        .map((key) => ({ key, label: SCHOOL_META[key].label, count: schoolCounts[key] ?? 0 }))
+        .filter((o) => o.count > 0),
+    [schoolCounts]
+  );
 
   const normalizeCourseCodeForSearch = (text: string) =>
     text.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -353,7 +360,10 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     );
   }, [selectedDept, tab]);
 
-  const enrolledCourseIds = new Set(enrollments.map((e) => e.courseId));
+  const enrolledCourseIds = useMemo(
+    () => new Set(enrollments.map((e) => e.courseId)),
+    [enrollments]
+  );
 
   const availableCourses = useMemo(
     () => filteredCourses.filter((c) => !enrolledCourseIds.has(c.id)),
@@ -659,6 +669,17 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     return splits;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enrollments, user?.branch]);
+
+  // Precompute each enrollment's display category once per render pass instead of
+  // re-invoking the heavy getCourseCategory branching inside every card's render.
+  const enrollmentCategoryById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const e of enrollments) {
+      map.set(e.id, getCourseCategory(e));
+    }
+    return map;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enrollments, user?.branch, user?.batch, user?.enrollmentId]);
 
   const determineCourseType = (course: Course): string => {
     const code = course.code.toUpperCase();
@@ -1073,7 +1094,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                                         </div>
                                       );
                                     }
-                                    const cat = getCourseCategory(enrollment) as keyof typeof categoryColors;
+                                    const cat = (enrollmentCategoryById.get(enrollment.id) ?? getCourseCategory(enrollment)) as keyof typeof categoryColors;
                                     const colors = categoryColors[cat];
                                     if (!colors) return null;
                                     const catLabels: Record<string, string> = {

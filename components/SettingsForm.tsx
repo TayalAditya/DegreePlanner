@@ -11,9 +11,13 @@ import { copyToClipboard } from "@/lib/utils";
 
 interface SettingsFormProps {
   user: any;
+  initialShareState?: {
+    isProfileShared: boolean;
+    shareToken: string | null;
+  };
 }
 
-export function SettingsForm({ user }: SettingsFormProps) {
+export function SettingsForm({ user, initialShareState }: SettingsFormProps) {
   const { palette, setPalette } = useTheme();
   const { showToast } = useToast();
   const router = useRouter();
@@ -30,10 +34,10 @@ export function SettingsForm({ user }: SettingsFormProps) {
     isProfileShared: boolean;
     shareToken: string | null;
   }>({
-    isProfileShared: false,
-    shareToken: null,
+    isProfileShared: initialShareState?.isProfileShared ?? false,
+    shareToken: initialShareState?.shareToken ?? null,
   });
-  const [shareLoading, setShareLoading] = useState(true);
+  const [shareLoading, setShareLoading] = useState(!initialShareState);
   const [shareOrigin, setShareOrigin] = useState("");
   const shareUrl =
     shareOrigin && shareState.shareToken
@@ -83,8 +87,10 @@ export function SettingsForm({ user }: SettingsFormProps) {
     };
 
     loadSettings();
-    loadShareSettings();
-  }, []);
+    if (!initialShareState) {
+      loadShareSettings();
+    }
+  }, [initialShareState]);
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
