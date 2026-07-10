@@ -357,6 +357,12 @@ export default function ProgressPage() {
         }
         return resolvedCat;
       }
+
+      // Mappings exist but none matched this student's branch → the course is NOT
+      // part of their curriculum → Free Elective. (Matches ProgressChart / creditCalculator /
+      // UserProgramModal — do NOT fall through to the courseType switch, which would
+      // wrongly return DE for e.g. a CS-671 enrolled as DE by a branch that doesn't map it.)
+      return "FE";
     }
 
     if (isIkCourse) return "HSS"; // IK-xxx → HSS+IKS basket without consuming HS cap

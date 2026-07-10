@@ -1219,6 +1219,7 @@ export default function ImportCoursesPage({
           catalogCourses={catalogCourses}
           courseTypeMap={courseTypeMap}
           dcPrefixes={dcPrefixes}
+          branch={effectiveBranch}
           importedKeys={importedCourseKeys}
           pendingKeys={pendingKeys}
           rawOcrText={ocrRawText}

@@ -5,6 +5,7 @@ import { X, AlertCircle, CheckCircle2, Search } from "lucide-react";
 import { DetectedCourse, normalizeCourseCode } from "@/lib/parseTranscript";
 import { courseIdentityKey } from "@/lib/courseIdentity";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
+import { isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
 import { formatCourseCode, formatCredits } from "@/lib/utils";
 
 interface CatalogCourse {
@@ -37,6 +38,8 @@ interface OcrConfirmModalProps {
   courseTypeMap: Map<string, string>;
   /** DC prefixes for the branch (e.g. {"CS"} for CSE) — for DE vs FE fallback */
   dcPrefixes: Set<string>;
+  /** Student's branch — gates the same-prefix → DE fallback to CSE/DSE/DSAI only */
+  branch?: string;
   /** Course identity keys already in DB (active): e.g. "MA222" */
   importedKeys: Set<string>;
   /** Course identity keys already selected in the current pending import list */
@@ -58,11 +61,17 @@ const COURSE_TYPE_OPTIONS = ["IC", "ICB", "DC", "DE", "HSS", "IKS", "FE", "MTP",
  * courseTypeMap  = normalised code → category from getAllDefaultCourses(branch)
  * dcPrefixes     = letter-prefixes that appear in DC codes for this branch
  *                  (e.g. {"CS"} for CSE) — used to tell DE apart from FE
+ * branch         = student's branch — the same-prefix → DE fallback only applies to
+ *                  CSE/DSE/DSAI, whose curricula treat any CS/DS course as a DE.
+ *                  For every other branch an unmapped same-prefix course is a Free
+ *                  Elective (matches getCourseCategory in ProgressChart / creditCalculator
+ *                  / progress page — e.g. CS-671 for MnC is FE, not DE).
  */
 function resolveCourseType(
   code: string,
   courseTypeMap: Map<string, string>,
-  dcPrefixes: Set<string>
+  dcPrefixes: Set<string>,
+  branch?: string
 ): string {
   const p = normalizeCourseCode(code);
   // Hard overrides
@@ -76,10 +85,17 @@ function resolveCourseType(
   if (p.startsWith("HS")) return "HSS";
   const specialDpCategory = getSpecialDpCategory(p);
   if (specialDpCategory) return specialDpCategory;
-  // Same-department prefix but not a required course → Departmental Elective
-  const prefix = /^([A-Z]+)/.exec(p)?.[1] ?? "";
-  if (prefix && dcPrefixes.has(prefix)) return "DE";
-  // Different department entirely → Free Elective
+  // Same-department prefix but not a required course → Departmental Elective.
+  // Only CSE/DSE/DSAI curricula count any CS/DS course as a DE; for all other
+  // branches an unmapped course (even one sharing a DC prefix) is a Free Elective.
+  const normalizedBranch = normalizeBranchCode(branch);
+  const prefixHeuristicApplies =
+    normalizedBranch === "CSE" || isDataScienceBranch(normalizedBranch);
+  if (prefixHeuristicApplies) {
+    const prefix = /^([A-Z]+)/.exec(p)?.[1] ?? "";
+    if (prefix && dcPrefixes.has(prefix)) return "DE";
+  }
+  // Different department / unmapped elective → Free Elective
   return "FE";
 }
 
@@ -88,6 +104,7 @@ export function OcrConfirmModal({
   catalogCourses,
   courseTypeMap,
   dcPrefixes,
+  branch,
   importedKeys,
   pendingKeys,
   rawOcrText,
@@ -127,7 +144,7 @@ export function OcrConfirmModal({
           alreadyExists,
           catalogCourseId: catalogMatch?.id ?? "",
           semester: d.detectedSemester ?? "",
-          courseType: resolveCourseType(d.rawCode, courseTypeMap, dcPrefixes),
+          courseType: resolveCourseType(d.rawCode, courseTypeMap, dcPrefixes, branch),
           grade: d.detectedGrade ?? "",
           detectedSemester: d.detectedSemester,
           detectedGrade: d.detectedGrade,
@@ -288,7 +305,7 @@ export function OcrConfirmModal({
                           catalogCourseId: nextId,
                           matchedName: match?.name,
                           courseType: match
-                            ? resolveCourseType(match.code, courseTypeMap, dcPrefixes)
+                            ? resolveCourseType(match.code, courseTypeMap, dcPrefixes, branch)
                             : row.courseType,
                           included: match ? (row.included || !row.alreadyExists) : false,
                         });
