@@ -23,6 +23,20 @@ interface UserNotification {
 
 const LS_KEY = "announcementsLastSeen";
 
+// Track whether the browser tab is visible, so we can pause background polling
+// when the user switches away. Cuts idle DB load (and Neon CU-hrs) dramatically.
+function useTabVisible() {
+  const [visible, setVisible] = useState(
+    typeof document === "undefined" ? true : document.visibilityState === "visible"
+  );
+  useEffect(() => {
+    const handler = () => setVisible(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, []);
+  return visible;
+}
+
 function getLastSeen(): number {
   try {
     return parseInt(localStorage.getItem(LS_KEY) || "0", 10);
@@ -50,6 +64,7 @@ export function NotificationBell() {
   const panelShiftRef = useRef(0);
   const [panelShift, setPanelShift] = useState(0);
   const queryClient = useQueryClient();
+  const tabVisible = useTabVisible();
 
   // Close on outside click
   useEffect(() => {
@@ -72,7 +87,8 @@ export function NotificationBell() {
       return res.json();
     },
     enabled: everOpened,
-    refetchInterval: everOpened ? 60_000 : false,
+    // Only poll while the tab is actually in the foreground
+    refetchInterval: everOpened && tabVisible ? 60_000 : false,
   });
 
   const { data: notifications = [], refetch: refetchNotifs } = useQuery<UserNotification[]>({
@@ -83,7 +99,8 @@ export function NotificationBell() {
       return res.json();
     },
     enabled: everOpened,
-    refetchInterval: everOpened ? 30_000 : false,
+    // Only poll while the tab is actually in the foreground
+    refetchInterval: everOpened && tabVisible ? 30_000 : false,
   });
 
   const unreadAnnouncements = announcements.filter(
