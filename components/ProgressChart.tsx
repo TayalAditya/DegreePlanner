@@ -556,19 +556,28 @@ export function ProgressChart({
     const icBasketUsed = { ic1: false, ic2: false };
     const hssUsed = { credits: 0 };
 
-    const completed = { core: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, total: 0 };
-    const inProgress = { core: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, total: 0 };
+    const completed = { core: 0, ic: 0, dc: 0, hss: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, total: 0 };
+    const inProgress = { core: 0, ic: 0, dc: 0, hss: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, total: 0 };
 
     const add = (bucket: typeof completed, category: keyof typeof categoryCredits, credits: number) => {
       const c = Number(credits || 0);
       bucket.total = addCredits(bucket.total, c);
       switch (category) {
+        // Split "core" into IC (institute core + basket), DC, and HSS+IKS so the
+        // remaining breakdown can show each separately instead of one clubbed row.
         case "IC":
         case "IC_BASKET":
+          bucket.core = addCredits(bucket.core, c);
+          bucket.ic = addCredits(bucket.ic, c);
+          break;
         case "DC":
+          bucket.core = addCredits(bucket.core, c);
+          bucket.dc = addCredits(bucket.dc, c);
+          break;
         case "HSS":
         case "IKS":
           bucket.core = addCredits(bucket.core, c);
+          bucket.hss = addCredits(bucket.hss, c);
           break;
         case "DE":
           bucket.de = addCredits(bucket.de, c);
@@ -672,6 +681,9 @@ export function ProgressChart({
       ? {
           ...completedServer,
           core: breakdownFromEnrollments.completed.core,
+          ic: breakdownFromEnrollments.completed.ic,
+          dc: breakdownFromEnrollments.completed.dc,
+          hss: breakdownFromEnrollments.completed.hss,
           de: breakdownFromEnrollments.completed.de,
           freeElective: breakdownFromEnrollments.completed.freeElective,
           mtp: breakdownFromEnrollments.completed.mtp,
@@ -683,12 +695,48 @@ export function ProgressChart({
       ? {
           ...inProgressServer,
           core: breakdownFromEnrollments.inProgress.core,
+          ic: breakdownFromEnrollments.inProgress.ic,
+          dc: breakdownFromEnrollments.inProgress.dc,
+          hss: breakdownFromEnrollments.inProgress.hss,
           de: breakdownFromEnrollments.inProgress.de,
           freeElective: breakdownFromEnrollments.inProgress.freeElective,
           mtp: breakdownFromEnrollments.inProgress.mtp,
           istp: breakdownFromEnrollments.inProgress.istp,
         }
       : inProgressServer;
+
+    // Split the clubbed "Core (IC + DC)" into its real parts so a remaining
+    // credit in one bucket (e.g. an HSS elective) isn't hidden inside "IC + DC".
+    const reqByCat = progress?.creditsRequiredByCategory || {};
+    const hasSplitCore = !!breakdownFromEnrollments && (reqByCat.DC != null || reqByCat.HSS != null);
+
+    const coreRows = hasSplitCore
+      ? [
+          {
+            key: "ic",
+            label: "Institute Core (IC)",
+            required: Number(reqByCat.IC || 0) + Number(reqByCat.IC_BASKET || 0),
+            completed: (completed as any).ic,
+            inProgress: (inProgress as any).ic,
+          },
+          {
+            key: "dc",
+            label: "Discipline Core (DC)",
+            required: Number(reqByCat.DC || 0),
+            completed: (completed as any).dc,
+            inProgress: (inProgress as any).dc,
+          },
+          {
+            key: "hss",
+            label: "Humanities & Social Sciences + IKS",
+            required: Number(reqByCat.HSS || 0),
+            completed: (completed as any).hss,
+            inProgress: (inProgress as any).hss,
+          },
+        ]
+      : [
+          { key: "core", label: "Core (IC + DC)", required: required.core, completed: completed.core, inProgress: inProgress.core },
+        ];
 
     const rows: Array<{
       key: string;
@@ -699,7 +747,7 @@ export function ProgressChart({
       counted: number;
       remaining: number;
     }> = [
-      { key: "core", label: "Core (IC + DC)", required: required.core, completed: completed.core, inProgress: inProgress.core },
+      ...coreRows,
       { key: "de", label: "Discipline Electives (DE)", required: required.de, completed: completed.de, inProgress: inProgress.de },
       { key: "pe", label: "Program Electives / Research", required: required.pe, completed: completed.pe, inProgress: inProgress.pe },
       { key: "freeElective", label: "Free Electives (FE)", required: required.freeElective, completed: completed.freeElective, inProgress: inProgress.freeElective },
