@@ -708,6 +708,24 @@ export class CreditCalculator {
         return;
       }
 
+      // Respect the user's explicit courseType choice for unambiguous types.
+      // DE, FREE_ELECTIVE, MTP, ISTP are clear — use them directly.
+      // CORE is ambiguous (could be IC/DC/HSS/IKS) — fall through to branchMappings.
+      switch (enrollment.courseType) {
+        case CourseType.DE:
+          addDeCredits(credits, enrollment.course.code);
+          return;
+        case CourseType.FREE_ELECTIVE:
+          addBreakdownCredits("freeElective", credits);
+          return;
+        case CourseType.MTP:
+          addBreakdownCredits("mtp", credits);
+          return;
+        case CourseType.ISTP:
+          addBreakdownCredits("istp", credits);
+          return;
+      }
+
       const matchedMapping = pickBranchMapping(enrollment.course.branchMappings, branch, batchYear);
       const mappedCategory = matchedMapping?.courseCategory;
 
