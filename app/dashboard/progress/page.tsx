@@ -335,6 +335,22 @@ export default function ProgressPage() {
       return applyMinorDeOverride("DE", enrollment);
     }
 
+    // Respect the user's explicit courseType choice for unambiguous types.
+    // DE, FREE_ELECTIVE, MTP, ISTP are clear — use them directly.
+    // CORE is ambiguous (could be IC/DC/HSS/IKS) — fall through to branchMappings.
+    switch (enrollment.courseType) {
+      case "DE":
+        return applyMinorDeOverride("DE", enrollment);
+      case "PE":
+        return getCurriculumBranchCode(user?.branch || "") === "BSCS" ? "PE" : "FE";
+      case "FREE_ELECTIVE":
+        return "FE";
+      case "MTP":
+        return "MTP";
+      case "ISTP":
+        return "ISTP";
+    }
+
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
       const mapping = pickRelevantBranchMapping(user.branch, enrollment.course.branchMappings);
 

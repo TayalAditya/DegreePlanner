@@ -480,6 +480,21 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       return "FE";
     }
 
+    // Respect the user's explicit courseType choice for unambiguous types.
+    // DE, FREE_ELECTIVE, MTP, ISTP are clear — use them directly.
+    // CORE is ambiguous (could be IC/DC/HSS/IKS) — fall through to branchMappings.
+    switch (enrollment.courseType) {
+      case "DE":
+        return applyMinorDeOverride("DE", enrollment);
+      case "FREE_ELECTIVE":
+      case "PE":
+        return "FE";
+      case "MTP":
+        return "MTP";
+      case "ISTP":
+        return "ISTP";
+    }
+
     // First try to get from branchMappings — batch-aware: prefer exact batch > global > skip wrong-batch
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
       const batchStr = inferredBatch ? String(inferredBatch) : "";

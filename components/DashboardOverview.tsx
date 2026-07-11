@@ -263,6 +263,14 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     if (normalizedCode === "IC181") return "HSS"; // → HSS+IKS
     if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC";
 
+    // Respect the user's explicit courseType choice for unambiguous types.
+    // DE, FREE_ELECTIVE, MTP, ISTP are clear — use them directly.
+    // CORE is ambiguous (could be IC/DC/HSS/IKS) — fall through to branchMappings.
+    if (enrollment.courseType === "DE") return applyMinorDeOverride("DE");
+    if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
+    if (enrollment.courseType === "MTP") return "MTP";
+    if (enrollment.courseType === "ISTP") return "ISTP";
+
     if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
       const mapping = pickRelevantBranchMapping(userSettings.branch, enrollment.course.branchMappings);
 

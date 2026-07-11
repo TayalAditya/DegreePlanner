@@ -94,6 +94,7 @@ export async function GET() {
             },
           },
         },
+        courseType: true,
       },
     }),
     prisma.userProgram.findFirst({
@@ -295,17 +296,51 @@ export async function GET() {
         if (e.grade === "F") continue;
         const cr = e.course.credits;
         const code = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+        // IK-xxx, IC-181, IC-182 → HSS+IKS combined basket
+        const isHssIks = /^IK\d/.test(code) || code === "IC181" ||
+          (code === "IC182" && batch != null && batch >= 2024);
+
+        // HS-xxx courses always go to HSS — never let courseType override
+        if (code.startsWith("HS")) {
+          add("HSS", cr);
+          continue;
+        }
+
+        // IKS courses (IK-xxx, IC-181, IC-182 for B24+) → HSS+IKS basket
+        if (isHssIks) {
+          add("HSS", cr);
+          continue;
+        }
+
+        // Respect the user's explicit courseType choice for unambiguous types.
+        // DE, FREE_ELECTIVE, MTP, ISTP are clear — use them directly.
+        // CORE is ambiguous (could be IC/DC/HSS/IKS) — fall through to branchMappings.
+        const courseType = e.courseType as string | null;
+        if (courseType === "DE") {
+          add("DE", cr);
+          continue;
+        }
+        if (courseType === "FREE_ELECTIVE" || courseType === "PE") {
+          add("FE", cr);
+          continue;
+        }
+        if (courseType === "MTP") {
+          add("MTP", cr);
+          continue;
+        }
+        if (courseType === "ISTP") {
+          add("ISTP", cr);
+          continue;
+        }
+
         const mapping = (e.course.branchMappings as Array<{ courseCategory: string; branch: string; batch: string; splitCategory: string | null; splitAmount: number | null }>)
           .find(m => pickCategory([m], normalizedBranch, batch) !== undefined &&
             getBranchCandidates(normalizedBranch).map(b => b.toUpperCase()).includes(m.branch.toUpperCase())) ??
           (() => { const c = pickCategory(e.course.branchMappings as any, normalizedBranch, batch); return c ? { courseCategory: c, splitCategory: null, splitAmount: null } : null; })();
 
-        // IK-xxx, IC-181, IC-182 → HSS+IKS combined basket
-        const isHssIks = /^IK\d/.test(code) || code === "IC181" ||
-          (code === "IC182" && batch != null && batch >= 2024);
-        let cat = isHssIks ? "HSS" :
-          (mapping?.courseCategory ??
-            (code.startsWith("HS") ? "HSS" : code.startsWith("IC") ? "IC" : "FE"));
+        let cat = mapping?.courseCategory ??
+            (code.startsWith("IC") ? "IC" : "FE");
 
         if (mapping?.splitCategory && mapping.splitAmount) {
           add(cat, cr - mapping.splitAmount);

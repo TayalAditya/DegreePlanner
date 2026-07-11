@@ -335,6 +335,14 @@ export function ProgressChart({
       return "HSS";
     }
 
+    // Respect the user's explicit courseType choice for unambiguous types.
+    // DE, FREE_ELECTIVE, MTP, ISTP are clear — use them directly.
+    // CORE is ambiguous (could be IC/DC/HSS/IKS) — fall through to branchMappings.
+    if (enrollment.courseType === "DE") return applyMinorDeOverride("DE");
+    if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
+    if (enrollment.courseType === "MTP") return "MTP";
+    if (enrollment.courseType === "ISTP") return "ISTP";
+
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length > 0) {
       const rawBranch = String(branch || userBranch || "").trim().toUpperCase();

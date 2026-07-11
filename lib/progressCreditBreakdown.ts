@@ -231,6 +231,14 @@ export function computeEnrollmentCreditBreakdown({
       return "FE";
     }
 
+    // Respect the user's explicit courseType choice for unambiguous types.
+    // DE, FREE_ELECTIVE, MTP, ISTP are clear — use them directly.
+    // CORE is ambiguous (could be IC/DC/HSS/IKS) — fall through to branchMappings.
+    if (enrollment.courseType === "DE") return applyMinorDeOverride(enrollment, "DE");
+    if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
+    if (enrollment.courseType === "MTP") return "MTP";
+    if (enrollment.courseType === "ISTP") return "ISTP";
+
     const mapping = pickMapping(enrollment, rawBranch, checkBranch);
     if (mapping?.courseCategory === "NA") return "FE";
     if (mapping?.courseCategory === "IKS" && isIkCourse) return "FE";

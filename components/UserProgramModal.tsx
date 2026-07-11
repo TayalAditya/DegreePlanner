@@ -463,6 +463,21 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     if (normalizedCode === "IC181") return "HSS"; // IC-181 → HSS+IKS basket
     if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC"; // IC-182 B24/B25 → HSS+IKS
 
+    // Respect the user's explicit courseType choice for unambiguous types.
+    // DE, FREE_ELECTIVE, MTP, ISTP are clear — use them directly.
+    // CORE is ambiguous (could be IC/DC/HSS/IKS) — fall through to branchMappings.
+    switch (enrollment.courseType) {
+      case "DE":
+        return applyMinorDeOverride("DE", enrollment);
+      case "PE":
+      case "FREE_ELECTIVE":
+        return "FE";
+      case "MTP":
+        return "MTP";
+      case "ISTP":
+        return "ISTP";
+    }
+
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && branch) {
       const mapping = pickRelevantBranchMapping(branch, enrollment.course.branchMappings);
 
