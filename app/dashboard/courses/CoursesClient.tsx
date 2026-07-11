@@ -94,6 +94,7 @@ type SchoolKey =
   | "TUM" // TU Munich (Semester Exchange)
   | "TUD" // TU Darmstadt (Semester Exchange)
   | "RWTH" // RWTH Aachen (Semester Exchange)
+  | "LUH" // Leibniz University Hannover (Semester Exchange)
   | "OTHER";
 
 type SchoolFilter = "all" | SchoolKey;
@@ -115,6 +116,7 @@ const SCHOOL_META: Record<SchoolKey, { label: string; order: number; prefixes: s
   TUM: { label: "TU Munich (Semester Exchange)", order: 95, prefixes: ["IN"] },
   TUD: { label: "TU Darmstadt (Semester Exchange)", order: 96, prefixes: ["11", "16", "18", "20", "41"] },
   RWTH: { label: "RWTH Aachen (Semester Exchange)", order: 97, prefixes: ["81", "42"] },
+  LUH: { label: "Leibniz University Hannover (Semester Exchange)", order: 98, prefixes: [] },
   OTHER: { label: "Other", order: 99, prefixes: [] },
 };
 
@@ -133,6 +135,7 @@ function getCourseSchoolKey(course: Pick<Course, "code" | "department">): School
   if (dept.includes("tu darmstadt")) return "TUD";
   if (dept.includes("tu munich")) return "TUM";
   if (dept.includes("rwth aachen")) return "RWTH";
+  if (dept.includes("leibniz") || dept.includes("hannover")) return "LUH";
 
   const prefix = getCoursePrefix(course.code);
   for (const key of SCHOOL_ORDER) {
