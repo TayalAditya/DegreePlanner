@@ -563,7 +563,7 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
                       checked={selectedMinorCodes.includes(m.code)}
                       onChange={() => toggleMinor(m.code)}
                     />
-                    <span className="truncate">{m.name}</span>
+                    <span className="leading-snug">{m.name}</span>
                   </label>
                 ))}
               </div>
