@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { GraduationCap, Award, BookOpen, Target, ChevronDown, AlertCircle } from "lucide-react";
 import dynamic from "next/dynamic";
 const ProgressChart = dynamic(() => import("@/components/ProgressChart").then(m => ({ default: m.ProgressChart })), { ssr: false, loading: () => <div className="h-64 animate-pulse bg-surface-elevated rounded-xl" /> });
-import { MinorPlannerCard } from "@/components/MinorPlannerCard";
+const MinorPlannerCard = dynamic(() => import("@/components/MinorPlannerCard").then(m => ({ default: m.MinorPlannerCard })), { ssr: false, loading: () => <div className="h-24 animate-pulse bg-surface rounded-lg border border-border" /> });
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { computeEnrollmentCreditBreakdown } from "@/lib/progressCreditBreakdown";
