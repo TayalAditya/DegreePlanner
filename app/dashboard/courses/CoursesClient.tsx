@@ -18,6 +18,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { StatCard } from "@/components/StatCard";
 import { getAllBranches } from "@/lib/branches";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
+import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
 import { getSpecialDpCategory, getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { addCredits, formatCourseCode, formatCredits, subtractCredits, sumCredits } from "@/lib/utils";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
@@ -483,23 +484,14 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       return "FE";
     }
 
-    // First try to get from branchMappings — batch-aware: prefer exact batch > global > skip wrong-batch
+    // First try to get from branchMappings — batch-aware via the shared canonical scorer
+    // (lib/courseCategory.ts) so branch/batch precedence is identical everywhere.
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
-      const batchStr = inferredBatch ? String(inferredBatch) : "";
-      const branchCandidates = getBranchCandidates(user.branch);
-      const allCandidates = [...branchCandidates, ...(user.branch === "GE" ? ["GE"] : [])];
-      let mapping: (typeof enrollment.course.branchMappings)[0] | undefined;
-      for (const c of allCandidates) {
-        const bm = enrollment.course.branchMappings;
-        const specific = bm.find((m) => m.branch === c && m.batch === batchStr);
-        if (specific) { mapping = specific; break; }
-        const global = bm.find((m) => m.branch === c && (!m.batch || m.batch === ""));
-        if (global) { mapping = global; break; }
-        // skip: same branch but different specific batch
-      }
-      if (!mapping && user.branch === "GE") {
-        mapping = enrollment.course.branchMappings.find((m) => m.branch.startsWith("GE") && (!m.batch || m.batch === ""));
-      }
+      const mapping = pickBranchMapping(
+        enrollment.course.branchMappings as BranchMapping[],
+        user.branch,
+        inferredBatch
+      );
 
       if (mapping) {
         if (mapping.courseCategory === "NA") {

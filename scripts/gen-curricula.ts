@@ -25,7 +25,7 @@ const CREDITS: Record<string, { ic: number; icb: number; dc: number; de: number;
   CE:     { ic:39,icb:6,dc:49,de:17,fe:22,mtp:12,total:160, dept:"SCENE", fullName:"Civil Engineering" },
   BE:     { ic:39,icb:6,dc:42,de:24,fe:22,mtp:12,total:160, dept:"SBE",  fullName:"Bioengineering" },
   EP:     { ic:39,icb:6,dc:37,de:29,fe:22,mtp:12,total:160, dept:"SPS",  fullName:"Engineering Physics" },
-  BSCS:   { ic:31,icb:6,dc:62,de:23,fe:15,mtp:14,total:163, dept:"SCS",  fullName:"B.S. Chemical Sciences" },
+  BSCS:   { ic:28,icb:6,dc:62,de:23,fe:15,mtp:14,total:163, dept:"SCS",  fullName:"B.S. Chemical Sciences" },
 };
 
 // B24/B25 overrides
@@ -202,6 +202,10 @@ function genTex(branch: string, batch: number, cr: ReturnType<typeof getCredits>
                 ltpcMap: Map<string,{l:string;t:string;p:string}>): string {
   const batchLabel = `B${String(batch).slice(2)}`;
   const hss = cr.total >= 163 ? 12 : 15;
+  // MTP is the 4+4 project block (counted as equivalent to Discipline Electives); the
+  // remaining project credit is ISTP (counted as equivalent to a Free Elective).
+  const mtpCr = cr.mtp - 4;
+  const mtpLabel = mtpCr === 8 ? "MTP (4+4, equivalent as DE)" : "MTP (equivalent as DE)";
   const LOGO = "C:/Users/AdityaTayal/Desktop/Projects/DegreePlanner/docs/curricula/iitmandi_logo.jpg";
 
   // GE specialisation labels
@@ -356,8 +360,8 @@ ${b2Header} & ${b2Cell} \\\\\\hline
   & Discipline Elective (DE) & ${cr.de} \\\\\\hline
 \\multirow{3}{*}{Electives}
   & Free Electives (FE) & ${cr.fe} \\\\\\cline{2-3}
-  & ISTP & 4 \\\\\\cline{2-3}
-  & Major Technical Project (MTP) & ${cr.mtp - 4} \\\\\\hline
+  & ${mtpLabel} & ${mtpCr} \\\\\\cline{2-3}
+  & ISTP (equivalent as FE) & 4 \\\\\\hline
 \\textbf{TOTAL} & & \\textbf{${cr.total}} \\\\\\hline
 \\end{tabular}
 \\end{center}

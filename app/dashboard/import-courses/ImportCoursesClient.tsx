@@ -515,7 +515,12 @@ export default function ImportCoursesPage({
         });
       }
 
-      const category = course.code.toUpperCase().startsWith("HS") ? "HSS" : "FE";
+      // Category comes from the DB-backed course-category map (courseTypeMap, which layers
+      // CourseBranchMapping → hard IKS/IC overrides → static curriculum). Only if the course
+      // is absent from that map do we fall back to the HS/FE prefix guess.
+      const norm = normalizeCourseCode(course.code);
+      const category = (courseTypeMap.get(norm) ??
+        (norm.startsWith("HS") ? "HSS" : "FE")) as DefaultCourse["category"];
 
       const newCourse: SelectedCourse = {
         code: course.code,

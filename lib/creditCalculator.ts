@@ -4,6 +4,7 @@ import { buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
 import { normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
+import { pickBranchMapping, pickBranchMappingCategory } from "@/lib/courseCategory";
 import {
   isMtp1CourseCode,
   isMtp2CourseCode,
@@ -79,61 +80,8 @@ interface BranchMapping {
   splitAmount?: number | null;
 }
 
-// Pick the best mapping for a given branch + batch.
-// Within the same branch priority, a batch-specific mapping beats a generic one (batch="").
-function pickBranchMapping(
-  mappings: BranchMapping[] | undefined,
-  branch?: string,
-  batchYear?: number | null
-): BranchMapping | undefined {
-  if (!mappings || mappings.length === 0) return undefined;
-
-  const normalizedBranch = normalizeBranchCode(branch);
-  const candidates = getBranchCandidates(normalizedBranch);
-  const candidateOrder = new Map<string, number>(candidates.map((br, idx) => [br, idx]));
-  const batchStr = batchYear ? String(batchYear) : "";
-
-  let best: BranchMapping | undefined;
-  let bestScore = Number.POSITIVE_INFINITY;
-
-  for (const m of mappings) {
-    const mappingBranch = normalizeBranchCode(m.branch);
-    const mappingBatch = m.batch ?? "";
-
-    // Skip mappings that don't apply to this batch
-    if (mappingBatch !== "" && mappingBatch !== batchStr) continue;
-
-    let branchIdx: number;
-
-    const directIdx = candidateOrder.get(mappingBranch);
-    if (directIdx !== undefined) {
-      branchIdx = directIdx;
-    } else if (normalizedBranch === "GE" && mappingBranch.startsWith("GE") && candidateOrder.has("GE")) {
-      branchIdx = (candidateOrder.get("GE") ?? Number.POSITIVE_INFINITY) + 0.5;
-    } else {
-      continue;
-    }
-
-    // Lower score = better: branch priority * 2, minus 1 bonus for batch-specific match
-    const batchBonus = batchStr && mappingBatch === batchStr ? 0 : 1;
-    const score = branchIdx * 2 + batchBonus;
-
-    if (score < bestScore) {
-      best = m;
-      bestScore = score;
-    }
-  }
-
-  return best;
-}
-
-function pickBranchMappingCategory(
-  mappings: BranchMapping[] | undefined,
-  branch?: string,
-  batchYear?: number | null
-): string | undefined {
-  return pickBranchMapping(mappings, branch, batchYear)?.courseCategory;
-}
+// `pickBranchMapping` / `pickBranchMappingCategory` now live in lib/courseCategory.ts
+// (the single source of truth) and are imported above.
 
 // Branches for which Design Practicum (IC202P) is NOT a compulsory Institute Core
 // from Batch-24 onwards: Civil (CE), Engineering Physics (EP), Bioengineering (BE),
@@ -821,6 +769,11 @@ export class CreditCalculator {
         return;
       }
       if (isDataScienceBranch(branch) && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) {
+        addDeCredits(credits, enrollment.course.code);
+        return;
+      }
+      // Civil: any CE-xxx course not already matched as DC counts as a Discipline Elective.
+      if (branch === "CE" && normalizedCode.startsWith("CE")) {
         addDeCredits(credits, enrollment.course.code);
         return;
       }

@@ -7,6 +7,7 @@ import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
 import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
+import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 
@@ -157,21 +158,16 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     return getBranchCandidates(raw).filter((branch) => branch !== "COMMON");
   }, [userSettings?.branch]);
 
-  const pickRelevantBranchMapping = (branch: string | undefined, mappings: any[] | undefined) => {
+  // Batch-aware resolution via the shared canonical scorer (lib/courseCategory.ts).
+  // getBranchCandidates() already covers branch aliases, GE, and COMMON (lowest priority),
+  // so this subsumes the previous manual exact/direct/ge/common fallback chain.
+  const pickRelevantBranchMapping = (
+    branch: string | undefined,
+    mappings: any[] | undefined,
+    batchYear?: number | null
+  ) => {
     if (!branch || !mappings || mappings.length === 0) return undefined;
-
-    const exact = mappings.find((m) => m.branch === branch);
-    if (exact) return exact;
-
-    const direct = mappings.find((m) => mappingBranchAliases.includes(m.branch));
-    if (direct) return direct;
-
-    if (branch === "GE") {
-      const ge = mappings.find((m) => String(m.branch || "").startsWith("GE"));
-      if (ge) return ge;
-    }
-
-    return mappings.find((m) => m.branch === "COMMON");
+    return pickBranchMapping(mappings as BranchMapping[], branch, batchYear);
   };
 
   const getCourseCategory = (
@@ -195,6 +191,16 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     const isICB2 = ICB2_CODES.has(normalizedCode);
     const isIkCourse = /^IK\d/.test(normalizedCode);
     const credits = enrollment.course?.credits || 0;
+
+    const inferredBatch = (() => {
+      const batch = userSettings?.batch;
+      if (typeof batch === "number" && batch > 2000) return batch;
+      const enrollmentId = String(userSettings?.enrollmentId || "").toUpperCase();
+      const match = /B(\d{2})/i.exec(enrollmentId);
+      if (match) return 2000 + Number.parseInt(match[1], 10);
+      return null;
+    })();
+    const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && userSettings?.branch) {
@@ -225,7 +231,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
        // Some IC basket courses are mapped as DC for certain branches (e.g. MSE: IC-240).
        // Respect explicit branch mappings before defaulting to FE.
        if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0) {
-        const mapping = pickRelevantBranchMapping(userSettings.branch, enrollment.course.branchMappings);
+        const mapping = pickRelevantBranchMapping(userSettings.branch, enrollment.course.branchMappings, inferredBatch);
 
         if (mapping?.courseCategory === "DC") {
           return "DC";
@@ -249,22 +255,12 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     }
 
     // Hard overrides (batch-sensitive)
-    const inferredBatch = (() => {
-      const batch = userSettings?.batch;
-      if (typeof batch === "number" && batch > 2000) return batch;
-      const enrollmentId = String(userSettings?.enrollmentId || "").toUpperCase();
-      const match = /B(\d{2})/i.exec(enrollmentId);
-      if (match) return 2000 + Number.parseInt(match[1], 10);
-      return null;
-    })();
-    const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
-
     if (normalizedCode === "IK593") return "HSS"; // IK-xxx → HSS+IKS
     if (normalizedCode === "IC181") return "HSS"; // → HSS+IKS
     if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC";
 
     if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
-      const mapping = pickRelevantBranchMapping(userSettings.branch, enrollment.course.branchMappings);
+      const mapping = pickRelevantBranchMapping(userSettings.branch, enrollment.course.branchMappings, inferredBatch);
 
       if (mapping?.courseCategory === "NA") {
         return "FE";

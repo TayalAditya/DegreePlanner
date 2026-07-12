@@ -56,6 +56,10 @@ export function getMtpComponent(code: unknown): MtpComponent | null {
   if (normalized === "MTP1") return 1;
   if (normalized === "MTP2") return 2;
 
+  // BSCS research project codes
+  if (normalized === "DP551P") return 1;
+  if (normalized === "DP552P") return 2;
+
   const match = normalized.match(/^([A-Z]+)(498P|499P)$/);
   if (!match || !MTP_PREFIXES.has(match[1])) return null;
   return match[2] === "498P" ? 1 : 2;

@@ -11,6 +11,7 @@ import {
 } from "@/components/SharedProfileView";
 import { authOptions } from "@/lib/auth";
 import { getBranchCandidates, getCurriculumBranchCode } from "@/lib/branchInfo";
+import { resolveBaseCategory } from "@/lib/courseCategory";
 import { loadDashboardEnrollments } from "@/lib/enrollmentsQuery";
 import {
   type CategoryCreditBreakdown,
@@ -71,42 +72,8 @@ const categoryLabels: Record<CategoryKey, string> = {
   ISTP: "ISTP",
 };
 
-const icBasketCodes = new Set(["IC131", "IC136", "IC230", "IC121", "IC240", "IC241", "IC253"]);
-const validCategories = new Set<CategoryKey>(categoryOrder);
-
-const normalizeCourseCode = (code: unknown) =>
-  String(code ?? "")
-    .replace(/\u00a0/g, " ")
-    .trim()
-    .toUpperCase()
-    .replace(/(\d{3}[A-Z]?)\s*\(\s*P\s*\)/g, "$1P")
-    .replace(/(_\d{1,2})?_NEW$/g, "")
-    .replace(/[^A-Z0-9]/g, "");
-
 function isCountedCompleted(enrollment: DashboardEnrollment) {
   return enrollment.status === "COMPLETED" && (!enrollment.grade || enrollment.grade !== "F");
-}
-
-function pickRelevantMapping(
-  enrollment: DashboardEnrollment,
-  userBranch?: string | null,
-  userBatch?: number | null
-) {
-  const mappings = enrollment.course?.branchMappings ?? [];
-  if (!userBranch || mappings.length === 0) return null;
-
-  const batch = userBatch ? String(userBatch) : "";
-  const candidates = Array.from(new Set([...getBranchCandidates(userBranch), "COMMON"]));
-
-  for (const branch of candidates) {
-    const batchSpecific = mappings.find((mapping) => mapping.branch === branch && mapping.batch === batch);
-    if (batchSpecific) return batchSpecific;
-
-    const global = mappings.find((mapping) => mapping.branch === branch && !mapping.batch);
-    if (global) return global;
-  }
-
-  return null;
 }
 
 function resolveCourseCategory(
@@ -115,40 +82,26 @@ function resolveCourseCategory(
   userBatch?: number | null
 ): CategoryKey {
   const courseCode = enrollment.course?.code ?? "";
-  const normalizedCode = normalizeCourseCode(courseCode);
-  const isBatch24Or25 = userBatch === 2024 || userBatch === 2025;
 
+  // Internships / 396P|399P are always Free Elective on the shared profile.
   if (enrollment.isInternship || /39[69]P$/i.test(courseCode)) return "FE";
-  if (normalizedCode.startsWith("HS")) return "HSS";
-  if (normalizedCode === "IC181" || normalizedCode === "IK593") return "HSS";
-  if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC";
-  if (/^IK\d/.test(normalizedCode)) return "HSS";
 
-  const mapping = pickRelevantMapping(enrollment, userBranch, userBatch);
-  if (mapping?.courseCategory === "NA") return "FE";
-  if (mapping?.courseCategory === "IKS") return "HSS";
-  if (mapping?.courseCategory && validCategories.has(mapping.courseCategory as CategoryKey)) {
-    return mapping.courseCategory as CategoryKey;
-  }
+  // Table-first resolution via the shared resolver (lib/courseCategory.ts).
+  const base = resolveBaseCategory(
+    {
+      code: courseCode,
+      courseType: enrollment.courseType,
+      branchMappings: enrollment.course?.branchMappings ?? undefined,
+    },
+    userBranch,
+    userBatch
+  );
 
-  if (icBasketCodes.has(normalizedCode)) return "IC_BASKET";
-  if (normalizedCode.startsWith("IC")) return "IC";
-
-  switch (enrollment.courseType) {
-    case "DE":
-      return "DE";
-    case "FREE_ELECTIVE":
-    case "PE":
-      return "FE";
-    case "MTP":
-      return "MTP";
-    case "ISTP":
-      return "ISTP";
-    case "CORE":
-      return "DC";
-    default:
-      return "FE";
-  }
+  // Map the shared base categories onto this page's CategoryKey set (no PE bucket here;
+  // this page has no stateful IC-basket, so any ICB candidate simply shows as IC_BASKET).
+  if (base === "IC_BASKET_CANDIDATE") return "IC_BASKET";
+  if (base === "PE") return "FE";
+  return base as CategoryKey;
 }
 
 function buildCourseRows(

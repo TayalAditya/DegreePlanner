@@ -1,5 +1,6 @@
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
+import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
 import { addCredits, formatCourseCode, minCredits, subtractCredits } from "@/lib/utils";
 
 type CategoryKey = "IC" | "IC_BASKET" | "DC" | "DE" | "FE" | "HSS" | "IKS" | "MTP" | "ISTP";
@@ -143,41 +144,15 @@ export function computeEnrollmentCreditBreakdown({
 
   const batchStr = userBatch ? String(userBatch) : "";
 
-  const pickMapping = (enrollment: EnrollmentLike, rawBranch: string, checkBranch: string) => {
+  // Thin adapter over the shared, canonical scorer (lib/courseCategory.ts) so the
+  // batch/branch precedence stays identical everywhere. `checkBranch` is unused now
+  // (the shared scorer normalizes internally) but kept in the signature for call sites.
+  const pickMapping = (enrollment: EnrollmentLike, rawBranch: string, _checkBranch: string) => {
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length === 0) return null;
-
-    const aliasList = getBranchCandidates(rawBranch);
-    const candidateOrder = new Map<string, number>(aliasList.map((b, idx) => [b, idx]));
-
-    let best: (typeof mappings)[number] | null = null;
-    let bestScore = Number.POSITIVE_INFINITY;
-
-    for (const m of mappings) {
-      const mBranch = String(m.branch || "");
-      const mBatch = m.batch ?? "";
-
-      // Skip mappings that don't apply to this batch
-      if (mBatch !== "" && mBatch !== batchStr) continue;
-
-      let branchIdx: number;
-      if (candidateOrder.has(mBranch)) {
-        branchIdx = candidateOrder.get(mBranch)!;
-      } else if (checkBranch === "GE" && mBranch.startsWith("GE") && candidateOrder.has("GE")) {
-        branchIdx = (candidateOrder.get("GE") ?? Number.POSITIVE_INFINITY) + 0.5;
-      } else {
-        continue;
-      }
-
-      const batchBonus = batchStr && mBatch === batchStr ? 0 : 1;
-      const score = branchIdx * 2 + batchBonus;
-      if (score < bestScore) {
-        best = m;
-        bestScore = score;
-      }
-    }
-
-    return best;
+    return (
+      pickBranchMapping(mappings as BranchMapping[], rawBranch, userBatch ?? null) ?? null
+    );
   };
 
   const getCourseCategory = (enrollment: EnrollmentLike): CategoryKey => {

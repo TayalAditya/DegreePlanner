@@ -652,27 +652,29 @@ const bscsSem4: DefaultCourse[] = [
   { code: "CY401",  name: "Introduction to Quantum Chemistry and Molecular Spectroscopy", credits: 3, category: "DC", semester: 4 },
 ];
 const bscsSem5: DefaultCourse[] = [
-  { code: "CY512",  name: "Advanced Quantum Chemistry",                                  credits: 3, category: "DC", semester: 5 },
-  { code: "CY512P", name: "Physical Chemistry Laboratory",                               credits: 3, category: "DC", semester: 5 },
-  { code: "CY531",  name: "Organic Reactions and Mechanisms",                             credits: 3, category: "DC", semester: 5 },
-  { code: "CY533P", name: "Inorganic Chemistry Laboratory",                              credits: 3, category: "DC", semester: 5 },
+  { code: "CY512",   name: "Advanced Quantum Chemistry",          credits: 3, category: "DC",   semester: 5 },
+  { code: "CY512P",  name: "Physical Chemistry Laboratory",       credits: 3, category: "DC",   semester: 5 },
+  { code: "CY531",   name: "Organic Reactions and Mechanisms",    credits: 3, category: "DC",   semester: 5 },
+  { code: "CY533P",  name: "Inorganic Chemistry Laboratory",      credits: 3, category: "DC",   semester: 5 },
+  { code: "CY-501P", name: "Research Literature Presentation 1",  credits: 1, category: "IC",   semester: 5 },
 ];
 const bscsSem6: DefaultCourse[] = [
-  { code: "CY511",  name: "Group Theory and Spectroscopy",            credits: 3, category: "DC", semester: 6 },
-  { code: "CY531P", name: "Organic Chemistry Laboratory",             credits: 3, category: "DC", semester: 6 },
-  { code: "CY532",  name: "Photochemistry and Pericyclic Reactions",  credits: 3, category: "DC", semester: 6 },
-  { code: "CY533",  name: "Chemistry of Main Group Elements",         credits: 3, category: "DC", semester: 6 },
-  { code: "CY534",  name: "Chemistry of Transition Elements",         credits: 3, category: "DC", semester: 6 },
+  { code: "CY511",   name: "Group Theory and Spectroscopy",           credits: 3, category: "DC",   semester: 6 },
+  { code: "CY531P",  name: "Organic Chemistry Laboratory",            credits: 3, category: "DC",   semester: 6 },
+  { code: "CY532",   name: "Photochemistry and Pericyclic Reactions", credits: 3, category: "DC",   semester: 6 },
+  { code: "CY533",   name: "Chemistry of Main Group Elements",        credits: 3, category: "DC",   semester: 6 },
+  { code: "CY534",   name: "Chemistry of Transition Elements",        credits: 3, category: "DC",   semester: 6 },
+  { code: "CY-502P", name: "Research Literature Presentation 2",      credits: 1, category: "IC",   semester: 6 },
 ];
 const bscsSem7: DefaultCourse[] = [
-  { code: "CY514",  name: "Chemical and Statistical Thermodynamics",  credits: 3, category: "DC", semester: 7 },
-  { code: "CY535",  name: "Introduction to Organometallic Chemistry", credits: 3, category: "DC", semester: 7 },
-  ...mtpSem7,
+  { code: "CY514",   name: "Chemical and Statistical Thermodynamics",  credits: 3, category: "DC",  semester: 7 },
+  { code: "CY535",   name: "Introduction to Organometallic Chemistry", credits: 3, category: "DC",  semester: 7 },
+  { code: "DP-551P", name: "Undergraduate Research Project 1",         credits: 6, category: "MTP", semester: 7 },
 ];
 const bscsSem8: DefaultCourse[] = [
-  { code: "CY513", name: "Chemical Kinetics and Reaction Dynamics", credits: 3, category: "DC", semester: 8 },
-  { code: "CY504", name: "Heterocyclic Chemistry",                  credits: 2, category: "DC", semester: 8 },
-  ...mtpSem8,
+  { code: "CY513",   name: "Chemical Kinetics and Reaction Dynamics", credits: 3, category: "DC",  semester: 8 },
+  { code: "CY504",   name: "Heterocyclic Chemistry",                  credits: 2, category: "DC",  semester: 8 },
+  { code: "DP-552P", name: "Undergraduate Research Project 2",        credits: 6, category: "MTP", semester: 8 },
 ];
 
 // ─── Optional HSS electives shown (unchecked) in Semester 2 for all branches ──
@@ -1567,6 +1569,8 @@ export function getDefaultCurriculum(branch: string, semester: number, batch?: n
     .map((course) => {
       if (course.category !== "MTP") return course;
       const component = course.semester === 8 ? 2 : 1;
+      // BSCS uses DP-551P/DP-552P with 6cr — keep hardcoded code and credits
+      if (effectiveBranch === "BSCS") return course;
       return {
         ...course,
         code: getMtpCourseCode(effectiveBranch, component),

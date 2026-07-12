@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getBranchCandidates, normalizeBranchCode } from "@/lib/branchInfo";
+import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
 import { CourseCategoryType } from "@prisma/client";
 
 function normalizeCourseCode(code: string): string {
@@ -50,7 +51,6 @@ export async function GET(req: NextRequest) {
     : session.user.batch ? String(session.user.batch) : "";
 
   const candidates = getBranchCandidates(requestedBranch);
-  const candidateOrder = new Map<string, number>(candidates.map((b, idx) => [b, idx]));
 
   // Fetch mappings for this branch's candidates, for generic batch "" AND the user's specific batch
   const batchFilter = userBatch
@@ -70,24 +70,23 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  // For each course code, pick the best mapping:
-  //   lower candidateOrder index = better branch match
-  //   within same branch priority, batch-specific beats generic (score += 0 vs 1)
-  const pickedScoreByCode = new Map<string, number>();
-  const categoriesByCode: Record<string, string> = {};
-
+  // Group mappings by course code, then pick the best one via the shared canonical
+  // scorer (lib/courseCategory.ts) so branch/batch precedence matches everywhere.
+  const mappingsByCode = new Map<string, BranchMapping[]>();
   for (const m of mappings) {
     const code = normalizeCourseCode(m.course.code);
-    const branchIdx = candidateOrder.get(m.branch) ?? Number.POSITIVE_INFINITY;
-    const batchBonus = userBatch && m.batch === userBatch ? 0 : 1;
-    const score = branchIdx * 2 + batchBonus;
+    const list = mappingsByCode.get(code);
+    if (list) list.push(m);
+    else mappingsByCode.set(code, [m]);
+  }
 
-    const existingScore = pickedScoreByCode.get(code);
-    if (existingScore !== undefined && existingScore <= score) continue;
+  const batchYear = userBatch ? Number(userBatch) : null;
+  const categoriesByCode: Record<string, string> = {};
 
-    pickedScoreByCode.set(code, score);
-
-    const uiCategory = toUiCategory(m.courseCategory);
+  for (const [code, list] of mappingsByCode) {
+    const best = pickBranchMapping(list, requestedBranch, batchYear);
+    if (!best) continue;
+    const uiCategory = toUiCategory(best.courseCategory as CourseCategoryType);
     categoriesByCode[code] = uiCategory === "IKS" && /^IK\d/.test(code) ? "FE" : uiCategory;
   }
 

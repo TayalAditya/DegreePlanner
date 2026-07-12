@@ -18,6 +18,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { useToast } from "@/components/ToastProvider";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
+import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
@@ -359,24 +360,15 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     return getBranchCandidates(raw).filter((branch) => branch !== "COMMON");
   }, [userSettings.branch]);
 
+  // Batch-aware resolution via the shared canonical scorer (lib/courseCategory.ts).
+  // getBranchCandidates() already covers branch aliases, GE, and COMMON (lowest priority),
+  // so this subsumes the previous manual exact/direct/ge/common fallback chain.
   const pickRelevantBranchMapping = (
     branch: string | undefined,
     mappings: Enrollment["course"]["branchMappings"] | undefined
   ) => {
     if (!branch || !mappings || mappings.length === 0) return undefined;
-
-    const exact = mappings.find((m) => m.branch === branch);
-    if (exact) return exact;
-
-    const direct = mappings.find((m) => mappingBranchAliases.includes(m.branch));
-    if (direct) return direct;
-
-    if (branch === "GE") {
-      const ge = mappings.find((m) => m.branch.startsWith("GE"));
-      if (ge) return ge;
-    }
-
-    return mappings.find((m) => m.branch === "COMMON");
+    return pickBranchMapping(mappings as BranchMapping[], branch, inferredBatch);
   };
 
   const applyMinorDeOverride = (category: CourseCategory, enrollment: Enrollment): CourseCategory => {

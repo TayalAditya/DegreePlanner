@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { getAllDefaultCourses, type DefaultCourse } from "@/lib/defaultCurriculum";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
+import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
 import {
   addCredits,
   formatCourseCode,
@@ -338,18 +339,10 @@ export function ProgressChart({
     const mappings = enrollment.course?.branchMappings || [];
     if (mappings.length > 0) {
       const rawBranch = String(branch || userBranch || "").trim().toUpperCase();
-      const checkBranch = normalizeBranchForIcBasket(rawBranch);
-      const aliasList = getBranchCandidates(rawBranch).filter((branch) => branch !== "COMMON");
-      const exact =
-        mappings.find((m: any) => m.branch === rawBranch) ||
-        mappings.find((m: any) => m.branch === checkBranch);
-      const direct = exact || mappings.find((m: any) => aliasList.includes(m.branch));
-      const ge =
-        checkBranch === "GE"
-          ? mappings.find((m: any) => String(m.branch || "").startsWith("GE"))
-          : undefined;
-      const common = mappings.find((m: any) => m.branch === "COMMON");
-      const mapping = direct || ge || common;
+      // Batch-aware resolution via the shared canonical scorer (lib/courseCategory.ts).
+      // getBranchCandidates() already includes COMMON (lowest priority) and GE aliases,
+      // so this subsumes the previous manual direct/ge/common fallback chain.
+      const mapping = pickBranchMapping(mappings as BranchMapping[], rawBranch, userBatch);
 
       if (mapping?.courseCategory === "NA") {
         return "FE";
