@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, GraduationCap } from "lucide-react";
+import { ChevronDown, GraduationCap, ChevronUp } from "lucide-react";
 import { MINORS, type MinorDefinition, type MinorRequirementGroup } from "@/lib/minors";
 import { MINOR_PLANNER_STORAGE_KEYS } from "@/lib/minorPlannerClient";
 import { addCredits, formatCourseCode, formatCredits } from "@/lib/utils";
@@ -102,11 +102,59 @@ function normalizeGroupCodes(group: MinorRequirementGroup): string[] {
   return Array.from(new Set(normalized));
 }
 
-function formatCodeList(codes: string[], limit = 6): string {
-  if (codes.length === 0) return "\u2014";
-  const shown = codes.slice(0, limit);
-  const suffix = codes.length > limit ? ` (+${codes.length - limit} more)` : "";
-  return `${shown.join(", ")}${suffix}`;
+const PILL_INITIAL_LIMIT = 6;
+
+function CoursePillList({
+  codes,
+  variant = "default",
+}: {
+  codes: string[];
+  variant?: "completed" | "inprogress" | "default";
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (codes.length === 0) return <span className="text-foreground-secondary">&mdash;</span>;
+
+  const shown = expanded ? codes : codes.slice(0, PILL_INITIAL_LIMIT);
+  const hidden = codes.length - PILL_INITIAL_LIMIT;
+
+  const pillClass =
+    variant === "completed"
+      ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800"
+      : variant === "inprogress"
+      ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800"
+      : "bg-surface border-border text-foreground-secondary";
+
+  return (
+    <div className="flex flex-wrap gap-1 mt-1">
+      {shown.map((code) => (
+        <span
+          key={code}
+          className={`inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-mono font-medium border ${pillClass}`}
+        >
+          {code}
+        </span>
+      ))}
+      {!expanded && hidden > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-medium border border-dashed border-border text-foreground-secondary hover:text-foreground hover:border-foreground-secondary transition-colors"
+        >
+          +{hidden} more <ChevronDown className="w-2.5 h-2.5" />
+        </button>
+      )}
+      {expanded && codes.length > PILL_INITIAL_LIMIT && (
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-medium border border-dashed border-border text-foreground-secondary hover:text-foreground hover:border-foreground-secondary transition-colors"
+        >
+          show less <ChevronUp className="w-2.5 h-2.5" />
+        </button>
+      )}
+    </div>
+  );
 }
 
 function computeMinorProgress(
@@ -739,22 +787,22 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
                                       </div>
                                     </div>
 
-                                    <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                                    <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-2 text-xs">
                                       <div>
-                                        <p className="text-foreground-secondary">Completed</p>
-                                        <p className="text-foreground">{formatCodeList(g.completedCodes)}</p>
+                                        <p className="text-foreground-secondary font-medium">Completed</p>
+                                        <CoursePillList codes={g.completedCodes} variant="completed" />
                                       </div>
                                       <div>
-                                        <p className="text-foreground-secondary">In progress</p>
-                                        <p className="text-foreground">{formatCodeList(g.inProgressCodes)}</p>
+                                        <p className="text-foreground-secondary font-medium">In progress</p>
+                                        <CoursePillList codes={g.inProgressCodes} variant="inprogress" />
                                       </div>
                                       <div>
-                                        <p className="text-foreground-secondary">Not started</p>
-                                        <p className="text-foreground">
-                                          {g.isConfigMissing
-                                            ? "Add course codes in lib/minors.ts"
-                                            : formatCodeList(g.notStartedCodes)}
-                                        </p>
+                                        <p className="text-foreground-secondary font-medium">Not started</p>
+                                        {g.isConfigMissing ? (
+                                          <span className="text-foreground-secondary">Add course codes in lib/minors.ts</span>
+                                        ) : (
+                                          <CoursePillList codes={g.notStartedCodes} variant="default" />
+                                        )}
                                       </div>
                                     </div>
                                   </div>
