@@ -36,6 +36,7 @@ const COLORS = {
   FE: "#10b981", // green
   HSS: "#f97316", // orange
   IKS: "#f59e0b", // amber
+  NOT_IN_DEGREE: "#94a3b8", // slate/grey — HSS+IKS credits beyond the 20-credit cap, not counted toward degree
   MTP: "#ef4444", // red
   ISTP: "#14b8a6", // teal
   core: "#4f46e5", // indigo
@@ -127,6 +128,27 @@ const normalizeBranchForIcBasket = (branch?: string) => {
 // HSS_CORE_CAP is now dynamic (15 BTech / 12 BSCS) — resolved per-render from progress data.
 // Module-level default for fallback only; actual value computed inside the component.
 const HSS_CORE_CAP_DEFAULT = 15;
+
+// HSS+IKS combined credits beyond this cap do not count toward the degree total.
+// Credits 0–HSS_CORE_CAP satisfy the HSS core requirement; HSS_CORE_CAP–HSS_FE_CAP
+// spill into Free Elective; anything above HSS_FE_CAP is "Not in Degree" (drained).
+const HSS_FE_CAP = 20;
+
+// Split one course's credits across the HSS+IKS buckets given how much of the
+// combined basket is already used. Returns the portion that satisfies the HSS
+// core requirement (0–coreCap), the portion that spills into Free Elective
+// (coreCap–HSS_FE_CAP), and the portion drained out of the degree (>HSS_FE_CAP).
+// `used` is advanced by the caller to (before + hss + fe); notInDegree does NOT
+// advance it — but since it only ever occurs once used has reached HSS_FE_CAP,
+// the running total effectively stops at the cap either way.
+function splitHssIksCredits(before: number, credits: number, coreCap: number) {
+  const afterCore = minCredits(coreCap, addCredits(before, credits));
+  const hss = subtractCredits(afterCore, minCredits(coreCap, before));
+  const afterFe = minCredits(HSS_FE_CAP, addCredits(before, credits));
+  const fe = subtractCredits(afterFe, minCredits(HSS_FE_CAP, addCredits(before, hss)));
+  const notInDegree = subtractCredits(credits, addCredits(hss, fe));
+  return { hss, fe, notInDegree };
+}
 
 const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCredits";
 
@@ -241,6 +263,7 @@ export function ProgressChart({
     FE: 0,
     HSS: 0,
     IKS: 0,
+    NOT_IN_DEGREE: 0,
     MTP: 0,
     ISTP: 0,
   };
@@ -323,16 +346,10 @@ export function ProgressChart({
       return "FE";
     }
 
-    // HS-xxx courses always go to HSS — never let branch mapping override
+    // HS-xxx courses always go to HSS — never let branch mapping override.
+    // The HSS/FE/not-in-degree split is applied by the caller via splitHssIksCredits;
+    // this function only classifies (it no longer mutates hssUsed).
     if (normalizedCode.startsWith("HS")) {
-      if (hssUsed) {
-        const before = hssUsed.credits;
-        if (before < HSS_CORE_CAP) {
-          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
-          return "HSS";
-        }
-        return "FE";
-      }
       return "HSS";
     }
 
@@ -349,8 +366,8 @@ export function ProgressChart({
       }
 
       // IK-xxx / IKS-mapped courses → HSS+IKS combined basket.
+      // Classification only; the caller applies the split via splitHssIksCredits.
       if (mapping?.courseCategory === "IKS") {
-        if (hssUsed) hssUsed.credits = Math.min(HSS_CORE_CAP, addCredits(hssUsed.credits, credits));
         return "HSS";
       }
 
@@ -460,25 +477,27 @@ export function ProgressChart({
         }
       }
 
-      // IKS courses go through the same HSS+IKS cap (max 15/12) — overflow → FE
+      // IKS courses go through the same HSS+IKS basket: 0–coreCap → HSS core,
+      // coreCap–20 → FE, >20 → Not in Degree.
       const isIksType = code === "IC181" || code === "IK593" || /^IK\d/.test(code) ||
         (code === "IC182" && (userBatch === 2024 || userBatch === 2025));
       if (isIksType) {
         const before = hssUsed.credits;
-        hssUsed.credits = Math.min(HSS_CORE_CAP, before + credits);
-        const actual = hssUsed.credits - before;
-        if (actual > 0) categoryCredits.HSS = addCredits(categoryCredits.HSS, actual);
-        const overflow = credits - actual;
-        if (overflow > 0) categoryCredits.FE = addCredits(categoryCredits.FE, overflow);
+        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP);
+        hssUsed.credits = addCredits(before, addCredits(hss, fe));
+        if (hss > 0) categoryCredits.HSS = addCredits(categoryCredits.HSS, hss);
+        if (fe > 0) categoryCredits.FE = addCredits(categoryCredits.FE, fe);
+        if (notInDegree > 0) categoryCredits.NOT_IN_DEGREE = addCredits(categoryCredits.NOT_IN_DEGREE, notInDegree);
         return;
       }
-      const hssBefore = hssUsed.credits;
       const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
       if (category === "HSS") {
-        const actualHss = subtractCredits(hssUsed.credits, hssBefore);
-        categoryCredits.HSS = addCredits(categoryCredits.HSS, actualHss);
-        const feOverflow = subtractCredits(credits, actualHss);
-        if (feOverflow > 0) categoryCredits.FE = addCredits(categoryCredits.FE, feOverflow);
+        const before = hssUsed.credits;
+        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP);
+        hssUsed.credits = addCredits(before, addCredits(hss, fe));
+        if (hss > 0) categoryCredits.HSS = addCredits(categoryCredits.HSS, hss);
+        if (fe > 0) categoryCredits.FE = addCredits(categoryCredits.FE, fe);
+        if (notInDegree > 0) categoryCredits.NOT_IN_DEGREE = addCredits(categoryCredits.NOT_IN_DEGREE, notInDegree);
       } else {
         categoryCredits[category] = addCredits(categoryCredits[category], credits);
       }
@@ -493,7 +512,7 @@ export function ProgressChart({
     }
   }
 
-  const DISPLAY_NAMES: Record<string, string> = { HSS: "HSS+IKS", IKS: "HSS+IKS", IC_BASKET: "IC Basket" };
+  const DISPLAY_NAMES: Record<string, string> = { HSS: "HSS+IKS", IKS: "HSS+IKS", IC_BASKET: "IC Basket", NOT_IN_DEGREE: "Not in Degree" };
   const categoryData = Object.entries(categoryCredits)
     .filter(([, value]) => value > 0)
     .map(([name, value]) => ({
@@ -549,11 +568,16 @@ export function ProgressChart({
     const icBasketUsed = { ic1: false, ic2: false };
     const hssUsed = { credits: 0 };
 
-    const completed = { core: 0, ic: 0, dc: 0, hss: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, total: 0 };
-    const inProgress = { core: 0, ic: 0, dc: 0, hss: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, total: 0 };
+    const completed = { core: 0, ic: 0, dc: 0, hss: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, notInDegree: 0, total: 0 };
+    const inProgress = { core: 0, ic: 0, dc: 0, hss: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, notInDegree: 0, total: 0 };
 
     const add = (bucket: typeof completed, category: keyof typeof categoryCredits, credits: number) => {
       const c = Number(credits || 0);
+      // HSS+IKS credits beyond the 20-credit cap don't count toward the degree total.
+      if (category === "NOT_IN_DEGREE") {
+        bucket.notInDegree = addCredits(bucket.notInDegree, c);
+        return;
+      }
       bucket.total = addCredits(bucket.total, c);
       switch (category) {
         // Split "core" into IC (institute core + basket), DC, and HSS+IKS so the
@@ -627,21 +651,22 @@ export function ProgressChart({
         (code === "IC182" && (userBatch === 2024 || userBatch === 2025));
       if (isIksType) {
         const before = hssUsed.credits;
-        hssUsed.credits = Math.min(HSS_CORE_CAP, addCredits(before, credits));
-        const actualHss = subtractCredits(hssUsed.credits, before);
-        if (actualHss > 0) add(bucket, "HSS", actualHss);
-        const feOverflow = subtractCredits(credits, actualHss);
-        if (feOverflow > 0) add(bucket, "FE", feOverflow);
+        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP);
+        hssUsed.credits = addCredits(before, addCredits(hss, fe));
+        if (hss > 0) add(bucket, "HSS", hss);
+        if (fe > 0) add(bucket, "FE", fe);
+        if (notInDegree > 0) add(bucket, "NOT_IN_DEGREE", notInDegree);
         return;
       }
 
-      const hssBefore = hssUsed.credits;
       const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
       if (category === "HSS") {
-        const actualHss = subtractCredits(hssUsed.credits, hssBefore);
-        add(bucket, "HSS", actualHss);
-        const feOverflow = subtractCredits(credits, actualHss);
-        if (feOverflow > 0) add(bucket, "FE", feOverflow);
+        const before = hssUsed.credits;
+        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP);
+        hssUsed.credits = addCredits(before, addCredits(hss, fe));
+        if (hss > 0) add(bucket, "HSS", hss);
+        if (fe > 0) add(bucket, "FE", fe);
+        if (notInDegree > 0) add(bucket, "NOT_IN_DEGREE", notInDegree);
       } else {
         add(bucket, category, credits);
       }
@@ -681,6 +706,7 @@ export function ProgressChart({
           freeElective: breakdownFromEnrollments.completed.freeElective,
           mtp: breakdownFromEnrollments.completed.mtp,
           istp: breakdownFromEnrollments.completed.istp,
+          notInDegree: breakdownFromEnrollments.completed.notInDegree,
         }
       : completedServer;
 
@@ -695,6 +721,7 @@ export function ProgressChart({
           freeElective: breakdownFromEnrollments.inProgress.freeElective,
           mtp: breakdownFromEnrollments.inProgress.mtp,
           istp: breakdownFromEnrollments.inProgress.istp,
+          notInDegree: breakdownFromEnrollments.inProgress.notInDegree,
         }
       : inProgressServer;
 
@@ -1076,7 +1103,7 @@ export function ProgressChart({
               key={key}
               className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-surface-hover text-foreground-secondary"
             >
-              {key}: {formatCredits(value)}
+              {DISPLAY_NAMES[key] ?? key}: {formatCredits(value)}
             </span>
           ))}
         </div>

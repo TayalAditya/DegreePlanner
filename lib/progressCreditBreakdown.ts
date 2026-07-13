@@ -3,7 +3,7 @@ import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
 import { addCredits, formatCourseCode, minCredits, subtractCredits } from "@/lib/utils";
 
-type CategoryKey = "IC" | "IC_BASKET" | "DC" | "DE" | "FE" | "HSS" | "IKS" | "MTP" | "ISTP";
+type CategoryKey = "IC" | "IC_BASKET" | "DC" | "DE" | "FE" | "HSS" | "IKS" | "MTP" | "ISTP" | "NOT_IN_DEGREE";
 
 export type CategoryCreditBreakdown = Record<CategoryKey, number>;
 
@@ -15,6 +15,7 @@ export type CountedCreditBreakdown = {
   freeElective: number;
   mtp: number;
   istp: number;
+  notInDegree: number;
   total: number;
 };
 
@@ -67,6 +68,20 @@ const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
 
 const HSS_CORE_CAP = 12;
 
+// HSS+IKS combined credits beyond this cap do not count toward the degree total.
+const HSS_FE_CAP = 20;
+
+// Split one course's credits across the HSS+IKS buckets:
+//   0–coreCap → core(HSS) ; coreCap–20 → FE ; >20 → Not in Degree (drained)
+function splitHssIksCredits(before: number, credits: number, coreCap: number) {
+  const afterCore = minCredits(coreCap, addCredits(before, credits));
+  const hss = subtractCredits(afterCore, minCredits(coreCap, before));
+  const afterFe = minCredits(HSS_FE_CAP, addCredits(before, credits));
+  const fe = subtractCredits(afterFe, minCredits(HSS_FE_CAP, addCredits(before, hss)));
+  const notInDegree = subtractCredits(credits, addCredits(hss, fe));
+  return { hss, fe, notInDegree };
+}
+
 const emptyCategoryCredits = (): CategoryCreditBreakdown => ({
   IC: 0,
   IC_BASKET: 0,
@@ -77,6 +92,7 @@ const emptyCategoryCredits = (): CategoryCreditBreakdown => ({
   IKS: 0,
   MTP: 0,
   ISTP: 0,
+  NOT_IN_DEGREE: 0,
 });
 
 const normalizeCourseCode = (code: unknown) =>
@@ -104,7 +120,10 @@ const countedFromCategories = (categoryCredits: CategoryCreditBreakdown): Counte
     categoryCredits.IKS
   );
   const core = addCredits(institutionalCore, categoryCredits.DC);
-  const total = Object.values(categoryCredits).reduce((sum, value) => addCredits(sum, value), 0);
+  // NOT_IN_DEGREE credits are excluded from the degree total.
+  const total = Object.entries(categoryCredits)
+    .filter(([key]) => key !== "NOT_IN_DEGREE")
+    .reduce((sum, [, value]) => addCredits(sum, value), 0);
 
   return {
     institutionalCore,
@@ -114,6 +133,7 @@ const countedFromCategories = (categoryCredits: CategoryCreditBreakdown): Counte
     freeElective: categoryCredits.FE,
     mtp: categoryCredits.MTP,
     istp: categoryCredits.ISTP,
+    notInDegree: categoryCredits.NOT_IN_DEGREE,
     total,
   };
 };
@@ -198,23 +218,18 @@ export function computeEnrollmentCreditBreakdown({
     }
 
     if (normalizedCode.startsWith("HS")) {
-      const before = hssUsed.credits;
-      if (before < HSS_CORE_CAP) {
-        hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, enrollment.course?.credits || 0));
-        return "HSS";
-      }
-      return "FE";
+      return "HSS";
     }
 
     const mapping = pickMapping(enrollment, rawBranch, checkBranch);
     if (mapping?.courseCategory === "NA") return "FE";
-    if (mapping?.courseCategory === "IKS" && isIkCourse) return "FE";
+    if (mapping?.courseCategory === "IKS" && isIkCourse) return "HSS";
     if (mapping?.courseCategory && mapping.courseCategory in categoryCredits) {
       return applyMinorDeOverride(enrollment, mapping.courseCategory as CategoryKey);
     }
     if ((enrollment.course?.branchMappings || []).length > 0) return "FE";
 
-    if (isIkCourse) return "FE";
+    if (isIkCourse) return "HSS";
     if (normalizedCode.startsWith("IC")) return "IC";
 
     const specialDpCategory = getSpecialDpCategory(normalizedCode);
@@ -244,15 +259,16 @@ export function computeEnrollmentCreditBreakdown({
     );
 
   sortedEnrollments.forEach((enrollment) => {
-    const hssBefore = hssUsed.credits;
     const category = getCourseCategory(enrollment);
     const credits = Number(enrollment.course?.credits || 0);
 
-    if (category === "HSS") {
-      const actualHss = subtractCredits(hssUsed.credits, hssBefore);
-      categoryCredits.HSS = addCredits(categoryCredits.HSS, actualHss);
-      const feOverflow = subtractCredits(credits, actualHss);
-      if (feOverflow > 0) categoryCredits.FE = addCredits(categoryCredits.FE, feOverflow);
+    if (category === "HSS" || category === "IKS") {
+      const before = hssUsed.credits;
+      const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP);
+      hssUsed.credits = addCredits(before, addCredits(hss, fe));
+      if (hss > 0) categoryCredits.HSS = addCredits(categoryCredits.HSS, hss);
+      if (fe > 0) categoryCredits.FE = addCredits(categoryCredits.FE, fe);
+      if (notInDegree > 0) categoryCredits.NOT_IN_DEGREE = addCredits(categoryCredits.NOT_IN_DEGREE, notInDegree);
       return;
     }
 
