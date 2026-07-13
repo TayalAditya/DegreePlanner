@@ -819,7 +819,11 @@ export default function PreRegistrationPage() {
     let total = 0;
     for (const o of data.offerings) {
       if (o.completedInSemester !== null) continue;
-      if (o.isCompulsory || selected.has(o.id)) total += o.credits;
+      if (o.isCompulsory || selected.has(o.id)) {
+        // Audit courses don't count toward semester credit limit
+        if (regTypes.get(o.id) === "AUDIT") continue;
+        total += o.credits;
+      }
     }
     // Add internship / MTP-1 selections
     const extraCourses = [...internshipCourses.p399, ...internshipCourses.p396, ...(mtp1Course ? [mtp1Course] : [])];
@@ -827,7 +831,7 @@ export default function PreRegistrationPage() {
       if (selectedExtra.has(c.id)) total += c.credits;
     }
     return total;
-  }, [data, selected, selectedExtra, internshipCourses, mtp1Course]);
+  }, [data, selected, selectedExtra, internshipCourses, mtp1Course, regTypes]);
 
   // Minor planner: for selected minor, compute per-group offering data with completion status
   const minorData = useMemo(() => {
