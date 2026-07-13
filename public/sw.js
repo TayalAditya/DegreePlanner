@@ -1,8 +1,8 @@
 // Service Worker for PWA functionality
 
-const CACHE_NAME = "degree-planner-v2";
-const STATIC_CACHE = "static-v2";
-const DYNAMIC_CACHE = "dynamic-v2";
+const CACHE_NAME = "degree-planner-v3";
+const STATIC_CACHE = "static-v3";
+const DYNAMIC_CACHE = "dynamic-v3";
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
@@ -46,6 +46,10 @@ self.addEventListener("fetch", (event) => {
 
   // Skip Chrome extensions
   if (url.protocol === "chrome-extension:") return;
+
+  // Never cache API routes — they return per-user data that must not be
+  // served stale after an account switch.
+  if (url.pathname.startsWith("/api/")) return;
 
   event.respondWith(
     caches.match(request).then((cachedResponse) => {

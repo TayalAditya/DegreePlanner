@@ -124,7 +124,7 @@ export async function GET() {
     }),
     prisma.preRegistrationPlan.findUnique({
       where: { userId_offeringSemester_offeringYear: { userId: session.user.id, offeringSemester, offeringYear } },
-      select: { selectedIds: true, updatedAt: true },
+      select: { selectedIds: true, registrationTypes: true, updatedAt: true },
     }),
     prisma.user.findUnique({
       where: { id: session.user.id },
@@ -423,6 +423,7 @@ export async function GET() {
     },
     savedPlan: {
       selectedIds: savedPlan?.selectedIds ?? [],
+      registrationTypes: (savedPlan?.registrationTypes as Record<string, string>) ?? {},
       updatedAt: savedPlan?.updatedAt ?? null,
     },
   });
