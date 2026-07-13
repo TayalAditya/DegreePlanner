@@ -600,7 +600,6 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
         }
       });
 
-    const branchConfig = getAllBranches().find((b) => b.code === user?.branch);
     const deCap = branchConfig?.deCredits ?? 28;
     if (credits.DE > deCap) {
       const overflow = subtractCredits(credits.DE, deCap);

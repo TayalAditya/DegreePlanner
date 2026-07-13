@@ -80,6 +80,7 @@ interface ProgressData {
     IKS: number;
     MTP: number;
     ISTP: number;
+    NOT_IN_DEGREE: number;
   };
   creditsInProgressByCategory: {
     IC: number;
@@ -92,6 +93,7 @@ interface ProgressData {
     IKS: number;
     MTP: number;
     ISTP: number;
+    NOT_IN_DEGREE: number;
   };
   creditsRequiredByCategory: {
     IC: number;
@@ -104,6 +106,7 @@ interface ProgressData {
     IKS: number;
     MTP: number;
     ISTP: number;
+    NOT_IN_DEGREE: number;
   };
   semesterWiseCredits: { semester: number; credits: number; inProgressCredits: number }[];
 }
