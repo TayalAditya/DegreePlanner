@@ -28,6 +28,7 @@ import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { NotificationBell } from "./NotificationBell";
 import { BrandMark } from "./BrandMark";
+import { ACAD_SEC_EMAILS } from "@/lib/permissions";
 
 interface DashboardNavProps {
   user: {
@@ -64,7 +65,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
     { name: "Inbox", href: "/dashboard/inbox", icon: Inbox },
   ];
 
-  const allNavigation = user.role === "ADMIN"
+  const allNavigation = user.role === "ADMIN" || ACAD_SEC_EMAILS.has((user.email ?? "").toLowerCase())
     ? [...navigation, ...adminNavigation]
     : navigation;
 

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { CourseCategoryType } from "@prisma/client";
+import { isAcadSec } from "@/lib/permissions";
 
 // Column indices (0-based) — fixed format
 const COL = {
@@ -66,7 +67,7 @@ function parseRow(row: any[]): {
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.user.role !== "ADMIN" && !isAcadSec(session.user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.user.role !== "ADMIN" && !isAcadSec(session.user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const semester = parseInt(searchParams.get("semester") ?? "", 10);
@@ -183,7 +184,7 @@ export async function GET(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.user.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.user.role !== "ADMIN" && !isAcadSec(session.user.email)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { searchParams } = new URL(request.url);
   const semester = parseInt(searchParams.get("semester") ?? "", 10);
