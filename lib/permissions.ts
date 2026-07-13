@@ -4,6 +4,9 @@ export const DOCS_ADMIN_ENROLLMENT_ID = (process.env.DOCS_ADMIN_ENROLLMENT_ID ||
 export const ACAD_SEC_EMAILS = new Set<string>([
   "academic_secretary@students.iitmandi.ac.in",
   "sae@iitmandi.ac.in",
+  "adcourses@iitmandi.ac.in",
+  "vaibhav@iitmandi.ac.in",
+  "vishalparmar@iitmandi.ac.in",
 ]);
 
 export function isAcadSec(email?: string | null): boolean {
