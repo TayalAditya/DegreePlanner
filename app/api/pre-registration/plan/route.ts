@@ -14,10 +14,14 @@ export async function GET(req: NextRequest) {
 
   const plan = await prisma.preRegistrationPlan.findUnique({
     where: { userId_offeringSemester_offeringYear: { userId: session.user.id, offeringSemester: semester, offeringYear: year } },
-    select: { selectedIds: true, updatedAt: true },
+    select: { selectedIds: true, registrationTypes: true, updatedAt: true },
   });
 
-  return NextResponse.json({ selectedIds: plan?.selectedIds ?? [], updatedAt: plan?.updatedAt ?? null });
+  return NextResponse.json({
+    selectedIds: plan?.selectedIds ?? [],
+    registrationTypes: (plan?.registrationTypes as Record<string, string>) ?? {},
+    updatedAt: plan?.updatedAt ?? null,
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -25,16 +29,23 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { semester, year, selectedIds } = body as { semester: number; year: number; selectedIds: string[] };
+  const { semester, year, selectedIds, registrationTypes } = body as {
+    semester: number;
+    year: number;
+    selectedIds: string[];
+    registrationTypes?: Record<string, string>;
+  };
 
   if (!semester || !year || !Array.isArray(selectedIds)) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
+  const types = registrationTypes ?? {};
+
   const plan = await prisma.preRegistrationPlan.upsert({
     where: { userId_offeringSemester_offeringYear: { userId: session.user.id, offeringSemester: semester, offeringYear: year } },
-    create: { userId: session.user.id, offeringSemester: semester, offeringYear: year, selectedIds },
-    update: { selectedIds },
+    create: { userId: session.user.id, offeringSemester: semester, offeringYear: year, selectedIds, registrationTypes: types },
+    update: { selectedIds, registrationTypes: types },
     select: { updatedAt: true },
   });
 

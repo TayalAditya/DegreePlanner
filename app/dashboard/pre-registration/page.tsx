@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PreRegistrationSkeleton } from "./loading";
-import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check, EyeOff } from "lucide-react";
+import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check, EyeOff, Eye } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { formatCredits, formatCourseCode } from "@/lib/utils";
@@ -37,8 +37,10 @@ interface ApiResponse {
   incompleteSemesters: number[];
   completedCourseCodes?: string[];
   studentInfo: { name: string | null; branch: string | null; semester: number; pfCreditsUsed: number; batch: number | null } | null;
-  savedPlan?: { selectedIds: string[]; updatedAt: string | null };
+  savedPlan?: { selectedIds: string[]; registrationTypes?: Record<string, string>; updatedAt: string | null };
 }
+
+type RegType = "REGULAR" | "PASS_FAIL" | "AUDIT";
 
 interface InternshipCourse {
   id: string;
@@ -188,9 +190,120 @@ function slotsClash(a: string | null, b: string | null): boolean {
   return fixedSlots(b).some((t) => sa.has(t));
 }
 
+// P/F credit budget (IIT Mandi: max 9 credits over entire program)
+const PF_TOTAL = 9;
+
+// Categories where P/F is freely allowed (FE, HSS/IKS, DE with warning)
+const PF_FREE_CATS = new Set(["FE", "HSS", "IKS"]);
+// Categories where P/F needs faculty+FA approval
+const PF_APPROVAL_CATS = new Set(["DE"]);
+
+/**
+ * Small selector shown on a selected course card to pick registration type.
+ * Rules:
+ *  - FE/HSS/IKS → Regular, P/F (with budget check), Audit
+ *  - DE          → Regular, P/F (faculty+FA approval needed), Audit
+ *  - DC/IC       → Regular, Audit  (no P/F allowed)
+ *  - Audit       → always available but shows transcript/degree warning
+ */
+function RegTypeSelector({
+  id,
+  category,
+  regType,
+  pfBudgetRemaining,
+  onChange,
+}: {
+  id: string;
+  category: string;
+  regType: RegType;
+  pfBudgetRemaining: number;
+  onChange: (id: string, type: RegType) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const allowPF = PF_FREE_CATS.has(category) || PF_APPROVAL_CATS.has(category);
+  const isCore = !allowPF; // DC, IC, MTP, ISTP
+
+  const options: { value: RegType; label: string }[] = [
+    { value: "REGULAR", label: "Regular" },
+    ...(allowPF ? [{ value: "PASS_FAIL" as RegType, label: "Pass/Fail" }] : []),
+    { value: "AUDIT", label: "Audit" },
+  ];
+
+  const displayLabel = regType === "PASS_FAIL" ? "P/F" : regType === "AUDIT" ? "Audit" : "Regular";
+  const displayColor =
+    regType === "PASS_FAIL"
+      ? "bg-accent/10 text-accent border-accent/30"
+      : regType === "AUDIT"
+      ? "bg-warning/10 text-warning border-warning/30"
+      : "bg-surface-secondary text-foreground-secondary border-border";
+
+  const handleSelect = (val: RegType) => {
+    setOpen(false);
+    onChange(id, val);
+  };
+
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded border transition-colors ${displayColor}`}
+        title="Change registration type"
+      >
+        {displayLabel}
+        <ChevronDown className="w-2.5 h-2.5" />
+      </button>
+
+      {open && (
+        <>
+          {/* Backdrop */}
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full mt-1 z-50 w-52 rounded-xl border border-border bg-background shadow-lg overflow-hidden">
+            {options.map((opt) => {
+              const isPF = opt.value === "PASS_FAIL";
+              const pfExhausted = isPF && pfBudgetRemaining <= 0 && regType !== "PASS_FAIL";
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => !pfExhausted && handleSelect(opt.value)}
+                  disabled={pfExhausted}
+                  className={`w-full text-left px-3 py-2 text-sm transition-colors
+                    ${opt.value === regType ? "bg-primary/10 text-primary font-medium" : "hover:bg-surface-secondary text-foreground"}
+                    ${pfExhausted ? "opacity-40 cursor-not-allowed" : ""}
+                  `}
+                >
+                  <span className="block font-medium">{opt.label}</span>
+                  <span className="block text-xs text-foreground-secondary mt-0.5">
+                    {opt.value === "REGULAR" && "Counts toward degree normally"}
+                    {opt.value === "PASS_FAIL" && PF_FREE_CATS.has(category) &&
+                      (pfExhausted
+                        ? `P/F budget exhausted (${PF_TOTAL} cr used)`
+                        : `Uses P/F budget · ${pfBudgetRemaining} cr remaining`)}
+                    {opt.value === "PASS_FAIL" && PF_APPROVAL_CATS.has(category) &&
+                      "Requires faculty & FA approval"}
+                    {opt.value === "AUDIT" && "Appears on transcript · does not count toward degree"}
+                  </span>
+                </button>
+              );
+            })}
+            {isCore && (
+              <div className="px-3 py-2 text-xs text-foreground-secondary border-t border-border">
+                P/F not permitted for DC/IC courses
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function CourseCard({
   offering, checked, disabled, onToggle, clashWith, isCompulsory, minorGroupLabel, studentInfo,
   samarthReported, onToggleSamarth,
+  regType, pfBudgetRemaining, onRegTypeChange,
 }: {
   offering: Offering & { instructorEmail?: string | null };
   checked: boolean;
@@ -202,6 +315,9 @@ function CourseCard({
   studentInfo?: { name: string | null; branch: string | null; semester: number } | null;
   samarthReported?: boolean;
   onToggleSamarth?: (offeringId: string) => void;
+  regType?: RegType;
+  pfBudgetRemaining?: number;
+  onRegTypeChange?: (id: string, type: RegType) => void;
 }) {
   const isCompleted = offering.completedInSemester !== null;
   const catColor = CATEGORY_COLOR[offering.resolvedCategory] ?? "bg-surface-secondary text-foreground-secondary";
@@ -258,6 +374,16 @@ function CourseCard({
               Sem {offering.completedInSemester}
             </span>
           )}
+          {/* Registration type selector — only for selected, non-compulsory, non-completed courses */}
+          {checked && !isCompulsory && !isCompleted && onRegTypeChange && (
+            <RegTypeSelector
+              id={offering.id}
+              category={offering.resolvedCategory}
+              regType={regType ?? "REGULAR"}
+              pfBudgetRemaining={pfBudgetRemaining ?? 0}
+              onChange={onRegTypeChange}
+            />
+          )}
         </div>
 
         <p className={`mt-0.5 text-sm font-medium text-foreground ${isCompleted ? "line-through" : ""}`}>
@@ -275,6 +401,20 @@ function CourseCard({
           <p className="mt-1 text-xs text-error flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" />
             Slot clash with {clashWith}
+          </p>
+        )}
+
+        {/* Registration type inline warnings */}
+        {checked && !isCompulsory && !isCompleted && regType === "AUDIT" && (
+          <p className="mt-1 text-xs text-warning flex items-center gap-1">
+            <Eye className="w-3 h-3" />
+            Audit: will appear on transcript but won&apos;t count toward your degree
+          </p>
+        )}
+        {checked && !isCompulsory && !isCompleted && regType === "PASS_FAIL" && PF_APPROVAL_CATS.has(offering.resolvedCategory) && (
+          <p className="mt-1 text-xs text-accent flex items-center gap-1">
+            <AlertTriangle className="w-3 h-3" />
+            DE as P/F requires faculty &amp; FA approval before registration
           </p>
         )}
 
@@ -510,6 +650,13 @@ export default function PreRegistrationPage() {
   const [selectedExtra, setSelectedExtra] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
   const [samarthReported, setSamarthReported] = useState<Set<string>>(new Set());
+  const [regTypes, setRegTypes] = useState<Map<string, RegType>>(new Map());
+
+  const handleRegTypeChange = (id: string, type: RegType) => {
+    setRegTypes(prev => { const m = new Map(prev); m.set(id, type); return m; });
+    setSaved(false);
+  };
+
   const toggleExtra = (id: string) => setSelectedExtra(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); setSaved(false); return s; });
 
   // P/F credits consumed by selected internship in THIS plan
@@ -520,6 +667,18 @@ export default function PreRegistrationPage() {
     }
     return used;
   }, [selectedExtra, internshipCourses]);
+
+  // P/F credits consumed by courses marked as P/F in this plan (non-internship)
+  const pfCreditsFromRegTypes = useMemo(() => {
+    if (!data) return 0;
+    let used = 0;
+    for (const o of data.offerings) {
+      if (selected.has(o.id) && regTypes.get(o.id) === "PASS_FAIL") {
+        used += o.credits;
+      }
+    }
+    return used;
+  }, [data, selected, regTypes]);
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
 
@@ -561,6 +720,14 @@ export default function PreRegistrationPage() {
           }
           setSelected(restoredIds);
           if (restoredExtra.size > 0) setSelectedExtra(restoredExtra);
+          // Restore registration types
+          if (plan.registrationTypes && Object.keys(plan.registrationTypes).length > 0) {
+            const m = new Map<string, RegType>();
+            for (const [id, type] of Object.entries(plan.registrationTypes)) {
+              if (type === "PASS_FAIL" || type === "AUDIT" || type === "REGULAR") m.set(id, type);
+            }
+            setRegTypes(m);
+          }
           setSaved(true);
         }
 
@@ -768,6 +935,8 @@ export default function PreRegistrationPage() {
     const next = new Set(selected);
     if (next.has(offering.id)) {
       next.delete(offering.id);
+      // Clear any custom reg type when deselecting
+      setRegTypes(prev => { const m = new Map(prev); m.delete(offering.id); return m; });
     } else {
       next.add(offering.id);
       const newTotal = totalCredits + offering.credits;
@@ -811,6 +980,7 @@ export default function PreRegistrationPage() {
               .filter((o) => o.isCompulsory && o.completedInSemester === null)
               .map((o) => o.id),
           ],
+          registrationTypes: Object.fromEntries(regTypes),
         }),
       });
       if (!res.ok) throw new Error();
@@ -986,6 +1156,10 @@ export default function PreRegistrationPage() {
   const registrationLocked = !!data.registrationOpensAt;
   const selectedCount = selected.size + selectedExtra.size + compulsory.filter((o) => !o.completedInSemester).length;
 
+  // P/F budget: historical + internship selections + reg-type P/F selections
+  const pfUsedTotal = (data.studentInfo?.pfCreditsUsed ?? 0) + pfCreditsFromSelection + pfCreditsFromRegTypes;
+  const pfBudgetRemaining = Math.max(0, PF_TOTAL - pfUsedTotal);
+
   const incompleteSemesters = data?.incompleteSemesters ?? [];
   const showIncompleteWarning = incompleteSemesters.length > 0 && !incompleteWarningDismissed;
 
@@ -1136,6 +1310,9 @@ export default function PreRegistrationPage() {
                           studentInfo={data.studentInfo}
                           samarthReported={samarthReported.has(offering!.id)}
                           onToggleSamarth={handleToggleSamarth}
+                          regType={regTypes.get(offering!.id) ?? "REGULAR"}
+                          pfBudgetRemaining={pfBudgetRemaining}
+                          onRegTypeChange={handleRegTypeChange}
                         />
                       ))}
                     </div>
@@ -1228,9 +1405,8 @@ export default function PreRegistrationPage() {
           )}
         </div>
         {(() => {
-          const pfUsed = (data.studentInfo?.pfCreditsUsed ?? 0) + pfCreditsFromSelection;
-          const PF_TOTAL = 9;
-          const pfRemaining = Math.max(0, PF_TOTAL - pfUsed);
+          const pfUsed = pfUsedTotal;
+          const pfRemaining = pfBudgetRemaining;
           const pfPct = Math.min(100, (pfUsed / PF_TOTAL) * 100);
           return (
             <div>
@@ -1308,6 +1484,9 @@ export default function PreRegistrationPage() {
               studentInfo={data.studentInfo}
               samarthReported={samarthReported.has(o.id)}
               onToggleSamarth={handleToggleSamarth}
+              regType={regTypes.get(o.id) ?? "REGULAR"}
+              pfBudgetRemaining={pfBudgetRemaining}
+              onRegTypeChange={handleRegTypeChange}
             />
           ))}
         </Section>
@@ -1327,6 +1506,9 @@ export default function PreRegistrationPage() {
               studentInfo={data.studentInfo}
               samarthReported={samarthReported.has(o.id)}
               onToggleSamarth={handleToggleSamarth}
+              regType={regTypes.get(o.id) ?? "REGULAR"}
+              pfBudgetRemaining={pfBudgetRemaining}
+              onRegTypeChange={handleRegTypeChange}
             />
           ))}
         </Section>
@@ -1354,6 +1536,9 @@ export default function PreRegistrationPage() {
                       studentInfo={data.studentInfo}
                       samarthReported={samarthReported.has(o.id)}
                       onToggleSamarth={handleToggleSamarth}
+                      regType={regTypes.get(o.id) ?? "REGULAR"}
+                      pfBudgetRemaining={pfBudgetRemaining}
+                      onRegTypeChange={handleRegTypeChange}
                     />
                   ))}
                 </Section>

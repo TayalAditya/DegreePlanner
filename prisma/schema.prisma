@@ -454,14 +454,16 @@ model CourseOffering {
 }
 
 model PreRegistrationPlan {
-  id               String   @id @default(cuid())
-  userId           String
-  offeringSemester Int
-  offeringYear     Int
-  selectedIds      String[]
-  savedAt          DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                String   @id @default(cuid())
+  userId            String
+  offeringSemester  Int
+  offeringYear      Int
+  selectedIds       String[]
+  /// JSON map of { [courseOrOfferingId]: "REGULAR" | "PASS_FAIL" | "AUDIT" }
+  registrationTypes Json     @default("{}")
+  savedAt           DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, offeringSemester, offeringYear])
   @@index([offeringSemester, offeringYear])
