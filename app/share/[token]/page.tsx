@@ -58,6 +58,7 @@ const categoryOrder: CategoryKey[] = [
   "HSS",
   "MTP",
   "ISTP",
+  "NOT_IN_DEGREE",
 ];
 
 const categoryLabels: Record<CategoryKey, string> = {
@@ -70,6 +71,7 @@ const categoryLabels: Record<CategoryKey, string> = {
   IKS: "Indian Knowledge System",
   MTP: "Major Technical Project",
   ISTP: "ISTP",
+  NOT_IN_DEGREE: "Not in Degree",
 };
 
 function isCountedCompleted(enrollment: DashboardEnrollment) {
@@ -199,6 +201,7 @@ function buildRequiredCredits(
     IKS: 0,
     MTP: mtpRequired,
     ISTP: istpRequired,
+    NOT_IN_DEGREE: 0,
   } satisfies CategoryCreditBreakdown;
 }
 
