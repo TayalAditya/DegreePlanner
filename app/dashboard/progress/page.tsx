@@ -698,6 +698,7 @@ export default function ProgressPage() {
       IKS: iksRequired,
       MTP: mtpRequired,
       ISTP: istpRequired,
+      NOT_IN_DEGREE: 0,
     };
 
     // Group by semester (include IN_PROGRESS when toggle is ON)
