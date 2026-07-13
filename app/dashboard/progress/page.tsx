@@ -120,6 +120,7 @@ const categoryColors = {
   IKS: { bg: "bg-warning/10", text: "text-warning", bar: "bg-warning" },
   MTP: { bg: "bg-error/10", text: "text-error", bar: "bg-error" },
   ISTP: { bg: "bg-accent/10", text: "text-accent", bar: "bg-accent" },
+  NOT_IN_DEGREE: { bg: "bg-foreground-muted/10", text: "text-foreground-muted", bar: "bg-foreground-muted" },
   AUDIT: { bg: "bg-foreground-muted/10", text: "text-foreground-muted", bar: "bg-foreground-muted" },
 };
 
@@ -134,6 +135,7 @@ const categoryLabels = {
   IKS: "Indian Knowledge System",
   MTP: "Major Technical Project",
   ISTP: "Interactive Socio-Technical Practicum",
+  NOT_IN_DEGREE: "Not in Degree (HSS+IKS excess)",
   AUDIT: "Audit (NC)",
 };
 
@@ -525,9 +527,9 @@ export default function ProgressPage() {
         totalCreditsEarned: 0,
         totalCreditsInProgress: 0,
         totalCreditsRequired,
-        creditsByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0 },
-        creditsInProgressByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0 },
-        creditsRequiredByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0 },
+        creditsByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0 },
+        creditsInProgressByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0 },
+        creditsRequiredByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0 },
         semesterWiseCredits: [],
       };
     }
@@ -553,6 +555,7 @@ export default function ProgressPage() {
       IKS: 0,
       MTP: 0,
       ISTP: 0,
+      NOT_IN_DEGREE: 0,
     };
 
     const creditsInProgressByCategory = {
@@ -566,6 +569,7 @@ export default function ProgressPage() {
       IKS: 0,
       MTP: 0,
       ISTP: 0,
+      NOT_IN_DEGREE: 0,
     };
 
     // HSS+IKS combined basket: BTech = 15, BSCS = 12 — must be declared before accumulateSplitAware uses it
@@ -587,18 +591,20 @@ export default function ProgressPage() {
         map[splitCat] = addCredits(map[splitCat], mapping.splitAmount);
         return;
       }
-      // IKS courses go through same HSS+IKS cap as HS-xxx — overflow → FE
+      // IKS courses go through same HSS+IKS basket: 0–coreCap → HSS, coreCap–20 → FE, >20 → Not in Degree
       const eCode = normalizeCode(e.course.code);
       const isIksType = eCode === "IC181" || eCode === "IK593" || /^IK\d/.test(eCode) ||
         (eCode === "IC182" && (inferredBatch === 2024 || inferredBatch === 2025));
       if (isIksType) {
         const before = hssU?.credits ?? 0;
-        if (hssU) hssU.credits = Math.min(HSS_CORE_CAP, before + e.course.credits);
+        if (hssU) hssU.credits = Math.min(HSS_FE_CAP, addCredits(before, e.course.credits));
         const after = hssU?.credits ?? before;
         const corePortion = Math.max(0, Math.min(HSS_CORE_CAP, after) - Math.min(HSS_CORE_CAP, before));
         const fePortion = Math.max(0, Math.min(HSS_FE_CAP, after) - Math.max(HSS_CORE_CAP, before));
+        const notInDegree = subtractCredits(e.course.credits, addCredits(corePortion, fePortion));
         if (corePortion > 0) map["HSS"] = addCredits(map["HSS"] ?? 0, corePortion);
         if (fePortion > 0) map["FE"] = addCredits(map["FE"] ?? 0, fePortion);
+        if (notInDegree > 0) map["NOT_IN_DEGREE"] = addCredits(map["NOT_IN_DEGREE"] ?? 0, notInDegree);
         return;
       }
       const hssBefore = hssU?.credits ?? 0;
@@ -607,8 +613,10 @@ export default function ProgressPage() {
       if (category === "HSS") {
         const corePortion = Math.max(0, Math.min(HSS_CORE_CAP, hssAfter) - Math.min(HSS_CORE_CAP, hssBefore));
         const fePortion = Math.max(0, Math.min(HSS_FE_CAP, hssAfter) - Math.max(HSS_CORE_CAP, hssBefore));
+        const notInDegree = subtractCredits(e.course.credits, addCredits(corePortion, fePortion));
         if (corePortion > 0) map["HSS"] = addCredits(map["HSS"] ?? 0, corePortion);
         if (fePortion > 0) map["FE"] = addCredits(map["FE"] ?? 0, fePortion);
+        if (notInDegree > 0) map["NOT_IN_DEGREE"] = addCredits(map["NOT_IN_DEGREE"] ?? 0, notInDegree);
       } else {
         // IKS should always be merged into HSS — safety net for any edge case
         const effectiveCat = category === "IKS" ? "HSS" : category;
@@ -620,7 +628,10 @@ export default function ProgressPage() {
 
     sortedInProgress.forEach((e) => accumulateSplitAware(creditsInProgressByCategory, e, icBasketUsed, hssUsed));
 
-    const totalCreditsEarned = sumCredits(completedEnrollments.map((e) => e.course.credits));
+    const totalCreditsEarned = subtractCredits(
+      sumCredits(completedEnrollments.map((e) => e.course.credits)),
+      creditsByCategory.NOT_IN_DEGREE
+    );
 
     const totalCreditsInProgress = sumCredits(inProgressEnrollments.map((e) => e.course.credits));
 

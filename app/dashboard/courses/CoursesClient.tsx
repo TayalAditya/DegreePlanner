@@ -78,6 +78,7 @@ const categoryColors = {
   IKS: { bg: "bg-warning/10", text: "text-warning", bar: "bg-warning", border: "border-warning/20" },
   MTP: { bg: "bg-error/10", text: "text-error", bar: "bg-error", border: "border-error/20" },
   ISTP: { bg: "bg-accent/10", text: "text-accent", bar: "bg-accent", border: "border-accent/20" },
+  NOT_IN_DEGREE: { bg: "bg-foreground-muted/10", text: "text-foreground-muted", bar: "bg-foreground-muted", border: "border-foreground-muted/20" },
 };
 
 const DEPARTMENT_PAGE_SIZE = 20;
@@ -557,9 +558,13 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
 
   const { creditsByCategory, completedIcBasketUsed } = useMemo(() => {
     const credits: Record<string, number> = {
-      IC: 0, IC_BASKET: 0, DC: 0, DE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0,
+      IC: 0, IC_BASKET: 0, DC: 0, DE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0,
     };
     const icBasketUsed = { ic1: false, ic2: false };
+    const hssUsed = { credits: 0 };
+    const branchConfig = getAllBranches().find((b) => b.code === user?.branch);
+    const hssCoreCapLocal = branchConfig?.icCredits != null && branchConfig.icCredits <= 52 ? 12 : 15;
+    const hssFeCapLocal = 20;
     enrollments
       .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
       .sort((a, b) => a.semester - b.semester)
@@ -579,7 +584,18 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
           }
         }
         const category = getCourseCategory(e, icBasketUsed);
-        if (category in credits) {
+        if (category === "HSS" || category === "IKS") {
+          const before = hssUsed.credits;
+          const afterCore = Math.min(hssCoreCapLocal, before + e.course.credits);
+          const hss = Math.max(0, afterCore - Math.min(hssCoreCapLocal, before));
+          const afterFe = Math.min(hssFeCapLocal, before + e.course.credits);
+          const fe = Math.max(0, afterFe - Math.min(hssFeCapLocal, before + hss));
+          const notInDegree = Math.max(0, e.course.credits - hss - fe);
+          hssUsed.credits = Math.min(hssFeCapLocal, before + e.course.credits);
+          if (hss > 0) credits["HSS"] = addCredits(credits["HSS"], hss);
+          if (fe > 0) credits["FE"] = addCredits(credits["FE"], fe);
+          if (notInDegree > 0) credits["NOT_IN_DEGREE"] = addCredits(credits["NOT_IN_DEGREE"], notInDegree);
+        } else if (category in credits) {
           credits[category] = addCredits(credits[category], e.course.credits);
         }
       });
@@ -916,6 +932,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                   IKS: "HSS+IKS",
                   MTP: "MTP",
                   ISTP: "ISTP",
+                  NOT_IN_DEGREE: "Not in Degree",
                 };
                 return (
                   <div key={category} className={`${colors.bg} ${colors.border} rounded-lg p-4 border`}>
