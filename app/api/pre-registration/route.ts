@@ -6,6 +6,7 @@ import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { getBranchCandidates, normalizeBranchCode } from "@/lib/branchInfo";
 import { EnrollmentStatus } from "@prisma/client";
 import { creditCalculator } from "@/lib/creditCalculator";
+import { isAcadSec } from "@/lib/permissions";
 
 const PRE_REG_OPEN = new Date("2026-07-15T00:00:00+05:30");
 
@@ -50,7 +51,28 @@ export async function GET() {
 
   const { branch, batch, enrollmentId, name } = session.user;
   const batchYear = inferBatchYear(batch, enrollmentId);
-  if (!batchYear) return NextResponse.json({ error: "Unknown batch" }, { status: 400 });
+
+  // Acad sec users don't have branch/batch — they shouldn't see the student pre-reg view at all.
+  // They use the admin plans page instead. Return empty offerings so the page doesn't error.
+  if (!batchYear) {
+    if (isAcadSec(session.user.email)) {
+      return NextResponse.json({
+        offeringSemester: 0,
+        offeringYear: new Date().getFullYear(),
+        term: "FALL",
+        creditLimit: 25,
+        registrationOpensAt: null,
+        offerings: [],
+        completedBreakdown: {},
+        programRequirements: null,
+        incompleteSemesters: [],
+        completedCourseCodes: [],
+        studentInfo: null,
+        savedPlan: { selectedIds: [], registrationTypes: {}, updatedAt: null },
+      });
+    }
+    return NextResponse.json({ error: "Unknown batch" }, { status: 400 });
+  }
 
   const state = inferAcademicState(batchYear);
   const offeringSemester = state.upcomingSemester ?? state.currentSemester;
