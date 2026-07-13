@@ -667,10 +667,14 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
 
   // Precompute each enrollment's display category once per render pass instead of
   // re-invoking the heavy getCourseCategory branching inside every card's render.
+  // IC-basket consumption is order-dependent, so we must sort by semester and pass
+  // the stateful tracker — otherwise non-compulsory ICB courses all fall to FE.
   const enrollmentCategoryById = useMemo(() => {
     const map = new Map<string, string>();
-    for (const e of enrollments) {
-      map.set(e.id, getCourseCategory(e));
+    const icBasketUsedForDisplay = { ic1: false, ic2: false };
+    const sorted = [...enrollments].sort((a, b) => a.semester - b.semester);
+    for (const e of sorted) {
+      map.set(e.id, getCourseCategory(e, icBasketUsedForDisplay));
     }
     return map;
   // eslint-disable-next-line react-hooks/exhaustive-deps
