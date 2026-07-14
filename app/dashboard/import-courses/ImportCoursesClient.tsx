@@ -602,6 +602,14 @@ export default function ImportCoursesPage({
   };
 
   const addOcrCourses = (confirmedRows: ConfirmRow[]) => {
+    const validRows = confirmedRows.filter(
+      (row) => row.catalogCourseId && row.semester !== ""
+    );
+    if (validRows.length === 0) {
+      showToast("warning", "Choose a catalog match and semester before adding.");
+      return;
+    }
+
     let added = 0;
     let updated = 0;
     const toAdd: SelectedCourse[] = [];
@@ -611,8 +619,7 @@ export default function ImportCoursesPage({
     const selectionKey = (identity: string, semester: number) =>
       `${identity}|${semester}`;
 
-    for (const row of confirmedRows) {
-      if (!row.catalogCourseId || row.semester === "") continue;
+    for (const row of validRows) {
       const semester = Number(row.semester);
 
       const catalog = catalogCourses.find((c) => c.id === row.catalogCourseId);
@@ -676,7 +683,7 @@ export default function ImportCoursesPage({
       });
       showToast("success", `OCR: ${added} added, ${updated} updated`);
     } else {
-      showToast("warning", "No new courses to add — they may already be in the list.");
+      showToast("warning", "These courses are already in your import list.");
     }
     setShowOcrModal(false);
   };

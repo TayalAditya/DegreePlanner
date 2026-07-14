@@ -151,7 +151,7 @@ export function OcrConfirmModal({
           matchedName: catalogMatch?.name,
         };
       });
-  }, [detected, catalogByCode, importedKeys, pendingKeys, courseTypeMap, dcPrefixes]);
+  }, [detected, catalogByCode, importedKeys, pendingKeys, courseTypeMap, dcPrefixes, branch]);
 
   const [rows, setRows] = useState<ConfirmRow[]>(initialRows);
   const [search, setSearch] = useState("");
@@ -160,7 +160,15 @@ export function OcrConfirmModal({
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   };
 
-  const includedCount = rows.filter((r) => r.included && !r.alreadyExists).length;
+  const selectedCount = rows.filter((r) => r.included && !r.alreadyExists).length;
+  const confirmableRows = rows.filter(
+    (r) =>
+      r.included &&
+      !r.alreadyExists &&
+      Boolean(r.catalogCourseId) &&
+      r.semester !== ""
+  );
+  const incompleteCount = selectedCount - confirmableRows.length;
 
   const filteredRows = search.trim()
     ? rows.filter(
@@ -188,7 +196,7 @@ export function OcrConfirmModal({
             </h2>
             <p className="text-sm text-foreground-secondary mt-0.5">
               {rows.length} course{rows.length !== 1 ? "s" : ""} detected —{" "}
-              {includedCount} selected
+              {selectedCount} selected
             </p>
           </div>
           <button
@@ -269,7 +277,7 @@ export function OcrConfirmModal({
                     {row.alreadyExists && (
                       <span className="flex items-center gap-1 text-xs text-success font-medium">
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        Already added
+                        Already added or selected
                       </span>
                     )}
                     {!row.catalogCourseId && !row.alreadyExists && (
@@ -388,18 +396,25 @@ export function OcrConfirmModal({
 
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 p-5 border-t border-border shrink-0">
+          <div className="min-w-0">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-foreground/5 transition-colors"
+            >
+              Cancel
+            </button>
+            {incompleteCount > 0 && (
+              <p className="mt-2 text-xs text-warning">
+                Match each selected course and choose its semester before adding.
+              </p>
+            )}
+          </div>
           <button
-            onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-border text-sm hover:bg-foreground/5 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={() => onConfirm(rows.filter((r) => r.included && !r.alreadyExists))}
-            disabled={includedCount === 0}
+            onClick={() => onConfirm(confirmableRows)}
+            disabled={confirmableRows.length === 0}
             className="px-5 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
-            Add {includedCount} Course{includedCount !== 1 ? "s" : ""} to List
+            Add {confirmableRows.length} Course{confirmableRows.length !== 1 ? "s" : ""} to List
           </button>
         </div>
       </div>
