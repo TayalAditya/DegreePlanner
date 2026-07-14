@@ -98,6 +98,7 @@ type SchoolKey =
   | "COMMON"
   | "TUM" // TU Munich (Semester Exchange)
   | "TUD" // TU Darmstadt (Semester Exchange)
+  | "TUB" // TU Braunschweig (Semester Exchange)
   | "RWTH" // RWTH Aachen (Semester Exchange)
   | "LUH" // Leibniz University Hannover (Semester Exchange)
   | "OTHER";
@@ -120,9 +121,10 @@ const SCHOOL_META: Record<SchoolKey, { label: string; order: number; prefixes: s
   COMMON: { label: "Common (IC/IKS/DP)", order: 90, prefixes: ["IC", "IK", "IKS", "DP", "RM"] },
   TUM: { label: "TU Munich (Semester Exchange)", order: 95, prefixes: ["IN"] },
   TUD: { label: "TU Darmstadt (Semester Exchange)", order: 96, prefixes: ["11", "16", "18", "20", "41"] },
-  RWTH: { label: "RWTH Aachen (Semester Exchange)", order: 97, prefixes: ["81", "42"] },
-  LUH: { label: "Leibniz University Hannover (Semester Exchange)", order: 98, prefixes: [] },
-  OTHER: { label: "Other", order: 99, prefixes: [] },
+  TUB: { label: "TU Braunschweig (Semester Exchange)", order: 97, prefixes: [] },
+  RWTH: { label: "RWTH Aachen (Semester Exchange)", order: 98, prefixes: ["81", "42"] },
+  LUH: { label: "Leibniz University Hannover (Semester Exchange)", order: 99, prefixes: [] },
+  OTHER: { label: "Other", order: 100, prefixes: [] },
 };
 
 const SCHOOL_ORDER: SchoolKey[] = Object.entries(SCHOOL_META)
@@ -139,6 +141,7 @@ function getCourseSchoolKey(course: Pick<Course, "code" | "department">): School
   const dept = String(course.department ?? "").toLowerCase();
   if (dept.includes("tu darmstadt")) return "TUD";
   if (dept.includes("tu munich")) return "TUM";
+  if (dept.includes("tu braunschweig")) return "TUB";
   if (dept.includes("rwth aachen")) return "RWTH";
   if (dept.includes("leibniz") || dept.includes("hannover")) return "LUH";
 
@@ -318,7 +321,6 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       course.department.toLowerCase().includes(searchLower);
     const matchesDept = selectedDept === "all" || getCourseSchoolKey(course) === selectedDept;
     return matchesSearch && matchesDept;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [allCourses, searchLower, searchNormalized, selectedDept]);
 
   const departmentGroups = useMemo(() => {
