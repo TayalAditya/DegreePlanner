@@ -58,7 +58,7 @@ export default async function DashboardPage() {
         }),
         prisma.userProgram.findFirst({
           where: { userId: session.user.id, isPrimary: true },
-          select: { program: { select: { totalCreditsRequired: true } } },
+          select: { program: { select: { totalCreditsRequired: true, icCredits: true } } },
         }),
       ]);
 
@@ -100,6 +100,7 @@ export default async function DashboardPage() {
         doingMTP2: userRecord?.doingMTP2 ?? true,
         doingISTP: userRecord?.doingISTP ?? true,
         totalPassFailCredits: userRecord?.totalPassFailCredits ?? 0,
+        programIcCredits: primaryProgram?.program?.icCredits ?? 60,
         role: session.user.role ?? "STUDENT",
       };
     } catch {

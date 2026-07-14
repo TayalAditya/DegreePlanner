@@ -21,6 +21,8 @@ interface DashboardOverviewProps {
 
 const HSS_CORE_CAP = 15; // Dynamic in practice; 15 BTech / 12 BSCS — component uses program data
 
+const HSS_FE_CAP = 20;
+
 const categoryLabels = {
   IC: "Institute Core",
   IC_BASKET: "IC Basket",
@@ -29,6 +31,7 @@ const categoryLabels = {
   FE: "Free Elective",
   HSS: "HSS+IKS",
   IKS: "HSS+IKS",
+  NOT_IN_DEGREE: "Not in Degree",
   MTP: "MTP",
   ISTP: "ISTP",
 } as const;
@@ -41,11 +44,25 @@ const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: st
   FE: { bg: "bg-success/10", text: "text-success" },
   HSS: { bg: "bg-warning/10", text: "text-warning" },
   IKS: { bg: "bg-warning/10", text: "text-warning" },
+  NOT_IN_DEGREE: { bg: "bg-foreground-muted/10", text: "text-foreground-muted" },
   MTP: { bg: "bg-error/10", text: "text-error" },
   ISTP: { bg: "bg-accent/10", text: "text-accent" },
 };
 
+type DashboardCategory = keyof typeof categoryLabels;
+type CreditAllocation = { category: DashboardCategory; credits: number };
+
+function splitHssIksCredits(before: number, credits: number, coreCap: number) {
+  const hss = Math.max(0, Math.min(credits, coreCap - before));
+  const fe = Math.max(
+    0,
+    Math.min(credits - hss, HSS_FE_CAP - Math.max(coreCap, before))
+  );
+  return { hss, fe, notInDegree: Math.max(0, credits - hss - fe) };
+}
+
 export function DashboardOverview({ userId, initialUserSettings, initialAcademicState, initialEnrollments }: DashboardOverviewProps) {
+  const hssCoreCap = Number(initialUserSettings?.programIcCredits ?? 60) <= 52 ? 12 : HSS_CORE_CAP;
   const hasInitialEnrollments = Array.isArray(initialEnrollments);
   const { data: enrollments, isLoading: enrollmentsLoading } = useQuery({
     queryKey: ["enrollments", userId],
@@ -172,8 +189,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
 
   const getCourseCategory = (
     enrollment: any,
-    icBasketUsed?: { ic1: boolean; ic2: boolean },
-    hssUsed?: { credits: number }
+    icBasketUsed?: { ic1: boolean; ic2: boolean }
   ): keyof typeof categoryLabels => {
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course?.code ?? "")) return "FE";
@@ -242,17 +258,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     }
 
     // HS-xxx courses always go to HSS — but track cap for correct FE conversion
-    if (normalizedCode.startsWith("HS")) {
-      if (hssUsed) {
-        const before = hssUsed.credits;
-        if (before < HSS_CORE_CAP) {
-          hssUsed.credits = minCredits(HSS_CORE_CAP, addCredits(before, credits));
-          return "HSS";
-        }
-        return "FE";
-      }
-      return "HSS";
-    }
+    if (normalizedCode.startsWith("HS")) return "HSS";
 
     // Hard overrides (batch-sensitive)
     if (normalizedCode === "IK593") return "HSS"; // IK-xxx → HSS+IKS
@@ -316,26 +322,58 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
 
     const sortedActiveEnrollments = [...activeEnrollmentsForCategory].sort(compareEnrollments);
     const icBasketUsedForCategory = { ic1: false, ic2: false };
-    const hssUsedForCategory = { credits: 0 };
-    const categorizedById = new Map<string, keyof typeof categoryLabels>();
+    const hssIksUsedForCategory = { credits: 0 };
+    const categorizedById = new Map<
+      string,
+      { category: DashboardCategory; creditAllocations: CreditAllocation[] }
+    >();
 
     sortedActiveEnrollments.forEach((e: any) => {
-      categorizedById.set(e.id, getCourseCategory(e, icBasketUsedForCategory, hssUsedForCategory));
+      const category = getCourseCategory(e, icBasketUsedForCategory);
+      const credits = Number(e.course?.credits || 0);
+      let creditAllocations: CreditAllocation[] = [{ category, credits }];
+
+      if (category === "HSS") {
+        const before = hssIksUsedForCategory.credits;
+        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, hssCoreCap);
+        creditAllocations = [];
+        if (hss > 0) creditAllocations.push({ category: "HSS", credits: hss });
+        if (fe > 0) creditAllocations.push({ category: "FE", credits: fe });
+        if (notInDegree > 0) {
+          creditAllocations.push({ category: "NOT_IN_DEGREE", credits: notInDegree });
+        }
+        hssIksUsedForCategory.credits = addCredits(before, hss, fe);
+      }
+
+      categorizedById.set(e.id, {
+        category: creditAllocations[0]?.category ?? category,
+        creditAllocations,
+      });
     });
 
     const curSemCourses = currentSemesterEnrollments
-      .map((e: any) => ({
-        ...e,
-        category: categorizedById.get(e.id) || getCourseCategory(e),
-      }))
+      .map((e: any) => {
+        const categorized = categorizedById.get(e.id);
+        const fallbackCategory = getCourseCategory(e);
+        return {
+          ...e,
+          category: categorized?.category ?? fallbackCategory,
+          creditAllocations: categorized?.creditAllocations ?? [
+            { category: fallbackCategory, credits: Number(e.course?.credits || 0) },
+          ],
+        };
+      })
       .sort(compareEnrollments);
 
     const curSemBreakdown = curSemCourses.reduce(
       (acc: Record<string, { credits: number; count: number }>, e: any) => {
-        const category = e.category as keyof typeof categoryLabels;
-        const credits = e.course?.credits || 0;
-        const existing = acc[category] || { credits: 0, count: 0 };
-        acc[category] = { credits: addCredits(existing.credits, credits), count: existing.count + 1 };
+        for (const allocation of e.creditAllocations as CreditAllocation[]) {
+          const existing = acc[allocation.category] || { credits: 0, count: 0 };
+          acc[allocation.category] = {
+            credits: addCredits(existing.credits, allocation.credits),
+            count: existing.count + 1,
+          };
+        }
         return acc;
       },
       {}
@@ -344,9 +382,6 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     const curSemTotalCredits = sumCredits(
       curSemCourses.map((e: any) => e.course?.credits || 0)
     );
-
-    const icBasketUsedForSemesterStats = { ic1: false, ic2: false };
-    const hssUsedForSemesterStats = { credits: 0 };
 
     const semesterStats = sortedEnrollments.reduce((acc: Record<number, any>, e: any) => {
       const sem = e.semester || 0;
@@ -361,14 +396,19 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
           FE: 0,
           HSS: 0,
           IKS: 0,
+          NOT_IN_DEGREE: 0,
           MTP: 0,
           ISTP: 0,
         };
-        // Reset HSS tracking for each new semester
-        hssUsedForSemesterStats.credits = 0;
       }
-      const category = getCourseCategory(e, icBasketUsedForSemesterStats, hssUsedForSemesterStats);
-      acc[sem][category] = addCredits(acc[sem][category] || 0, e.course?.credits || 0);
+      const categorized = categorizedById.get(e.id);
+      const allocations = categorized?.creditAllocations ?? [];
+      allocations.forEach((allocation) => {
+        acc[sem][allocation.category] = addCredits(
+          acc[sem][allocation.category] || 0,
+          allocation.credits
+        );
+      });
       acc[sem].total = addCredits(acc[sem].total, e.course?.credits || 0);
       return acc;
     }, {});
@@ -486,8 +526,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
                 </thead>
                 <tbody>
                   {currentSemesterCourses.map((e: any) => {
-                    const category = e.category as keyof typeof categoryLabels;
-                    const colors = categoryColors[category];
+                    const allocations = e.creditAllocations as CreditAllocation[];
                     return (
                       <tr key={e.id} className="border-b border-border/60 last:border-0">
                         <td className="py-2 pr-4 font-semibold text-foreground whitespace-nowrap">
@@ -500,10 +539,23 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
                           {formatCredits(e.course?.credits || 0)}
                         </td>
                         <td className="py-2 whitespace-nowrap">
-                          <span className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}>
-                            <span className={`font-semibold ${colors.text}`}>
-                              {categoryLabels[category]}
-                            </span>
+                          <span className="inline-flex items-center gap-1 flex-wrap">
+                            {allocations.map((allocation) => {
+                              const colors = categoryColors[allocation.category];
+                              return (
+                                <span
+                                  key={`${allocation.category}-${allocation.credits}`}
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}
+                                >
+                                  <span className={`font-semibold ${colors.text}`}>
+                                    {categoryLabels[allocation.category]}
+                                  </span>
+                                  <span className="text-xs text-foreground-secondary">
+                                    ({formatCredits(allocation.credits)})
+                                  </span>
+                                </span>
+                              );
+                            })}
                           </span>
                         </td>
                       </tr>
@@ -556,6 +608,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
                   <span>DE: {sem.DE}</span>
                   <span>FE: {sem.FE}</span>
                   {(sem.HSS + sem.IKS > 0) && <span>HSS+IKS: {addCredits(sem.HSS, sem.IKS)}</span>}
+                  {sem.NOT_IN_DEGREE > 0 && <span>Not in Degree: {sem.NOT_IN_DEGREE}</span>}
                   {(sem.MTP > 0 || sem.ISTP > 0) && (
                     <>
                       {sem.MTP > 0 && <span>MTP: {sem.MTP}</span>}
