@@ -1331,7 +1331,7 @@ export default function PreRegistrationPage() {
   const showIncompleteWarning = incompleteSemesters.length > 0 && !incompleteWarningDismissed;
 
   return (
-    <div className="max-w-6xl mx-auto pb-24">
+    <div className="max-w-6xl mx-auto pb-36 sm:pb-24">
       {/* Incomplete semester warning modal */}
       {showIncompleteWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
@@ -1803,7 +1803,7 @@ export default function PreRegistrationPage() {
         <>
           <button
             onClick={() => setProgressOpen(true)}
-            className="lg:hidden fixed bottom-[76px] right-4 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
+            className="lg:hidden fixed bottom-32 sm:bottom-[76px] right-4 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors"
             aria-label="View progress"
           >
             <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
@@ -1896,7 +1896,7 @@ export default function PreRegistrationPage() {
       )}
 
       <div className="fixed bottom-0 left-0 lg:left-64 xl:left-72 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-3xl mx-auto px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
           <div>
             <p className="text-sm text-foreground-secondary">
               <span className="font-semibold text-foreground">{selectedCount}</span> course{selectedCount !== 1 ? "s" : ""} ·{" "}
@@ -1904,38 +1904,41 @@ export default function PreRegistrationPage() {
             </p>
             <p className="text-xs text-foreground-secondary">Planning only · not official registration</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className={`grid gap-2 sm:flex sm:items-center ${saved ? "grid-cols-3" : "grid-cols-1"}`}>
             {saved && (
               <button
                 onClick={() => setShowPlanTable(true)}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-border bg-surface hover:bg-surface-hover text-foreground"
+                className="min-w-0 px-2 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-border bg-surface hover:bg-surface-hover text-foreground"
               >
-                <BookOpen className="w-4 h-4" />
-                View Plan
+                <BookOpen className="w-4 h-4 shrink-0" />
+                <span className="min-[420px]:hidden">View</span>
+                <span className="hidden min-[420px]:inline">View Plan</span>
               </button>
             )}
             {saved && (
               <button
                 onClick={handleCopyCourses}
-                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-border bg-surface hover:bg-surface-hover text-foreground"
+                className="min-w-0 px-2 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-border bg-surface hover:bg-surface-hover text-foreground"
               >
-                {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
-                {copied ? "Copied!" : "Copy Courses"}
+                {copied ? <Check className="w-4 h-4 shrink-0 text-success" /> : <Copy className="w-4 h-4 shrink-0" />}
+                <span className="min-[420px]:hidden">{copied ? "Done" : "Copy"}</span>
+                <span className="hidden min-[420px]:inline">{copied ? "Copied!" : "Copy Courses"}</span>
               </button>
             )}
             <button
               onClick={handleSavePlan}
               disabled={saving}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2
+              className={`min-w-0 px-2 sm:px-5 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2
                 disabled:opacity-50 disabled:cursor-not-allowed
                 ${saved ? "bg-success text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
             >
               {saving ? (
-                <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                <div className="w-4 h-4 shrink-0 rounded-full border-2 border-current border-t-transparent animate-spin" />
               ) : (
-                <Save className="w-4 h-4" />
+                <Save className="w-4 h-4 shrink-0" />
               )}
-              {saving ? "Saving…" : saved ? "Saved" : "Save Plan"}
+              <span className="min-[420px]:hidden">{saving ? "Saving" : saved ? "Saved" : "Save"}</span>
+              <span className="hidden min-[420px]:inline">{saving ? "Saving…" : saved ? "Saved" : "Save Plan"}</span>
             </button>
           </div>
         </div>

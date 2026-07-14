@@ -99,22 +99,22 @@ export function DashboardNav({ user }: DashboardNavProps) {
     <>
       {/* Desktop & Mobile: Top Navbar */}
       <nav className="bg-surface border-b border-border/60 no-print sticky top-0 z-50 h-16 shadow-sm">
-        <div className="flex h-full items-center justify-between px-4 sm:px-6">
+        <div className="flex h-full items-center justify-between gap-2 px-4 sm:px-6">
           {/* Left: Logo */}
           <Link
             href="/dashboard"
-            className="flex items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+            className="flex shrink-0 items-center rounded-lg focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
           >
-            <BrandMark size="md" priority />
-            <span className="ml-2 text-lg font-bold text-foreground">
+            <BrandMark size="sm" priority />
+            <span className="ml-2 whitespace-nowrap text-base font-bold text-foreground sm:text-lg">
               Degree Planner
             </span>
           </Link>
 
-          <div className="flex-1" />
+          <div className="min-w-0 flex-1" />
 
           {/* Right: Notification & Menu Toggle */}
-          <div className="flex items-center space-x-2">
+          <div className="flex shrink-0 items-center space-x-1.5 sm:space-x-2">
             <div className="hidden lg:block">
               <ThemeToggle variant="mode" />
             </div>
