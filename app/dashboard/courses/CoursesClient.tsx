@@ -250,8 +250,10 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   const loadData = async () => {
     try {
       const [enrollmentsRes, userRes] = await Promise.all([
-        fetch("/api/enrollments"),
-        fetch("/api/user/settings"),
+        // Enrollment mutations must never be followed by a browser-cached list,
+        // otherwise a just-deleted course reappears until the user refreshes.
+        fetch("/api/enrollments", { cache: "no-store" }),
+        fetch("/api/user/settings", { cache: "no-store" }),
       ]);
 
       if (enrollmentsRes.ok) {
@@ -835,6 +837,9 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       });
 
       if (response.ok) {
+        // Update the visible list immediately, then reconcile it with a fresh
+        // server response so the page reflects the delete without a manual reload.
+        setEnrollments((current) => current.filter((enrollment) => enrollment.id !== enrollmentId));
         showToast("success", "Course removed successfully!");
         await loadData();
       } else {
