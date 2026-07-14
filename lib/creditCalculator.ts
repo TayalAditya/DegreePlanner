@@ -489,6 +489,7 @@ export class CreditCalculator {
       courseType: CourseType;
       grade?: string | null;
       semester?: number;
+      isPassFail?: boolean;
       isInternship?: boolean;
     }>,
     branch?: string,
@@ -599,6 +600,13 @@ export class CreditCalculator {
       seenCanonicalCodes.add(canonicalCode);
 
       addBreakdownCredits("total", credits);
+
+      // P/F courses consume the P/F allowance but always satisfy the Free
+      // Elective basket, even when their regular mapping is HSS or DE.
+      if (enrollment.isPassFail) {
+        addBreakdownCredits("freeElective", credits);
+        return;
+      }
 
       // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
       if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) {

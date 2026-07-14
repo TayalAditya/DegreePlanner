@@ -57,6 +57,7 @@ interface Enrollment {
   status: string;
   grade?: string | null;
   programId?: string | null;
+  isPassFail?: boolean;
   isInternship?: boolean;
   course: {
     code: string;
@@ -380,6 +381,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     icBasketUsed?: ICBasketUsed,
     hssUsed?: { credits: number }
   ): CourseCategory => {
+    if (enrollment.isPassFail) return "FE";
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
 
@@ -778,7 +780,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                         {(() => {
                           const pfCr = enrollments
                             .filter(e =>
-                              (e.isInternship || /39[69]P$/i.test(e.course.code)) &&
+                              e.isPassFail &&
                               (e.status === "COMPLETED" || e.status === "IN_PROGRESS")
                             )
                             .reduce((sum, e) => sum + (e.course.credits || 0), 0);

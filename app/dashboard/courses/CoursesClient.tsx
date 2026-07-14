@@ -48,6 +48,7 @@ interface Enrollment {
   grade?: string;
   courseType?: "CORE" | "DE" | "FREE_ELECTIVE" | "PE" | "MTP" | "ISTP";
   courseId: string;
+  isPassFail?: boolean;
   isInternship?: boolean;
   course: Course & {
     branchMappings?: {
@@ -431,6 +432,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     enrollment: Enrollment,
     icBasketUsed?: { ic1: boolean; ic2: boolean }
   ): string => {
+    if (enrollment.isPassFail) return "FE";
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
 

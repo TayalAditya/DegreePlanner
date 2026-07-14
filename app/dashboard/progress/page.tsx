@@ -32,6 +32,7 @@ interface Enrollment {
   courseType: string;
   status: string;
   grade?: string;
+  isPassFail?: boolean;
   isInternship?: boolean;
   course: {
     code: string;
@@ -244,6 +245,7 @@ export default function ProgressPage() {
   };
 
   const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any, hssUsed?: { credits: number }): CourseCategory => {
+    if (enrollment.isPassFail) return "FE";
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
 

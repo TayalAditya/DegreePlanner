@@ -191,6 +191,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     enrollment: any,
     icBasketUsed?: { ic1: boolean; ic2: boolean }
   ): keyof typeof categoryLabels => {
+    if (enrollment.isPassFail) return "FE";
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course?.code ?? "")) return "FE";
 

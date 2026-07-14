@@ -85,8 +85,8 @@ function resolveCourseCategory(
 ): CategoryKey {
   const courseCode = enrollment.course?.code ?? "";
 
-  // Internships / 396P|399P are always Free Elective on the shared profile.
-  if (enrollment.isInternship || /39[69]P$/i.test(courseCode)) return "FE";
+  // P/F and internship courses always satisfy Free Electives on shared profiles.
+  if (enrollment.isPassFail || enrollment.isInternship || /39[69]P$/i.test(courseCode)) return "FE";
 
   // Table-first resolution via the shared resolver (lib/courseCategory.ts).
   const base = resolveBaseCategory(

@@ -17,6 +17,8 @@ export default async function ImportCoursesPage() {
   let initialDoingMTP2 = true;
   let initialBatch24Icb1Course: string | null = null;
   let initialImportedKeys: string[] = [];
+  let initialPassFailCredits = 0;
+  let initialPassFailCreditsBySemester: Record<number, number> = {};
   let initialCurrentSemester = 6;
   let initialPreRegLockedSemester: number | null = null;
 
@@ -31,6 +33,7 @@ export default async function ImportCoursesPage() {
             enrollmentId: true,
             doingMTP: true,
             doingMTP2: true,
+            totalPassFailCredits: true,
           },
         }),
         loadDashboardEnrollments(session.user.id),
@@ -42,6 +45,7 @@ export default async function ImportCoursesPage() {
         initialEnrollmentId = userRecord.enrollmentId ?? null;
         initialDoingMTP = userRecord.doingMTP ?? true;
         initialDoingMTP2 = userRecord.doingMTP2 ?? true;
+        initialPassFailCredits = userRecord.totalPassFailCredits ?? 0;
 
         const batchYear = inferBatchYear(userRecord.batch, userRecord.enrollmentId);
         if (batchYear) {
@@ -67,6 +71,17 @@ export default async function ImportCoursesPage() {
         .filter((e: any) => e.status !== "DROPPED" && e.status !== "FAILED")
         .map((e: any) => courseIdentityKey(e.course?.code))
         .filter(Boolean) as string[];
+
+      initialPassFailCreditsBySemester = enrollments.reduce<Record<number, number>>(
+        (totals, enrollment: any) => {
+          if (!enrollment.isPassFail) return totals;
+          const semester = Number(enrollment.semester || 0);
+          if (semester <= 0) return totals;
+          totals[semester] = (totals[semester] ?? 0) + Number(enrollment.passFailCredits || enrollment.course?.credits || 0);
+          return totals;
+        },
+        {}
+      );
     } catch {
       // Fall back to client-side fetch
     }
@@ -81,6 +96,8 @@ export default async function ImportCoursesPage() {
       initialDoingMTP2={initialDoingMTP2}
       initialBatch24Icb1Course={initialBatch24Icb1Course}
       initialImportedKeys={initialImportedKeys}
+      initialPassFailCredits={initialPassFailCredits}
+      initialPassFailCreditsBySemester={initialPassFailCreditsBySemester}
       initialCurrentSemester={initialCurrentSemester}
       initialPreRegLockedSemester={initialPreRegLockedSemester}
     />

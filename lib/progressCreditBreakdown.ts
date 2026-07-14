@@ -24,6 +24,7 @@ type EnrollmentLike = {
   status?: string | null;
   grade?: string | null;
   courseType?: string | null;
+  isPassFail?: boolean | null;
   isInternship?: boolean | null;
   course?: {
     code?: string | null;
@@ -188,7 +189,7 @@ export function computeEnrollmentCreditBreakdown({
     const rawBranch = String(userBranch || "").trim().toUpperCase();
     const checkBranch = normalizeBranchForIcBasket(rawBranch);
 
-    if (enrollment.isInternship || /39[69]P$/i.test(courseCode)) return "FE";
+    if (enrollment.isPassFail || enrollment.isInternship || /39[69]P$/i.test(courseCode)) return "FE";
 
     const isBatch24Or25 = userBatch === 2024 || userBatch === 2025;
     if (normalizedCode === "IK593") return "FE";

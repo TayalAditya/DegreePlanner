@@ -26,9 +26,12 @@ import { courseIdentityKey } from "@/lib/courseIdentity";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
 
+type RegistrationType = "REGULAR" | "PASS_FAIL" | "AUDIT";
+
 interface SelectedCourse extends DefaultCourse {
   selected: boolean;
   grade?: string;
+  registrationType?: RegistrationType;
 }
 
 interface EnrollmentSummary {
@@ -57,6 +60,8 @@ interface ImportCoursesClientProps {
   initialDoingMTP2?: boolean;
   initialBatch24Icb1Course?: string | null;
   initialImportedKeys?: string[];
+  initialPassFailCredits?: number;
+  initialPassFailCreditsBySemester?: Record<number, number>;
   initialCurrentSemester?: number;
   initialPreRegLockedSemester?: number | null;
 }
@@ -68,11 +73,16 @@ const CourseRow = memo(function CourseRow({
   course,
   onToggle,
   onGrade,
+  onRegistrationType,
 }: {
   course: SelectedCourse;
   onToggle: (code: string, semester: number) => void;
   onGrade: (code: string, grade: string) => void;
+  onRegistrationType: (code: string, semester: number, type: RegistrationType) => void;
 }) {
+  const registrationType = course.registrationType ?? "REGULAR";
+  const canUsePassFail = ["FE", "HSS", "IKS", "DE"].includes(course.category);
+
   return (
     <div
       className={`p-4 rounded-lg border transition-all ${
@@ -124,11 +134,22 @@ const CourseRow = memo(function CourseRow({
           </div>
         </div>
         {course.selected && (
-          <div className="w-full sm:w-32 sm:shrink-0">
+          <div className="w-full sm:w-44 sm:shrink-0 space-y-2">
+            <select
+              value={registrationType}
+              onChange={(e) => onRegistrationType(course.code, course.semester, e.target.value as RegistrationType)}
+              className="w-full px-2 py-1 text-sm rounded-lg border bg-background"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <option value="REGULAR">Regular</option>
+              {canUsePassFail && <option value="PASS_FAIL">Pass/Fail (P/F)</option>}
+              <option value="AUDIT">Audit</option>
+            </select>
             <select
               value={course.grade || ""}
               onChange={(e) => onGrade(course.code, e.target.value)}
-              className="w-full px-2 py-1 text-sm rounded-lg border bg-background"
+              disabled={registrationType === "AUDIT"}
+              className="w-full px-2 py-1 text-sm rounded-lg border bg-background disabled:opacity-50"
               onClick={(e) => e.stopPropagation()}
             >
               <option value="">Grade</option>
@@ -141,6 +162,12 @@ const CourseRow = memo(function CourseRow({
               <option value="D">D (4)</option>
               <option value="P">P (Pass)</option>
             </select>
+            {registrationType === "PASS_FAIL" && (
+              <p className="text-xs text-success">P/F counts as Free Elective.</p>
+            )}
+            {registrationType === "AUDIT" && (
+              <p className="text-xs text-warning">Transcript only; not counted toward degree.</p>
+            )}
           </div>
         )}
       </div>
@@ -156,6 +183,8 @@ export default function ImportCoursesPage({
   initialDoingMTP2,
   initialBatch24Icb1Course,
   initialImportedKeys,
+  initialPassFailCredits = 0,
+  initialPassFailCreditsBySemester = {},
   initialCurrentSemester,
   initialPreRegLockedSemester,
 }: ImportCoursesClientProps = {}) {
@@ -778,6 +807,24 @@ export default function ImportCoursesPage({
     });
   }, []);
 
+  const updateRegistrationType = useCallback(
+    (code: string, semester: number, registrationType: RegistrationType) => {
+      startTransition(() => {
+        setCourses((prev) =>
+          prev.map((c) => {
+            if (c.code !== code || c.semester !== semester) return c;
+            return {
+              ...c,
+              registrationType,
+              grade: registrationType === "AUDIT" ? undefined : c.grade,
+            };
+          })
+        );
+      });
+    },
+    []
+  );
+
   const handleGeSpecChange = async (newSpec: string) => {
     if (newSpec === geSubBranch && newSpec === branch) return;
     // Persist the chosen specialization to the user's branch (GE-family is changeable).
@@ -855,6 +902,35 @@ export default function ImportCoursesPage({
         return;
       }
 
+      const selectedPassFailCredits = selectedCourses
+        .filter((course) => course.registrationType === "PASS_FAIL")
+        .reduce((sum, course) => addCredits(sum, course.credits), 0);
+      if (addCredits(initialPassFailCredits, selectedPassFailCredits) > 9) {
+        const msg = `P/F limit is 9 credits. You have ${formatCredits(initialPassFailCredits)} already and selected ${formatCredits(selectedPassFailCredits)} more.`;
+        setErrorMessage(msg);
+        showToast("error", msg);
+        return;
+      }
+
+      const selectedPassFailBySemester = new Map<number, number>();
+      selectedCourses
+        .filter((course) => course.registrationType === "PASS_FAIL")
+        .forEach((course) => {
+          selectedPassFailBySemester.set(
+            course.semester,
+            addCredits(selectedPassFailBySemester.get(course.semester) ?? 0, course.credits)
+          );
+        });
+      for (const [semester, selectedCredits] of selectedPassFailBySemester) {
+        const existingCredits = Number(initialPassFailCreditsBySemester[semester] ?? 0);
+        if (addCredits(existingCredits, selectedCredits) > 6) {
+          const msg = `P/F limit is 6 credits in Semester ${semester}. You have ${formatCredits(existingCredits)} already and selected ${formatCredits(selectedCredits)} more.`;
+          setErrorMessage(msg);
+          showToast("error", msg);
+          return;
+        }
+      }
+
       if (lockedOut.length > 0) {
         showToast("info", `Skipped ${lockedOut.length} Sem ${preRegLockedSemester}+ course${lockedOut.length > 1 ? "s" : ""} — plan those on the Pre-Registration page.`);
       }
@@ -886,7 +962,8 @@ export default function ImportCoursesPage({
         courseCode: course.code,
         semester: course.semester,
         courseType: course.category,
-        grade: course.grade || undefined,
+        grade: course.registrationType === "AUDIT" ? undefined : course.grade || undefined,
+        registrationType: course.registrationType ?? "REGULAR",
       }));
 
       const res = await fetch("/api/enrollments/bulk", {
@@ -935,7 +1012,7 @@ export default function ImportCoursesPage({
   // Derived per-render values memoized so a single course toggle doesn't rebuild
   // the semester grouping + summary for the whole list on every keystroke/click.
   // Declared before the early return below so hook order stays unconditional.
-  const { semesterGroups, selectedCount, totalCredits, pendingKeys } = useMemo(() => {
+  const { semesterGroups, selectedCount, totalCredits, selectedPassFailCredits, pendingKeys } = useMemo(() => {
     const groups: Record<number, SelectedCourse[]> = {};
     courses.forEach((course) => {
       (groups[course.semester] ||= []).push(course);
@@ -944,13 +1021,22 @@ export default function ImportCoursesPage({
     const selected = courses.filter((c) => c.selected);
     const count = selected.length;
     const credits = selected.reduce((sum, c) => addCredits(sum, c.credits), 0);
+    const passFailCredits = selected
+      .filter((c) => c.registrationType === "PASS_FAIL")
+      .reduce((sum, c) => addCredits(sum, c.credits), 0);
 
     // Pending keys = courses already in the current in-memory list (not yet imported)
     const keys = new Set(
       selected.map((c) => courseIdentityKey(c.code)).filter(Boolean)
     );
 
-    return { semesterGroups: groups, selectedCount: count, totalCredits: credits, pendingKeys: keys };
+    return {
+      semesterGroups: groups,
+      selectedCount: count,
+      totalCredits: credits,
+      selectedPassFailCredits: passFailCredits,
+      pendingKeys: keys,
+    };
   }, [courses]);
 
   if (submitted) {
@@ -1302,7 +1388,7 @@ export default function ImportCoursesPage({
       </div>
 
       {/* Summary */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <div className="bg-surface p-4 rounded-xl border border-border">
           <div className="text-sm text-foreground-secondary mb-1">Selected Courses</div>
           <div className="text-3xl font-bold text-primary">{selectedCount}</div>
@@ -1314,6 +1400,15 @@ export default function ImportCoursesPage({
         <div className="bg-surface p-4 rounded-xl border border-border">
           <div className="text-sm text-foreground-secondary mb-1">Semesters</div>
           <div className="text-3xl font-bold text-secondary">1-{currentSemester}</div>
+        </div>
+        <div className="bg-surface p-4 rounded-xl border border-border">
+          <div className="text-sm text-foreground-secondary mb-1">P/F Credits</div>
+          <div className="text-3xl font-bold text-success">
+            {formatCredits(addCredits(initialPassFailCredits, selectedPassFailCredits))}/9
+          </div>
+          <p className="mt-1 text-xs text-foreground-secondary">
+            {formatCredits(Math.max(0, 9 - addCredits(initialPassFailCredits, selectedPassFailCredits)))} remaining after import
+          </p>
         </div>
       </div>
 
@@ -1431,6 +1526,7 @@ export default function ImportCoursesPage({
                         course={course}
                         onToggle={toggleCourse}
                         onGrade={updateGrade}
+                        onRegistrationType={updateRegistrationType}
                       />
                     ))}
                   </div>

@@ -43,6 +43,7 @@ interface Enrollment {
   status: string;
   grade?: string | null;
   programId?: string | null;
+  isPassFail?: boolean;
   isInternship?: boolean;
   course: {
     code: string;
@@ -628,7 +629,7 @@ export default function ProgramsClient({
                           {(() => {
                             const pfCr = enrollments
                               .filter(e =>
-                                (e.isInternship || /39[69]P$/i.test(e.course.code)) &&
+                                e.isPassFail &&
                                 (e.status === "COMPLETED" || e.status === "IN_PROGRESS")
                               )
                               .reduce((sum, e) => sum + (e.course.credits || 0), 0);

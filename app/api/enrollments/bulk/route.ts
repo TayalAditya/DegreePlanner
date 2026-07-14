@@ -7,6 +7,7 @@ import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { getMtpComponent, isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
 import { EnrollmentStatus } from "@prisma/client";
+import { PASS_FAIL_LIMITS } from "@/lib/course-validation";
 
 export async function POST(req: NextRequest) {
   try {
@@ -181,6 +182,8 @@ export async function POST(req: NextRequest) {
         year: true,
         term: true,
         status: true,
+        isPassFail: true,
+        passFailCredits: true,
         course: {
           select: {
             code: true,
@@ -198,6 +201,21 @@ export async function POST(req: NextRequest) {
       existingByIdentity.set(key, list);
     }
 
+    let passFailCreditsUsed = existingActiveEnrollments
+      .filter((enrollment) => enrollment.isPassFail)
+      .reduce((sum, enrollment) => sum + Number(enrollment.passFailCredits || 0), 0);
+    const passFailCreditsBySemester = new Map<number, number>();
+    existingActiveEnrollments
+      .filter((enrollment) => enrollment.isPassFail)
+      .forEach((enrollment) => {
+        passFailCreditsBySemester.set(
+          enrollment.semester,
+          (passFailCreditsBySemester.get(enrollment.semester) ?? 0) +
+            Number(enrollment.passFailCredits || 0)
+        );
+      });
+    const passFailEligibleCategories = new Set(["FE", "HSS", "IKS", "DE"]);
+
     for (const enrollment of enrollments) {
       try {
         const { courseCode, semester, grade } = enrollment as {
@@ -208,7 +226,22 @@ export async function POST(req: NextRequest) {
         };
 
         const rawType = (enrollment as any).courseType as string;
+        const registrationType = String((enrollment as any).registrationType ?? "REGULAR");
+        if (!["REGULAR", "PASS_FAIL", "AUDIT"].includes(registrationType)) {
+          errors.push({ courseCode, error: "Invalid registration type." });
+          continue;
+        }
+        const isAudit = registrationType === "AUDIT";
+        const isPassFail = registrationType === "PASS_FAIL";
+        if (isPassFail && !passFailEligibleCategories.has(rawType)) {
+          errors.push({
+            courseCode,
+            error: "P/F is available only for Free Electives, HSS+IKS, or Discipline Electives.",
+          });
+          continue;
+        }
         let courseType = categoryToCourseType[rawType] ?? "CORE";
+        if (isPassFail) courseType = "FREE_ELECTIVE";
 
         const codeCandidates = buildCodeCandidates(courseCode);
         const course = await prisma.course.findFirst({
@@ -252,21 +285,51 @@ export async function POST(req: NextRequest) {
 
         // Past semesters are COMPLETED; current sem depends on whether grade given
         const isPastSemester = semester < currentSemester;
-        const status =
-          grade ? "COMPLETED" : isPastSemester ? "COMPLETED" : "IN_PROGRESS";
+        const status = isAudit
+          ? EnrollmentStatus.AUDIT
+          : grade
+            ? EnrollmentStatus.COMPLETED
+            : isPastSemester
+              ? EnrollmentStatus.COMPLETED
+              : EnrollmentStatus.IN_PROGRESS;
 
         const normalizedCode = normalizeCourseCode(course.code);
         const specialDpCourseType = getSpecialDpCourseType(normalizedCode);
         if (specialDpCourseType) courseType = specialDpCourseType;
         await maybeEnableProjectPrefsForCourse(normalizedCode);
 
+        const previousPassFailCredits = existingInSameSemester?.isPassFail
+          ? Number(existingInSameSemester.passFailCredits || 0)
+          : 0;
+        const nextPassFailCredits = isPassFail ? Number(course.credits || 0) : 0;
+        const currentSemesterPassFail = passFailCreditsBySemester.get(semester) ?? 0;
+        const nextTotalPassFail = passFailCreditsUsed - previousPassFailCredits + nextPassFailCredits;
+        const nextSemesterPassFail = currentSemesterPassFail - previousPassFailCredits + nextPassFailCredits;
+
+        if (nextTotalPassFail > PASS_FAIL_LIMITS.TOTAL_CREDITS) {
+          errors.push({
+            courseCode,
+            error: `Cannot exceed ${PASS_FAIL_LIMITS.TOTAL_CREDITS} total P/F credits.`,
+          });
+          continue;
+        }
+        if (nextSemesterPassFail > PASS_FAIL_LIMITS.PER_SEMESTER_CREDITS) {
+          errors.push({
+            courseCode,
+            error: `Cannot exceed ${PASS_FAIL_LIMITS.PER_SEMESTER_CREDITS} P/F credits in Semester ${semester}.`,
+          });
+          continue;
+        }
+
         if (existingInSameSemester) {
           const updated = await prisma.courseEnrollment.update({
             where: { id: existingInSameSemester.id },
             data: {
               courseType,
-              grade,
+              grade: isAudit ? null : grade || null,
               status,
+              isPassFail,
+              passFailCredits: nextPassFailCredits,
               year: semYear,
               term,
               programId: primaryProgramId,
@@ -321,8 +384,10 @@ export async function POST(req: NextRequest) {
               year: semYear,
               term,
               courseType: courseType || "CORE",
-              grade,
+              grade: isAudit ? null : grade || null,
               status,
+              isPassFail,
+              passFailCredits: nextPassFailCredits,
               programId: primaryProgramId,
             },
           });
@@ -335,10 +400,15 @@ export async function POST(req: NextRequest) {
             year: semYear,
             term,
             status,
+            isPassFail,
+            passFailCredits: nextPassFailCredits,
             course: { code: course.code },
           });
           existingByIdentity.set(identityKey, nextList);
         }
+
+        passFailCreditsUsed = nextTotalPassFail;
+        passFailCreditsBySemester.set(semester, nextSemesterPassFail);
       } catch (error) {
         console.error(`Error processing ${(enrollment as any).courseCode}:`, error);
         errors.push({
@@ -353,6 +423,11 @@ export async function POST(req: NextRequest) {
       successful: results.length,
       failed: errors.length,
     };
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { totalPassFailCredits: passFailCreditsUsed },
+    });
 
     console.log(`✅ Import complete: ${summary.successful} success, ${summary.failed} failed`);
 
