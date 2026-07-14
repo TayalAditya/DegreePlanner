@@ -8,6 +8,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { PlanImageDownloadButton } from "@/components/PlanImageDownloadButton";
 import { formatCredits, formatCourseCode } from "@/lib/utils";
 import { MINORS } from "@/lib/minors";
+import { getBatch23FacultyAdvisor } from "@/lib/batch23FacultyAdvisors";
 
 interface Offering {
   id: string;
@@ -49,6 +50,8 @@ interface InternshipCourse {
   code: string;
   name: string;
   credits: number;
+  instructor?: string | null;
+  instructorEmail?: string | null;
 }
 
 interface PlannedCourse {
@@ -532,7 +535,7 @@ function Section({ title, count, children, defaultOpen = false, headerBg, error 
 function toOffering(c: InternshipCourse, category: string): Offering {
   return {
     id: c.id, courseId: c.id, courseCode: formatCourseCode(c.code), courseName: c.name,
-    instructor: null, instructorEmail: null, school: null, slots: null, ltpc: null,
+    instructor: c.instructor ?? null, instructorEmail: c.instructorEmail ?? null, school: null, slots: null, ltpc: null,
     credits: c.credits, curriculumLink: null, resolvedCategory: category,
     isCompulsory: false, completedInSemester: null,
   };
@@ -793,24 +796,39 @@ export default function PreRegistrationPage() {
             CSE: "CS", CS: "CS", DSE: "DS", DSAI: "DS",
             EE: "EE", ME: "ME", CE: "CE", EP: "EP",
             BE: "BE", BIO: "BE", MNC: "MC", MC: "MC",
-            MS: "MS", MSE: "MS", GE: "GE", VLSI: "VL",
+            MS: "MS", MSE: "MS", GE: "GE", VLSI: "VL", MEVLSI: "VL",
+            BSCS: "BS", BS: "BS",
           };
           const branch = (d.studentInfo?.branch ?? "").toUpperCase();
           const sem = d.offeringSemester ?? 0;
+          const facultyAdvisor = getBatch23FacultyAdvisor(branch, d.studentInfo?.batch);
           // GE specialisations share the GE internship and MTP course codes.
           const prefix = BRANCH_PREFIX[branch] ?? (branch.startsWith("GE-") ? "GE" : null);
           const norm = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+          const withFacultyAdvisor = (course: InternshipCourse): InternshipCourse =>
+            facultyAdvisor
+              ? {
+                  ...course,
+                  instructor: `${facultyAdvisor.name} (Faculty Advisor)`,
+                  instructorEmail: facultyAdvisor.email,
+                }
+              : course;
           // Internship only eligible from Sem 6 onwards
           if (sem >= 6 && prefix) {
             const keep399 = new Set([`${prefix}399P`]);
             const keep396 = new Set([`${prefix}396P`]);
-            const p399 = (courses as InternshipCourse[]).filter((c) => keep399.has(norm(c.code)));
-            const p396 = (courses as InternshipCourse[]).filter((c) => keep396.has(norm(c.code)));
+            const p399 = (courses as InternshipCourse[])
+              .filter((c) => keep399.has(norm(c.code)))
+              .map(withFacultyAdvisor);
+            const p396 = (courses as InternshipCourse[])
+              .filter((c) => keep396.has(norm(c.code)))
+              .map(withFacultyAdvisor);
             setInternshipCourses({ p399, p396 });
           }
           // MTP-1 only from Sem 7 onwards
           if (sem >= 7 && prefix) {
-            const mtp1 = (courses as InternshipCourse[]).find((c) => norm(c.code) === `${prefix}498P`) ?? null;
+            const matchedMtp1 = (courses as InternshipCourse[]).find((c) => norm(c.code) === `${prefix}498P`);
+            const mtp1 = matchedMtp1 ? withFacultyAdvisor(matchedMtp1) : null;
             setMtp1Course(mtp1);
           }
         }
@@ -1020,17 +1038,17 @@ export default function PreRegistrationPage() {
     const extras: Array<PlannedCourse & { selected: boolean }> = [
       ...internshipCourses.p399.map((course) => ({
         id: course.id, code: course.code, name: course.name, credits: course.credits,
-        instructor: null, slots: null, category: "FE", registrationType: "PASS_FAIL" as RegType,
+        instructor: course.instructor ?? null, slots: null, category: "FE", registrationType: "PASS_FAIL" as RegType,
         selected: selectedExtra.has(course.id),
       })),
       ...internshipCourses.p396.map((course) => ({
         id: course.id, code: course.code, name: course.name, credits: course.credits,
-        instructor: null, slots: null, category: "FE", registrationType: "PASS_FAIL" as RegType,
+        instructor: course.instructor ?? null, slots: null, category: "FE", registrationType: "PASS_FAIL" as RegType,
         selected: selectedExtra.has(course.id),
       })),
       ...(mtp1Course ? [{
         id: mtp1Course.id, code: mtp1Course.code, name: mtp1Course.name, credits: mtp1Course.credits,
-        instructor: null, slots: null, category: "MTP", registrationType: "REGULAR" as RegType,
+        instructor: mtp1Course.instructor ?? null, slots: null, category: "MTP", registrationType: "REGULAR" as RegType,
         selected: selectedExtra.has(mtp1Course.id),
       }] : []),
     ];
