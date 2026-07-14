@@ -27,6 +27,7 @@ import {
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { NotificationBell } from "./NotificationBell";
+import { FeedbackButton } from "./FeedbackButton";
 import { BrandMark } from "./BrandMark";
 import { ACAD_SEC_EMAILS } from "@/lib/permissions";
 
@@ -113,6 +114,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
             <div className="hidden lg:block">
               <ThemeToggle variant="mode" />
             </div>
+            <FeedbackButton />
             <NotificationBell />
             {/* Mobile: Menu toggle */}
             <button

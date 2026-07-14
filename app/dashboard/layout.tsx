@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { DashboardNav } from "@/components/DashboardNav";
 import { RouteTransition } from "@/components/RouteTransition";
 import { ScrollToTop } from "@/components/ScrollToTop";
-import { FeedbackButton } from "@/components/FeedbackButton";
 import { AcadSecGate } from "@/components/AcadSecGate";
 
 export default async function DashboardLayout({
@@ -53,7 +52,6 @@ export default async function DashboardLayout({
           </div>
         </div>
         <ScrollToTop />
-        <FeedbackButton />
       </div>
     </AcadSecGate>
   );
