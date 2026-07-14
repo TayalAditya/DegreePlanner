@@ -35,6 +35,10 @@ const PAIRS: [string, string][] = [
   ["ME-308", "ME-215"],
   // VLSI: EE-311 / VL-201 (Device Electronics / Semiconductor Device for ICs)
   ["EE-311", "VL-201"],
+  // CS/DSAI: CS-669 / DS-413 (Pattern Recognition ≡ Introduction to Statistical Learning)
+  ["CS-669", "DS-413"],
+  // CS: CS-515 / CS-213 (Advanced Computer Science Practicum ≡ Reverse Engineering)
+  ["CS-515", "CS-213"],
 ];
 
 async function main() {

@@ -23,6 +23,7 @@ interface Offering {
   resolvedCategory: string;
   isCompulsory: boolean;
   completedInSemester: number | null;
+  completedVia?: string | null;
 }
 
 interface ApiResponse {
@@ -371,7 +372,9 @@ function CourseCard({
           {isCompleted && (
             <span className="px-1.5 py-0.5 text-xs rounded bg-success/10 text-success border border-success/20 flex items-center gap-1">
               <CheckCircle className="w-3 h-3" />
-              Sem {offering.completedInSemester}
+              {offering.completedVia
+                ? `Done via ${offering.completedVia}`
+                : `Sem ${offering.completedInSemester}`}
             </span>
           )}
           {/* Registration type selector — only for selected, non-compulsory, non-completed courses */}

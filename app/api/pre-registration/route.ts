@@ -7,8 +7,9 @@ import { getBranchCandidates, normalizeBranchCode } from "@/lib/branchInfo";
 import { EnrollmentStatus } from "@prisma/client";
 import { creditCalculator } from "@/lib/creditCalculator";
 import { isAcadSec } from "@/lib/permissions";
+import { getBatchAdjustedCredits } from "@/lib/branches";
 
-const PRE_REG_OPEN = new Date("2026-07-15T00:00:00+05:30");
+const PRE_REG_OPEN = new Date("2026-08-15T00:00:00+05:30");
 
 // Credit limits per semester
 const CREDIT_LIMIT: Record<number, number> = { 3: 22, 5: 25, 7: 25 };
@@ -143,12 +144,18 @@ export async function GET() {
     completed.map((e) => [e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, ""), e.semester])
   );
 
-  // Apply course equivalencies from DB: if student completed an exchange course, treat the IIT Mandi equivalent as done
+  // Apply course equivalencies from DB: if student completed an exchange course, treat the IIT Mandi equivalent as done.
+  // Track which course actually satisfied it so the UI can explain why the equivalent is locked.
+  const completedViaByCourseId = new Map<string, string>();
+  const completedViaByCourseCode = new Map<string, string>();
   for (const eq of equivalencies) {
     const sem = completedByCourseId.get(eq.courseId);
-    if (sem !== undefined) {
+    if (sem !== undefined && !completedByCourseId.has(eq.equivalent.id)) {
       completedByCourseId.set(eq.equivalent.id, sem);
-      completedByCourseCode.set(eq.equivalent.code.toUpperCase().replace(/[^A-Z0-9]/g, ""), sem);
+      const eqNormCode = eq.equivalent.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      completedByCourseCode.set(eqNormCode, sem);
+      completedViaByCourseId.set(eq.equivalent.id, eq.course.code);
+      completedViaByCourseCode.set(eqNormCode, eq.course.code);
     }
   }
 
@@ -247,6 +254,11 @@ export async function GET() {
         completedByCourseCode.get(normalizedCode) ??
         null;
       const isCompleted = completedSem != null;
+      // If completion came from an equivalent course (not the course itself), surface which one.
+      const completedVia =
+        (o.courseId ? completedViaByCourseId.get(o.courseId) : undefined) ??
+        completedViaByCourseCode.get(normalizedCode) ??
+        null;
 
       // Compulsory if:
       //  a) no semester restriction OR same as student's current semester
@@ -297,6 +309,7 @@ export async function GET() {
         resolvedCategory,
         isCompulsory,
         completedInSemester: completedSem ?? null,
+        completedVia,
       };
     });
 
@@ -360,10 +373,11 @@ export async function GET() {
       tally.FE = (tally.FE ?? 0) + hssOverflow;
 
       completedBreakdown = tally;
+      const batchAdj = getBatchAdjustedCredits(normalizedBranch, batchYear, { dcCredits: req.dcCredits, deCredits: req.deCredits });
       programRequirements = {
         IC:       Math.max(0, req.icCredits - IC_BASKET_REQ - HSS_IKS_REQ),
         IC_BASKET: IC_BASKET_REQ,
-        DC:   req.dcCredits,
+        DC:   batchAdj.dcCredits,
         DE:   adjustedDeCredits,
         FE:   adjustedFeCredits,
         MTP:  progress.required.mtp,
