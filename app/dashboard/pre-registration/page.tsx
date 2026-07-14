@@ -331,13 +331,13 @@ function CourseCard({
     // fired the wrong action. A div with an explicit onClick has no such quirk.
     <div
       role="button"
-      tabIndex={isCompleted ? -1 : 0}
+      tabIndex={isCompleted || disabled ? -1 : 0}
       className={`flex items-start gap-3 p-4 rounded-xl border transition-all cursor-pointer
-        ${isCompleted ? "opacity-50 cursor-default" : ""}
+        ${isCompleted || disabled ? "opacity-50 cursor-not-allowed" : ""}
         ${clashWith ? "border-error/30 bg-error/5" : checked ? "border-primary/30 bg-primary/5" : "border-border bg-surface hover:border-border-hover"}
       `}
-      onClick={isCompleted ? undefined : onToggle}
-      onKeyDown={isCompleted ? undefined : (e) => {
+      onClick={isCompleted || disabled ? undefined : onToggle}
+      onKeyDown={isCompleted || disabled ? undefined : (e) => {
         if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();
           onToggle?.();
@@ -524,41 +524,39 @@ function toOffering(c: InternshipCourse, category: string): Offering {
   };
 }
 
-function InternshipSection({ internshipCourses, selected, onToggle, pfCreditsUsed, samarthReported, onToggleSamarth }: {
+function InternshipSection({ internshipCourses, selected, onToggle, canSelect399P, hasSelected399P, samarthReported, onToggleSamarth }: {
   internshipCourses: { p399: InternshipCourse[]; p396: InternshipCourse[] };
   selected: Set<string>;
   onToggle: (id: string) => void;
-  pfCreditsUsed: number;
+  canSelect399P: boolean;
+  hasSelected399P: boolean;
   samarthReported?: Set<string>;
   onToggleSamarth?: (offeringId: string) => void;
 }) {
-  const PF_TOTAL = 9;
-  const pfRemaining399 = Math.max(0, PF_TOTAL - pfCreditsUsed - 9);
-  const pfRemaining396 = Math.max(0, PF_TOTAL - pfCreditsUsed - 6);
   return (
     <Section title="Semester-Long Internship" count={internshipCourses.p399.length + internshipCourses.p396.length}>
       <div className="space-y-4">
         {internshipCourses.p399.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-foreground">Onsite (399P) — 9 cr P/F · No other courses · P/F budget → {pfRemaining399} remaining</p>
+            <p className="text-xs font-semibold text-foreground">Onsite (399P) — 9 cr P/F · Uses the complete P/F allowance</p>
             <div className="flex items-start gap-2 p-2 rounded-lg bg-error/5 border border-error/15">
               <AlertTriangle className="w-3.5 h-3.5 text-error flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-error">Cannot enroll alongside any other course in Sem 6/7</p>
+              <p className="text-xs text-error">Cannot be selected with any other course in this semester</p>
             </div>
             {internshipCourses.p399.map((c) => (
-              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={false} onToggle={() => onToggle(c.id)} samarthReported={samarthReported?.has(c.id)} onToggleSamarth={onToggleSamarth} />
+              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={!selected.has(c.id) && !canSelect399P} onToggle={() => onToggle(c.id)} samarthReported={samarthReported?.has(c.id)} onToggleSamarth={onToggleSamarth} />
             ))}
           </div>
         )}
         {internshipCourses.p396.length > 0 && (
           <div className="space-y-2">
-            <p className="text-xs font-semibold text-foreground">Remote (396P) — 6 cr P/F · P/F budget → {pfRemaining396} remaining</p>
+            <p className="text-xs font-semibold text-foreground">Remote (396P) — 6 cr P/F</p>
             <div className="flex items-start gap-2 p-2 rounded-lg bg-warning/5 border border-warning/15">
               <AlertTriangle className="w-3.5 h-3.5 text-warning flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-warning">Uses {Math.min(6, PF_TOTAL - pfCreditsUsed)} of {PF_TOTAL} total P/F credits</p>
+              <p className="text-xs text-warning">Uses 6 of the 9 total P/F credits</p>
             </div>
             {internshipCourses.p396.map((c) => (
-              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={false} onToggle={() => onToggle(c.id)} samarthReported={samarthReported?.has(c.id)} onToggleSamarth={onToggleSamarth} />
+              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={hasSelected399P} onToggle={() => onToggle(c.id)} samarthReported={samarthReported?.has(c.id)} onToggleSamarth={onToggleSamarth} />
             ))}
           </div>
         )}
@@ -654,13 +652,17 @@ export default function PreRegistrationPage() {
   const [copied, setCopied] = useState(false);
   const [samarthReported, setSamarthReported] = useState<Set<string>>(new Set());
   const [regTypes, setRegTypes] = useState<Map<string, RegType>>(new Map());
+  const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
 
   const handleRegTypeChange = (id: string, type: RegType) => {
+    if (type === "PASS_FAIL" && hasSelected399P) {
+      showToast("error", "399P already uses the complete 9-credit P/F allowance.");
+      return;
+    }
     setRegTypes(prev => { const m = new Map(prev); m.set(id, type); return m; });
     setSaved(false);
   };
-
-  const toggleExtra = (id: string) => setSelectedExtra(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); setSaved(false); return s; });
 
   // P/F credits consumed by selected internship in THIS plan
   const pfCreditsFromSelection = useMemo(() => {
@@ -682,8 +684,41 @@ export default function PreRegistrationPage() {
     }
     return used;
   }, [data, selected, regTypes]);
-  const { showToast } = useToast();
-  const { confirm } = useConfirmDialog();
+
+  const hasSelected399P = internshipCourses.p399.some((course) => selectedExtra.has(course.id));
+  const hasPendingCompulsory = Boolean(
+    data?.offerings.some((offering) => offering.isCompulsory && offering.completedInSemester === null)
+  );
+  const hasOtherSelections =
+    selected.size > 0 ||
+    hasPendingCompulsory ||
+    Array.from(selectedExtra).some((id) => !internshipCourses.p399.some((course) => course.id === id));
+  const historicalPfCredits = data?.studentInfo?.pfCreditsUsed ?? 0;
+  const canSelect399P = !hasOtherSelections && historicalPfCredits === 0 && pfCreditsFromRegTypes === 0;
+
+  const toggleExtra = (id: string) => {
+    const is399P = internshipCourses.p399.some((course) => course.id === id);
+    const alreadySelected = selectedExtra.has(id);
+
+    if (!alreadySelected && is399P && !canSelect399P) {
+      const message = historicalPfCredits > 0 || pfCreditsFromRegTypes > 0
+        ? "399P uses all 9 P/F credits. Remove existing P/F choices first."
+        : "399P is a full-semester internship. Deselect every other course first.";
+      showToast("error", message);
+      return;
+    }
+    if (!alreadySelected && !is399P && hasSelected399P) {
+      showToast("error", "Deselect 399P first. It cannot be planned with another course.");
+      return;
+    }
+
+    setSelectedExtra((prev) => {
+      const next = new Set(prev);
+      alreadySelected ? next.delete(id) : next.add(id);
+      return next;
+    });
+    setSaved(false);
+  };
 
   useEffect(() => {
     Promise.all([
@@ -929,6 +964,10 @@ export default function PreRegistrationPage() {
 
   const handleToggle = (offering: Offering) => {
     if (offering.isCompulsory || offering.completedInSemester !== null) return;
+    if (hasSelected399P) {
+      showToast("error", "Deselect 399P first. It cannot be planned with another course.");
+      return;
+    }
     if (clashMap.has(offering.id)) return; // core clash — cannot select
 
     // Prevent selecting if it clashes with an already-selected optional course
@@ -1183,7 +1222,7 @@ export default function PreRegistrationPage() {
 
         {/* Show internship section even when no offerings uploaded */}
         {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={(data?.studentInfo?.pfCreditsUsed ?? 0) + pfCreditsFromSelection} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} />
+          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} canSelect399P={canSelect399P} hasSelected399P={hasSelected399P} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} />
         )}
       </div>
     );
@@ -1622,7 +1661,7 @@ export default function PreRegistrationPage() {
 
       {/* Semester-Long Internship */}
       {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-        <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} pfCreditsUsed={data.studentInfo?.pfCreditsUsed ?? 0} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} />
+        <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} canSelect399P={canSelect399P} hasSelected399P={hasSelected399P} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} />
       )}
 
       {/* Semester breakdown analysis */}

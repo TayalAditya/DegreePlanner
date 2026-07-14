@@ -14,6 +14,10 @@ import {
   validateBranchSpecificCourse,
   getInternshipCredits,
   PASS_FAIL_LIMITS,
+  isOnsiteSemesterInternshipCourse,
+  isSemesterInternshipCourse,
+  validateOnsiteInternshipExclusivity,
+  validateOnsiteInternshipPassFailBudget,
 } from "@/lib/course-validation";
 
 export async function GET(request: NextRequest) {
@@ -262,51 +266,34 @@ export async function POST(request: NextRequest) {
     if (specialDpCourseType) finalCourseType = specialDpCourseType as CourseType;
 
     // Internship courses (XX-396P / XX-399P) are always P/F — bypass user toggle and 9cr limit check
-    const isInternshipCourse =
-      normalizedCourseCode.endsWith("396P") || normalizedCourseCode.endsWith("399P");
+    const isInternshipCourse = isSemesterInternshipCourse(course.code);
+    const is399PCourse = isOnsiteSemesterInternshipCourse(course.code);
     const finalIsPassFail =
       isInternshipCourse ||
       (finalCourseType === CourseType.FREE_ELECTIVE ? Boolean(isPassFail) : false);
+    if (isInternshipCourse) finalCourseType = CourseType.FREE_ELECTIVE;
 
-    // Semester-long onsite internship constraint (e.g., DP-399P):
-    // If any *399P course is enrolled in semester 6/7, no other courses are allowed in that semester.
-    if (semesterNumber === 6 || semesterNumber === 7) {
-      const is399PCourse = normalizedCourseCode.endsWith("399P");
+    const exclusivity = await validateOnsiteInternshipExclusivity(
+      session.user.id,
+      semesterNumber,
+      course.code
+    );
+    if (!exclusivity.allowed) {
+      return NextResponse.json({ error: exclusivity.reason }, { status: 400 });
+    }
 
-      const semesterEnrollments = await prisma.courseEnrollment.findMany({
-        where: {
-          userId: session.user.id,
-          semester: semesterNumber,
-          status: { not: EnrollmentStatus.DROPPED },
-        },
-        select: {
-          id: true,
-          status: true,
-          course: { select: { code: true } },
-        },
-      });
-
-      const semesterHas399P = semesterEnrollments.some((e) =>
-        normalizeCourseCode(e.course.code).endsWith("399P")
+    if (is399PCourse) {
+      const pfBudget = await validateOnsiteInternshipPassFailBudget(
+        session.user.id,
+        course.credits
       );
-
-      if (is399PCourse && semesterEnrollments.length > 0) {
-        return NextResponse.json(
-          { error: "Cannot enroll in a 399P course with other courses in semester 6/7. Remove other courses from that semester first." },
-          { status: 400 }
-        );
-      }
-
-      if (!is399PCourse && semesterHas399P) {
-        return NextResponse.json(
-          { error: "Cannot enroll in any other course in semester 6/7 while a 399P course is enrolled." },
-          { status: 400 }
-        );
+      if (!pfBudget.allowed) {
+        return NextResponse.json({ error: pfBudget.reason }, { status: 400 });
       }
     }
 
     // Validate P/F course enrollment (FE only)
-    if (isPassFail && finalCourseType !== CourseType.FREE_ELECTIVE) {
+    if (isPassFail && !isInternshipCourse && finalCourseType !== CourseType.FREE_ELECTIVE) {
       return NextResponse.json(
         { error: "Only Free Electives can be taken as Pass/Fail" },
         { status: 400 }
@@ -348,7 +335,16 @@ export async function POST(request: NextRequest) {
 
     // Validate internship
     let internshipCredits = 0;
-    if (isInternship) {
+    const finalIsInternship = isInternshipCourse || Boolean(isInternship);
+    const finalInternshipType = is399PCourse
+      ? "ONSITE"
+      : isInternshipCourse
+        ? "REMOTE"
+        : internshipType;
+    if (finalIsInternship) {
+      if (isInternshipCourse) {
+        internshipCredits = course.credits;
+      } else {
       if (!internshipType || !["REMOTE", "ONSITE"].includes(internshipType)) {
         return NextResponse.json(
           { error: "Invalid internship type. Must be REMOTE or ONSITE" },
@@ -361,6 +357,7 @@ export async function POST(request: NextRequest) {
         internshipType as "REMOTE" | "ONSITE",
         internshipDays
       );
+      }
     }
 
     // Create enrollment
@@ -401,9 +398,9 @@ export async function POST(request: NextRequest) {
           grade: grade || null,
           isPassFail: finalIsPassFail,
           passFailCredits: finalIsPassFail ? course.credits : 0,
-          isInternship: isInternship || false,
-          internshipType: isInternship ? internshipType : null,
-          internshipDays: isInternship ? internshipDays : null,
+          isInternship: finalIsInternship,
+          internshipType: finalIsInternship ? finalInternshipType : null,
+          internshipDays: finalIsInternship && !isInternshipCourse ? internshipDays : null,
         },
         include: {
           course: true,
@@ -472,10 +469,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Update user's P/F credits if applicable
-    if (finalIsPassFail) {
+    if (finalIsPassFail && !is399PCourse) {
       await prisma.user.update({
         where: { id: session.user.id },
         data: { totalPassFailCredits: { increment: course.credits } },
+      });
+    }
+
+    if (is399PCourse) {
+      // 399P is exactly the complete P/F allowance. Set, don't increment, so
+      // a stale aggregate can never make the displayed budget exceed 9.
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { totalPassFailCredits: PASS_FAIL_LIMITS.TOTAL_CREDITS },
       });
     }
 
@@ -533,7 +539,7 @@ export async function POST(request: NextRequest) {
         ...enrollment,
         internshipCredits,
         droppedPfCourses,
-        message: isInternship
+        message: finalIsInternship
           ? `Internship enrolled. Credits to be awarded: ${internshipCredits}`
           : undefined,
       },

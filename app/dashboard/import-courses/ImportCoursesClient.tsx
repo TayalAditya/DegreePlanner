@@ -80,8 +80,10 @@ const CourseRow = memo(function CourseRow({
   onGrade: (code: string, grade: string) => void;
   onRegistrationType: (code: string, semester: number, type: RegistrationType) => void;
 }) {
-  const registrationType = course.registrationType ?? "REGULAR";
-  const canUsePassFail = ["FE", "HSS", "IKS", "DE"].includes(course.category);
+  const isSemesterInternship = /39[69]P$/i.test(course.code.replace(/[^A-Z0-9]/gi, ""));
+  const isOnsiteInternship = /399P$/i.test(course.code.replace(/[^A-Z0-9]/gi, ""));
+  const registrationType = isSemesterInternship ? "PASS_FAIL" : (course.registrationType ?? "REGULAR");
+  const canUsePassFail = isSemesterInternship || ["FE", "HSS", "IKS", "DE"].includes(course.category);
 
   return (
     <div
@@ -138,12 +140,17 @@ const CourseRow = memo(function CourseRow({
             <select
               value={registrationType}
               onChange={(e) => onRegistrationType(course.code, course.semester, e.target.value as RegistrationType)}
+              disabled={isSemesterInternship}
               className="w-full px-2 py-1 text-sm rounded-lg border bg-background"
               onClick={(e) => e.stopPropagation()}
             >
-              <option value="REGULAR">Regular</option>
-              {canUsePassFail && <option value="PASS_FAIL">Pass/Fail (P/F)</option>}
-              <option value="AUDIT">Audit</option>
+              {isSemesterInternship ? (
+                <option value="PASS_FAIL">Pass/Fail (required)</option>
+              ) : (
+                <option value="REGULAR">Regular</option>
+              )}
+              {canUsePassFail && !isSemesterInternship && <option value="PASS_FAIL">Pass/Fail (P/F)</option>}
+              {!isSemesterInternship && <option value="AUDIT">Audit</option>}
             </select>
             <select
               value={course.grade || ""}
@@ -164,6 +171,9 @@ const CourseRow = memo(function CourseRow({
             </select>
             {registrationType === "PASS_FAIL" && (
               <p className="text-xs text-success">P/F counts as Free Elective.</p>
+            )}
+            {isOnsiteInternship && (
+              <p className="text-xs text-error">399P uses all 9 P/F credits and must be the only course in this semester.</p>
             )}
             {registrationType === "AUDIT" && (
               <p className="text-xs text-warning">Transcript only; not counted toward degree.</p>
@@ -678,16 +688,39 @@ export default function ImportCoursesPage({
   }, []);
 
   const toggleCourse = useCallback((code: string, semester: number) => {
+    const clicked = courses.find((course) => course.code === code && course.semester === semester);
+    if (!clicked) return;
+    const selecting = !clicked.selected;
+    const is399P = /399P$/i.test(clicked.code.replace(/[^A-Z0-9]/gi, ""));
+    const semesterHas399P = courses.some(
+      (course) => course.selected && course.semester === semester && /399P$/i.test(course.code.replace(/[^A-Z0-9]/gi, ""))
+    );
+    const semesterHasOtherCourse = courses.some(
+      (course) => course.selected && course.semester === semester && course.code !== code
+    );
+    if (selecting && is399P && semesterHasOtherCourse) {
+      showToast("error", "399P is a full-semester internship. Deselect every other course in this semester first.");
+      return;
+    }
+    if (selecting && !is399P && semesterHas399P) {
+      showToast("error", "Deselect 399P first. No other course can be selected in that semester.");
+      return;
+    }
+
     startTransition(() => { setCourses((prev) => {
-      const clicked = prev.find((c) => c.code === code && c.semester === semester);
-      if (!clicked) return prev;
-      const nowSelected = !clicked.selected;
-      const clickedIdentity = courseIdentityKey(clicked.code);
+      const currentClicked = prev.find((c) => c.code === code && c.semester === semester);
+      if (!currentClicked) return prev;
+      const nowSelected = !currentClicked.selected;
+      const clickedIdentity = courseIdentityKey(currentClicked.code);
 
       return prev.map((c) => {
         // Toggle the clicked course itself
         if (c.code === code && c.semester === semester) {
-          return { ...c, selected: nowSelected };
+          return {
+            ...c,
+            selected: nowSelected,
+            registrationType: is399P && nowSelected ? "PASS_FAIL" : c.registrationType,
+          };
         }
 
         if (nowSelected) {
@@ -710,7 +743,7 @@ export default function ImportCoursesPage({
           }
 
           // ICB basket: selecting one deselects all other ICB courses in the SAME semester
-          if (clicked.category === "ICB" && c.category === "ICB" && c.semester === semester) {
+          if (currentClicked.category === "ICB" && c.category === "ICB" && c.semester === semester) {
             return { ...c, selected: false };
           }
 
@@ -761,7 +794,7 @@ export default function ImportCoursesPage({
         return c;
       });
     }); });
-  }, [userBatch]);
+  }, [courses, showToast, userBatch]);
 
   const toggleAllInSemester = useCallback((sem: number) => {
     startTransition(() => {
@@ -771,6 +804,11 @@ export default function ImportCoursesPage({
 
         if (allSelected) {
           return prev.map((c) => (c.semester === sem ? { ...c, selected: false } : c));
+        }
+
+        if (semCourses.some((course) => /399P$/i.test(course.code.replace(/[^A-Z0-9]/gi, "")))) {
+          showToast("error", "Select 399P separately. It cannot be imported with another course in the same semester.");
+          return prev;
         }
 
         const selectedElsewhere = new Set(
@@ -797,7 +835,7 @@ export default function ImportCoursesPage({
         });
       });
     });
-  }, []);
+  }, [showToast]);
 
   const updateGrade = useCallback((code: string, grade: string) => {
     startTransition(() => {
@@ -809,6 +847,7 @@ export default function ImportCoursesPage({
 
   const updateRegistrationType = useCallback(
     (code: string, semester: number, registrationType: RegistrationType) => {
+      if (/39[69]P$/i.test(code.replace(/[^A-Z0-9]/gi, ""))) return;
       startTransition(() => {
         setCourses((prev) =>
           prev.map((c) => {
@@ -902,9 +941,25 @@ export default function ImportCoursesPage({
         return;
       }
 
+      const selected399P = selectedCourses.filter((course) =>
+        /399P$/i.test(course.code.replace(/[^A-Z0-9]/gi, ""))
+      );
       const selectedPassFailCredits = selectedCourses
-        .filter((course) => course.registrationType === "PASS_FAIL")
+        .filter((course) => course.registrationType === "PASS_FAIL" || /39[69]P$/i.test(course.code.replace(/[^A-Z0-9]/gi, "")))
         .reduce((sum, course) => addCredits(sum, course.credits), 0);
+      if (selected399P.length > 0) {
+        const onsite = selected399P[0];
+        const anotherSameSemester = selectedCourses.some(
+          (course) => course.semester === onsite.semester && course.code !== onsite.code
+        );
+        const otherSelectedPf = selectedPassFailCredits - onsite.credits;
+        if (selected399P.length > 1 || onsite.credits !== 9 || anotherSameSemester || initialPassFailCredits > 0 || otherSelectedPf > 0) {
+          const msg = "399P is exactly 9 P/F credits and must be the only course in that semester. Remove all other P/F choices first.";
+          setErrorMessage(msg);
+          showToast("error", msg);
+          return;
+        }
+      }
       if (addCredits(initialPassFailCredits, selectedPassFailCredits) > 9) {
         const msg = `P/F limit is 9 credits. You have ${formatCredits(initialPassFailCredits)} already and selected ${formatCredits(selectedPassFailCredits)} more.`;
         setErrorMessage(msg);
@@ -914,7 +969,7 @@ export default function ImportCoursesPage({
 
       const selectedPassFailBySemester = new Map<number, number>();
       selectedCourses
-        .filter((course) => course.registrationType === "PASS_FAIL")
+        .filter((course) => course.registrationType === "PASS_FAIL" || /39[69]P$/i.test(course.code.replace(/[^A-Z0-9]/gi, "")))
         .forEach((course) => {
           selectedPassFailBySemester.set(
             course.semester,
@@ -923,7 +978,8 @@ export default function ImportCoursesPage({
         });
       for (const [semester, selectedCredits] of selectedPassFailBySemester) {
         const existingCredits = Number(initialPassFailCreditsBySemester[semester] ?? 0);
-        if (addCredits(existingCredits, selectedCredits) > 6) {
+        const has399P = selected399P.some((course) => course.semester === semester);
+        if (!has399P && addCredits(existingCredits, selectedCredits) > 6) {
           const msg = `P/F limit is 6 credits in Semester ${semester}. You have ${formatCredits(existingCredits)} already and selected ${formatCredits(selectedCredits)} more.`;
           setErrorMessage(msg);
           showToast("error", msg);
@@ -963,7 +1019,9 @@ export default function ImportCoursesPage({
         semester: course.semester,
         courseType: course.category,
         grade: course.registrationType === "AUDIT" ? undefined : course.grade || undefined,
-        registrationType: course.registrationType ?? "REGULAR",
+        registrationType: /39[69]P$/i.test(course.code.replace(/[^A-Z0-9]/gi, ""))
+          ? "PASS_FAIL"
+          : (course.registrationType ?? "REGULAR"),
       }));
 
       const res = await fetch("/api/enrollments/bulk", {
@@ -1022,7 +1080,7 @@ export default function ImportCoursesPage({
     const count = selected.length;
     const credits = selected.reduce((sum, c) => addCredits(sum, c.credits), 0);
     const passFailCredits = selected
-      .filter((c) => c.registrationType === "PASS_FAIL")
+      .filter((c) => c.registrationType === "PASS_FAIL" || /39[69]P$/i.test(c.code.replace(/[^A-Z0-9]/gi, "")))
       .reduce((sum, c) => addCredits(sum, c.credits), 0);
 
     // Pending keys = courses already in the current in-memory list (not yet imported)

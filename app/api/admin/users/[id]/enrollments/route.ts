@@ -5,7 +5,14 @@ import prisma from "@/lib/prisma";
 import { getProgramLookupBranchCode, isDataScienceBranch } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
-import { canTakePassFailCourse } from "@/lib/course-validation";
+import {
+  canTakePassFailCourse,
+  isOnsiteSemesterInternshipCourse,
+  isSemesterInternshipCourse,
+  PASS_FAIL_LIMITS,
+  validateOnsiteInternshipExclusivity,
+  validateOnsiteInternshipPassFailBudget,
+} from "@/lib/course-validation";
 import { CourseType, EnrollmentStatus, Term } from "@prisma/client";
 
 // Odd semesters start in fall, even in spring
@@ -130,20 +137,29 @@ export async function POST(
   const specialDpCourseType = getSpecialDpCourseType(course.code);
   if (specialDpCourseType) finalCourseType = specialDpCourseType as CourseType;
 
+  const is399PCourse = isOnsiteSemesterInternshipCourse(course.code);
+  const isInternshipCourse = isSemesterInternshipCourse(course.code);
+  const exclusivity = await validateOnsiteInternshipExclusivity(userId, semNum, course.code);
+  if (!exclusivity.allowed) {
+    return NextResponse.json({ error: exclusivity.reason }, { status: 400 });
+  }
+
   const state = inferAcademicState(batchYear);
   const currentSem = state.currentSemester;
   const autoStatus = semNum < currentSem ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS;
-  const isPassFail = registrationType === "PASS_FAIL";
-  const isAudit = registrationType === "AUDIT";
+  const isPassFail = isInternshipCourse || registrationType === "PASS_FAIL";
+  const isAudit = registrationType === "AUDIT" && !isInternshipCourse;
 
   if (isPassFail) {
-    if (!["FE", "HSS", "IKS", "DE"].includes(detectedCategory)) {
+    if (!isInternshipCourse && !["FE", "HSS", "IKS", "DE"].includes(detectedCategory)) {
       return NextResponse.json(
         { error: "Pass/Fail is only available for Free Electives, HSS/IKS, and Discipline Electives" },
         { status: 400 }
       );
     }
-    const { allowed, reason } = await canTakePassFailCourse(userId, course.credits, semNum);
+    const { allowed, reason } = is399PCourse
+      ? await validateOnsiteInternshipPassFailBudget(userId, course.credits)
+      : await canTakePassFailCourse(userId, course.credits, semNum);
     if (!allowed) {
       return NextResponse.json({ error: reason || "Cannot take this course as Pass/Fail" }, { status: 400 });
     }
@@ -166,15 +182,22 @@ export async function POST(
         grade: null,
         isPassFail,
         passFailCredits: isPassFail ? course.credits : 0,
-        isInternship: false,
+        isInternship: isInternshipCourse,
       },
       include: { course: true },
     });
 
-    if (isPassFail) {
+    if (isPassFail && !is399PCourse) {
       await tx.user.update({
         where: { id: userId },
         data: { totalPassFailCredits: { increment: course.credits } },
+      });
+    }
+
+    if (is399PCourse) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { totalPassFailCredits: PASS_FAIL_LIMITS.TOTAL_CREDITS },
       });
     }
 

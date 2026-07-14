@@ -7,7 +7,13 @@ import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { getMtpComponent, isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
 import { EnrollmentStatus } from "@prisma/client";
-import { PASS_FAIL_LIMITS } from "@/lib/course-validation";
+import {
+  PASS_FAIL_LIMITS,
+  isOnsiteSemesterInternshipCourse,
+  isSemesterInternshipCourse,
+  validateOnsiteInternshipExclusivity,
+  validateOnsiteInternshipPassFailBudget,
+} from "@/lib/course-validation";
 
 export async function POST(req: NextRequest) {
   try {
@@ -231,17 +237,9 @@ export async function POST(req: NextRequest) {
           errors.push({ courseCode, error: "Invalid registration type." });
           continue;
         }
-        const isAudit = registrationType === "AUDIT";
-        const isPassFail = registrationType === "PASS_FAIL";
-        if (isPassFail && !passFailEligibleCategories.has(rawType)) {
-          errors.push({
-            courseCode,
-            error: "P/F is available only for Free Electives, HSS+IKS, or Discipline Electives.",
-          });
-          continue;
-        }
+        const requestedAudit = registrationType === "AUDIT";
+        const requestedPassFail = registrationType === "PASS_FAIL";
         let courseType = categoryToCourseType[rawType] ?? "CORE";
-        if (isPassFail) courseType = "FREE_ELECTIVE";
 
         const codeCandidates = buildCodeCandidates(courseCode);
         const course = await prisma.course.findFirst({
@@ -285,6 +283,11 @@ export async function POST(req: NextRequest) {
 
         // Past semesters are COMPLETED; current sem depends on whether grade given
         const isPastSemester = semester < currentSemester;
+        const normalizedCode = normalizeCourseCode(course.code);
+        const is399PCourse = isOnsiteSemesterInternshipCourse(course.code);
+        const isInternshipCourse = isSemesterInternshipCourse(course.code);
+        const isPassFail = isInternshipCourse || requestedPassFail;
+        const isAudit = requestedAudit && !isInternshipCourse;
         const status = isAudit
           ? EnrollmentStatus.AUDIT
           : grade
@@ -292,10 +295,16 @@ export async function POST(req: NextRequest) {
             : isPastSemester
               ? EnrollmentStatus.COMPLETED
               : EnrollmentStatus.IN_PROGRESS;
-
-        const normalizedCode = normalizeCourseCode(course.code);
+        if (requestedPassFail && !isInternshipCourse && !passFailEligibleCategories.has(rawType)) {
+          errors.push({
+            courseCode,
+            error: "P/F is available only for Free Electives, HSS+IKS, or Discipline Electives.",
+          });
+          continue;
+        }
+        if (isPassFail) courseType = "FREE_ELECTIVE";
         const specialDpCourseType = getSpecialDpCourseType(normalizedCode);
-        if (specialDpCourseType) courseType = specialDpCourseType;
+        if (specialDpCourseType && !isInternshipCourse) courseType = specialDpCourseType;
         await maybeEnableProjectPrefsForCourse(normalizedCode);
 
         const previousPassFailCredits = existingInSameSemester?.isPassFail
@@ -306,19 +315,42 @@ export async function POST(req: NextRequest) {
         const nextTotalPassFail = passFailCreditsUsed - previousPassFailCredits + nextPassFailCredits;
         const nextSemesterPassFail = currentSemesterPassFail - previousPassFailCredits + nextPassFailCredits;
 
-        if (nextTotalPassFail > PASS_FAIL_LIMITS.TOTAL_CREDITS) {
-          errors.push({
-            courseCode,
-            error: `Cannot exceed ${PASS_FAIL_LIMITS.TOTAL_CREDITS} total P/F credits.`,
-          });
+        const exclusivity = await validateOnsiteInternshipExclusivity(
+          user.id,
+          semester,
+          course.code,
+          existingInSameSemester?.id
+        );
+        if (!exclusivity.allowed) {
+          errors.push({ courseCode, error: exclusivity.reason || "399P enrollment conflict." });
           continue;
         }
-        if (nextSemesterPassFail > PASS_FAIL_LIMITS.PER_SEMESTER_CREDITS) {
-          errors.push({
-            courseCode,
-            error: `Cannot exceed ${PASS_FAIL_LIMITS.PER_SEMESTER_CREDITS} P/F credits in Semester ${semester}.`,
-          });
-          continue;
+
+        if (is399PCourse) {
+          const pfBudget = await validateOnsiteInternshipPassFailBudget(
+            user.id,
+            Number(course.credits || 0),
+            existingInSameSemester?.id
+          );
+          if (!pfBudget.allowed) {
+            errors.push({ courseCode, error: pfBudget.reason || "399P must use the complete P/F allowance." });
+            continue;
+          }
+        } else {
+          if (nextTotalPassFail > PASS_FAIL_LIMITS.TOTAL_CREDITS) {
+            errors.push({
+              courseCode,
+              error: `Cannot exceed ${PASS_FAIL_LIMITS.TOTAL_CREDITS} total P/F credits.`,
+            });
+            continue;
+          }
+          if (nextSemesterPassFail > PASS_FAIL_LIMITS.PER_SEMESTER_CREDITS) {
+            errors.push({
+              courseCode,
+              error: `Cannot exceed ${PASS_FAIL_LIMITS.PER_SEMESTER_CREDITS} P/F credits in Semester ${semester}.`,
+            });
+            continue;
+          }
         }
 
         if (existingInSameSemester) {
@@ -330,6 +362,7 @@ export async function POST(req: NextRequest) {
               status,
               isPassFail,
               passFailCredits: nextPassFailCredits,
+              isInternship: isInternshipCourse,
               year: semYear,
               term,
               programId: primaryProgramId,
@@ -337,45 +370,6 @@ export async function POST(req: NextRequest) {
           });
           results.push({ courseCode, action: "updated", id: updated.id });
         } else {
-          // Semester-long onsite internship constraint (e.g., DP-399P):
-          // If any *399P course is enrolled in semester 6/7, no other courses are allowed in that semester.
-          if (semester === 6 || semester === 7) {
-            const is399PCourse = normalizedCode.endsWith("399P");
-            const semesterEnrollments = await prisma.courseEnrollment.findMany({
-              where: {
-                userId: user.id,
-                semester,
-                status: { not: "DROPPED" },
-              },
-              select: {
-                id: true,
-                course: { select: { code: true } },
-              },
-            });
-
-            const semesterHas399P = semesterEnrollments.some((e) =>
-              normalizeCourseCode(e.course.code).endsWith("399P")
-            );
-
-            if (is399PCourse && semesterEnrollments.length > 0) {
-              errors.push({
-                courseCode,
-                error:
-                  "Cannot enroll in a 399P course with other courses in semester 6/7. Remove other courses from that semester first.",
-              });
-              continue;
-            }
-
-            if (!is399PCourse && semesterHas399P) {
-              errors.push({
-                courseCode,
-                error:
-                  "Cannot enroll in any other course in semester 6/7 while a 399P course is enrolled.",
-              });
-              continue;
-            }
-          }
-
           const created = await prisma.courseEnrollment.create({
             data: {
               userId: user.id,
@@ -388,6 +382,7 @@ export async function POST(req: NextRequest) {
               status,
               isPassFail,
               passFailCredits: nextPassFailCredits,
+              isInternship: isInternshipCourse,
               programId: primaryProgramId,
             },
           });
@@ -407,8 +402,13 @@ export async function POST(req: NextRequest) {
           existingByIdentity.set(identityKey, nextList);
         }
 
-        passFailCreditsUsed = nextTotalPassFail;
-        passFailCreditsBySemester.set(semester, nextSemesterPassFail);
+        passFailCreditsUsed = is399PCourse
+          ? PASS_FAIL_LIMITS.TOTAL_CREDITS
+          : nextTotalPassFail;
+        passFailCreditsBySemester.set(
+          semester,
+          is399PCourse ? PASS_FAIL_LIMITS.TOTAL_CREDITS : nextSemesterPassFail
+        );
       } catch (error) {
         console.error(`Error processing ${(enrollment as any).courseCode}:`, error);
         errors.push({

@@ -77,7 +77,8 @@ export default function CreditsSection() {
                 <li>• Grades: Pass (P) or Fail (F)</li>
                 <li>• Count towards B.Tech requirement</li>
                 <li>• Maximum 9 P/F credits total</li>
-                <li>• Not more than 6 in a semester</li>
+                <li>• Not more than 6 in a semester, except a 9-credit 399P onsite internship</li>
+                <li>• 399P uses all 9 P/F credits and must be the only course in that semester</li>
                 <li>• Don&apos;t affect CGPA</li>
               </ul>
             </div>

@@ -197,6 +197,9 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   const { confirm } = useConfirmDialog();
   const isPassFail = registrationType === "PASS_FAIL";
   const isAudit = registrationType === "AUDIT";
+  const addingCourseCode = addingCourse?.code.replace(/[^A-Z0-9]/gi, "") ?? "";
+  const addingIs399P = addingCourseCode.endsWith("399P");
+  const addingIsSemesterInternship = /39[69]P$/i.test(addingCourseCode);
   const setIsPassFail = (enabled: boolean) =>
     setRegistrationType(enabled ? "PASS_FAIL" : "REGULAR");
   const setIsAudit = (enabled: boolean) =>
@@ -796,6 +799,25 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       return;
     }
 
+    const sameSemesterEnrollments = enrollments.filter(
+      (enrollment) => enrollment.semester === semNum && !["DROPPED", "FAILED"].includes(enrollment.status)
+    );
+    const semesterHas399P = sameSemesterEnrollments.some((enrollment) =>
+      /399P$/i.test(enrollment.course.code.replace(/[^A-Z0-9]/gi, ""))
+    );
+    if (addingIs399P && sameSemesterEnrollments.length > 0) {
+      showToast("error", "399P is a full-semester internship. Remove every other course in this semester first.");
+      return;
+    }
+    if (!addingIs399P && semesterHas399P) {
+      showToast("error", "A 399P internship already occupies this semester. Remove it before adding another course.");
+      return;
+    }
+    if (addingIs399P && passFailUsed > 0) {
+      showToast("error", "399P uses all 9 P/F credits. Remove existing P/F courses first.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const batchYear = inferBatchYear();
@@ -813,10 +835,10 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
         finalCourseType = determineCourseType(addingCourse);
       }
 
-      const isPassFail = registrationType === "PASS_FAIL";
-      const isAudit = registrationType === "AUDIT";
+      const isPassFail = addingIsSemesterInternship || registrationType === "PASS_FAIL";
+      const isAudit = registrationType === "AUDIT" && !addingIsSemesterInternship;
       const passFailSourceCategory = getPassFailSourceCategory(addingCourse, courseType);
-      if (isPassFail && !passFailSourceCategory) {
+      if (isPassFail && !addingIsSemesterInternship && !passFailSourceCategory) {
         showToast("error", "Pass/Fail is only available for Free Electives, HSS/IKS, and Discipline Electives.");
         return;
       }
@@ -840,6 +862,8 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
           grade: isAudit ? undefined : (grade || undefined),
           status,
           isPassFail,
+          isInternship: addingIsSemesterInternship,
+          internshipType: addingIs399P ? "ONSITE" : addingIsSemesterInternship ? "REMOTE" : undefined,
         }),
       });
 
@@ -1881,7 +1905,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                 {/* Registration type — Regular is the default when neither option is selected. */}
                 {(() => {
                   const passFailSourceCategory = getPassFailSourceCategory(addingCourse, courseType);
-                  const canUsePF = Boolean(passFailSourceCategory) && passFailRemaining >= addingCourse.credits;
+                  const canUsePF = addingIsSemesterInternship || (Boolean(passFailSourceCategory) && passFailRemaining >= addingCourse.credits);
 
                   return (
                     <>
@@ -1894,9 +1918,13 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                           <div>
                             <p className="text-sm font-medium text-foreground">Pass/Fail (P/F)</p>
                             <p className="text-xs text-foreground-secondary">
-                              You can take up to {maxPassFailCredits} P/F credits. Remaining: {passFailRemaining}.
+                              {addingIs399P
+                                ? "399P is compulsory P/F: 9 credits and the entire P/F allowance."
+                                : `You can take up to ${maxPassFailCredits} P/F credits. Remaining: ${passFailRemaining}.`}
                             </p>
-                            {passFailSourceCategory ? (
+                            {addingIs399P ? (
+                              <p className="text-xs text-error mt-1">No other course can be enrolled in the same semester.</p>
+                            ) : passFailSourceCategory ? (
                               <p className="text-xs text-success mt-1">
                                 {passFailSourceCategory} P/F will count as a Free Elective.
                               </p>
@@ -1907,9 +1935,9 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                           <label className="inline-flex items-center gap-2">
                             <input
                               type="checkbox"
-                              checked={isPassFail}
+                              checked={isPassFail || addingIsSemesterInternship}
                               onChange={(e) => setIsPassFail(e.target.checked)}
-                              disabled={!canUsePF || isAudit}
+                              disabled={!canUsePF || isAudit || addingIsSemesterInternship}
                               className="h-4 w-4"
                             />
                             <span className="text-sm text-foreground">Take as P/F</span>
@@ -1927,13 +1955,14 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                           <label className="inline-flex items-center gap-2">
                             <input
                               type="checkbox"
-                              checked={isAudit}
+                              checked={isAudit && !addingIsSemesterInternship}
                               onChange={(e) => {
                                 setIsAudit(e.target.checked);
                                 if (e.target.checked) {
                                   setGrade("");
                                 }
                               }}
+                              disabled={addingIsSemesterInternship}
                               className="h-4 w-4"
                             />
                             <span className="text-sm text-foreground">Take as Audit</span>
