@@ -14,6 +14,34 @@ const feedbackSchema = z.object({
   message: z.string().trim().max(2000).optional(),
 });
 
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const all = searchParams.get("all") === "1";
+
+  if (all && session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const feedbacks = await prisma.feedback.findMany({
+      where: all ? undefined : { userId: session.user.id },
+      orderBy: { createdAt: "desc" },
+      take: all ? 500 : 50,
+    });
+
+    return NextResponse.json(feedbacks);
+  } catch (error) {
+    console.error("Error fetching feedback:", error);
+    return NextResponse.json({ error: "Failed to fetch feedback" }, { status: 500 });
+  }
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
 
@@ -53,5 +81,27 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Error creating feedback:", error);
     return NextResponse.json({ error: "Failed to submit feedback" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user || session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "Missing id" }, { status: 400 });
+    }
+
+    await prisma.feedback.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    console.error("Error deleting feedback:", error);
+    return NextResponse.json({ error: "Failed to delete feedback" }, { status: 500 });
   }
 }
