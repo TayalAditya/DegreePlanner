@@ -1,13 +1,11 @@
 // Service Worker for PWA functionality
 
-const CACHE_NAME = "degree-planner-v3";
-const STATIC_CACHE = "static-v3";
-const DYNAMIC_CACHE = "dynamic-v3";
+const CACHE_VERSION = "v4";
+const STATIC_CACHE = `degree-planner-static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `degree-planner-assets-${CACHE_VERSION}`;
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
-  "/",
-  "/dashboard",
   "/manifest.json",
   "/offline.html",
 ];
@@ -50,6 +48,17 @@ self.addEventListener("fetch", (event) => {
   // Never cache API routes — they return per-user data that must not be
   // served stale after an account switch.
   if (url.pathname.startsWith("/api/")) return;
+
+  // Pages must reach the network so a deployment cannot be hidden behind
+  // stale dashboard HTML. Offline navigation still has the offline fallback.
+  if (request.mode === "navigate") {
+    event.respondWith(fetch(request).catch(() => caches.match("/offline.html")));
+    return;
+  }
+
+  // Only cache content-hashed Next.js static assets. Other route responses
+  // may be user- or deployment-specific and must not be served stale.
+  if (!url.pathname.startsWith("/_next/static/")) return;
 
   event.respondWith(
     caches.match(request).then((cachedResponse) => {

@@ -14,6 +14,12 @@ function ServiceWorkerPopups() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
+    // Bypass the HTTP cache when checking the worker so a fresh deployment
+    // replaces a stale worker as soon as the app is opened.
+    void navigator.serviceWorker
+      .register("/sw.js", { updateViaCache: "none" })
+      .then((registration) => registration.update());
+
     const handler = (event: MessageEvent) => {
       const data = event.data;
       if (!data || typeof data !== "object") return;
