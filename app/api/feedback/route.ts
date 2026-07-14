@@ -8,11 +8,15 @@ import { flushFeedback } from "@/lib/feedbackDigest";
 
 const EMOJI_KEYS = ["useful", "love", "improve", "great_ux"] as const;
 
-const feedbackSchema = z.object({
-  rating: z.number().int().min(1).max(5),
-  emoji: z.enum(EMOJI_KEYS).optional(),
-  message: z.string().trim().max(2000).optional(),
-});
+const feedbackSchema = z
+  .object({
+    rating: z.number().int().min(1).max(5).optional(),
+    emoji: z.enum(EMOJI_KEYS).optional(),
+    message: z.string().trim().max(2000).optional(),
+  })
+  .refine((d) => d.emoji || d.message, {
+    message: "Provide a reaction or a message",
+  });
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -65,7 +69,7 @@ export async function POST(req: NextRequest) {
     await prisma.feedback.create({
       data: {
         userId: user.id,
-        rating,
+        rating: rating ?? 0,
         emoji: emoji || null,
         message: message || null,
         userName: user.name || "Unknown",

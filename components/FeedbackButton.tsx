@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { MessageSquareHeart, X, Send, Star } from "lucide-react";
+import { MessageSquareHeart, X, Send } from "lucide-react";
 import { useToast } from "./ToastProvider";
 
 const EMOJI_OPTIONS = [
@@ -30,8 +30,6 @@ export function FeedbackButton() {
   const { showToast } = useToast();
 
   const [open, setOpen] = useState(false);
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -46,15 +44,13 @@ export function FeedbackButton() {
       return;
     }
     setOpen(true);
-    setRating(0);
-    setHoverRating(0);
     setSelectedEmoji(null);
     setMessage("");
   };
 
   const handleSubmit = async () => {
-    if (rating === 0) {
-      showToast("warning", "Please select a star rating ⭐");
+    if (!selectedEmoji && !message.trim()) {
+      showToast("warning", "Pick a reaction or leave a comment 🙂");
       return;
     }
 
@@ -64,7 +60,6 @@ export function FeedbackButton() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          rating,
           emoji: selectedEmoji || undefined,
           message: message.trim() || undefined,
         }),
@@ -82,8 +77,6 @@ export function FeedbackButton() {
       setSubmitting(false);
     }
   };
-
-  const displayRating = hoverRating || rating;
 
   return (
     <>
@@ -131,39 +124,6 @@ export function FeedbackButton() {
                 <span>{user.branch || "—"}</span>
               </div>
 
-              {/* Star rating */}
-              <div className="mb-5">
-                <label className="text-sm font-medium text-foreground mb-2 block">
-                  Rate your experience
-                </label>
-                <div className="flex items-center gap-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      type="button"
-                      onClick={() => setRating(star)}
-                      onMouseEnter={() => setHoverRating(star)}
-                      onMouseLeave={() => setHoverRating(0)}
-                      className="p-1 transition-transform duration-150 hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded"
-                      aria-label={`${star} star${star !== 1 ? "s" : ""}`}
-                    >
-                      <Star
-                        className={`w-7 h-7 transition-colors duration-150 ${
-                          star <= displayRating
-                            ? "text-amber-400 fill-amber-400"
-                            : "text-foreground-secondary/30"
-                        } ${star === displayRating ? "animate-star-pop" : ""}`}
-                      />
-                    </button>
-                  ))}
-                  {displayRating > 0 && (
-                    <span className="ml-2 text-sm text-foreground-secondary">
-                      {["", "Needs work", "Okay", "Good", "Great", "Amazing!"][displayRating]}
-                    </span>
-                  )}
-                </div>
-              </div>
-
               {/* Emoji reactions */}
               <div className="mb-5">
                 <label className="text-sm font-medium text-foreground mb-2 block">
@@ -205,7 +165,7 @@ export function FeedbackButton() {
                   placeholder="What can we do better? Any features you'd love to see?"
                   rows={3}
                   maxLength={2000}
-                  className="dp-input w-full resize-none"
+                  className="dp-field w-full resize-none"
                 />
                 {message.length > 0 && (
                   <p className="text-xs text-foreground-secondary mt-1 text-right">
@@ -225,7 +185,7 @@ export function FeedbackButton() {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={submitting || rating === 0}
+                  disabled={submitting || (!selectedEmoji && !message.trim())}
                   className="dp-btn dp-btn-primary"
                 >
                   {submitting ? (
