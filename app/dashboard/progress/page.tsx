@@ -781,8 +781,12 @@ export default function ProgressPage() {
 
   const icBasketUsedForDisplay: ICBasketUsed = { ic1: false, ic2: false };
   const hssUsedForDisplay = { credits: 0 };
+  const hssIksUsedForSemesterDisplay = { credits: 0 };
   const deUsedForDisplay = { credits: 0 };
   const deCapForDisplay = progress?.creditsRequiredByCategory?.DE ?? 28;
+  const hssCoreCapForSemesterDisplay = Number(
+    progress?.creditsRequiredByCategory?.HSS ?? HSS_CORE_CAP_DEFAULT
+  );
 
   const semesterCourses = sortedActiveEnrollments
     .map((e) => {
@@ -838,15 +842,35 @@ export default function ProgressPage() {
         hssUsedForDisplay.credits = Math.min(HSS_FE_CAP, hssBefore + (e.course.credits || 0));
       }
 
-      // HSS overflow split
-      const hssAfter = hssUsedForDisplay.credits;
-      const hssPortionUsed = isIksDisplay
-        ? Math.max(0, hssAfter - hssBefore)
-        : subtractCredits(hssAfter, hssBefore);
-      const hssSplitCredits = category === "HSS" && hssPortionUsed < e.course.credits
-        ? subtractCredits(e.course.credits, hssPortionUsed)
-        : undefined;
-      if (hssSplitCredits !== undefined) {
+      // Build the HSS+IKS allocation once for both this table and the
+      // category cards: core cap -> FE spill -> Not in Degree.
+      if (category === "HSS") {
+        const sourceCredits = Number(e.course.credits ?? 0);
+        const hssBeforeForSemester = hssIksUsedForSemesterDisplay.credits;
+        const hssCredits = Math.max(
+          0,
+          Math.min(sourceCredits, hssCoreCapForSemesterDisplay - hssBeforeForSemester)
+        );
+        const feCredits = Math.max(
+          0,
+          Math.min(
+            sourceCredits - hssCredits,
+            HSS_FE_CAP - Math.max(hssCoreCapForSemesterDisplay, hssBeforeForSemester)
+          )
+        );
+        const notInDegreeCredits = Math.max(0, sourceCredits - hssCredits - feCredits);
+        const creditAllocations: { category: CourseCategory; credits: number }[] = [];
+        if (hssCredits > 0) creditAllocations.push({ category: "HSS", credits: hssCredits });
+        if (feCredits > 0) creditAllocations.push({ category: "FE", credits: feCredits });
+        if (notInDegreeCredits > 0) {
+          creditAllocations.push({ category: "NOT_IN_DEGREE", credits: notInDegreeCredits });
+        }
+        hssIksUsedForSemesterDisplay.credits = addCredits(
+          hssBeforeForSemester,
+          hssCredits,
+          feCredits
+        );
+
         return {
           id: e.id,
           semester: e.semester,
@@ -856,8 +880,9 @@ export default function ProgressPage() {
           status: e.status,
           grade: e.grade,
           category,
-          splitCategory: "FE" as string,
-          splitCredits: hssSplitCredits,
+          splitCategory: undefined as string | undefined,
+          splitCredits: undefined as number | undefined,
+          creditAllocations,
         };
       }
 
@@ -1192,6 +1217,21 @@ export default function ProgressPage() {
 
         for (const sem of Object.values(semesterCourses)) {
           for (const c of sem as any[]) {
+            // HSS+IKS rows already carry their exact allocation from the
+            // semester table, so both sections use one source of truth.
+            if (Array.isArray(c.creditAllocations)) {
+              const sourceCredits = Number(c.credits ?? 0);
+              for (const allocation of c.creditAllocations) {
+                addCourseAllocation(
+                  allocation.category,
+                  c,
+                  Number(allocation.credits ?? 0),
+                  Number(allocation.credits ?? 0) === sourceCredits ? undefined : sourceCredits
+                );
+              }
+              continue;
+            }
+
             // HSS and IKS share one 20-credit basket. Recalculate their display
             // allocation here so the detailed list always shows the same spill
             // into FE as the category totals (for example, 1 HSS + 2 FE of a
@@ -1507,7 +1547,25 @@ export default function ProgressPage() {
                                 </span>
                               </td>
                               <td className="py-2 whitespace-nowrap">
-                                {c.splitCategory ? (() => {
+                                {Array.isArray(c.creditAllocations) ? (
+                                  <span className="inline-flex items-center gap-1 flex-wrap">
+                                    {c.creditAllocations.map((allocation: { category: CourseCategory; credits: number }) => {
+                                      const allocationCategory = allocation.category as CourseCategory;
+                                      const allocationColors = categoryColors[allocationCategory] ?? categoryColors.FE;
+                                      const allocationLabel = categoryLabels[allocationCategory] ?? allocationCategory;
+                                      return (
+                                        <span
+                                          key={`${allocationCategory}-${allocation.credits}`}
+                                          className={`inline-flex items-center px-2 py-1 rounded-full border border-border ${allocationColors.bg}`}
+                                        >
+                                          <span className={`font-semibold text-xs ${allocationColors.text}`}>
+                                            {allocationLabel} ({formatCredits(allocation.credits)})
+                                          </span>
+                                        </span>
+                                      );
+                                    })}
+                                  </span>
+                                ) : c.splitCategory ? (() => {
                                   const mainCat = c.category as CourseCategory;
                                   const splitCat = c.splitCategory as CourseCategory;
                                   const mainColors = categoryColors[mainCat] ?? categoryColors.FE;
