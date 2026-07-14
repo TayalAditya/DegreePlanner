@@ -50,9 +50,20 @@ interface InternshipCourse {
   credits: number;
 }
 
+interface PlannedCourse {
+  id: string;
+  code: string;
+  name: string;
+  credits: number;
+  instructor: string | null;
+  slots: string | null;
+  category: string;
+  registrationType: RegType;
+}
+
 const CATEGORY_LABEL: Record<string, string> = {
   IC: "IC", IC_BASKET: "IC", DC: "DC", DE: "DE",
-  HSS: "HSS+IKS", IKS: "HSS+IKS", FE: "FE", MTP: "MTP", ISTP: "ISTP",
+  HSS: "HSS+IKS", IKS: "HSS+IKS", FE: "FE", MTP: "MTP", ISTP: "ISTP", AUDIT: "Audit",
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
@@ -65,12 +76,13 @@ const CATEGORY_COLOR: Record<string, string> = {
   FE: "bg-success/10 text-success border-success/20",
   MTP: "bg-error/10 text-error border-error/20",
   ISTP: "bg-accent/10 text-accent border-accent/20",
+  AUDIT: "bg-warning/10 text-warning border-warning/20",
 };
 
 const CATEGORY_BAR_COLOR: Record<string, string> = {
   DC: "bg-primary", IC: "bg-info", IC_BASKET: "bg-info",
   DE: "bg-secondary", HSS: "bg-warning", IKS: "bg-warning",
-  FE: "bg-success", MTP: "bg-error", ISTP: "bg-accent",
+  FE: "bg-success", MTP: "bg-error", ISTP: "bg-accent", AUDIT: "bg-warning",
 };
 
 // Parse slot string — handles +, &, , separators e.g. "B & L4" → ["B","L4"]
@@ -626,7 +638,9 @@ function ProgressPanel({ programRequirements, completedBreakdown, categoryBreakd
                   <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${CATEGORY_COLOR[cat] ?? ""}`}>{cat}</span>
                   <span className="text-xs text-foreground-secondary">{count} course{count !== 1 ? "s" : ""}</span>
                 </div>
-                <span className="text-xs font-semibold text-foreground flex-shrink-0">+{formatCredits(credits)} cr</span>
+                <span className={`text-xs font-semibold flex-shrink-0 ${cat === "AUDIT" ? "text-warning" : "text-foreground"}`}>
+                  {cat === "AUDIT" ? `${formatCredits(credits)} cr excluded` : `+${formatCredits(credits)} cr`}
+                </span>
               </div>
             ))}
           </div>
@@ -650,6 +664,7 @@ export default function PreRegistrationPage() {
   const [mtp1Course, setMtp1Course] = useState<InternshipCourse | null>(null);
   const [selectedExtra, setSelectedExtra] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
+  const [showPlanTable, setShowPlanTable] = useState(false);
   const [samarthReported, setSamarthReported] = useState<Set<string>>(new Set());
   const [regTypes, setRegTypes] = useState<Map<string, RegType>>(new Map());
   const { showToast } = useToast();
@@ -758,6 +773,7 @@ export default function PreRegistrationPage() {
           }
           setSelected(restoredIds);
           if (restoredExtra.size > 0) setSelectedExtra(restoredExtra);
+          setSaved(true);
           // Restore registration types
           if (plan.registrationTypes && Object.keys(plan.registrationTypes).length > 0) {
             const m = new Map<string, RegType>();
@@ -939,9 +955,19 @@ export default function PreRegistrationPage() {
     for (const o of data.offerings) {
       if (!o.isCompulsory && !selected.has(o.id)) continue;
       if (o.completedInSemester !== null) continue;
-      // Audit courses appear on the transcript but don't count toward the degree — exclude from category tally.
-      if (regTypes.get(o.id) === "AUDIT") continue;
-      let cat = o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory;
+      const registrationType = regTypes.get(o.id) ?? "REGULAR";
+      // Audit stays visible in planning, but is explicitly excluded from degree credits.
+      if (registrationType === "AUDIT") {
+        add("AUDIT", o.credits);
+        continue;
+      }
+      // Every P/F course consumes only the Free Elective basket, irrespective
+      // of whether its regular classification is HSS, IKS or DE.
+      let cat = registrationType === "PASS_FAIL"
+        ? "FE"
+        : o.resolvedCategory === "IKS"
+          ? "HSS"
+          : o.resolvedCategory;
       // Overflow: if requirement already met, reclassify to FE
       if (req && done && ["DE", "HSS"].includes(cat)) {
         const remaining = (req[cat] ?? 0) - (done[cat] ?? 0);
@@ -958,8 +984,56 @@ export default function PreRegistrationPage() {
     for (const c of extraCourses) {
       if (selectedExtra.has(c.id)) add(c.category, c.credits);
     }
-    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP"]; // IKS merged into HSS
+    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP", "AUDIT"]; // IKS merged into HSS
     return ORDER.filter((cat) => map.has(cat)).map((cat) => ({ cat, ...map.get(cat)! }));
+  }, [data, selected, selectedExtra, internshipCourses, mtp1Course, regTypes]);
+
+  const plannedCourses = useMemo<PlannedCourse[]>(() => {
+    if (!data) return [];
+    const rows: PlannedCourse[] = [];
+
+    for (const offering of data.offerings) {
+      if (offering.completedInSemester !== null) continue;
+      if (!offering.isCompulsory && !selected.has(offering.id)) continue;
+      const registrationType = regTypes.get(offering.id) ?? "REGULAR";
+      const category = registrationType === "PASS_FAIL"
+        ? "FE"
+        : registrationType === "AUDIT"
+          ? "AUDIT"
+          : offering.resolvedCategory === "IKS"
+            ? "HSS"
+            : offering.resolvedCategory;
+      rows.push({
+        id: offering.id,
+        code: offering.courseCode,
+        name: offering.courseName,
+        credits: offering.credits,
+        instructor: offering.instructor,
+        slots: offering.slots,
+        category,
+        registrationType,
+      });
+    }
+
+    const extras: Array<PlannedCourse & { selected: boolean }> = [
+      ...internshipCourses.p399.map((course) => ({
+        id: course.id, code: course.code, name: course.name, credits: course.credits,
+        instructor: null, slots: null, category: "FE", registrationType: "PASS_FAIL" as RegType,
+        selected: selectedExtra.has(course.id),
+      })),
+      ...internshipCourses.p396.map((course) => ({
+        id: course.id, code: course.code, name: course.name, credits: course.credits,
+        instructor: null, slots: null, category: "FE", registrationType: "PASS_FAIL" as RegType,
+        selected: selectedExtra.has(course.id),
+      })),
+      ...(mtp1Course ? [{
+        id: mtp1Course.id, code: mtp1Course.code, name: mtp1Course.name, credits: mtp1Course.credits,
+        instructor: null, slots: null, category: "MTP", registrationType: "REGULAR" as RegType,
+        selected: selectedExtra.has(mtp1Course.id),
+      }] : []),
+    ];
+    rows.push(...extras.filter((course) => course.selected).map(({ selected: _selected, ...course }) => course));
+    return rows;
   }, [data, selected, selectedExtra, internshipCourses, mtp1Course, regTypes]);
 
   const handleToggle = (offering: Offering) => {
@@ -1675,7 +1749,8 @@ export default function PreRegistrationPage() {
             {categoryBreakdown.map(({ cat, credits, count }) => {
               const color = CATEGORY_COLOR[cat] ?? "bg-surface-secondary text-foreground-secondary border-border";
               const label = CATEGORY_LABEL[cat] ?? cat;
-              const pct = Math.min(100, (credits / totalCredits) * 100);
+              const isAudit = cat === "AUDIT";
+              const pct = isAudit || totalCredits === 0 ? 0 : Math.min(100, (credits / totalCredits) * 100);
               return (
                 <div key={cat} className="flex items-center gap-3">
                   <span className={`flex-shrink-0 w-16 text-center px-1.5 py-0.5 text-xs font-semibold rounded border ${color}`}>
@@ -1688,7 +1763,7 @@ export default function PreRegistrationPage() {
                     />
                   </div>
                   <span className="flex-shrink-0 text-sm font-medium text-foreground w-16 text-right">
-                    +{formatCredits(credits)} cr
+                    {isAudit ? `${formatCredits(credits)} cr audit` : `+${formatCredits(credits)} cr`}
                   </span>
                   <span className="flex-shrink-0 text-xs text-foreground-secondary w-16">
                     {count} course{count !== 1 ? "s" : ""}
@@ -1699,7 +1774,10 @@ export default function PreRegistrationPage() {
             <div className="mt-3 pt-3 border-t border-border flex items-center justify-between">
               <span className="text-sm font-semibold text-foreground">Total</span>
               <span className="text-sm font-semibold text-foreground">
-                {formatCredits(totalCredits)} cr · {categoryBreakdown.reduce((s, r) => s + r.count, 0)} courses
+                {formatCredits(totalCredits)} cr · {categoryBreakdown.filter((row) => row.cat !== "AUDIT").reduce((sum, row) => sum + row.count, 0)} degree courses
+                {categoryBreakdown.find((row) => row.cat === "AUDIT") && (
+                  <> · {categoryBreakdown.find((row) => row.cat === "AUDIT")!.count} audit course{categoryBreakdown.find((row) => row.cat === "AUDIT")!.count !== 1 ? "s" : ""}</>
+                )}
               </span>
             </div>
           </div>
@@ -1755,6 +1833,67 @@ export default function PreRegistrationPage() {
         </>
       )}
 
+      {showPlanTable && (
+        <>
+          <div className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm" onClick={() => setShowPlanTable(false)} />
+          <div className="fixed inset-x-3 top-8 bottom-8 z-[61] mx-auto max-w-6xl overflow-hidden rounded-2xl border border-border bg-background shadow-2xl flex flex-col">
+            <div className="flex items-start justify-between gap-4 border-b border-border p-5">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Semester {data.offeringSemester} Course Plan</h2>
+                <p className="mt-1 text-sm text-foreground-secondary">
+                  {formatCredits(plannedCourses.filter((course) => course.registrationType !== "AUDIT").reduce((sum, course) => sum + course.credits, 0))} degree credits
+                  {plannedCourses.some((course) => course.registrationType === "AUDIT") && (
+                    <> · {formatCredits(plannedCourses.filter((course) => course.registrationType === "AUDIT").reduce((sum, course) => sum + course.credits, 0))} audit credits excluded</>
+                  )}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPlanTable(false)}
+                className="h-9 w-9 rounded-lg border border-border text-xl leading-none text-foreground-secondary hover:bg-surface-hover hover:text-foreground"
+                aria-label="Close course plan"
+              >
+                ×
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto">
+              <table className="w-full min-w-[820px] text-sm">
+                <thead className="sticky top-0 bg-surface-secondary text-left text-xs uppercase tracking-wide text-foreground-secondary">
+                  <tr>
+                    <th className="px-5 py-3 font-semibold">Code</th>
+                    <th className="px-5 py-3 font-semibold">Course</th>
+                    <th className="px-5 py-3 font-semibold text-right">Credits</th>
+                    <th className="px-5 py-3 font-semibold">Faculty</th>
+                    <th className="px-5 py-3 font-semibold">Slot</th>
+                    <th className="px-5 py-3 font-semibold">Type</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {plannedCourses.map((course) => {
+                    const isAudit = course.registrationType === "AUDIT";
+                    const type = course.registrationType === "PASS_FAIL"
+                      ? "P/F → FE"
+                      : isAudit
+                        ? "Audit · not in degree"
+                        : `Regular · ${CATEGORY_LABEL[course.category] ?? course.category}`;
+                    return (
+                      <tr key={course.id} className={isAudit ? "bg-warning/5" : "hover:bg-surface-hover/70"}>
+                        <td className="px-5 py-3 font-mono text-xs font-semibold text-foreground-secondary">{formatCourseCode(course.code)}</td>
+                        <td className="px-5 py-3 font-medium text-foreground">{course.name}</td>
+                        <td className="px-5 py-3 text-right font-medium text-foreground">{formatCredits(course.credits)}</td>
+                        <td className="px-5 py-3 text-foreground-secondary">{course.instructor ?? "—"}</td>
+                        <td className="px-5 py-3 font-mono text-xs text-foreground-secondary">{course.slots ?? "—"}</td>
+                        <td className={`px-5 py-3 text-xs font-semibold ${isAudit ? "text-warning" : course.registrationType === "PASS_FAIL" ? "text-success" : "text-foreground-secondary"}`}>{type}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
       <div className="fixed bottom-0 left-0 lg:left-64 xl:left-72 right-0 z-40 border-t border-border bg-background/95 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div>
@@ -1765,6 +1904,15 @@ export default function PreRegistrationPage() {
             <p className="text-xs text-foreground-secondary">Planning only · not official registration</p>
           </div>
           <div className="flex items-center gap-2">
+            {saved && (
+              <button
+                onClick={() => setShowPlanTable(true)}
+                className="px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 border border-border bg-surface hover:bg-surface-hover text-foreground"
+              >
+                <BookOpen className="w-4 h-4" />
+                View Plan
+              </button>
+            )}
             {saved && (
               <button
                 onClick={handleCopyCourses}
