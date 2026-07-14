@@ -62,6 +62,8 @@ type CreditClassificationState = {
  */
 const COURSE_EQUIVALENTS: Record<string, string> = {
   EE205: "EE202",
+  AR503: "AR520",
+  EE302: "EE301",
 };
 
 export interface MTPEligibility {
