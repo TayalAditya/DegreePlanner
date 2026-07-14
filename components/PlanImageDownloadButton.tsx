@@ -38,6 +38,39 @@ const COLUMNS = [
   { label: "Type", width: 171 },
 ] as const;
 
+interface PlanImageTheme {
+  background: string;
+  backgroundSecondary: string;
+  surface: string;
+  foreground: string;
+  foregroundSecondary: string;
+  border: string;
+  primary: string;
+  primaryForeground: string;
+  warning: string;
+  watermarkOpacity: number;
+}
+
+function getPlanImageTheme(): PlanImageTheme {
+  const root = document.documentElement;
+  const styles = window.getComputedStyle(root);
+  const value = (name: string, fallback: string) => styles.getPropertyValue(name).trim() || fallback;
+  const dark = root.classList.contains("dark");
+
+  return {
+    background: value("--background", dark ? "#0a0e17" : "#fafbfc"),
+    backgroundSecondary: value("--background-secondary", dark ? "#10141f" : "#f3f4f7"),
+    surface: value("--surface", dark ? "#131821" : "#ffffff"),
+    foreground: value("--foreground", dark ? "#f5f8fc" : "#0a1117"),
+    foregroundSecondary: value("--foreground-secondary", dark ? "#9eafc0" : "#636e7b"),
+    border: value("--border", dark ? "#253349" : "#e5e7eb"),
+    primary: value("--primary", dark ? "#6366f1" : "#5550ff"),
+    primaryForeground: value("--primary-foreground", "#ffffff"),
+    warning: value("--warning", dark ? "#fbbf24" : "#f59e0b"),
+    watermarkOpacity: dark ? 0.14 : 0.1,
+  };
+}
+
 function wrapText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
   const words = text.trim().split(/\s+/).filter(Boolean);
   if (words.length === 0) return ["—"];
@@ -123,25 +156,26 @@ async function renderPlanImage({
   if (!context) throw new Error("Canvas is unavailable");
 
   const logo = await loadLogo();
-  context.fillStyle = "#f8fafc";
+  const theme = getPlanImageTheme();
+  context.fillStyle = theme.background;
   context.fillRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = "#0b78b5";
+  context.fillStyle = theme.primary;
   context.fillRect(0, 0, canvas.width, 18);
 
   if (logo) {
     context.drawImage(logo, MARGIN, 56, 84, 84);
   }
-  context.fillStyle = "#102a43";
+  context.fillStyle = theme.foreground;
   context.font = "700 36px Inter, Arial, sans-serif";
   context.fillText("Degree Planner", MARGIN + 106, 92);
-  context.fillStyle = "#486581";
+  context.fillStyle = theme.foregroundSecondary;
   context.font = "500 22px Inter, Arial, sans-serif";
   context.fillText("PlanMyDegree.app", MARGIN + 106, 126);
 
-  context.fillStyle = "#102a43";
+  context.fillStyle = theme.foreground;
   context.font = "700 48px Inter, Arial, sans-serif";
   context.fillText(`Semester ${semester} Pre-Registration Plan`, MARGIN, 198);
-  context.fillStyle = "#486581";
+  context.fillStyle = theme.foregroundSecondary;
   context.font = "500 24px Inter, Arial, sans-serif";
   const studentDetail = [studentName, branch].filter(Boolean).join("  |  ");
   context.fillText(`${term} ${year}${studentDetail ? `  |  ${studentDetail}` : ""}`, MARGIN, 235);
@@ -153,18 +187,18 @@ async function renderPlanImage({
     .filter((course) => course.registrationType === "AUDIT")
     .reduce((total, course) => total + course.credits, 0);
   context.textAlign = "right";
-  context.fillStyle = "#0b78b5";
+  context.fillStyle = theme.primary;
   context.font = "700 28px Inter, Arial, sans-serif";
   context.fillText(`${degreeCredits % 1 === 0 ? degreeCredits.toFixed(0) : degreeCredits.toFixed(2).replace(/0+$/, "")} degree credits`, CANVAS_WIDTH - MARGIN, 198);
-  context.fillStyle = "#486581";
+  context.fillStyle = theme.foregroundSecondary;
   context.font = "500 22px Inter, Arial, sans-serif";
   const auditDetail = auditCredits > 0 ? `  |  ${auditCredits} audit credits excluded` : "";
   context.fillText(`${courses.length} courses${auditDetail}`, CANVAS_WIDTH - MARGIN, 235);
 
   let y = headerHeight;
-  context.fillStyle = "#0b78b5";
+  context.fillStyle = theme.primary;
   context.fillRect(MARGIN, y, TABLE_WIDTH, tableHeaderHeight);
-  context.fillStyle = "#ffffff";
+  context.fillStyle = theme.primaryForeground;
   context.font = "700 21px Inter, Arial, sans-serif";
   let columnX = MARGIN;
   COLUMNS.forEach((column, index) => {
@@ -176,27 +210,27 @@ async function renderPlanImage({
   y += tableHeaderHeight;
 
   rows.forEach((row, rowIndex) => {
-    context.fillStyle = rowIndex % 2 === 0 ? "#ffffff" : "#f1f5f9";
+    context.fillStyle = rowIndex % 2 === 0 ? theme.surface : theme.backgroundSecondary;
     context.fillRect(MARGIN, y, TABLE_WIDTH, row.height);
-    context.strokeStyle = "#d9e2ec";
+    context.strokeStyle = theme.border;
     context.lineWidth = 1;
     context.strokeRect(MARGIN, y, TABLE_WIDTH, row.height);
 
     let x = MARGIN;
-    context.fillStyle = "#243b53";
+    context.fillStyle = theme.foreground;
     context.font = "500 26px Inter, Arial, sans-serif";
     row.cells.forEach((lines, index) => {
       if (index === 0) {
-        context.fillStyle = "#0b78b5";
+        context.fillStyle = theme.primary;
         context.font = "700 24px ui-monospace, SFMono-Regular, Consolas, monospace";
       } else if (index === 1) {
-        context.fillStyle = "#102a43";
+        context.fillStyle = theme.foreground;
         context.font = "600 26px Inter, Arial, sans-serif";
       } else if (index === 5) {
-        context.fillStyle = row.cells[5][0].startsWith("Audit") ? "#9c5d00" : "#334e68";
+        context.fillStyle = row.cells[5][0].startsWith("Audit") ? theme.warning : theme.foregroundSecondary;
         context.font = "600 22px Inter, Arial, sans-serif";
       } else {
-        context.fillStyle = "#334e68";
+        context.fillStyle = theme.foregroundSecondary;
         context.font = "500 24px Inter, Arial, sans-serif";
       }
       const textX = index === 2 ? x + COLUMNS[index].width / 2 : x + 15;
@@ -208,37 +242,42 @@ async function renderPlanImage({
 
   if (logo) {
     context.save();
-    context.globalAlpha = 0.035;
-    const watermarkSize = Math.min(520, canvas.height * 0.28);
+    context.globalAlpha = theme.watermarkOpacity;
+    const watermarkSize = Math.min(600, canvas.height * 0.32);
     context.drawImage(logo, (CANVAS_WIDTH - watermarkSize) / 2, headerHeight + (tableHeight - watermarkSize) / 2, watermarkSize, watermarkSize);
+    context.globalAlpha = theme.watermarkOpacity * 0.65;
+    context.fillStyle = theme.primary;
+    context.font = "700 64px Inter, Arial, sans-serif";
+    context.textAlign = "center";
+    context.fillText("DEGREE PLANNER", CANVAS_WIDTH / 2, headerHeight + tableHeight / 2 + watermarkSize / 2 + 44);
     context.restore();
   }
 
   const footerY = headerHeight + tableHeight;
-  context.fillStyle = "#ffffff";
+  context.fillStyle = theme.surface;
   context.fillRect(0, footerY, CANVAS_WIDTH, footerHeight);
-  context.strokeStyle = "#d9e2ec";
+  context.strokeStyle = theme.border;
   context.beginPath();
   context.moveTo(MARGIN, footerY);
   context.lineTo(CANVAS_WIDTH - MARGIN, footerY);
   context.stroke();
 
-  context.strokeStyle = "#829ab1";
+  context.strokeStyle = theme.foregroundSecondary;
   context.lineWidth = 2;
   context.beginPath();
   context.moveTo(MARGIN, footerY + 98);
   context.lineTo(MARGIN + 440, footerY + 98);
   context.stroke();
-  context.fillStyle = "#486581";
+  context.fillStyle = theme.foregroundSecondary;
   context.font = "500 20px Inter, Arial, sans-serif";
   context.textAlign = "left";
   context.fillText("Student signature", MARGIN, footerY + 130);
 
   context.textAlign = "right";
-  context.fillStyle = "#102a43";
+  context.fillStyle = theme.foreground;
   context.font = "700 23px Inter, Arial, sans-serif";
   context.fillText("Generated via PlanMyDegree.app", CANVAS_WIDTH - MARGIN, footerY + 84);
-  context.fillStyle = "#486581";
+  context.fillStyle = theme.foregroundSecondary;
   context.font = "500 20px Inter, Arial, sans-serif";
   context.fillText(`Created by Aditya Tayal  |  ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`, CANVAS_WIDTH - MARGIN, footerY + 118);
 
