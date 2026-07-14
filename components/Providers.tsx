@@ -7,6 +7,7 @@ import { ThemeProvider } from "./ThemeProvider";
 import { ToastProvider, useToast } from "./ToastProvider";
 import { ConfirmDialogProvider } from "./ConfirmDialog";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { MaintenanceGate } from "./MaintenanceGate";
 
 function ServiceWorkerPopups() {
   const { showToast } = useToast();
@@ -81,6 +82,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <ToastProvider>
               <ConfirmDialogProvider>
                 <ServiceWorkerPopups />
+                <MaintenanceGate />
                 {!isOnline && (
                   <div className="fixed top-0 left-0 right-0 bg-red-500 dark:bg-red-600 text-white text-center py-2 z-[9999] text-sm">
                     You are currently offline. Changes will be saved when connection is restored.

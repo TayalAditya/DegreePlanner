@@ -523,6 +523,16 @@ model Feedback {
   @@index([createdAt])
 }
 
+// A single global row controls the temporary write-freeze screen used during
+// database maintenance. A nullable end time means the window is inactive.
+model MaintenanceWindow {
+  id        String   @id
+  endsAt    DateTime?
+  message   String?
+  startedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum UserRole {
   STUDENT
   ADMIN

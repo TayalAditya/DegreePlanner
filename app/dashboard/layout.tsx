@@ -4,6 +4,9 @@ import { DashboardNav } from "@/components/DashboardNav";
 import { RouteTransition } from "@/components/RouteTransition";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AcadSecGate } from "@/components/AcadSecGate";
+import { MaintenanceScreen } from "@/components/MaintenanceScreen";
+import { getMaintenanceStatus } from "@/lib/maintenance";
+import { isDocumentsAdmin } from "@/lib/permissions";
 
 export default async function DashboardLayout({
   children,
@@ -32,6 +35,11 @@ export default async function DashboardLayout({
         </div>
       </div>
     );
+  }
+
+  const maintenance = await getMaintenanceStatus();
+  if (maintenance.active && maintenance.endsAt && !isDocumentsAdmin(session.user)) {
+    return <MaintenanceScreen endsAt={maintenance.endsAt} message={maintenance.message} />;
   }
 
   return (

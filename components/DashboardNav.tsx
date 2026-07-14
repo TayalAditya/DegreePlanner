@@ -23,6 +23,7 @@ import {
   Users,
   Megaphone,
   CalendarCheck,
+  Power,
 } from "lucide-react";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
@@ -30,7 +31,7 @@ import { NotificationBell } from "./NotificationBell";
 import { FeedbackButton } from "./FeedbackButton";
 import { FeedbackSpotlight } from "./FeedbackSpotlight";
 import { BrandMark } from "./BrandMark";
-import { ACAD_SEC_EMAILS } from "@/lib/permissions";
+import { ACAD_SEC_EMAILS, isDocumentsAdmin } from "@/lib/permissions";
 
 interface DashboardNavProps {
   user: {
@@ -38,6 +39,7 @@ interface DashboardNavProps {
     email?: string | null;
     image?: string | null;
     role?: string | null;
+    enrollmentId?: string | null;
   };
 }
 
@@ -65,6 +67,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
 { name: "Pre-Reg Plans", href: "/dashboard/admin/pre-registration/plans", icon: Users },
     { name: "Course Mappings", href: "/dashboard/course-mappings", icon: GitBranch },
     { name: "Inbox", href: "/dashboard/inbox", icon: Inbox },
+    ...(isDocumentsAdmin(user) ? [{ name: "Shutdown", href: "/dashboard/shutdown", icon: Power }] : []),
   ];
 
   const isAcadSecUser = ACAD_SEC_EMAILS.has((user.email ?? "").toLowerCase());
