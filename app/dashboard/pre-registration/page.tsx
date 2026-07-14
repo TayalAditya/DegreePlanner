@@ -903,6 +903,8 @@ export default function PreRegistrationPage() {
     for (const o of data.offerings) {
       if (!o.isCompulsory && !selected.has(o.id)) continue;
       if (o.completedInSemester !== null) continue;
+      // Audit courses appear on the transcript but don't count toward the degree — exclude from category tally.
+      if (regTypes.get(o.id) === "AUDIT") continue;
       let cat = o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory;
       // Overflow: if requirement already met, reclassify to FE
       if (req && done && ["DE", "HSS"].includes(cat)) {
@@ -922,7 +924,7 @@ export default function PreRegistrationPage() {
     }
     const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP"]; // IKS merged into HSS
     return ORDER.filter((cat) => map.has(cat)).map((cat) => ({ cat, ...map.get(cat)! }));
-  }, [data, selected, selectedExtra, internshipCourses, mtp1Course]);
+  }, [data, selected, selectedExtra, internshipCourses, mtp1Course, regTypes]);
 
   const handleToggle = (offering: Offering) => {
     if (offering.isCompulsory || offering.completedInSemester !== null) return;
