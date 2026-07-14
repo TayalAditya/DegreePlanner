@@ -362,6 +362,14 @@ export default function ProgramsClient({
     saveProjectPrefs(doingMTP1, doingMTP2, checked);
   };
 
+  // The server calculator applies branch- and batch-specific requirement changes
+  // (for example, B25's DC/DE redistribution). Never use the base Program value
+  // once progress data is available, otherwise the numerator and denominator
+  // describe different curricula.
+  const displayedDcRequirement = Number(
+    progressData?.creditsRequiredByCategory?.DC ?? primaryProgram?.program.dcCredits ?? 0
+  );
+
   const displayProgress = useMemo(() => {
     if (!progressData) return null;
 
@@ -369,6 +377,7 @@ export default function ProgramsClient({
       enrollments: programEnrollments,
       userBranch: userSettings?.branch,
       userBatch: inferredBatch,
+      programIcCredits: primaryProgram?.program.icCredits,
       requiredDE: Number(progressData?.required?.de ?? 0),
       includeCurrentSemesterCredits,
       nonMgmtMinorCourseCodes,
@@ -387,7 +396,7 @@ export default function ProgramsClient({
 
     return {
       institutionalCore: countedFromEnrollments("institutionalCore", primaryProgram?.program.icCredits ?? 0),
-      dc: countedFromEnrollments("dc", primaryProgram?.program.dcCredits ?? 0),
+      dc: countedFromEnrollments("dc", displayedDcRequirement),
       core: countedFromEnrollments("core", Number(progressData?.required?.core ?? 0)),
       de: countedFromEnrollments("de", Number(progressData?.required?.de ?? 0)),
       freeElective: countedFromEnrollments("freeElective", Number(progressData?.required?.freeElective ?? 0)),
@@ -403,7 +412,7 @@ export default function ProgramsClient({
     includeCurrentSemesterCredits,
     nonMgmtMinorCourseCodes,
     primaryProgram?.program.icCredits,
-    primaryProgram?.program.dcCredits,
+    displayedDcRequirement,
   ]);
 
   const secondaryPrograms = userPrograms.filter((p) => !p.isPrimary);
@@ -555,7 +564,7 @@ export default function ProgramsClient({
                             <>
                               {formatCredits(displayProgress?.dc ?? 0)}
                               <span className="text-xs font-normal text-foreground-secondary ml-1">
-                                / {formatCredits(primaryProgram.program.dcCredits)} cr
+                                / {formatCredits(displayedDcRequirement)} cr
                               </span>
                             </>
                           ) : (

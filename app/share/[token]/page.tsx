@@ -302,6 +302,7 @@ export default async function SharePage({ params }: SharePageProps) {
     enrollments: profileEnrollments,
     userBranch: profileUser.branch,
     userBatch: profileUser.batch,
+    programIcCredits: program?.icCredits,
     requiredDE: program?.deCredits ?? 0,
   });
   const requiredCredits = buildRequiredCredits(

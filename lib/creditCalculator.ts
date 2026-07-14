@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
 import { normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
+import { getBatchAdjustedCredits } from "@/lib/branches";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { pickBranchMapping, pickBranchMappingCategory } from "@/lib/courseCategory";
 import {
@@ -161,8 +162,25 @@ export class CreditCalculator {
       ? Math.max(0, program.mtpIstpCredits - MTP_TOTAL_CREDITS)
       : 0;
 
+    // Infer batch year for batch-specific credit adjustments
+    const inferredBatch = (() => {
+      if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;
+      const enrollmentId = String(user?.enrollmentId || "").toUpperCase();
+      const match = /B(\d{2})/i.exec(enrollmentId);
+      if (match) return 2000 + Number.parseInt(match[1], 10);
+      return null;
+    })();
+
+    // Batch-specific DC/DE adjustments (e.g. B25: EE-261→EE-265 adds 2cr to DC)
+    const adjusted = getBatchAdjustedCredits(
+      user?.branch ?? program.code,
+      inferredBatch,
+      { dcCredits: program.dcCredits, deCredits: program.deCredits },
+    );
+    const effectiveDcCredits = adjusted.dcCredits;
+
     // Adjust credit requirements based on user preferences (skip logic per IIT Mandi rules)
-    let deCredits = program.deCredits;
+    let deCredits = adjusted.deCredits;
     let feCredits = program.feCredits;
     let mtpCredits = mtpCreditsFull;
     let istpCredits = istpCreditsFull;
@@ -171,19 +189,12 @@ export class CreditCalculator {
     // DC 36 + DE 0 + FE 52. Named GE tracks (GE-ROBO/MECH/COMM/FIN) keep the
     // program's DE 30 / FE 22 (they share the single "GE" program record).
     if (user?.branch === "GE") {
-      const mergedFe = program.deCredits + program.feCredits; // 30 + 22 = 52
+      const mergedFe = adjusted.deCredits + program.feCredits;
       deCredits = 0;
       feCredits = mergedFe;
     }
 
     {
-      const inferredBatch = (() => {
-        if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;
-        const enrollmentId = String(user?.enrollmentId || "").toUpperCase();
-        const match = /B(\d{2})/i.exec(enrollmentId);
-        if (match) return 2000 + Number.parseInt(match[1], 10);
-        return null;
-      })();
       const isBatch22 = inferredBatch === 2022;
 
       const doingMTP1Pref = user?.doingMTP ?? true;
@@ -214,7 +225,7 @@ export class CreditCalculator {
     }
 
     const required: CreditBreakdown = {
-      core: program.icCredits + program.dcCredits, // IC + DC = "core" in IIT Mandi terms
+      core: program.icCredits + effectiveDcCredits,
       de: deCredits,
       pe: researchCredits, // reuse pe field for BS Research credits
       freeElective: feCredits,
@@ -304,7 +315,7 @@ export class CreditCalculator {
       creditsRequiredByCategory: {
         IC: Math.max(0, (program.icCredits ?? 60) - 6 - hssReq),
         IC_BASKET: 6,
-        DC: program.dcCredits ?? 0,
+        DC: effectiveDcCredits,
         DE: deCredits,
         FE: feCredits,
         HSS: hssReq,

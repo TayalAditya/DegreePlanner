@@ -15,6 +15,7 @@ import {
 } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, getCurriculumBranchCode, isDataScienceBranch } from "@/lib/branchInfo";
+import { getBatchAdjustedCredits } from "@/lib/branches";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
@@ -685,11 +686,23 @@ export default function ProgressPage() {
       deAdjustment += MTP_COMPONENT_CREDITS;
     }
 
+    // Keep the local category display aligned with the server-side progress
+    // calculator. Some curricula change their DC/DE split by batch while their
+    // total degree-credit requirement remains unchanged (for example, B25 ME/GE).
+    const batchAdjustedCredits = getBatchAdjustedCredits(
+      user?.branch ?? "",
+      inferredBatch,
+      {
+        dcCredits: programCredits.dcCredits ?? 0,
+        deCredits: programCredits.deCredits ?? 0,
+      }
+    );
+
     const creditsRequiredByCategory = {
       IC: Math.max(0, icCredits - icBasketRequired - HSS_CORE_CAP - iksRequired),
       IC_BASKET: icBasketRequired,
-      DC: programCredits.dcCredits ?? 0,
-      DE: (programCredits.deCredits ?? 0) + deAdjustment,
+      DC: batchAdjustedCredits.dcCredits,
+      DE: batchAdjustedCredits.deCredits + deAdjustment,
       PE: isBSProgram
         ? Math.max(0, (programCredits.mtpIstpCredits ?? 0) - MTP_TOTAL_CREDITS)
         : 0,
@@ -1154,17 +1167,37 @@ export default function ProgressPage() {
         }
 
         // Build flat list of all courses grouped by their computed category
-        const coursesByCat: Record<string, { code: string; name: string; credits: number; status: string; grade?: string; semester: number; splitCategory?: string; splitCredits?: number }[]> = {};
+        type CategorizedCourse = {
+          code: string;
+          name: string;
+          credits: number;
+          sourceCredits?: number;
+          status: string;
+          grade?: string;
+          semester: number;
+        };
+        const coursesByCat: Record<string, CategorizedCourse[]> = {};
         for (const sem of Object.values(semesterCourses)) {
           for (const c of sem as any[]) {
-            // Primary category
-            if (!coursesByCat[c.category]) coursesByCat[c.category] = [];
-            coursesByCat[c.category].push(c);
-            // Split category (e.g. HSS + FE split)
-            if (c.splitCategory) {
+            const splitCredits = Number(c.splitCredits ?? 0);
+            const hasSplit =
+              Boolean(c.splitCategory) && splitCredits > 0 && splitCredits < Number(c.credits ?? 0);
+            const primaryCredits = hasSplit
+              ? subtractCredits(Number(c.credits ?? 0), splitCredits)
+              : Number(c.credits ?? 0);
+            const sourceCredits = hasSplit ? Number(c.credits ?? 0) : undefined;
+
+            if (primaryCredits > 0) {
+              if (!coursesByCat[c.category]) coursesByCat[c.category] = [];
+              coursesByCat[c.category].push({ ...c, credits: primaryCredits, sourceCredits });
+            }
+            if (hasSplit) {
               if (!coursesByCat[c.splitCategory]) coursesByCat[c.splitCategory] = [];
-              // Avoid duplicate entry; mark as split
-              coursesByCat[c.splitCategory].push({ ...c, _isSplit: true } as any);
+              coursesByCat[c.splitCategory].push({
+                ...c,
+                credits: splitCredits,
+                sourceCredits,
+              });
             }
           }
         }
@@ -1251,7 +1284,12 @@ export default function ProgressPage() {
                                         <span className="text-foreground-secondary truncate">{c.name}</span>
                                       </div>
                                       <div className="flex items-center gap-2 flex-shrink-0">
-                                        <span className="text-xs text-foreground-secondary">{formatCredits(c.credits)} cr</span>
+                                        <span className="text-xs text-foreground-secondary">
+                                          {formatCredits(c.credits)} cr
+                                          {c.sourceCredits != null && c.sourceCredits !== c.credits
+                                            ? ` of ${formatCredits(c.sourceCredits)}`
+                                            : ""}
+                                        </span>
                                         {c.grade && <span className="text-xs font-semibold text-success bg-success/10 px-1.5 py-0.5 rounded">{c.grade}</span>}
                                       </div>
                                     </div>
@@ -1273,7 +1311,12 @@ export default function ProgressPage() {
                                         <span className="font-mono text-xs font-semibold text-foreground flex-shrink-0">{c.code}</span>
                                         <span className="text-foreground-secondary truncate">{c.name}</span>
                                       </div>
-                                      <span className="text-xs text-foreground-secondary flex-shrink-0">{formatCredits(c.credits)} cr</span>
+                                      <span className="text-xs text-foreground-secondary flex-shrink-0">
+                                        {formatCredits(c.credits)} cr
+                                        {c.sourceCredits != null && c.sourceCredits !== c.credits
+                                          ? ` of ${formatCredits(c.sourceCredits)}`
+                                          : ""}
+                                      </span>
                                     </div>
                                   ))}
                                 </div>

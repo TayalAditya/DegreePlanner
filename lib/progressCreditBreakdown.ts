@@ -32,6 +32,8 @@ type EnrollmentLike = {
       branch?: string | null;
       batch?: string | null;
       courseCategory?: string | null;
+      splitCategory?: string | null;
+      splitAmount?: number | null;
     }>;
   } | null;
 };
@@ -40,6 +42,8 @@ type Options = {
   enrollments: EnrollmentLike[];
   userBranch?: string | null;
   userBatch?: number | null;
+  /** Program IC requirement determines the HSS+IKS core cap: BTech=15, BSCS=12. */
+  programIcCredits?: number | null;
   requiredDE?: number;
   includeCurrentSemesterCredits?: boolean;
   nonMgmtMinorCourseCodes?: Set<string>;
@@ -65,8 +69,6 @@ const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
   EE: {},
   VLSI: {},
 };
-
-const HSS_CORE_CAP = 12;
 
 // HSS+IKS combined credits beyond this cap do not count toward the degree total.
 const HSS_FE_CAP = 20;
@@ -142,6 +144,7 @@ export function computeEnrollmentCreditBreakdown({
   enrollments,
   userBranch,
   userBatch,
+  programIcCredits,
   requiredDE = 0,
   includeCurrentSemesterCredits = false,
   nonMgmtMinorCourseCodes,
@@ -149,6 +152,7 @@ export function computeEnrollmentCreditBreakdown({
   const categoryCredits = emptyCategoryCredits();
   const icBasketUsed = { ic1: false, ic2: false };
   const hssUsed = { credits: 0 };
+  const hssCoreCap = (programIcCredits ?? 60) <= 52 ? 12 : 15;
 
   const shouldCount = (enrollment: EnrollmentLike) => {
     if (enrollment.status === "COMPLETED") return !enrollment.grade || enrollment.grade !== "F";
@@ -262,9 +266,31 @@ export function computeEnrollmentCreditBreakdown({
     const category = getCourseCategory(enrollment);
     const credits = Number(enrollment.course?.credits || 0);
 
+    // A branch mapping can allocate one course across two baskets. For example,
+    // CSE's IN-2406 contributes 3 DC + 1 FE rather than four credits to one
+    // category. Apply the same allocation used by the full progress calculator.
+    const rawBranch = String(userBranch || "").trim().toUpperCase();
+    const checkBranch = normalizeBranchForIcBasket(rawBranch);
+    const mapping = pickMapping(enrollment, rawBranch, checkBranch);
+    const splitAmount = Number(mapping?.splitAmount ?? 0);
+    const splitCategory = mapping?.splitCategory as CategoryKey | undefined;
+    const canSplit =
+      splitAmount > 0 &&
+      splitAmount < credits &&
+      splitCategory &&
+      splitCategory in categoryCredits &&
+      category !== "HSS" &&
+      category !== "IKS";
+
+    if (canSplit) {
+      categoryCredits[category] = addCredits(categoryCredits[category], subtractCredits(credits, splitAmount));
+      categoryCredits[splitCategory] = addCredits(categoryCredits[splitCategory], splitAmount);
+      return;
+    }
+
     if (category === "HSS" || category === "IKS") {
       const before = hssUsed.credits;
-      const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP);
+      const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, hssCoreCap);
       hssUsed.credits = addCredits(before, addCredits(hss, fe));
       if (hss > 0) categoryCredits.HSS = addCredits(categoryCredits.HSS, hss);
       if (fe > 0) categoryCredits.FE = addCredits(categoryCredits.FE, fe);

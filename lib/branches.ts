@@ -289,3 +289,30 @@ export const getBranchByCode = (code: string): BranchConfig | undefined => {
 export const getBranchTypes = () => {
   return Array.from(new Set(Object.values(BRANCH_CONFIGS).map(b => b.type)));
 };
+
+const B25_DC_DE_DELTA: Record<string, { dc: number; de: number }> = {
+  ME:        { dc: 2, de: -2 },
+  'GE-MECH': { dc: 2, de: -2 },
+  'GE-COMM': { dc: 2, de: -2 },
+  'GE-ROBO': { dc: 2, de: -2 },
+  'GE-FIN':  { dc: 2, de: -2 },
+  'GE-OPEN': { dc: 2, de: -2 },
+  GE:        { dc: 2, de: -2 },
+};
+
+export function getBatchAdjustedCredits(
+  branch: string,
+  batchYear: number | null | undefined,
+  base: { dcCredits: number; deCredits: number },
+): { dcCredits: number; deCredits: number } {
+  if (batchYear === 2025) {
+    const delta = B25_DC_DE_DELTA[branch];
+    if (delta) {
+      return {
+        dcCredits: base.dcCredits + delta.dc,
+        deCredits: Math.max(0, base.deCredits + delta.de),
+      };
+    }
+  }
+  return { dcCredits: base.dcCredits, deCredits: base.deCredits };
+}
