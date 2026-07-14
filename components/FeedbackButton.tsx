@@ -88,6 +88,7 @@ export function FeedbackButton() {
   return (
     <>
       <button
+        id="feedback-trigger-btn"
         type="button"
         onClick={handleOpen}
         className="dp-icon-btn"
