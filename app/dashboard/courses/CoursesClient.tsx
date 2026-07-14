@@ -922,7 +922,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
         <StatCard
           icon={<Award className="w-full h-full" />}
           label="Completed"
-          value={formatCredits(totalCreditsCompleted)}
+          value={formatCredits(subtractCredits(totalCreditsCompleted, creditsByCategory.NOT_IN_DEGREE))}
           sublabel="Credits earned"
           valueColor="text-success"
           iconBg="bg-success/10"

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import Link from "next/link";
 import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
-import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
+import { addCredits, formatCourseCode, formatCredits, minCredits, subtractCredits, sumCredits } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
@@ -600,7 +600,13 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
               >
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-semibold text-foreground">Semester {sem.semester}</p>
-                  <span className="text-sm font-semibold text-primary">{formatCredits(sem.total)} credits</span>
+                  <span className="text-sm font-semibold text-primary">
+                    {formatCredits(subtractCredits(sem.total, sem.NOT_IN_DEGREE))}
+                    {sem.NOT_IN_DEGREE > 0 && (
+                      <span className="text-foreground-muted font-normal"> +{formatCredits(sem.NOT_IN_DEGREE)}</span>
+                    )}
+                    {" "}credits
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-foreground-secondary">
                   <span>IC: {sem.IC}</span>

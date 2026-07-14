@@ -110,7 +110,7 @@ interface ProgressData {
     ISTP: number;
     NOT_IN_DEGREE: number;
   };
-  semesterWiseCredits: { semester: number; credits: number; inProgressCredits: number }[];
+  semesterWiseCredits: { semester: number; credits: number; inProgressCredits: number; notInDegreeCredits: number }[];
 }
 
 // Color scheme for each category
@@ -716,24 +716,39 @@ export default function ProgressPage() {
       NOT_IN_DEGREE: 0,
     };
 
-    // Group by semester (include IN_PROGRESS when toggle is ON)
-    const semesterMap = new Map<number, { completed: number; inProgress: number }>();
-    completedEnrollments.forEach((e) => {
-      const cur = semesterMap.get(e.semester) || { completed: 0, inProgress: 0 };
-      semesterMap.set(e.semester, { ...cur, completed: addCredits(cur.completed, e.course.credits) });
+    // Group by semester (include IN_PROGRESS when toggle is ON).
+    // Track per-semester "Not in Degree" (HSS+IKS excess) so it can be shown separately
+    // and excluded from the counted total — mirrors the category tally above.
+    const semesterMap = new Map<number, { completed: number; inProgress: number; notInDegree: number }>();
+    // Independent trackers so per-semester NOT_IN_DEGREE allocation matches the category tally
+    // (HSS cap fills cumulatively across semesters in sorted order).
+    const semHssUsed = { credits: 0 };
+    const semIcBasketUsed: ICBasketUsed = { ic1: false, ic2: false };
+    sortedCompleted.forEach((e) => {
+      const cur = semesterMap.get(e.semester) || { completed: 0, inProgress: 0, notInDegree: 0 };
+      const tmp: Record<string, number> = {
+        IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0,
+      };
+      accumulateSplitAware(tmp, e, semIcBasketUsed, semHssUsed);
+      semesterMap.set(e.semester, {
+        ...cur,
+        completed: addCredits(cur.completed, e.course.credits),
+        notInDegree: addCredits(cur.notInDegree, tmp.NOT_IN_DEGREE ?? 0),
+      });
     });
     if (includeCurrentSemesterCredits) {
       inProgressEnrollments.forEach((e) => {
-        const cur = semesterMap.get(e.semester) || { completed: 0, inProgress: 0 };
+        const cur = semesterMap.get(e.semester) || { completed: 0, inProgress: 0, notInDegree: 0 };
         semesterMap.set(e.semester, { ...cur, inProgress: addCredits(cur.inProgress, e.course.credits) });
       });
     }
 
     const semesterWiseCredits = Array.from(semesterMap.entries())
-      .map(([semester, { completed, inProgress }]) => ({
+      .map(([semester, { completed, inProgress, notInDegree }]) => ({
         semester,
-        credits: completed,
+        credits: subtractCredits(completed, notInDegree),
         inProgressCredits: inProgress,
+        notInDegreeCredits: notInDegree,
       }))
       .sort((a, b) => a.semester - b.semester);
 
@@ -1637,7 +1652,7 @@ export default function ProgressPage() {
             Semester-wise Credits
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {progress.semesterWiseCredits.map(({ semester, credits, inProgressCredits }) => {
+            {progress.semesterWiseCredits.map(({ semester, credits, inProgressCredits, notInDegreeCredits }) => {
               const hasPending = inProgressCredits > 0;
               return (
                 <div
@@ -1659,6 +1674,11 @@ export default function ProgressPage() {
                   )}
                   {hasPending && credits === 0 && (
                     <p className="text-[10px] text-info/70 mt-0.5">in progress</p>
+                  )}
+                  {notInDegreeCredits > 0 && (
+                    <p className="text-[10px] text-foreground-muted mt-0.5">
+                      +{formatCredits(notInDegreeCredits)} not in degree
+                    </p>
                   )}
                 </div>
               );
