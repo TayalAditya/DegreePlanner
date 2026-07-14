@@ -239,7 +239,7 @@ function RegTypeSelector({
 
   const options: { value: RegType; label: string }[] = [
     { value: "REGULAR", label: "Regular" },
-    ...(allowPF ? [{ value: "PASS_FAIL" as RegType, label: "Pass/Fail" }] : []),
+    ...(allowPF ? [{ value: "PASS_FAIL" as RegType, label: "Pass/Fail → FE" }] : []),
     { value: "AUDIT", label: "Audit" },
   ];
 
@@ -290,12 +290,12 @@ function RegTypeSelector({
                   <span className="block font-medium">{opt.label}</span>
                   <span className="block text-xs text-foreground-secondary mt-0.5">
                     {opt.value === "REGULAR" && "Counts toward degree normally"}
-                    {opt.value === "PASS_FAIL" && PF_FREE_CATS.has(category) &&
+                    {opt.value === "PASS_FAIL" &&
                       (pfExhausted
                         ? `P/F budget exhausted (${PF_TOTAL} cr used)`
-                        : `Uses P/F budget · ${pfBudgetRemaining} cr remaining`)}
+                        : `Counts as FE, not ${CATEGORY_LABEL[category] ?? category} · ${pfBudgetRemaining} cr P/F remaining`)}
                     {opt.value === "PASS_FAIL" && PF_APPROVAL_CATS.has(category) &&
-                      "Requires faculty & FA approval"}
+                      <><br />Requires faculty & FA approval</>}
                     {opt.value === "AUDIT" && "Appears on transcript · does not count toward degree"}
                   </span>
                 </button>
@@ -426,10 +426,11 @@ function CourseCard({
             Audit: will appear on transcript but won&apos;t count toward your degree
           </p>
         )}
-        {checked && !isCompulsory && !isCompleted && regType === "PASS_FAIL" && PF_APPROVAL_CATS.has(offering.resolvedCategory) && (
+        {checked && !isCompulsory && !isCompleted && regType === "PASS_FAIL" && (
           <p className="mt-1 text-xs text-accent flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" />
-            DE as P/F requires faculty &amp; FA approval before registration
+            P/F counts toward FE, not {CATEGORY_LABEL[offering.resolvedCategory] ?? offering.resolvedCategory}.
+            {PF_APPROVAL_CATS.has(offering.resolvedCategory) && " DE as P/F also requires faculty & FA approval."}
           </p>
         )}
 
