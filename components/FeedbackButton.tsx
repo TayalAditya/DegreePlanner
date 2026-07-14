@@ -91,12 +91,12 @@ export function FeedbackButton() {
 
   return (
     <>
-      {/* Floating button — hidden on mobile to avoid clashing with nav */}
+      {/* Floating button — smaller on mobile, positioned to avoid nav clashes */}
       <button
         ref={buttonRef}
         type="button"
         onClick={handleOpen}
-        className="hidden md:inline-flex fixed bottom-6 left-6 z-40 group items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 text-white shadow-xl shadow-fuchsia-500/30 hover:shadow-fuchsia-500/50 hover:scale-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-400/40 active:scale-95 transition-all duration-300 no-print animate-feedback-float"
+        className="fixed bottom-20 left-4 md:bottom-6 md:left-6 z-40 group inline-flex items-center justify-center w-11 h-11 md:w-14 md:h-14 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 text-white shadow-xl shadow-fuchsia-500/30 hover:shadow-fuchsia-500/50 hover:scale-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-400/40 active:scale-95 transition-all duration-300 no-print animate-feedback-float"
         aria-label="Give feedback"
       >
         <span className="text-2xl group-hover:animate-star-pop">💬</span>
