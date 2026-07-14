@@ -50,7 +50,22 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { branch, batch, enrollmentId, name } = session.user;
+  const {
+    branch: sessionBranch,
+    batch: sessionBatch,
+    enrollmentId,
+    name: sessionName,
+  } = session.user;
+  // Branch specializations can be changed from Import Courses. JWT session
+  // claims are deliberately long-lived, so use the profile as the source of
+  // truth instead of making pre-registration wait for a new sign-in.
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { branch: true, batch: true, name: true, totalPassFailCredits: true },
+  });
+  const branch = currentUser?.branch ?? sessionBranch;
+  const batch = currentUser?.batch ?? sessionBatch;
+  const name = currentUser?.name ?? sessionName;
   const batchYear = inferBatchYear(batch, enrollmentId);
 
   // Acad sec users don't have branch/batch — they shouldn't see the student pre-reg view at all.
@@ -84,7 +99,7 @@ export async function GET() {
   const normalizedBranch = normalizeBranchCode(branch);
 
   // Fetch all data in parallel
-  const [offerings, completed, userProgram, savedPlan, userRecord, equivalencies] = await Promise.all([
+  const [offerings, completed, userProgram, savedPlan, equivalencies] = await Promise.all([
     prisma.courseOffering.findMany({
       where: { offeringYear, isActive: true },
       include: {
@@ -126,10 +141,6 @@ export async function GET() {
     prisma.preRegistrationPlan.findUnique({
       where: { userId_offeringSemester_offeringYear: { userId: session.user.id, offeringSemester, offeringYear } },
       select: { selectedIds: true, registrationTypes: true, updatedAt: true },
-    }),
-    prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { totalPassFailCredits: true },
     }),
     prisma.courseEquivalent.findMany({
       select: { courseId: true, equivalentId: true,
@@ -443,7 +454,7 @@ export async function GET() {
       name: name ?? null,
       branch: branch ?? null,
       semester: offeringSemester,
-      pfCreditsUsed: userRecord?.totalPassFailCredits ?? 0,
+      pfCreditsUsed: currentUser?.totalPassFailCredits ?? 0,
       batch: batchYear,
     },
     savedPlan: {
