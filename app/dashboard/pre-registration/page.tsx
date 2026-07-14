@@ -1239,7 +1239,7 @@ export default function PreRegistrationPage() {
         <select
           value={selectedMinorCode}
           onChange={(e) => setSelectedMinorCode(e.target.value)}
-          className="text-sm bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 w-full sm:w-auto sm:max-w-[220px]"
+          className="text-sm bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 w-full sm:w-auto sm:min-w-[280px]"
         >
           <option value="">— Select a minor / specialization —</option>
           {MINORS.filter((m) => !m.eligibleBatches || (data?.studentInfo?.batch && m.eligibleBatches.includes(data.studentInfo.batch))).map((m) => (
