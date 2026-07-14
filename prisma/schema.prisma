@@ -39,6 +39,7 @@ model User {
   samarthReports           SamarthReport[]
   sessions                 Session[]
   supportTickets           SupportTicket[]
+  feedbacks                Feedback[]
   approvedTimetableEntries TimetableEntry[]      @relation("TimetableApprovedBy")
   createdTimetableEntries  TimetableEntry[]      @relation("TimetableCreatedBy")
   updatedTimetableEntries  TimetableEntry[]      @relation("TimetableUpdatedBy")
@@ -502,6 +503,23 @@ model LoginAttempt {
 
   @@index([email])
   @@index([outcome, createdAt])
+  @@index([createdAt])
+}
+
+model Feedback {
+  id         String    @id @default(cuid())
+  userId     String
+  rating     Int
+  emoji      String?
+  message    String?
+  userName   String
+  rollNumber String
+  branch     String
+  sentAt     DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([sentAt])
   @@index([createdAt])
 }
 

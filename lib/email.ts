@@ -101,3 +101,72 @@ export async function sendSamarthDigest(rows: SamarthReportRow[]): Promise<void>
     html,
   });
 }
+
+export interface FeedbackRow {
+  userName: string;
+  rollNumber: string;
+  branch: string;
+  rating: number;
+  emoji: string | null;
+  message: string | null;
+  createdAt: Date;
+}
+
+function renderStars(rating: number): string {
+  return "★".repeat(rating) + "☆".repeat(5 - rating);
+}
+
+export async function sendFeedbackDigest(rows: FeedbackRow[]): Promise<void> {
+  if (rows.length === 0) return;
+
+  const to = process.env.FEEDBACK_DIGEST_TO || "b23243@students.iitmandi.ac.in";
+  const from = process.env.GMAIL_USER!;
+
+  const avgRating = (rows.reduce((s, r) => s + r.rating, 0) / rows.length).toFixed(1);
+
+  const htmlHeader = ["Name", "Roll", "Branch", "Rating", "Reaction", "Message", "Date"];
+  const htmlDataRows = rows.map((r) => [
+    r.userName,
+    r.rollNumber,
+    r.branch,
+    renderStars(r.rating),
+    r.emoji || "—",
+    r.message ? escapeHtml(r.message.slice(0, 200)) : "—",
+    r.createdAt.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+  ]);
+
+  const text = rows
+    .map((r) => `${r.userName} (${r.rollNumber}, ${r.branch}): ${renderStars(r.rating)} ${r.emoji || ""} — ${r.message || "No message"}`)
+    .join("\n");
+
+  const tableRows = htmlDataRows
+    .map(
+      (cols) =>
+        "<tr>" +
+        cols.map((c) => `<td style="padding:6px 10px;border:1px solid #ddd">${c}</td>`).join("") +
+        "</tr>"
+    )
+    .join("");
+
+  const html = `
+    <h2 style="font-family:sans-serif;color:#333">PlanMyDegree Feedback</h2>
+    <p style="font-family:sans-serif;font-size:14px;color:#555">
+      <strong>${rows.length}</strong> new response${rows.length !== 1 ? "s" : ""} · Average rating: <strong>${avgRating}/5</strong>
+    </p>
+    <table style="border-collapse:collapse;font-family:sans-serif;font-size:13px;width:100%">
+      <thead>
+        <tr>${htmlHeader.map((h) => `<th style="padding:6px 10px;border:1px solid #ddd;background:#f4f4f4;text-align:left">${h}</th>`).join("")}</tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <p style="color:#888;font-size:12px;margin-top:16px">— Degree Planner Feedback System</p>
+  `;
+
+  await getTransport().sendMail({
+    from: `PlanMyDegree Feedback <${from}>`,
+    to,
+    subject: `PlanMyDegree Feedback — ${rows.length} new response${rows.length !== 1 ? "s" : ""} (avg ${avgRating}★)`,
+    text,
+    html,
+  });
+}

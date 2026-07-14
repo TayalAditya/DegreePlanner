@@ -587,6 +587,32 @@ html {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Feedback animations */
+@keyframes star-pop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+@keyframes feedback-burst {
+  0% {
+    box-shadow: 0 0 0 0 rgba(var(--color-primary-rgb, 99 102 241) / 0.5);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: 0 0 0 20px rgba(var(--color-primary-rgb, 99 102 241) / 0);
+    opacity: 0;
+  }
+}
+
+.animate-star-pop {
+  animation: star-pop 0.3s ease-out;
+}
+
+.animate-feedback-burst {
+  animation: feedback-burst 0.8s ease-out forwards;
+}
+
 /* Smooth transitions for better UX on slow connections */
 .transition-opacity {
   transition: opacity 0.3s ease-in-out;
