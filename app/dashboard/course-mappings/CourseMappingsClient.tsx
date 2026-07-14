@@ -67,7 +67,7 @@ type MappingKey = string; // `${courseId}-${branch}-${batch}`
 const mappingKey = (courseId: string, branch: string, batch: string) =>
   `${courseId}-${branch}-${batch}`;
 
-export default function CourseMappingsPage() {
+export default function CourseMappingsClient() {
   const { showToast } = useToast();
   const [courses, setCourses] = useState<Course[]>([]);
   // mappings keyed by courseId-branch-batch

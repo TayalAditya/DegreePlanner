@@ -65,9 +65,20 @@ export function DashboardNav({ user }: DashboardNavProps) {
     { name: "Inbox", href: "/dashboard/inbox", icon: Inbox },
   ];
 
-  const allNavigation = user.role === "ADMIN" || ACAD_SEC_EMAILS.has((user.email ?? "").toLowerCase())
-    ? [...navigation, ...adminNavigation]
-    : navigation;
+  const isAcadSecUser = ACAD_SEC_EMAILS.has((user.email ?? "").toLowerCase());
+
+  // Acad-sec accounts only manage pre-reg plans — hide Users, Announcements,
+  // Course Mappings, and Inbox. Full ADMINs see everything.
+  const acadSecNavigation = adminNavigation.filter(
+    (item) => item.href === "/dashboard/admin/pre-registration/plans"
+  );
+
+  const allNavigation =
+    user.role === "ADMIN"
+      ? [...navigation, ...adminNavigation]
+      : isAcadSecUser
+      ? [...navigation, ...acadSecNavigation]
+      : navigation;
 
   const isActiveRoute = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";

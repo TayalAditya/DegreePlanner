@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { CourseType, EnrollmentStatus } from "@prisma/client";
 import { getBatch24Icb1Course } from "@/lib/batch24";
+import { isAcadSec } from "@/lib/permissions";
+import { resetAcadSecScratchData } from "@/lib/acadSecReset";
 
 export async function GET(req: NextRequest) {
   try {
@@ -76,11 +78,16 @@ export async function PATCH(req: NextRequest) {
     const isGeFamily = (b?: string | null) =>
       b === "GE" || (typeof b === "string" && b.startsWith("GE-"));
 
-    // Prevent branch changes if branch is already set (except GE-family ↔ GE-family).
+    // Acad-sec accounts are previewers — they may switch branch freely to inspect any
+    // program's pre-reg view; their scratch data is wiped on change (below).
+    const acadSec = isAcadSec(session.user.email);
+
+    // Prevent branch changes if branch is already set (except GE-family ↔ GE-family, or acad-sec).
     if (
       branch &&
       currentUser.branch &&
       currentUser.branch !== branch &&
+      !acadSec &&
       !(isGeFamily(currentUser.branch) && isGeFamily(branch))
     ) {
       return NextResponse.json(
@@ -88,6 +95,8 @@ export async function PATCH(req: NextRequest) {
         { status: 403 }
       );
     }
+
+    const branchChanged = !!branch && currentUser.branch !== branch;
 
     // Validate branch if provided
     if (branch) {
@@ -181,6 +190,12 @@ export async function PATCH(req: NextRequest) {
         },
       });
     });
+
+    // Acad-sec previewers: switching branch means the old plan/enrollments are stale —
+    // wipe scratch data so the new branch's pre-reg view starts clean.
+    if (acadSec && branchChanged) {
+      await resetAcadSecScratchData(session.user.id);
+    }
 
     return NextResponse.json(user);
   } catch (error) {

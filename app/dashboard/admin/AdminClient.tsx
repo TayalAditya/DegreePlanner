@@ -429,7 +429,7 @@ function LoginAttemptsTab() {
   );
 }
 
-export default function AdminPage() {
+export default function AdminClient() {
   const [activeTab, setActiveTab] = useState<"users" | "attempts">("users");
   const [search, setSearch] = useState("");
   const [branchFilter, setBranchFilter] = useState("ALL");

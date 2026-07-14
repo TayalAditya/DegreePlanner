@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getProgramLookupBranchCode } from "@/lib/branchInfo";
+import { isAcadSec } from "@/lib/permissions";
+import { resetAcadSecScratchData } from "@/lib/acadSecReset";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -29,6 +31,13 @@ export async function POST(req: NextRequest) {
         batch: session.user.batch,
       },
     });
+
+    // Acad-sec accounts are shared logins — wipe any scratch pre-reg plans / mock
+    // enrollments left over from previous sessions so the view always starts fresh.
+    if (isAcadSec(email)) {
+      const dbUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+      if (dbUser) await resetAcadSecScratchData(dbUser.id);
+    }
 
     // Auto-enroll in program if not already enrolled
     if (session.user.branch) {
