@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getProgramLookupBranchCode } from "@/lib/branchInfo";
+import { getProgramLookupBranchCode, isDataScienceBranch } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { canTakePassFailCourse } from "@/lib/course-validation";
@@ -118,6 +118,14 @@ export async function POST(
   if (normalizedCode.startsWith("HS")) detectedCategory = "HSS";
   if (normalizedCode.startsWith("IK") || normalizedCode === "IC181" || normalizedCode === "IC182") {
     detectedCategory = "IKS";
+  }
+  if (
+    detectedCategory === "CORE" &&
+    (user.branch === "CSE" || isDataScienceBranch(user.branch)) &&
+    (normalizedCode.startsWith("CS") || normalizedCode.startsWith("DS"))
+  ) {
+    detectedCategory = "DE";
+    finalCourseType = CourseType.DE;
   }
   const specialDpCourseType = getSpecialDpCourseType(course.code);
   if (specialDpCourseType) finalCourseType = specialDpCourseType as CourseType;
