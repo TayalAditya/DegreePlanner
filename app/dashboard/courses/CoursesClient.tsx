@@ -68,6 +68,8 @@ interface User {
   enrollmentId?: string | null;
 }
 
+type RegistrationType = "REGULAR" | "PASS_FAIL" | "AUDIT";
+
 // Color scheme for each category
 const categoryColors = {
   IC: { bg: "bg-info/10", text: "text-info", bar: "bg-info", border: "border-info/20" },
@@ -183,14 +185,19 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   const [semester, setSemester] = useState<string>("");
   const [grade, setGrade] = useState<string>("");
   const [courseType, setCourseType] = useState<string>("AUTO");
-  const [isPassFail, setIsPassFail] = useState(false);
-  const [isAudit, setIsAudit] = useState(false);
+  const [registrationType, setRegistrationType] = useState<RegistrationType>("REGULAR");
   const [submitting, setSubmitting] = useState(false);
   const [expandedDepartments, setExpandedDepartments] = useState<string[]>([]);
   const [departmentVisibleCounts, setDepartmentVisibleCounts] = useState<Record<string, number>>({});
   const [searchResultsLimit, setSearchResultsLimit] = useState(20);
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
+  const isPassFail = registrationType === "PASS_FAIL";
+  const isAudit = registrationType === "AUDIT";
+  const setIsPassFail = (enabled: boolean) =>
+    setRegistrationType(enabled ? "PASS_FAIL" : "REGULAR");
+  const setIsAudit = (enabled: boolean) =>
+    setRegistrationType(enabled ? "AUDIT" : "REGULAR");
 
   // Auto-calculate current semester from batch year (2023) + current date
   // Odd sems = Fall (Aug-Dec), Even sems = Spring (Jan-May)
@@ -736,14 +743,33 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     return "FREE_ELECTIVE";
   };
 
+  const getPassFailSourceCategory = (
+    course: Course,
+    selectedCourseType: string
+  ): "FE" | "HSS" | "IKS" | "DE" | null => {
+    const normalizedCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const mappedCategory = dbCourseCategoryMap.get(normalizedCode);
+
+    if (mappedCategory === "FE" || mappedCategory === "HSS" || mappedCategory === "IKS" || mappedCategory === "DE") {
+      return mappedCategory;
+    }
+    if (normalizedCode.startsWith("HS")) return "HSS";
+    if (normalizedCode.startsWith("IK") || normalizedCode === "IC181" || normalizedCode === "IC182") return "IKS";
+
+    const resolvedType = selectedCourseType === "AUTO"
+      ? determineCourseType(course)
+      : selectedCourseType;
+    if (resolvedType === "DE") return "DE";
+    if (resolvedType === "FREE_ELECTIVE" || resolvedType === "PE") return "FE";
+    return null;
+  };
+
   const handleAddCourse = (course: Course) => {
-    const norm = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    const isInternshipCourse = norm.endsWith("396P") || norm.endsWith("399P");
     setAddingCourse(course);
     setSemester(/^[A-Z]+-010$/i.test(course.code) ? "8" : "");
     setGrade("");
     setCourseType(determineCourseType(course));
-    setIsPassFail(isInternshipCourse);
+    setRegistrationType("REGULAR");
   };
 
   const inferBatchYear = () => {
@@ -783,6 +809,17 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
         finalCourseType = determineCourseType(addingCourse);
       }
 
+      const isPassFail = registrationType === "PASS_FAIL";
+      const isAudit = registrationType === "AUDIT";
+      const passFailSourceCategory = getPassFailSourceCategory(addingCourse, courseType);
+      if (isPassFail && !passFailSourceCategory) {
+        showToast("error", "Pass/Fail is only available for Free Electives, HSS/IKS, and Discipline Electives.");
+        return;
+      }
+      // P/F courses always consume the Free Elective basket, regardless of the
+      // category they would have used under regular grading.
+      if (isPassFail) finalCourseType = "FREE_ELECTIVE";
+
       const status = isAudit ? "AUDIT" : grade ? "COMPLETED" : semNum < 6 ? "COMPLETED" : "IN_PROGRESS";
 
       console.log("Frontend: Adding course to semester", semNum, "with status", status);
@@ -798,7 +835,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
           courseType: finalCourseType,
           grade: isAudit ? undefined : (grade || undefined),
           status,
-          isPassFail: !isAudit && isPassFail && finalCourseType === "FREE_ELECTIVE",
+          isPassFail,
         }),
       });
 
@@ -809,7 +846,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
           showToast("warning", `P/F removed from ${result.droppedPfCourses.join(", ")} — internship occupies the P/F budget.`);
         }
         setAddingCourse(null);
-        setIsAudit(false);
+        setRegistrationType("REGULAR");
         await loadData();
       } else {
         const error = await response.json();
@@ -1746,7 +1783,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                   <select
                     value={grade}
                     onChange={(e) => setGrade(e.target.value)}
-                    disabled={isAudit}
+                    disabled={registrationType === "AUDIT"}
                     className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="">No grade yet</option>
@@ -1776,7 +1813,12 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                     onChange={(e) => {
                       const next = e.target.value;
                       setCourseType(next);
-                      if (next !== "FREE_ELECTIVE") setIsPassFail(false);
+                      if (
+                        registrationType === "PASS_FAIL" &&
+                        !getPassFailSourceCategory(addingCourse, next)
+                      ) {
+                        setRegistrationType("REGULAR");
+                      }
                     }}
                     className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground"
                   >
@@ -1832,16 +1874,17 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                   </p>
                 </div>
 
-                {/* Pass/Fail Option (FE only) */}
+                {/* Registration type — Regular is the default when neither option is selected. */}
                 {(() => {
-                  const inferredType = courseType === "AUTO"
-                    ? determineCourseType(addingCourse)
-                    : courseType;
-                  const isFE = inferredType === "FREE_ELECTIVE";
-                  const canUsePF = isFE && passFailRemaining > 0;
+                  const passFailSourceCategory = getPassFailSourceCategory(addingCourse, courseType);
+                  const canUsePF = Boolean(passFailSourceCategory) && passFailRemaining >= addingCourse.credits;
 
                   return (
                     <>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">Registration Type</p>
+                        <p className="text-xs text-foreground-secondary">Regular is selected by default. Choose P/F or Audit below when needed.</p>
+                      </div>
                       <div className="p-4 bg-surface-hover rounded-lg border border-border">
                         <div className="flex items-center justify-between gap-4">
                           <div>
@@ -1849,8 +1892,12 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                             <p className="text-xs text-foreground-secondary">
                               You can take up to {maxPassFailCredits} P/F credits. Remaining: {passFailRemaining}.
                             </p>
-                            {!isFE && (
-                              <p className="text-xs text-foreground-secondary mt-1">Only Free Electives can be taken as P/F.</p>
+                            {passFailSourceCategory ? (
+                              <p className="text-xs text-success mt-1">
+                                {passFailSourceCategory} P/F will count as a Free Elective.
+                              </p>
+                            ) : (
+                              <p className="text-xs text-foreground-secondary mt-1">P/F is available only for Free Electives, HSS/IKS, and Discipline Electives.</p>
                             )}
                           </div>
                           <label className="inline-flex items-center gap-2">
@@ -1880,7 +1927,6 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                               onChange={(e) => {
                                 setIsAudit(e.target.checked);
                                 if (e.target.checked) {
-                                  setIsPassFail(false);
                                   setGrade("");
                                 }
                               }}

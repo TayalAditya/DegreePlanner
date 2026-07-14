@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
+import { canTakePassFailCourse } from "@/lib/course-validation";
 import { CourseType, EnrollmentStatus, Term } from "@prisma/client";
 
 // Odd semesters start in fall, even in spring
@@ -30,10 +31,13 @@ export async function POST(
   }
 
   const { id: userId } = await params;
-  const { courseCode, semester } = await request.json();
+  const { courseCode, semester, registrationType = "REGULAR" } = await request.json();
 
   if (!courseCode || !semester) {
     return NextResponse.json({ error: "courseCode and semester are required" }, { status: 400 });
+  }
+  if (!["REGULAR", "PASS_FAIL", "AUDIT"].includes(registrationType)) {
+    return NextResponse.json({ error: "Invalid registration type" }, { status: 400 });
   }
 
   const semNum = Number(semester);
@@ -92,6 +96,7 @@ export async function POST(
 
   // Auto-detect courseType from branch mapping
   let finalCourseType: CourseType = CourseType.CORE;
+  let detectedCategory = "CORE";
   if (user.branch) {
     const mapping = await prisma.courseBranchMapping.findFirst({
       where: { courseId: course.id, branch: user.branch },
@@ -99,11 +104,20 @@ export async function POST(
     });
     if (mapping) {
       const cat = mapping.courseCategory;
+      detectedCategory = cat;
       if (cat === "DE") finalCourseType = CourseType["DE"];
-      else if (cat === "FE" || cat === "NA" || cat === "INTERNSHIP") finalCourseType = CourseType["FREE_ELECTIVE"];
+      else if (cat === "FE" || cat === "NA" || cat === "INTERNSHIP") {
+        finalCourseType = CourseType["FREE_ELECTIVE"];
+        detectedCategory = "FE";
+      }
       else if (cat === "MTP") finalCourseType = CourseType["MTP"];
       else if (cat === "ISTP") finalCourseType = CourseType["ISTP"];
     }
+  }
+  const normalizedCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (normalizedCode.startsWith("HS")) detectedCategory = "HSS";
+  if (normalizedCode.startsWith("IK") || normalizedCode === "IC181" || normalizedCode === "IC182") {
+    detectedCategory = "IKS";
   }
   const specialDpCourseType = getSpecialDpCourseType(course.code);
   if (specialDpCourseType) finalCourseType = specialDpCourseType as CourseType;
@@ -111,23 +125,52 @@ export async function POST(
   const state = inferAcademicState(batchYear);
   const currentSem = state.currentSemester;
   const autoStatus = semNum < currentSem ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS;
+  const isPassFail = registrationType === "PASS_FAIL";
+  const isAudit = registrationType === "AUDIT";
 
-  const enrollment = await prisma.courseEnrollment.create({
-    data: {
-      userId,
-      courseId: course.id,
-      semester: semNum,
-      year,
-      term,
-      courseType: finalCourseType,
-      programId: finalProgramId,
-      status: autoStatus,
-      grade: null,
-      isPassFail: false,
-      passFailCredits: 0,
-      isInternship: false,
-    },
-    include: { course: true },
+  if (isPassFail) {
+    if (!["FE", "HSS", "IKS", "DE"].includes(detectedCategory)) {
+      return NextResponse.json(
+        { error: "Pass/Fail is only available for Free Electives, HSS/IKS, and Discipline Electives" },
+        { status: 400 }
+      );
+    }
+    const { allowed, reason } = await canTakePassFailCourse(userId, course.credits, semNum);
+    if (!allowed) {
+      return NextResponse.json({ error: reason || "Cannot take this course as Pass/Fail" }, { status: 400 });
+    }
+    // P/F always consumes the Free Elective basket, even when the regular
+    // classification would have been HSS/IKS or DE.
+    finalCourseType = CourseType.FREE_ELECTIVE;
+  }
+
+  const enrollment = await prisma.$transaction(async (tx) => {
+    const created = await tx.courseEnrollment.create({
+      data: {
+        userId,
+        courseId: course.id,
+        semester: semNum,
+        year,
+        term,
+        courseType: finalCourseType,
+        programId: finalProgramId,
+        status: isAudit ? EnrollmentStatus.AUDIT : autoStatus,
+        grade: null,
+        isPassFail,
+        passFailCredits: isPassFail ? course.credits : 0,
+        isInternship: false,
+      },
+      include: { course: true },
+    });
+
+    if (isPassFail) {
+      await tx.user.update({
+        where: { id: userId },
+        data: { totalPassFailCredits: { increment: course.credits } },
+      });
+    }
+
+    return created;
   });
 
   return NextResponse.json(enrollment, { status: 201 });

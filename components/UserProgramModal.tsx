@@ -127,11 +127,17 @@ interface CourseSearchResult {
   department?: string;
 }
 
+type RegistrationType = "REGULAR" | "PASS_FAIL" | "AUDIT";
+
 export function UserProgramModal({ userId, userName, onClose }: UserProgramModalProps) {
   const [view, setView] = useState<"progress" | "programs">("progress");
   const [deletingEnrollmentId, setDeletingEnrollmentId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [addForm, setAddForm] = useState({ courseCode: "", semester: "1" });
+  const [addForm, setAddForm] = useState<{
+    courseCode: string;
+    semester: string;
+    registrationType: RegistrationType;
+  }>({ courseCode: "", semester: "1", registrationType: "REGULAR" });
   const [courseSearch, setCourseSearch] = useState("");
   const [courseResults, setCourseResults] = useState<CourseSearchResult[]>([]);
   const [showCourseDropdown, setShowCourseDropdown] = useState(false);
@@ -216,7 +222,11 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
       const res = await fetch(`/api/admin/users/${userId}/enrollments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ courseCode: form.courseCode.trim(), semester: Number(form.semester) }),
+        body: JSON.stringify({
+          courseCode: form.courseCode.trim(),
+          semester: Number(form.semester),
+          registrationType: form.registrationType,
+        }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error || "Failed to add course");
@@ -225,7 +235,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     onSuccess: () => {
       showToast("success", "Course added");
       setShowAddForm(false);
-      setAddForm({ courseCode: "", semester: "1" });
+      setAddForm({ courseCode: "", semester: "1", registrationType: "REGULAR" });
       setCourseSearch("");
       setCourseResults([]);
       setDetectedCategory(null);
@@ -990,6 +1000,24 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                               >
                                 {[1,2,3,4,5,6,7,8].map((s) => <option key={s} value={s}>Semester {s}</option>)}
                               </select>
+                            </div>
+                            <div>
+                              <label className="block text-xs text-foreground-secondary mb-1">Registration Type</label>
+                              <select
+                                value={addForm.registrationType}
+                                onChange={(e) => setAddForm((f) => ({
+                                  ...f,
+                                  registrationType: e.target.value as RegistrationType,
+                                }))}
+                                className="w-full px-2.5 py-1.5 text-sm rounded-md border border-border bg-surface text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                              >
+                                <option value="REGULAR">Regular</option>
+                                <option value="PASS_FAIL">Pass/Fail — counts as FE</option>
+                                <option value="AUDIT">Audit — transcript only</option>
+                              </select>
+                              <p className="mt-1 text-xs text-foreground-secondary">
+                                P/F is allowed for FE, HSS/IKS, and DE. Audit never counts toward degree credits.
+                              </p>
                             </div>
                           </div>
                           <div className="flex gap-2 justify-end">
