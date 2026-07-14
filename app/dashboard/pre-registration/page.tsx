@@ -5,6 +5,7 @@ import { PreRegistrationSkeleton } from "./loading";
 import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check, EyeOff, Eye } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
+import { PlanImageDownloadButton } from "@/components/PlanImageDownloadButton";
 import { formatCredits, formatCourseCode } from "@/lib/utils";
 import { MINORS } from "@/lib/minors";
 
@@ -1848,14 +1849,25 @@ export default function PreRegistrationPage() {
                   )}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowPlanTable(false)}
-                className="h-9 w-9 rounded-lg border border-border text-xl leading-none text-foreground-secondary hover:bg-surface-hover hover:text-foreground"
-                aria-label="Close course plan"
-              >
-                ×
-              </button>
+              <div className="flex items-center gap-2">
+                <PlanImageDownloadButton
+                  semester={data.offeringSemester}
+                  term={data.term}
+                  year={data.offeringYear}
+                  studentName={data.studentInfo?.name}
+                  branch={data.studentInfo?.branch}
+                  courses={plannedCourses}
+                  categoryLabels={CATEGORY_LABEL}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPlanTable(false)}
+                  className="h-9 w-9 rounded-lg border border-border text-xl leading-none text-foreground-secondary hover:bg-surface-hover hover:text-foreground"
+                  aria-label="Close course plan"
+                >
+                  ×
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-auto">
               <table className="w-full min-w-[820px] text-sm">
