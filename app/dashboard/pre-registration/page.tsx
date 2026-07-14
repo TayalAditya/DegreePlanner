@@ -1047,27 +1047,54 @@ export default function PreRegistrationPage() {
   const handleCopyCourses = async () => {
     if (!data) return;
 
-    const allCourses: { code: string; name: string; credits: number; slots: string | null; category: string }[] = [];
+    const allCourses: {
+      code: string;
+      name: string;
+      credits: number;
+      slots: string | null;
+      category: string;
+      registrationType: RegType;
+    }[] = [];
 
     for (const o of data.offerings) {
       if (o.completedInSemester !== null) continue;
       if (!o.isCompulsory && !selected.has(o.id)) continue;
-      const cat = o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory;
-      allCourses.push({ code: o.courseCode, name: o.courseName, credits: o.credits, slots: o.slots, category: cat });
+      const registrationType = regTypes.get(o.id) ?? "REGULAR";
+      const regularCategory = o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory;
+      const category = registrationType === "PASS_FAIL"
+        ? "FE"
+        : registrationType === "AUDIT"
+          ? "AUDIT"
+          : regularCategory;
+      allCourses.push({
+        code: o.courseCode,
+        name: o.courseName,
+        credits: o.credits,
+        slots: o.slots,
+        category,
+        registrationType,
+      });
     }
 
     const extraItems = [
-      ...internshipCourses.p399.map(c => ({ ...c, category: "FE" })),
-      ...internshipCourses.p396.map(c => ({ ...c, category: "FE" })),
-      ...(mtp1Course ? [{ ...mtp1Course, category: "MTP" }] : []),
+      ...internshipCourses.p399.map(c => ({ ...c, category: "FE", registrationType: "PASS_FAIL" as RegType })),
+      ...internshipCourses.p396.map(c => ({ ...c, category: "FE", registrationType: "PASS_FAIL" as RegType })),
+      ...(mtp1Course ? [{ ...mtp1Course, category: "MTP", registrationType: "REGULAR" as RegType }] : []),
     ];
     for (const c of extraItems) {
       if (selectedExtra.has(c.id)) {
-        allCourses.push({ code: formatCourseCode(c.code), name: c.name, credits: c.credits, slots: null, category: c.category });
+        allCourses.push({
+          code: formatCourseCode(c.code),
+          name: c.name,
+          credits: c.credits,
+          slots: null,
+          category: c.category,
+          registrationType: c.registrationType,
+        });
       }
     }
 
-    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP"];
+    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP", "AUDIT"];
     const grouped = new Map<string, typeof allCourses>();
     for (const c of allCourses) {
       const list = grouped.get(c.category) ?? [];
@@ -1082,22 +1109,38 @@ export default function PreRegistrationPage() {
     let text = `${studentName} | ${branch} | Semester ${sem}\nPre-Registration Plan\n`;
     let totalCourses = 0;
     let totalCredits = 0;
+    let auditCredits = 0;
 
     for (const cat of ORDER) {
       const courses = grouped.get(cat);
       if (!courses || courses.length === 0) continue;
-      const catLabel = CATEGORY_LABEL[cat] ?? cat;
-      const catCredits = courses.reduce((s, c) => s + c.credits, 0);
+      const catLabel = cat === "AUDIT" ? "Audit (not in degree)" : (CATEGORY_LABEL[cat] ?? cat);
+      const catCredits = courses
+        .filter((c) => c.registrationType !== "AUDIT")
+        .reduce((s, c) => s + c.credits, 0);
+      const catAuditCredits = courses
+        .filter((c) => c.registrationType === "AUDIT")
+        .reduce((s, c) => s + c.credits, 0);
       totalCourses += courses.length;
       totalCredits += catCredits;
-      text += `\n${catLabel} (${courses.length} course${courses.length !== 1 ? "s" : ""}, ${formatCredits(catCredits)} cr)\n`;
+      auditCredits += catAuditCredits;
+      const creditLabel = catAuditCredits > 0
+        ? `${formatCredits(catCredits)} degree cr, ${formatCredits(catAuditCredits)} audit cr`
+        : `${formatCredits(catCredits)} cr`;
+      text += `\n${catLabel} (${courses.length} course${courses.length !== 1 ? "s" : ""}, ${creditLabel})\n`;
       for (const c of courses) {
         const slot = c.slots ? ` [${c.slots}]` : "";
-        text += `• ${c.code} — ${c.name} (${formatCredits(c.credits)} cr)${slot}\n`;
+        const registrationLabel = c.registrationType === "PASS_FAIL"
+          ? "P/F → FE"
+          : c.registrationType === "AUDIT"
+            ? "Audit — transcript only"
+            : "Regular";
+        text += `• ${c.code} — ${c.name} (${formatCredits(c.credits)} cr)${slot} · ${registrationLabel}\n`;
       }
     }
 
-    text += `\nTotal: ${totalCourses} courses, ${formatCredits(totalCredits)} cr`;
+    text += `\nTotal: ${totalCourses} courses, ${formatCredits(totalCredits)} degree credits`;
+    if (auditCredits > 0) text += ` (${formatCredits(auditCredits)} audit credits excluded)`;
 
     try {
       await navigator.clipboard.writeText(text);
