@@ -12,8 +12,8 @@ const EMOJI_OPTIONS = [
   { key: "great_ux", emoji: "🚀", label: "Great UX" },
 ] as const;
 
-const COOLDOWN_MS = 24 * 60 * 60 * 1000;
-const LS_KEY = "feedback_last_submitted";
+const COOLDOWN_MS = 12 * 60 * 60 * 1000;
+const LS_KEY = "pmd.🌟.last_vibe_check";
 
 function canSubmit(): boolean {
   try {
@@ -44,7 +44,7 @@ export function FeedbackButton() {
 
   const handleOpen = () => {
     if (!canSubmit()) {
-      showToast("info", "You've already shared feedback today — thanks! 🙏");
+      showToast("info", "You've already shared feedback recently — try again in a bit! 🙏");
       return;
     }
     setOpen(true);
