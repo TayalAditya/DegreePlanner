@@ -168,7 +168,9 @@ export async function GET(req: NextRequest) {
     });
 
     return NextResponse.json(sanitized, {
-      headers: { "Cache-Control": "public, max-age=600, stale-while-revalidate=300" },
+      // The catalog is edited directly by admins, so a stale browser/CDN response
+      // makes newly added or corrected courses appear missing for up to 15 minutes.
+      headers: { "Cache-Control": "private, no-store" },
     });
   } catch (error) {
     console.error("Error fetching courses:", error);

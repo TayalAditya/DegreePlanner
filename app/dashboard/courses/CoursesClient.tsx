@@ -227,7 +227,9 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   useEffect(() => {
     if (tab !== "catalog" || catalogLoaded || allCourses.length > 0) return;
     setCatalogLoaded(true);
-    fetch("/api/courses")
+    // Course catalog changes (including admin/SemEx updates) must be visible
+    // immediately instead of showing the browser's cached catalog snapshot.
+    fetch("/api/courses", { cache: "no-store" })
       .then(r => r.ok ? r.json() : [])
       .then(data => setAllCourses(data))
       .catch(() => {});
