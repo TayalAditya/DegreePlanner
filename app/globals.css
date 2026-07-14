@@ -605,12 +605,21 @@ html {
   }
 }
 
+@keyframes feedback-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
 .animate-star-pop {
   animation: star-pop 0.3s ease-out;
 }
 
 .animate-feedback-burst {
   animation: feedback-burst 0.8s ease-out forwards;
+}
+
+.animate-feedback-float {
+  animation: feedback-float 3s ease-in-out infinite;
 }
 
 /* Smooth transitions for better UX on slow connections */

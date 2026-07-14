@@ -91,17 +91,18 @@ export function FeedbackButton() {
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button — hidden on mobile to avoid clashing with nav */}
       <button
         ref={buttonRef}
         type="button"
         onClick={handleOpen}
-        className="fixed bottom-6 left-6 z-40 inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary text-white shadow-lg shadow-primary/20 hover:bg-primary-hover focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 active:scale-95 transition-all duration-150 no-print"
+        className="hidden md:inline-flex fixed bottom-6 left-6 z-40 group items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 text-white shadow-xl shadow-fuchsia-500/30 hover:shadow-fuchsia-500/50 hover:scale-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-fuchsia-400/40 active:scale-95 transition-all duration-300 no-print animate-feedback-float"
         aria-label="Give feedback"
       >
-        <MessageSquareHeart className="w-5 h-5" />
+        <span className="text-2xl group-hover:animate-star-pop">💬</span>
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-400 rounded-full border-2 border-white animate-pulse text-[8px] flex items-center justify-center font-bold">✦</span>
         {showBurst && (
-          <span className="absolute inset-0 rounded-full animate-feedback-burst pointer-events-none" />
+          <span className="absolute inset-0 rounded-2xl animate-feedback-burst pointer-events-none" />
         )}
       </button>
 
