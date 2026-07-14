@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { MTP_COMPONENT_CREDITS } from "@/lib/mtpConfig";
 import { addCredits, formatCredits, sumCredits } from "@/lib/utils";
+import { getBranchCandidates, normalizeBranchCode } from "@/lib/branchInfo";
 import { EnrollmentStatus } from "@prisma/client";
 
 /**
@@ -232,7 +233,16 @@ export async function validateBranchSpecificCourse(
 
   // Check if it's branch-specific
   if (course.isBranchSpecific) {
-    if (!course.requiredBranches.includes(user.branch)) {
+    const normalizedUserBranch = normalizeBranchCode(user.branch);
+    const allowedBranches = new Set(course.requiredBranches.map(normalizeBranchCode));
+    // GE's base programme code is intentionally not a fallback for a specialised
+    // GE profile here: a course can list GE-MECH/GERAI/GECE explicitly without
+    // also admitting every other GE specialisation.
+    const eligibleBranchCandidates = getBranchCandidates(user.branch)
+      .map(normalizeBranchCode)
+      .filter((branch) => !(normalizedUserBranch.startsWith("GE-") && branch === "GE"));
+
+    if (!eligibleBranchCandidates.some((branch) => allowedBranches.has(branch))) {
       return {
         valid: false,
         reason: `This course is only for branches: ${course.requiredBranches.join(", ")}`,
