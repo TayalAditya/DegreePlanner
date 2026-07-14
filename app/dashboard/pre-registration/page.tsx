@@ -452,7 +452,7 @@ function CourseCard({
               `Respected ${salutation},\n\nI would like to enquire if ${courseRef} is being offered to ${semBranch} students this semester, as I am keen on registering for it.\n\nThank you,\n${studentName}`,
             ];
             const subject = encodeURIComponent(`Inquiry Regarding ${code} - ${name}`);
-            const body = encodeURIComponent(BODY_VARIANTS[Math.floor(Math.random() * BODY_VARIANTS.length)]);
+            const body = encodeURIComponent(BODY_VARIANTS[0]);
             return (
               <a
                 href={`mailto:${offering.instructorEmail.split(/[;,]\s*/).join(",")}?subject=${subject}&body=${body}`}
@@ -744,7 +744,8 @@ export default function PreRegistrationPage() {
           };
           const branch = (d.studentInfo?.branch ?? "").toUpperCase();
           const sem = d.offeringSemester ?? 0;
-          const prefix = BRANCH_PREFIX[branch] ?? null;
+          // GE specialisations share the GE internship and MTP course codes.
+          const prefix = BRANCH_PREFIX[branch] ?? (branch.startsWith("GE-") ? "GE" : null);
           const norm = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
           // Internship only eligible from Sem 6 onwards
           if (sem >= 6 && prefix) {

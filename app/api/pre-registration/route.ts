@@ -144,19 +144,30 @@ export async function GET() {
     completed.map((e) => [e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, ""), e.semester])
   );
 
-  // Apply course equivalencies from DB: if student completed an exchange course, treat the IIT Mandi equivalent as done.
-  // Track which course actually satisfied it so the UI can explain why the equivalent is locked.
+  // Apply course equivalencies in both directions. CourseEquivalent is stored
+  // as a directed record, but a completed code must satisfy either side of the
+  // pair (for example B23 GE-Mech EE-301 satisfies the EE-302 offering too).
+  // Track which course actually satisfied it so the UI can explain why the
+  // equivalent is locked.
   const completedViaByCourseId = new Map<string, string>();
   const completedViaByCourseCode = new Map<string, string>();
+  const markEquivalentCompleted = (
+    sourceId: string,
+    sourceCode: string,
+    targetId: string,
+    targetCode: string
+  ) => {
+    const sem = completedByCourseId.get(sourceId);
+    if (sem === undefined || completedByCourseId.has(targetId)) return;
+    completedByCourseId.set(targetId, sem);
+    const targetNormCode = targetCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    completedByCourseCode.set(targetNormCode, sem);
+    completedViaByCourseId.set(targetId, sourceCode);
+    completedViaByCourseCode.set(targetNormCode, sourceCode);
+  };
   for (const eq of equivalencies) {
-    const sem = completedByCourseId.get(eq.courseId);
-    if (sem !== undefined && !completedByCourseId.has(eq.equivalent.id)) {
-      completedByCourseId.set(eq.equivalent.id, sem);
-      const eqNormCode = eq.equivalent.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-      completedByCourseCode.set(eqNormCode, sem);
-      completedViaByCourseId.set(eq.equivalent.id, eq.course.code);
-      completedViaByCourseCode.set(eqNormCode, eq.course.code);
-    }
+    markEquivalentCompleted(eq.courseId, eq.course.code, eq.equivalent.id, eq.equivalent.code);
+    markEquivalentCompleted(eq.equivalent.id, eq.equivalent.code, eq.courseId, eq.course.code);
   }
 
   // IC-181 & IC-182 are IKS basket — only one counts. If either is done, the other is not compulsory.
