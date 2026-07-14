@@ -14,8 +14,8 @@ const feedbackSchema = z
     emoji: z.enum(EMOJI_KEYS).optional(),
     message: z.string().trim().max(2000).optional(),
   })
-  .refine((d) => d.emoji || d.message, {
-    message: "Provide a reaction or a message",
+  .refine((d) => d.rating !== undefined || d.emoji || d.message, {
+    message: "Provide a rating, reaction, or message",
   });
 
 export async function GET(req: NextRequest) {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { MessageSquareHeart, X, Send } from "lucide-react";
+import { MessageSquareHeart, X, Send, Star } from "lucide-react";
 import { useToast } from "./ToastProvider";
 
 const EMOJI_OPTIONS = [
@@ -30,6 +30,7 @@ export function FeedbackButton() {
   const { showToast } = useToast();
 
   const [open, setOpen] = useState(false);
+  const [rating, setRating] = useState<number | null>(null);
   const [selectedEmoji, setSelectedEmoji] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -44,13 +45,14 @@ export function FeedbackButton() {
       return;
     }
     setOpen(true);
+    setRating(null);
     setSelectedEmoji(null);
     setMessage("");
   };
 
   const handleSubmit = async () => {
-    if (!selectedEmoji && !message.trim()) {
-      showToast("warning", "Pick a reaction or leave a comment 🙂");
+    if (!rating) {
+      showToast("warning", "Please select a star rating first.");
       return;
     }
 
@@ -60,6 +62,7 @@ export function FeedbackButton() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          rating,
           emoji: selectedEmoji || undefined,
           message: message.trim() || undefined,
         }),
@@ -124,10 +127,31 @@ export function FeedbackButton() {
                 <span>{user.branch || "—"}</span>
               </div>
 
+              <div className="mb-5">
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Rate your experience
+                </label>
+                <div className="flex items-center gap-1.5" aria-label="Star rating">
+                  {[1, 2, 3, 4, 5].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setRating(value)}
+                      className="rounded-md p-1 text-amber-400 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                      aria-label={`${value} star${value === 1 ? "" : "s"}`}
+                      aria-pressed={rating === value}
+                    >
+                      <Star className="h-7 w-7" fill={rating !== null && value <= rating ? "currentColor" : "none"} />
+                    </button>
+                  ))}
+                  <span className="ml-2 text-xs text-foreground-secondary">{rating ? `${rating}/5` : "Required"}</span>
+                </div>
+              </div>
+
               {/* Emoji reactions */}
               <div className="mb-5">
                 <label className="text-sm font-medium text-foreground mb-2 block">
-                  Quick reaction
+                  Quick reaction <span className="text-foreground-secondary font-normal">(optional)</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {EMOJI_OPTIONS.map((opt) => (
@@ -185,7 +209,7 @@ export function FeedbackButton() {
                 </button>
                 <button
                   onClick={handleSubmit}
-                  disabled={submitting || (!selectedEmoji && !message.trim())}
+                  disabled={submitting || !rating}
                   className="dp-btn dp-btn-primary"
                 >
                   {submitting ? (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Clock3, MessageSquareHeart, Send } from "lucide-react";
+import { Clock3, MessageSquareHeart, Send, Star } from "lucide-react";
 
 const FEEDBACK_OPTIONS = [
   { key: "useful", label: "Useful" },
@@ -25,6 +25,7 @@ function formatRemaining(milliseconds: number) {
 export function MaintenanceScreen({ endsAt, message }: MaintenanceScreenProps) {
   const endTime = useMemo(() => new Date(endsAt).getTime(), [endsAt]);
   const [now, setNow] = useState(() => Date.now());
+  const [rating, setRating] = useState<number | null>(null);
   const [emoji, setEmoji] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
   const [feedbackState, setFeedbackState] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -43,7 +44,7 @@ export function MaintenanceScreen({ endsAt, message }: MaintenanceScreenProps) {
   }, [remaining]);
 
   const submitFeedback = async () => {
-    if (!emoji && !feedback.trim()) return;
+    if (!rating) return;
 
     setFeedbackState("sending");
     try {
@@ -51,6 +52,7 @@ export function MaintenanceScreen({ endsAt, message }: MaintenanceScreenProps) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          rating,
           emoji: emoji || undefined,
           message: feedback.trim() || undefined,
         }),
@@ -58,6 +60,7 @@ export function MaintenanceScreen({ endsAt, message }: MaintenanceScreenProps) {
 
       if (!response.ok) throw new Error("Feedback submission failed");
       setFeedbackState("sent");
+      setRating(null);
       setFeedback("");
       setEmoji(null);
     } catch {
@@ -101,6 +104,25 @@ export function MaintenanceScreen({ endsAt, message }: MaintenanceScreenProps) {
             </div>
             <p className="mt-1 text-sm text-slate-300">What should we improve next?</p>
 
+            <div className="mt-4">
+              <p className="text-sm font-medium text-white">Rate your experience</p>
+              <div className="mt-2 flex items-center gap-1.5" aria-label="Star rating">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setRating(value)}
+                    className="rounded-md p-1 text-amber-300 transition-transform hover:scale-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    aria-label={`${value} star${value === 1 ? "" : "s"}`}
+                    aria-pressed={rating === value}
+                  >
+                    <Star className="h-7 w-7" fill={rating !== null && value <= rating ? "currentColor" : "none"} />
+                  </button>
+                ))}
+                <span className="ml-2 text-xs text-slate-400">{rating ? `${rating}/5` : "Required"}</span>
+              </div>
+            </div>
+
             <div className="mt-4 flex flex-wrap gap-2">
               {FEEDBACK_OPTIONS.map((option) => (
                 <button
@@ -132,12 +154,12 @@ export function MaintenanceScreen({ endsAt, message }: MaintenanceScreenProps) {
                   ? "Thanks — your feedback was saved."
                   : feedbackState === "error"
                   ? "Could not save feedback. Please try again."
-                  : "Feedback is saved even while maintenance is active."}
+                  : "A star rating is required. Feedback is saved even while maintenance is active."}
               </p>
               <button
                 type="button"
                 onClick={submitFeedback}
-                disabled={feedbackState === "sending" || (!emoji && !feedback.trim())}
+                disabled={feedbackState === "sending" || !rating}
                 className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Send className="h-4 w-4" />
