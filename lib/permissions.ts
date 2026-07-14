@@ -7,6 +7,7 @@ export const ACAD_SEC_EMAILS = new Set<string>([
   "adcourses@iitmandi.ac.in",
   "vaibhav@iitmandi.ac.in",
   "vishalparmar@iitmandi.ac.in",
+  "deanacad@students.iitmandi.ac.in",
 ]);
 
 export function isAcadSec(email?: string | null): boolean {

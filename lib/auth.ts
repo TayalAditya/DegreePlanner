@@ -354,6 +354,16 @@ export const authOptions: NextAuthOptions = {
       };
 
       if (!approvedUser) {
+        // Acad-secretary / admin accounts are identified by ACAD_SEC_EMAILS (the source
+        // of truth), not by an ApprovedUser row. Allow them in even without a row so the
+        // set doesn't need a parallel DB row per email. They preview via impersonation,
+        // so branch/batch stay null — that's fine.
+        if (isAcadSecEmail(user.email)) {
+          console.log("Login allowed for acad-sec account without ApprovedUser row:", user.email);
+          await logAttempt("approved", "acad_sec_no_row");
+          return true;
+        }
+
         const domain = user.email.split("@")[1]?.toLowerCase();
         if (domain === "students.iitmandi.ac.in") {
           console.log("Login allowed for unapproved IIT Mandi student:", user.email);
@@ -439,7 +449,7 @@ export const authOptions: NextAuthOptions = {
 
           if (approvedUser) {
             const isDocumentsAdmin = (approvedUser.enrollmentId || "").toUpperCase() === DOCS_ADMIN_ENROLLMENT_ID;
-            
+
             // Store in token
             token.isApproved = true;
             token.role = isDocumentsAdmin ? "ADMIN" : "STUDENT";
@@ -465,7 +475,7 @@ export const authOptions: NextAuthOptions = {
               // User might not exist yet if PrismaAdapter hasn't run
               console.log("User update failed (expected on first login)");
             }
-            
+
             // Auto-enroll in program
             if (approvedUser.branch) {
               try {
@@ -473,7 +483,7 @@ export const authOptions: NextAuthOptions = {
                   where: { email: user.email },
                   select: { id: true },
                 });
-                
+
                 if (dbUser) {
                   // Use batch-specific program first (e.g. CE_B24), fall back to generic (CE)
                   const lookupCode = getProgramLookupBranchCode(approvedUser.branch, approvedUser.batch);
@@ -511,6 +521,35 @@ export const authOptions: NextAuthOptions = {
               } catch (err) {
                 console.log("Program enrollment failed (expected on first login)");
               }
+            }
+          } else if (isAcadSecEmail(user.email)) {
+            // Acad-sec without an ApprovedUser row — grant isApproved and the same
+            // STUDENT role that acad-sec accounts WITH a row get (e.g. sae@iitmandi.ac.in).
+            // Acad-sec powers (branch exemption + impersonation) come from isAcadSec(),
+            // not from the role. Leave branch/batch/enrollmentId null so impersonation
+            // is required.
+            token.isApproved = true;
+            token.role = "STUDENT";
+            token.enrollmentId = null;
+            token.department = null;
+            token.branch = null;
+            token.batch = null;
+
+            // Sync to User table
+            try {
+              await prisma.user.update({
+                where: { email: user.email },
+                data: {
+                  isApproved: true,
+                  role: "STUDENT",
+                  enrollmentId: null,
+                  department: null,
+                  branch: null,
+                  batch: null,
+                },
+              });
+            } catch (err) {
+              console.log("Acad-sec user update failed (expected on first login)");
             }
           }
         } catch (error: any) {
