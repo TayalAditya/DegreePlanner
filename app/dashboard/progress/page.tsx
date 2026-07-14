@@ -1177,8 +1177,48 @@ export default function ProgressPage() {
           semester: number;
         };
         const coursesByCat: Record<string, CategorizedCourse[]> = {};
+        const hssCoreCap = Number(progress.creditsRequiredByCategory.HSS ?? HSS_CORE_CAP_DEFAULT);
+        let hssIksUsedForList = 0;
+        const addCourseAllocation = (
+          category: string,
+          course: any,
+          credits: number,
+          sourceCredits?: number
+        ) => {
+          if (credits <= 0) return;
+          if (!coursesByCat[category]) coursesByCat[category] = [];
+          coursesByCat[category].push({ ...course, credits, sourceCredits });
+        };
+
         for (const sem of Object.values(semesterCourses)) {
           for (const c of sem as any[]) {
+            // HSS and IKS share one 20-credit basket. Recalculate their display
+            // allocation here so the detailed list always shows the same spill
+            // into FE as the category totals (for example, 1 HSS + 2 FE of a
+            // 3-credit course when the 15-credit HSS cap is crossed).
+            if (c.category === "HSS" || c.category === "IKS") {
+              const sourceCredits = Number(c.credits ?? 0);
+              const hssCredits = Math.max(
+                0,
+                Math.min(sourceCredits, hssCoreCap - hssIksUsedForList)
+              );
+              const feCredits = Math.max(
+                0,
+                Math.min(
+                  sourceCredits - hssCredits,
+                  HSS_FE_CAP - Math.max(hssCoreCap, hssIksUsedForList)
+                )
+              );
+              const notInDegreeCredits = Math.max(0, sourceCredits - hssCredits - feCredits);
+              const isSplit = hssCredits > 0 && hssCredits < sourceCredits;
+
+              addCourseAllocation("HSS", c, hssCredits, isSplit ? sourceCredits : undefined);
+              addCourseAllocation("FE", c, feCredits, sourceCredits);
+              addCourseAllocation("NOT_IN_DEGREE", c, notInDegreeCredits, sourceCredits);
+              hssIksUsedForList = addCredits(hssIksUsedForList, hssCredits, feCredits);
+              continue;
+            }
+
             const splitCredits = Number(c.splitCredits ?? 0);
             const hasSplit =
               Boolean(c.splitCategory) && splitCredits > 0 && splitCredits < Number(c.credits ?? 0);
@@ -1188,16 +1228,10 @@ export default function ProgressPage() {
             const sourceCredits = hasSplit ? Number(c.credits ?? 0) : undefined;
 
             if (primaryCredits > 0) {
-              if (!coursesByCat[c.category]) coursesByCat[c.category] = [];
-              coursesByCat[c.category].push({ ...c, credits: primaryCredits, sourceCredits });
+              addCourseAllocation(c.category, c, primaryCredits, sourceCredits);
             }
             if (hasSplit) {
-              if (!coursesByCat[c.splitCategory]) coursesByCat[c.splitCategory] = [];
-              coursesByCat[c.splitCategory].push({
-                ...c,
-                credits: splitCredits,
-                sourceCredits,
-              });
+              addCourseAllocation(c.splitCategory, c, splitCredits, sourceCredits);
             }
           }
         }
