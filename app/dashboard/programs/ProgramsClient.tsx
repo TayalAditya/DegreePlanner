@@ -208,7 +208,8 @@ export default function ProgramsClient({
         // Only fetch progress here — programs/enrollments/settings are seeded from
         // the server render. /api/progress needs client-only minor-planner params.
         const progressRes = await fetch(
-          `/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}${minorCountedCodesParam}`
+          `/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}${minorCountedCodesParam}`,
+          { cache: "no-store" }
         );
 
         if (progressRes.ok) {
@@ -248,10 +249,11 @@ export default function ProgramsClient({
 
       const [progressRes, enrollmentsRes, userRes] = await Promise.all([
         fetch(
-          `/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}${minorCountedCodesParam}`
+          `/api/progress?programId=${encodeURIComponent(primaryProgram.program.id)}${minorCodesParam}${minorCountedCodesParam}`,
+          { cache: "no-store" }
         ),
-        fetch("/api/enrollments"),
-        fetch("/api/user/settings"),
+        fetch("/api/enrollments", { cache: "no-store" }),
+        fetch("/api/user/settings", { cache: "no-store" }),
       ]);
 
       if (progressRes.ok) {
@@ -287,11 +289,12 @@ export default function ProgramsClient({
     setSavingPrefs(true);
     setSavedPrefs(false);
     try {
-      await fetch("/api/user/settings", {
+      const response = await fetch("/api/user/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ doingMTP: mtp1, doingMTP2: mtp2, doingISTP: istp }),
       });
+      if (!response.ok) throw new Error("Could not save project preferences");
       setSavedPrefs(true);
       setTimeout(() => setSavedPrefs(false), 2000);
       await refreshExtras();
