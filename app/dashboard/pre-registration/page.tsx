@@ -338,6 +338,8 @@ function CourseCard({
   onRegTypeChange?: (id: string, type: RegType) => void;
 }) {
   const isCompleted = offering.completedInSemester !== null;
+  const normalizedCourseCode = offering.courseCode.replace(/[^A-Z0-9]/gi, "");
+  const slotLabel = offering.slots || (/(?:396P|399P|498P)$/i.test(normalizedCourseCode) ? "NS" : null);
   const catColor = CATEGORY_COLOR[offering.resolvedCategory] ?? "bg-surface-secondary text-foreground-secondary";
   const catLabel = CATEGORY_LABEL[offering.resolvedCategory] ?? offering.resolvedCategory;
 
@@ -412,7 +414,7 @@ function CourseCard({
 
         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-foreground-secondary">
           {offering.instructor && <span>{offering.instructor}</span>}
-          {offering.slots && <span className="font-mono">{offering.slots}</span>}
+          {slotLabel && <span className="font-mono" title={slotLabel === "NS" ? "No scheduled slot" : undefined}>{slotLabel}</span>}
           {offering.ltpc && <span>{offering.ltpc}</span>}
           <span className="font-medium">{formatCredits(offering.credits)} cr</span>
         </div>
