@@ -118,7 +118,7 @@ function registrationLabel(course: PlanImageCourse, categoryLabels: Record<strin
   return `Regular - ${categoryLabels[course.category] ?? course.category}`;
 }
 
-async function renderPlanImage({
+export async function createPlanImageBlob({
   semester,
   term,
   year,
@@ -293,7 +293,7 @@ export function PlanImageDownloadButton(props: PlanImageDownloadButtonProps) {
   const handleDownload = async () => {
     setCreatingImage(true);
     try {
-      const image = await renderPlanImage(props);
+      const image = await createPlanImageBlob(props);
       const url = URL.createObjectURL(image);
       const link = document.createElement("a");
       link.href = url;

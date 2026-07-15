@@ -5,7 +5,7 @@ import { PreRegistrationSkeleton } from "./loading";
 import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check, EyeOff, Eye } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
-import { PlanImageDownloadButton } from "@/components/PlanImageDownloadButton";
+import { PlanImageDownloadButton, createPlanImageBlob } from "@/components/PlanImageDownloadButton";
 import { formatCredits, formatCourseCode } from "@/lib/utils";
 import { MINORS } from "@/lib/minors";
 import { getBatch23FacultyAdvisor } from "@/lib/batch23FacultyAdvisors";
@@ -1184,111 +1184,30 @@ export default function PreRegistrationPage() {
     }
   };
 
-  const handleCopyCourses = async () => {
+  const handleCopyPlanImage = async () => {
     if (!data) return;
 
-    const allCourses: {
-      code: string;
-      name: string;
-      credits: number;
-      slots: string | null;
-      category: string;
-      registrationType: RegType;
-    }[] = [];
-
-    for (const o of data.offerings) {
-      if (o.completedInSemester !== null) continue;
-      if (!o.isCompulsory && !selected.has(o.id)) continue;
-      const registrationType = regTypes.get(o.id) ?? "REGULAR";
-      const regularCategory = o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory;
-      const category = registrationType === "PASS_FAIL"
-        ? "FE"
-        : registrationType === "AUDIT"
-          ? "AUDIT"
-          : regularCategory;
-      allCourses.push({
-        code: o.courseCode,
-        name: o.courseName,
-        credits: o.credits,
-        slots: o.slots,
-        category,
-        registrationType,
-      });
+    if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+      showToast("warning", "Image copy is not supported in this browser. Use Get as Photo instead.");
+      return;
     }
-
-    const extraItems = [
-      ...internshipCourses.p399.map(c => ({ ...c, category: "FE", registrationType: "PASS_FAIL" as RegType })),
-      ...internshipCourses.p396.map(c => ({ ...c, category: "FE", registrationType: "PASS_FAIL" as RegType })),
-      ...(mtp1Course ? [{ ...mtp1Course, category: "MTP", registrationType: "REGULAR" as RegType }] : []),
-    ];
-    for (const c of extraItems) {
-      if (selectedExtra.has(c.id)) {
-        allCourses.push({
-          code: formatCourseCode(c.code),
-          name: c.name,
-          credits: c.credits,
-          slots: null,
-          category: c.category,
-          registrationType: c.registrationType,
-        });
-      }
-    }
-
-    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP", "AUDIT"];
-    const grouped = new Map<string, typeof allCourses>();
-    for (const c of allCourses) {
-      const list = grouped.get(c.category) ?? [];
-      list.push(c);
-      grouped.set(c.category, list);
-    }
-
-    const studentName = data.studentInfo?.name ?? "Student";
-    const branch = data.studentInfo?.branch ?? "";
-    const sem = data.offeringSemester;
-
-    let text = `${studentName} | ${branch} | Semester ${sem}\nPre-Registration Plan\n`;
-    let totalCourses = 0;
-    let totalCredits = 0;
-    let auditCredits = 0;
-
-    for (const cat of ORDER) {
-      const courses = grouped.get(cat);
-      if (!courses || courses.length === 0) continue;
-      const catLabel = cat === "AUDIT" ? "Audit (not in degree)" : (CATEGORY_LABEL[cat] ?? cat);
-      const catCredits = courses
-        .filter((c) => c.registrationType !== "AUDIT")
-        .reduce((s, c) => s + c.credits, 0);
-      const catAuditCredits = courses
-        .filter((c) => c.registrationType === "AUDIT")
-        .reduce((s, c) => s + c.credits, 0);
-      totalCourses += courses.length;
-      totalCredits += catCredits;
-      auditCredits += catAuditCredits;
-      const creditLabel = catAuditCredits > 0
-        ? `${formatCredits(catCredits)} degree cr, ${formatCredits(catAuditCredits)} audit cr`
-        : `${formatCredits(catCredits)} cr`;
-      text += `\n${catLabel} (${courses.length} course${courses.length !== 1 ? "s" : ""}, ${creditLabel})\n`;
-      for (const c of courses) {
-        const slot = c.slots ? ` [${c.slots}]` : "";
-        const registrationLabel = c.registrationType === "PASS_FAIL"
-          ? "P/F → FE"
-          : c.registrationType === "AUDIT"
-            ? "Audit — transcript only"
-            : "Regular";
-        text += `• ${c.code} — ${c.name} (${formatCredits(c.credits)} cr)${slot} · ${registrationLabel}\n`;
-      }
-    }
-
-    text += `\nTotal: ${totalCourses} courses, ${formatCredits(totalCredits)} degree credits`;
-    if (auditCredits > 0) text += ` (${formatCredits(auditCredits)} audit credits excluded)`;
 
     try {
-      await navigator.clipboard.writeText(text);
+      const image = await createPlanImageBlob({
+        semester: data.offeringSemester,
+        term: data.term,
+        year: data.offeringYear,
+        studentName: data.studentInfo?.name,
+        branch: data.studentInfo?.branch,
+        courses: plannedCourses,
+        categoryLabels: CATEGORY_LABEL,
+      });
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": image })]);
       setCopied(true);
-      showToast("success", "Courses copied to clipboard");
+      showToast("success", "Plan image copied — paste it anywhere");
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      showToast("error", "Could not copy to clipboard");
+      showToast("error", "Could not copy the plan image. Use Get as Photo instead.");
     }
   };
 
@@ -1951,12 +1870,12 @@ export default function PreRegistrationPage() {
             )}
             {saved && (
               <button
-                onClick={handleCopyCourses}
+                onClick={handleCopyPlanImage}
                 className="min-w-0 px-2 sm:px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 border border-border bg-surface hover:bg-surface-hover text-foreground"
               >
                 {copied ? <Check className="w-4 h-4 shrink-0 text-success" /> : <Copy className="w-4 h-4 shrink-0" />}
                 <span className="min-[420px]:hidden">{copied ? "Done" : "Copy"}</span>
-                <span className="hidden min-[420px]:inline">{copied ? "Copied!" : "Copy Courses"}</span>
+                <span className="hidden min-[420px]:inline">{copied ? "Copied!" : "Copy Image"}</span>
               </button>
             )}
             <button
