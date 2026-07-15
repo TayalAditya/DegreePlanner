@@ -52,6 +52,7 @@ interface InternshipCourse {
   credits: number;
   instructor?: string | null;
   instructorEmail?: string | null;
+  slots?: string | null;
 }
 
 interface PlannedCourse {
@@ -535,7 +536,7 @@ function Section({ title, count, children, defaultOpen = false, headerBg, error 
 function toOffering(c: InternshipCourse, category: string): Offering {
   return {
     id: c.id, courseId: c.id, courseCode: formatCourseCode(c.code), courseName: c.name,
-    instructor: c.instructor ?? null, instructorEmail: c.instructorEmail ?? null, school: null, slots: null, ltpc: null,
+    instructor: c.instructor ?? null, instructorEmail: c.instructorEmail ?? null, school: null, slots: c.slots ?? "NS", ltpc: null,
     credits: c.credits, curriculumLink: null, resolvedCategory: category,
     isCompulsory: false, completedInSemester: null,
   };
@@ -811,8 +812,9 @@ export default function PreRegistrationPage() {
                   ...course,
                   instructor: `${facultyAdvisor.name} (Faculty Advisor)`,
                   instructorEmail: facultyAdvisor.email,
+                  slots: "NS",
                 }
-              : course;
+              : { ...course, slots: "NS" };
           // Internship only eligible from Sem 6 onwards
           if (sem >= 6 && prefix) {
             const keep399 = new Set([`${prefix}399P`]);
@@ -1038,17 +1040,17 @@ export default function PreRegistrationPage() {
     const extras: Array<PlannedCourse & { selected: boolean }> = [
       ...internshipCourses.p399.map((course) => ({
         id: course.id, code: course.code, name: course.name, credits: course.credits,
-        instructor: course.instructor ?? null, slots: null, category: "FE", registrationType: "PASS_FAIL" as RegType,
+        instructor: course.instructor ?? null, slots: course.slots ?? "NS", category: "FE", registrationType: "PASS_FAIL" as RegType,
         selected: selectedExtra.has(course.id),
       })),
       ...internshipCourses.p396.map((course) => ({
         id: course.id, code: course.code, name: course.name, credits: course.credits,
-        instructor: course.instructor ?? null, slots: null, category: "FE", registrationType: "PASS_FAIL" as RegType,
+        instructor: course.instructor ?? null, slots: course.slots ?? "NS", category: "FE", registrationType: "PASS_FAIL" as RegType,
         selected: selectedExtra.has(course.id),
       })),
       ...(mtp1Course ? [{
         id: mtp1Course.id, code: mtp1Course.code, name: mtp1Course.name, credits: mtp1Course.credits,
-        instructor: mtp1Course.instructor ?? null, slots: null, category: "MTP", registrationType: "REGULAR" as RegType,
+        instructor: mtp1Course.instructor ?? null, slots: mtp1Course.slots ?? "NS", category: "MTP", registrationType: "REGULAR" as RegType,
         selected: selectedExtra.has(mtp1Course.id),
       }] : []),
     ];
