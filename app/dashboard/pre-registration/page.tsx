@@ -26,6 +26,7 @@ interface Offering {
   isCompulsory: boolean;
   completedInSemester: number | null;
   completedVia?: string | null;
+  equivalentCourseIds?: string[];
 }
 
 interface ApiResponse {
@@ -1112,6 +1113,23 @@ export default function PreRegistrationPage() {
       );
       if (clash) {
         showToast("error", `Slot clash with ${clash.courseCode} — deselect it first`);
+        return;
+      }
+
+      // Prevent selecting both members of an equivalent set (e.g. EE-210 ≡ EE-212).
+      // Only one of a pair may be registered — match on either direction.
+      const equivSelected = data?.offerings.find((o) => {
+        if (!selected.has(o.id) || o.id === offering.id) return false;
+        return (
+          (offering.equivalentCourseIds ?? []).includes(o.courseId ?? "") ||
+          (o.equivalentCourseIds ?? []).includes(offering.courseId ?? "")
+        );
+      });
+      if (equivSelected) {
+        showToast(
+          "error",
+          `${offering.courseCode} is equivalent to ${equivSelected.courseCode} — you can register only one. Deselect ${equivSelected.courseCode} first.`
+        );
         return;
       }
     }

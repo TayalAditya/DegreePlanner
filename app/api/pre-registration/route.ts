@@ -176,9 +176,18 @@ export async function GET() {
     completedViaByCourseId.set(targetId, sourceCode);
     completedViaByCourseCode.set(targetNormCode, sourceCode);
   };
+  // Bidirectional courseId → equivalent courseIds map. Used client-side to enforce
+  // "register only one of an equivalent set" during live selection (e.g. EE-210 vs EE-212).
+  const equivalentIdsByCourseId = new Map<string, Set<string>>();
+  const linkEquivalentIds = (aId: string, bId: string) => {
+    if (!equivalentIdsByCourseId.has(aId)) equivalentIdsByCourseId.set(aId, new Set());
+    equivalentIdsByCourseId.get(aId)!.add(bId);
+  };
   for (const eq of equivalencies) {
     markEquivalentCompleted(eq.courseId, eq.course.code, eq.equivalent.id, eq.equivalent.code);
     markEquivalentCompleted(eq.equivalent.id, eq.equivalent.code, eq.courseId, eq.course.code);
+    linkEquivalentIds(eq.courseId, eq.equivalent.id);
+    linkEquivalentIds(eq.equivalent.id, eq.courseId);
   }
 
   // IC-181 & IC-182 are IKS basket — only one counts. If either is done, the other is not compulsory.
@@ -332,6 +341,9 @@ export async function GET() {
         isCompulsory,
         completedInSemester: completedSem ?? null,
         completedVia,
+        equivalentCourseIds: o.courseId
+          ? Array.from(equivalentIdsByCourseId.get(o.courseId) ?? [])
+          : [],
       };
     });
 
