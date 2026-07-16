@@ -490,15 +490,15 @@ function CourseCard({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleSamarth(offering.id); }}
-              className={`inline-flex items-center gap-1 text-xs transition-colors ${
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors ${
                 samarthReported
-                  ? "text-warning font-medium"
-                  : "text-foreground-secondary hover:text-warning"
+                  ? "bg-warning/10 text-warning font-medium"
+                  : "text-foreground-secondary hover:text-warning hover:bg-warning/5"
               }`}
               title="Report that this course is not visible on the Samarth portal"
             >
               {samarthReported
-                ? <><Check className="w-3 h-3" /> Reported to Acad Sec</>
+                ? <><Check className="w-3 h-3" /> Reported</>
                 : <><EyeOff className="w-3 h-3" /> Not on Samarth</>}
             </button>
           )}
@@ -506,15 +506,15 @@ function CourseCard({
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleSootrank(offering.id); }}
-              className={`inline-flex items-center gap-1 text-xs transition-colors ${
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs transition-colors ${
                 sootrankReported
-                  ? "text-warning font-medium"
-                  : "text-foreground-secondary hover:text-warning"
+                  ? "bg-warning/10 text-warning font-medium"
+                  : "text-foreground-secondary hover:text-warning hover:bg-warning/5"
               }`}
               title="Report that this course is not visible on the Sootrank portal"
             >
               {sootrankReported
-                ? <><Check className="w-3 h-3" /> Reported to Acad Sec</>
+                ? <><Check className="w-3 h-3" /> Reported</>
                 : <><FileX className="w-3 h-3" /> Not on Sootrank</>}
             </button>
           )}
