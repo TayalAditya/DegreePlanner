@@ -1613,9 +1613,9 @@ export default function PreRegistrationPage() {
                   href="https://iitmandi.samarth.edu.in/index.php/vidhyarthi/re-registration/history"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary hover:underline font-medium"
+                  className="inline-flex items-baseline gap-0.5 text-primary hover:underline font-medium"
                 >
-                  Samarth portal
+                  Samarth portal<ExternalLink className="w-3 h-3 self-center" />
                 </a>
                 , open <span className="font-medium text-foreground">Submission Details</span> for{" "}
                 <span className="font-medium text-foreground">{data.term} {data.offeringYear}</span>. If it looks like the screenshot below
@@ -1838,6 +1838,8 @@ export default function PreRegistrationPage() {
                       studentInfo={data.studentInfo}
                       samarthReported={samarthReported.has(o.id)}
                       onToggleSamarth={handleToggleSamarth}
+                      sootrankReported={sootrankReported.has(o.id)}
+                      onToggleSootrank={handleToggleSootrank}
                       regType={regTypes.get(o.id) ?? "REGULAR"}
                       pfBudgetRemaining={pfBudgetRemaining}
                       onRegTypeChange={handleRegTypeChange}

@@ -75,8 +75,11 @@ export async function POST() {
     update: { rollNumber: roll, studentName: name, branch },
   });
 
-  // Mirror to the Google Sheet — append-only log. Non-blocking; DB is source of truth.
-  postToSheet({
+  // Mirror to the Google Sheet — append-only log. Must be awaited: on Vercel the
+  // function freezes as soon as the response is returned, so a fire-and-forget
+  // fetch never completes in production. postToSheet never throws (errors are
+  // logged and swallowed) and has an 8s timeout, so this can't 500 the request.
+  await postToSheet({
     tab: "NotSubmittedOnSamarth",
     studentName: name,
     rollNumber: roll,
@@ -84,7 +87,7 @@ export async function POST() {
     offeringSemester: ctx.offeringSemester,
     offeringYear: ctx.offeringYear,
     reportedAt: row.createdAt.toISOString(),
-  }).catch((e) => console.error("[not-submitted] sheet mirror failed:", e));
+  });
 
   return NextResponse.json({ reported: true });
 }

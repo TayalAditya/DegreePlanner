@@ -107,8 +107,11 @@ export async function POST(req: NextRequest) {
     update: { sentAt: null, rollNumber: roll, studentName: name, branch },
   });
 
-  // Fire the digest if the batch threshold is reached — don't block the response on email.
-  flushSamarthReports().catch((e) => console.error("[samarth-digest] flush failed:", e));
+  // Fire the digest if the batch threshold is reached. Must be awaited: on Vercel
+  // the function freezes once the response returns, so a fire-and-forget email
+  // never actually sends in production. Failures are swallowed so a broken SMTP
+  // config can't fail the report itself.
+  await flushSamarthReports().catch((e) => console.error("[samarth-digest] flush failed:", e));
 
   return NextResponse.json({ reported: true });
 }
