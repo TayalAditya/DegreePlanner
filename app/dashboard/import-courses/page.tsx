@@ -15,6 +15,7 @@ export default async function ImportCoursesPage() {
   let initialEnrollmentId: string | null = null;
   let initialDoingMTP = true;
   let initialDoingMTP2 = true;
+  let initialManualCourseImportOnly = false;
   let initialBatch24Icb1Course: string | null = null;
   let initialImportedKeys: string[] = [];
   let initialPassFailCredits = 0;
@@ -33,6 +34,7 @@ export default async function ImportCoursesPage() {
             enrollmentId: true,
             doingMTP: true,
             doingMTP2: true,
+            manualCourseImportOnly: true,
             totalPassFailCredits: true,
           },
         }),
@@ -45,6 +47,7 @@ export default async function ImportCoursesPage() {
         initialEnrollmentId = userRecord.enrollmentId ?? null;
         initialDoingMTP = userRecord.doingMTP ?? true;
         initialDoingMTP2 = userRecord.doingMTP2 ?? true;
+        initialManualCourseImportOnly = userRecord.manualCourseImportOnly ?? false;
         initialPassFailCredits = userRecord.totalPassFailCredits ?? 0;
 
         const batchYear = inferBatchYear(userRecord.batch, userRecord.enrollmentId);
@@ -94,6 +97,7 @@ export default async function ImportCoursesPage() {
       initialEnrollmentId={initialEnrollmentId}
       initialDoingMTP={initialDoingMTP}
       initialDoingMTP2={initialDoingMTP2}
+      initialManualCourseImportOnly={initialManualCourseImportOnly}
       initialBatch24Icb1Course={initialBatch24Icb1Course}
       initialImportedKeys={initialImportedKeys}
       initialPassFailCredits={initialPassFailCredits}

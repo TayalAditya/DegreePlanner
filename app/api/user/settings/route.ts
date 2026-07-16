@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
         doingMTP: true,
         doingMTP2: true,
         doingISTP: true,
+        manualCourseImportOnly: true,
         totalPassFailCredits: true,
         createdAt: true,
       },
@@ -186,6 +187,7 @@ export async function PATCH(req: NextRequest) {
           doingMTP: true,
           doingMTP2: true,
           doingISTP: true,
+          manualCourseImportOnly: true,
           totalPassFailCredits: true,
         },
       });

@@ -27,6 +27,7 @@ model User {
   totalPassFailCredits     Int                   @default(0)
   passFailPerSemester      Int                   @default(0)
   doingMTP2                Boolean               @default(true)
+  manualCourseImportOnly   Boolean               @default(false)
   shareToken               String?               @unique
   isProfileShared          Boolean               @default(false)
   accounts                 Account[]

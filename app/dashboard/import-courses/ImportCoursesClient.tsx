@@ -58,6 +58,7 @@ interface ImportCoursesClientProps {
   initialEnrollmentId?: string | null;
   initialDoingMTP?: boolean;
   initialDoingMTP2?: boolean;
+  initialManualCourseImportOnly?: boolean;
   initialBatch24Icb1Course?: string | null;
   initialImportedKeys?: string[];
   initialPassFailCredits?: number;
@@ -191,6 +192,7 @@ export default function ImportCoursesPage({
   initialEnrollmentId,
   initialDoingMTP,
   initialDoingMTP2,
+  initialManualCourseImportOnly = false,
   initialBatch24Icb1Course,
   initialImportedKeys,
   initialPassFailCredits = 0,
@@ -213,6 +215,7 @@ export default function ImportCoursesPage({
   const [currentSemester, setCurrentSemester] = useState(initialCurrentSemester ?? 6);
   const [doingMTP, setDoingMTP] = useState(initialDoingMTP ?? true);
   const [doingMTP2, setDoingMTP2] = useState(initialDoingMTP2 ?? true);
+  const [manualCourseImportOnly, setManualCourseImportOnly] = useState(initialManualCourseImportOnly);
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
   const [importedCourseKeys, setImportedCourseKeys] = useState<Set<string>>(
     new Set(initialImportedKeys ?? [])
@@ -309,8 +312,12 @@ export default function ImportCoursesPage({
   }, [effectiveBranch]);
 
   useEffect(() => {
+    if (manualCourseImportOnly) {
+      startTransition(() => setCourses([]));
+      return;
+    }
     loadDefaultCourses();
-  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingMTP2, userBatch, batch24Icb1Course]);
+  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingMTP2, userBatch, batch24Icb1Course, manualCourseImportOnly]);
 
   useEffect(() => {
     setCustomSemester(currentSemester);
@@ -349,6 +356,7 @@ export default function ImportCoursesPage({
 
         setDoingMTP(data.doingMTP ?? true);
         setDoingMTP2(data.doingMTP2 ?? true);
+        setManualCourseImportOnly(data.manualCourseImportOnly === true);
       }
     } catch (error) {
       console.error("Failed to load settings:", error);
@@ -1166,7 +1174,9 @@ export default function ImportCoursesPage({
             Import Your Courses
           </h1>
           <p className="text-foreground-secondary mt-2">
-            Select courses you&apos;ve completed from semesters 1-{currentSemester}
+            {manualCourseImportOnly
+              ? "Import only the courses you took, from your Samarth transcript or the catalog."
+              : `Select courses you&apos;ve completed from semesters 1-${currentSemester}`}
           </p>
         </div>
         <button
@@ -1180,7 +1190,7 @@ export default function ImportCoursesPage({
       </div>
 
       {/* Configuration */}
-      <div className="bg-gradient-to-br from-primary/10 to-secondary/10 dark:from-primary/15 dark:to-secondary/15 p-6 rounded-xl border border-primary/20 dark:border-primary/30">
+      {!manualCourseImportOnly && <div className="bg-gradient-to-br from-primary/10 to-secondary/10 dark:from-primary/15 dark:to-secondary/15 p-6 rounded-xl border border-primary/20 dark:border-primary/30">
         <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
           <Info className="h-5 w-5 text-primary" />
           Your Configuration
@@ -1257,7 +1267,7 @@ export default function ImportCoursesPage({
             </button>
           </div>
         </div>
-      </div>
+      </div>}
 
       {/* ── Samarth Transcript Import ──────────────────────────────────────── */}
       <div className="bg-surface rounded-xl border border-border overflow-hidden">
@@ -1478,7 +1488,17 @@ export default function ImportCoursesPage({
       </div>
 
       {/* Info Banner */}
-      <div className="bg-warning/10 border border-warning/20 p-4 rounded-xl flex gap-3">
+      {manualCourseImportOnly ? (
+        <div className="bg-info/10 border border-info/20 p-4 rounded-xl flex gap-3">
+          <Info className="h-5 w-5 text-info flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-foreground">Manual course import</p>
+            <p className="text-foreground-secondary mt-1">
+              No preset course choices are shown for this profile. Add only completed courses from the transcript or catalog. Discipline Core courses can be added or removed later from <a className="text-primary hover:underline" href="/dashboard/courses">My Courses</a>.
+            </p>
+          </div>
+        </div>
+      ) : <div className="bg-warning/10 border border-warning/20 p-4 rounded-xl flex gap-3">
         <AlertCircle className="h-5 w-5 text-warning flex-shrink-0 mt-0.5" />
         <div className="text-sm">
           <p className="font-semibold text-foreground">
@@ -1495,7 +1515,7 @@ export default function ImportCoursesPage({
                 : "Selecting IC140 in a semester auto-checks IC102P in the other (they always pair across semesters). IC181 is semester-exclusive. IC Basket courses allow only one selection per semester."}
           </p>
         </div>
-      </div>
+      </div>}
 
       {/* Ready to Import */}
       {selectedCount > 0 && (
@@ -1529,7 +1549,7 @@ export default function ImportCoursesPage({
       )}
 
       {/* Semester-wise Courses */}
-      <div className="space-y-4">
+      {(!manualCourseImportOnly || courses.length > 0) && <div className="space-y-4">
         {Object.keys(semesterGroups)
           .map(Number)
           .sort((a, b) => a - b)
@@ -1599,7 +1619,7 @@ export default function ImportCoursesPage({
               </div>
             );
           })}
-      </div>
+      </div>}
 
     </div>
   );

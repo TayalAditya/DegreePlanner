@@ -8,6 +8,9 @@ import { DOCS_ADMIN_ENROLLMENT_ID, isAcadSec as isAcadSecEmail } from "@/lib/per
 
 const SUPPORTED_BATCHES = new Set([2022, 2023, 2024, 2025]);
 const B22_ALLOWED_BRANCHES = new Set(["CSE"]);
+// Explicitly approved legacy-profile exceptions. Their batch-22 enrollment ID
+// is retained, while their academic plan is mapped to the assigned branch.
+const B22_BRANCH_EXCEPTION_IDS = new Set(["B22340"]);
 const B24_ALLOWED_BRANCHES = new Set(["CSE", "DSE", "EE", "MEVLSI", "MSE", "BioE", "CE", "EP", "GE", "ME", "MNC", "BSCS"]);
 const ENROLLMENT_FALLBACK_ALLOWED_DOMAINS = new Set([
   "students.iitmandi.ac.in",
@@ -397,7 +400,12 @@ export const authOptions: NextAuthOptions = {
       }
 
       const isB22 = approvedUser.batch === 2022 || /^B22\d+$/i.test(enrollmentId);
-      if (!isAcadSec && isB22 && !B22_ALLOWED_BRANCHES.has(approvedUser.branch || "")) {
+      if (
+        !isAcadSec &&
+        isB22 &&
+        !B22_ALLOWED_BRANCHES.has(approvedUser.branch || "") &&
+        !B22_BRANCH_EXCEPTION_IDS.has(enrollmentId)
+      ) {
         console.log("Login rejected: Branch", approvedUser.branch, "not allowed for B22");
         await logAttempt("rejected", "branch_not_allowed");
         return "/auth/error?error=branch_not_allowed";
