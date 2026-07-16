@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PreRegistrationSkeleton } from "./loading";
-import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check, EyeOff, Eye } from "lucide-react";
+import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check, EyeOff, Eye, FileX, FileWarning } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { PlanImageDownloadButton, createPlanImageBlob } from "@/components/PlanImageDownloadButton";
@@ -321,6 +321,7 @@ function RegTypeSelector({
 function CourseCard({
   offering, checked, disabled, onToggle, clashWith, isCompulsory, minorGroupLabel, studentInfo,
   samarthReported, onToggleSamarth,
+  sootrankReported, onToggleSootrank,
   regType, pfBudgetRemaining, onRegTypeChange,
 }: {
   offering: Offering & { instructorEmail?: string | null };
@@ -333,6 +334,8 @@ function CourseCard({
   studentInfo?: { name: string | null; branch: string | null; semester: number } | null;
   samarthReported?: boolean;
   onToggleSamarth?: (offeringId: string) => void;
+  sootrankReported?: boolean;
+  onToggleSootrank?: (offeringId: string) => void;
   regType?: RegType;
   pfBudgetRemaining?: number;
   onRegTypeChange?: (id: string, type: RegType) => void;
@@ -499,6 +502,22 @@ function CourseCard({
                 : <><EyeOff className="w-3 h-3" /> Not on Samarth</>}
             </button>
           )}
+          {onToggleSootrank && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onToggleSootrank(offering.id); }}
+              className={`inline-flex items-center gap-1 text-xs transition-colors ${
+                sootrankReported
+                  ? "text-warning font-medium"
+                  : "text-foreground-secondary hover:text-warning"
+              }`}
+              title="Report that this course is not visible on the Sootrank portal"
+            >
+              {sootrankReported
+                ? <><Check className="w-3 h-3" /> Reported to Acad Sec</>
+                : <><FileX className="w-3 h-3" /> Not on Sootrank</>}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -544,7 +563,7 @@ function toOffering(c: InternshipCourse, category: string): Offering {
   };
 }
 
-function InternshipSection({ internshipCourses, selected, onToggle, canSelect399P, hasSelected399P, samarthReported, onToggleSamarth }: {
+function InternshipSection({ internshipCourses, selected, onToggle, canSelect399P, hasSelected399P, samarthReported, onToggleSamarth, sootrankReported, onToggleSootrank }: {
   internshipCourses: { p399: InternshipCourse[]; p396: InternshipCourse[] };
   selected: Set<string>;
   onToggle: (id: string) => void;
@@ -552,6 +571,8 @@ function InternshipSection({ internshipCourses, selected, onToggle, canSelect399
   hasSelected399P: boolean;
   samarthReported?: Set<string>;
   onToggleSamarth?: (offeringId: string) => void;
+  sootrankReported?: Set<string>;
+  onToggleSootrank?: (offeringId: string) => void;
 }) {
   return (
     <Section title="Semester-Long Internship" count={internshipCourses.p399.length + internshipCourses.p396.length}>
@@ -564,7 +585,7 @@ function InternshipSection({ internshipCourses, selected, onToggle, canSelect399
               <p className="text-xs text-error">Cannot be selected with any other course in this semester</p>
             </div>
             {internshipCourses.p399.map((c) => (
-              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={!selected.has(c.id) && !canSelect399P} onToggle={() => onToggle(c.id)} samarthReported={samarthReported?.has(c.id)} onToggleSamarth={onToggleSamarth} />
+              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={!selected.has(c.id) && !canSelect399P} onToggle={() => onToggle(c.id)} samarthReported={samarthReported?.has(c.id)} onToggleSamarth={onToggleSamarth} sootrankReported={sootrankReported?.has(c.id)} onToggleSootrank={onToggleSootrank} />
             ))}
           </div>
         )}
@@ -576,7 +597,7 @@ function InternshipSection({ internshipCourses, selected, onToggle, canSelect399
               <p className="text-xs text-warning">Uses 6 of the 9 total P/F credits</p>
             </div>
             {internshipCourses.p396.map((c) => (
-              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={hasSelected399P} onToggle={() => onToggle(c.id)} samarthReported={samarthReported?.has(c.id)} onToggleSamarth={onToggleSamarth} />
+              <CourseCard key={c.id} offering={toOffering(c, "FE")} checked={selected.has(c.id)} disabled={hasSelected399P} onToggle={() => onToggle(c.id)} samarthReported={samarthReported?.has(c.id)} onToggleSamarth={onToggleSamarth} sootrankReported={sootrankReported?.has(c.id)} onToggleSootrank={onToggleSootrank} />
             ))}
           </div>
         )}
@@ -585,17 +606,19 @@ function InternshipSection({ internshipCourses, selected, onToggle, canSelect399
   );
 }
 
-function MtpSection({ course, selected, onToggle, samarthReported, onToggleSamarth }: {
+function MtpSection({ course, selected, onToggle, samarthReported, onToggleSamarth, sootrankReported, onToggleSootrank }: {
   course: InternshipCourse;
   selected: Set<string>;
   onToggle: (id: string) => void;
   samarthReported?: Set<string>;
   onToggleSamarth?: (offeringId: string) => void;
+  sootrankReported?: Set<string>;
+  onToggleSootrank?: (offeringId: string) => void;
 }) {
   return (
     <Section title="Major Technical Project - I (MTP)" count={1} headerBg="bg-error/5">
       <p className="text-xs text-foreground-secondary mb-2">4 credits · DC · Semester 7 onwards</p>
-      <CourseCard offering={toOffering(course, "MTP")} checked={selected.has(course.id)} disabled={false} onToggle={() => onToggle(course.id)} samarthReported={samarthReported?.has(course.id)} onToggleSamarth={onToggleSamarth} />
+      <CourseCard offering={toOffering(course, "MTP")} checked={selected.has(course.id)} disabled={false} onToggle={() => onToggle(course.id)} samarthReported={samarthReported?.has(course.id)} onToggleSamarth={onToggleSamarth} sootrankReported={sootrankReported?.has(course.id)} onToggleSootrank={onToggleSootrank} />
     </Section>
   );
 }
@@ -674,6 +697,9 @@ export default function PreRegistrationPage() {
   const [copied, setCopied] = useState(false);
   const [showPlanTable, setShowPlanTable] = useState(false);
   const [samarthReported, setSamarthReported] = useState<Set<string>>(new Set());
+  const [sootrankReported, setSootrankReported] = useState<Set<string>>(new Set());
+  const [notSubmitted, setNotSubmitted] = useState(false);
+  const [notSubmittedBusy, setNotSubmittedBusy] = useState(false);
   const [regTypes, setRegTypes] = useState<Map<string, RegType>>(new Map());
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
@@ -749,14 +775,25 @@ export default function PreRegistrationPage() {
       fetch("/api/courses").then((r) => r.json()).catch(() => [] as InternshipCourse[]),
       fetch("/api/pre-registration/samarth-report")
         .then((r) => r.json())
-        .then((j) => (j?.reportedOfferingIds as string[]) ?? [])
-        .catch(() => [] as string[]),
+        .then((j) => ({
+          samarth: (j?.samarthReportedIds as string[]) ?? (j?.reportedOfferingIds as string[]) ?? [],
+          sootrank: (j?.sootrankReportedIds as string[]) ?? [],
+        }))
+        .catch(() => ({ samarth: [] as string[], sootrank: [] as string[] })),
+      fetch("/api/pre-registration/not-submitted")
+        .then((r) => r.json())
+        .then((j) => Boolean(j?.reported))
+        .catch(() => false),
     ])
-      .then(([d, courses, reportedIds]) => {
+      .then(([d, courses, reported, notSubmittedFlag]) => {
         setData(d);
-        if (Array.isArray(reportedIds) && reportedIds.length > 0) {
-          setSamarthReported(new Set(reportedIds));
+        if (Array.isArray(reported.samarth) && reported.samarth.length > 0) {
+          setSamarthReported(new Set(reported.samarth));
         }
+        if (Array.isArray(reported.sootrank) && reported.sootrank.length > 0) {
+          setSootrankReported(new Set(reported.sootrank));
+        }
+        setNotSubmitted(notSubmittedFlag);
 
         // Restore saved plan from embedded response — no second round-trip
         const plan = d.savedPlan;
@@ -1166,7 +1203,7 @@ export default function PreRegistrationPage() {
       const res = await fetch("/api/pre-registration/samarth-report", {
         method: wasReported ? "DELETE" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ offeringId }),
+        body: JSON.stringify({ offeringId, reportType: "SAMARTH" }),
       });
       if (!res.ok) throw new Error();
       showToast(
@@ -1181,6 +1218,86 @@ export default function PreRegistrationPage() {
         return s;
       });
       showToast("error", "Could not update Samarth report");
+    }
+  };
+
+  const handleToggleSootrank = async (offeringId: string) => {
+    const wasReported = sootrankReported.has(offeringId);
+
+    // Reporting notifies the Academic Secretary, so guard against accidental
+    // taps with a confirmation. Un-reporting is harmless and needs no confirm.
+    if (!wasReported) {
+      const offering = data?.offerings.find((o) => o.id === offeringId);
+      const ok = await confirm({
+        title: "Report to Academic Secretary?",
+        message: `This will notify the Academic Secretary that ${offering?.courseCode ?? "this course"} is not visible on the Sootrank portal. Only do this if you've actually checked Sootrank and it's missing.`,
+        confirmText: "Yes, report it",
+        cancelText: "Cancel",
+      });
+      if (!ok) return;
+    }
+
+    // Optimistic flip
+    setSootrankReported((prev) => {
+      const s = new Set(prev);
+      wasReported ? s.delete(offeringId) : s.add(offeringId);
+      return s;
+    });
+    try {
+      const res = await fetch("/api/pre-registration/samarth-report", {
+        method: wasReported ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offeringId, reportType: "SOOTRANK" }),
+      });
+      if (!res.ok) throw new Error();
+      showToast(
+        "success",
+        wasReported ? "Removed from Sootrank report" : "Reported — the Academic Secretary will be notified"
+      );
+    } catch {
+      // Revert on failure
+      setSootrankReported((prev) => {
+        const s = new Set(prev);
+        wasReported ? s.add(offeringId) : s.delete(offeringId);
+        return s;
+      });
+      showToast("error", "Could not update Sootrank report");
+    }
+  };
+
+  const handleToggleNotSubmitted = async () => {
+    const wasReported = notSubmitted;
+
+    if (!wasReported) {
+      const ok = await confirm({
+        title: "Report to Academic Secretary?",
+        message:
+          "This tells the Academic Secretary that your pre-registration is NOT showing as submitted on the Samarth portal. Only do this if you've actually checked Samarth and your submission is missing.",
+        confirmText: "Yes, report it",
+        cancelText: "Cancel",
+      });
+      if (!ok) return;
+    }
+
+    setNotSubmittedBusy(true);
+    // Optimistic flip
+    setNotSubmitted(!wasReported);
+    try {
+      const res = await fetch("/api/pre-registration/not-submitted", {
+        method: wasReported ? "DELETE" : "POST",
+      });
+      if (!res.ok) throw new Error();
+      showToast(
+        "success",
+        wasReported
+          ? "Removed — no longer flagged as not submitted"
+          : "Reported — the Academic Secretary will be notified"
+      );
+    } catch {
+      setNotSubmitted(wasReported); // revert
+      showToast("error", "Could not update your Samarth submission status");
+    } finally {
+      setNotSubmittedBusy(false);
     }
   };
 
@@ -1239,7 +1356,7 @@ export default function PreRegistrationPage() {
 
         {/* Show internship section even when no offerings uploaded */}
         {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} canSelect399P={canSelect399P} hasSelected399P={hasSelected399P} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} />
+          <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} canSelect399P={canSelect399P} hasSelected399P={hasSelected399P} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} sootrankReported={sootrankReported} onToggleSootrank={handleToggleSootrank} />
         )}
       </div>
     );
@@ -1419,6 +1536,8 @@ export default function PreRegistrationPage() {
                           studentInfo={data.studentInfo}
                           samarthReported={samarthReported.has(offering!.id)}
                           onToggleSamarth={handleToggleSamarth}
+                          sootrankReported={sootrankReported.has(offering!.id)}
+                          onToggleSootrank={handleToggleSootrank}
                           regType={regTypes.get(offering!.id) ?? "REGULAR"}
                           pfBudgetRemaining={pfBudgetRemaining}
                           onRegTypeChange={handleRegTypeChange}
@@ -1475,6 +1594,74 @@ export default function PreRegistrationPage() {
           Degree Planner lets you browse all eligible courses by category and plan your semester ahead of time.
           Actual pre-registration on the institute portal will begin in late June.
         </p>
+      </div>
+
+      {/* Global "not submitted on Samarth" status */}
+      <div className={`rounded-xl border overflow-hidden transition-colors ${
+        notSubmitted ? "border-warning/40 bg-warning/8" : "border-border bg-surface"
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <FileWarning className={`w-5 h-5 flex-shrink-0 mt-0.5 ${notSubmitted ? "text-warning" : "text-foreground-secondary"}`} />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                {notSubmitted ? "Reported: your pre-registration is not submitted on Samarth" : "Pre-registration not showing as submitted on Samarth?"}
+              </p>
+              <p className="text-xs text-foreground-secondary mt-0.5">
+                On the{" "}
+                <a
+                  href="https://iitmandi.samarth.edu.in/index.php/vidhyarthi/re-registration/history"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Samarth portal
+                </a>
+                , open <span className="font-medium text-foreground">Submission Details</span> for{" "}
+                <span className="font-medium text-foreground">{data.term} {data.offeringYear}</span>. If it looks like the screenshot below
+                — <span className="font-semibold text-error">Not Submitted</span> — then submit a &ldquo;Not Submitted on Samarth&rdquo; request here so the Academic Secretary can look into it.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleNotSubmitted}
+            disabled={notSubmittedBusy}
+            className={`flex-shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              notSubmitted
+                ? "border border-border bg-surface hover:bg-surface-hover text-foreground"
+                : "bg-warning text-white hover:bg-warning/90"
+            }`}
+          >
+            {notSubmittedBusy ? (
+              <div className="w-4 h-4 shrink-0 rounded-full border-2 border-current border-t-transparent animate-spin" />
+            ) : notSubmitted ? (
+              <Check className="w-4 h-4 shrink-0" />
+            ) : (
+              <FileWarning className="w-4 h-4 shrink-0" />
+            )}
+            {notSubmitted ? "Reported — undo" : "Report not submitted"}
+          </button>
+        </div>
+
+        {/* Reference: how "Not Submitted" looks on Samarth (theme-aware screenshot) */}
+        <div className="border-t border-border/60 bg-background-secondary/40 px-4 py-3">
+          <p className="text-xs text-foreground-secondary mb-2">
+            This is how it looks on Samarth when your selections aren&apos;t submitted:
+          </p>
+          {/* Light-mode screenshot */}
+          <img
+            src="/samarth/not-submitted-light.png"
+            alt="Samarth Submission Details showing 'Not Submitted, Kindly submit your course selections.'"
+            className="block dark:hidden w-full max-w-md rounded-lg border border-border"
+          />
+          {/* Dark-mode screenshot */}
+          <img
+            src="/samarth/not-submitted-dark.png"
+            alt="Samarth Submission Details showing 'Not Submitted, Kindly submit your course selections.'"
+            className="hidden dark:block w-full max-w-md rounded-lg border border-border"
+          />
+        </div>
       </div>
 
       {/* Registration lock banner */}
@@ -1568,6 +1755,8 @@ export default function PreRegistrationPage() {
               studentInfo={data.studentInfo}
               samarthReported={samarthReported.has(o.id)}
               onToggleSamarth={handleToggleSamarth}
+              sootrankReported={sootrankReported.has(o.id)}
+              onToggleSootrank={handleToggleSootrank}
             />
           ))}
         </Section>
@@ -1575,7 +1764,7 @@ export default function PreRegistrationPage() {
 
       {/* MTP-1 */}
       {mtp1Course && (
-        <MtpSection course={mtp1Course} selected={selectedExtra} onToggle={toggleExtra} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} />
+        <MtpSection course={mtp1Course} selected={selectedExtra} onToggle={toggleExtra} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} sootrankReported={sootrankReported} onToggleSootrank={handleToggleSootrank} />
       )}
 
       {/* DE */}
@@ -1593,6 +1782,8 @@ export default function PreRegistrationPage() {
               studentInfo={data.studentInfo}
               samarthReported={samarthReported.has(o.id)}
               onToggleSamarth={handleToggleSamarth}
+              sootrankReported={sootrankReported.has(o.id)}
+              onToggleSootrank={handleToggleSootrank}
               regType={regTypes.get(o.id) ?? "REGULAR"}
               pfBudgetRemaining={pfBudgetRemaining}
               onRegTypeChange={handleRegTypeChange}
@@ -1615,6 +1806,8 @@ export default function PreRegistrationPage() {
               studentInfo={data.studentInfo}
               samarthReported={samarthReported.has(o.id)}
               onToggleSamarth={handleToggleSamarth}
+              sootrankReported={sootrankReported.has(o.id)}
+              onToggleSootrank={handleToggleSootrank}
               regType={regTypes.get(o.id) ?? "REGULAR"}
               pfBudgetRemaining={pfBudgetRemaining}
               onRegTypeChange={handleRegTypeChange}
@@ -1678,7 +1871,7 @@ export default function PreRegistrationPage() {
 
       {/* Semester-Long Internship */}
       {(internshipCourses.p399.length > 0 || internshipCourses.p396.length > 0) && (
-        <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} canSelect399P={canSelect399P} hasSelected399P={hasSelected399P} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} />
+        <InternshipSection internshipCourses={internshipCourses} selected={selectedExtra} onToggle={toggleExtra} canSelect399P={canSelect399P} hasSelected399P={hasSelected399P} samarthReported={samarthReported} onToggleSamarth={handleToggleSamarth} sootrankReported={sootrankReported} onToggleSootrank={handleToggleSootrank} />
       )}
 
       {/* Semester breakdown analysis */}

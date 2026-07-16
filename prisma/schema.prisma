@@ -36,6 +36,7 @@ model User {
   documents                Document[]
   notifications            Notification[]
   preRegistrationPlans     PreRegistrationPlan[]
+  preRegNotSubmitted       PreRegNotSubmitted[]
   samarthReports           SamarthReport[]
   sessions                 Session[]
   supportTickets           SupportTicket[]
@@ -482,12 +483,31 @@ model SamarthReport {
   courseName       String
   offeringSemester Int
   offeringYear     Int
+  reportType       String    @default("SAMARTH") // SAMARTH | SOOTRANK
   sentAt           DateTime?
   createdAt        DateTime  @default(now())
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, courseOfferingId, offeringSemester, offeringYear])
-  @@index([sentAt, createdAt])
+  @@unique([userId, courseOfferingId, offeringSemester, offeringYear, reportType])
+  @@index([sentAt, reportType, createdAt])
+}
+
+// Global (per student, per semester) flag: student ka pura pre-reg Samarth portal
+// pe submit hi nahi hua. Course-specific nahi. DB source of truth + Google Sheet mirror.
+model PreRegNotSubmitted {
+  id               String   @id @default(cuid())
+  userId           String
+  rollNumber       String
+  studentName      String
+  branch           String
+  batchYear        Int
+  offeringSemester Int
+  offeringYear     Int
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, offeringSemester, offeringYear])
+  @@index([offeringSemester, offeringYear])
 }
 
 model LoginAttempt {

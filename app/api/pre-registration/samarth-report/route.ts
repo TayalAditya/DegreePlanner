@@ -15,13 +15,20 @@ function offeringContext(batch: number | null | undefined, enrollmentId: string 
   return { batchYear, offeringSemester, offeringYear };
 }
 
-/** GET → the offering IDs this student currently has flagged for the active semester. */
+type ReportType = "SAMARTH" | "SOOTRANK";
+
+/** Coerce an untrusted value to a valid report type, defaulting to SAMARTH. */
+function parseReportType(v: unknown): ReportType {
+  return v === "SOOTRANK" ? "SOOTRANK" : "SAMARTH";
+}
+
+/** GET → the offering IDs this student currently has flagged for the active semester, per portal. */
 export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const ctx = offeringContext(session.user.batch, session.user.enrollmentId);
-  if (!ctx) return NextResponse.json({ reportedOfferingIds: [] });
+  if (!ctx) return NextResponse.json({ samarthReportedIds: [], sootrankReportedIds: [] });
 
   const reports = await prisma.samarthReport.findMany({
     where: {
@@ -29,18 +36,28 @@ export async function GET() {
       offeringSemester: ctx.offeringSemester,
       offeringYear: ctx.offeringYear,
     },
-    select: { courseOfferingId: true },
+    select: { courseOfferingId: true, reportType: true },
   });
 
-  return NextResponse.json({ reportedOfferingIds: reports.map((r) => r.courseOfferingId) });
+  const samarthReportedIds = reports.filter((r) => r.reportType !== "SOOTRANK").map((r) => r.courseOfferingId);
+  const sootrankReportedIds = reports.filter((r) => r.reportType === "SOOTRANK").map((r) => r.courseOfferingId);
+
+  return NextResponse.json({
+    samarthReportedIds,
+    sootrankReportedIds,
+    // Back-compat: older clients read reportedOfferingIds (Samarth only).
+    reportedOfferingIds: samarthReportedIds,
+  });
 }
 
-/** POST { offeringId } → flag a course as not visible on Samarth. */
+/** POST { offeringId, reportType? } → flag a course as not visible on Samarth/Sootrank. */
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { offeringId } = (await req.json()) as { offeringId?: string };
+  const body = (await req.json()) as { offeringId?: string; reportType?: string };
+  const { offeringId } = body;
+  const reportType = parseReportType(body.reportType);
   if (!offeringId) return NextResponse.json({ error: "offeringId required" }, { status: 400 });
 
   const ctx = offeringContext(session.user.batch, session.user.enrollmentId);
@@ -65,11 +82,12 @@ export async function POST(req: NextRequest) {
 
   await prisma.samarthReport.upsert({
     where: {
-      userId_courseOfferingId_offeringSemester_offeringYear: {
+      userId_courseOfferingId_offeringSemester_offeringYear_reportType: {
         userId: session.user.id,
         courseOfferingId: offering.id,
         offeringSemester: ctx.offeringSemester,
         offeringYear: ctx.offeringYear,
+        reportType,
       },
     },
     create: {
@@ -83,6 +101,7 @@ export async function POST(req: NextRequest) {
       courseName: offering.courseName,
       offeringSemester: ctx.offeringSemester,
       offeringYear: ctx.offeringYear,
+      reportType,
     },
     // If it was previously sent then re-flagged, treat as a fresh pending report.
     update: { sentAt: null, rollNumber: roll, studentName: name, branch },
@@ -94,12 +113,14 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ reported: true });
 }
 
-/** DELETE { offeringId } → un-flag a course. */
+/** DELETE { offeringId, reportType? } → un-flag a course. */
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { offeringId } = (await req.json()) as { offeringId?: string };
+  const body = (await req.json()) as { offeringId?: string; reportType?: string };
+  const { offeringId } = body;
+  const reportType = parseReportType(body.reportType);
   if (!offeringId) return NextResponse.json({ error: "offeringId required" }, { status: 400 });
 
   const ctx = offeringContext(session.user.batch, session.user.enrollmentId);
@@ -111,6 +132,7 @@ export async function DELETE(req: NextRequest) {
       courseOfferingId: offeringId,
       offeringSemester: ctx.offeringSemester,
       offeringYear: ctx.offeringYear,
+      reportType,
     },
   });
 

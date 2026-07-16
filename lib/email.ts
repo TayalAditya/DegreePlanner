@@ -36,6 +36,15 @@ export interface SamarthReportRow {
   courseName: string;
 }
 
+export type ReportType = "SAMARTH" | "SOOTRANK";
+
+// Per-portal labels for the digest email. Same table shape, only the wording
+// (subject + intro + portal name) changes between Samarth and Sootrank.
+const PORTAL_LABEL: Record<ReportType, string> = {
+  SAMARTH: "Samarth",
+  SOOTRANK: "Sootrank",
+};
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -44,12 +53,18 @@ function escapeHtml(s: string): string {
 }
 
 /**
- * Send a digest of "not on Samarth" course reports to the academic secretary.
+ * Send a digest of "not on <portal>" course reports to the academic secretary.
  * Body is a tab-separated table so rows paste straight into Excel columns.
+ * `reportType` only changes the wording (subject/heading/portal name) — the
+ * recipient and table layout are identical for Samarth and Sootrank.
  */
-export async function sendSamarthDigest(rows: SamarthReportRow[]): Promise<void> {
+export async function sendSamarthDigest(
+  rows: SamarthReportRow[],
+  { reportType = "SAMARTH" }: { reportType?: ReportType } = {}
+): Promise<void> {
   if (rows.length === 0) return;
 
+  const portal = PORTAL_LABEL[reportType];
   const to = process.env.SAMARTH_DIGEST_TO || "b23243@students.iitmandi.ac.in";
   const from = process.env.GMAIL_USER!;
 
@@ -82,7 +97,7 @@ export async function sendSamarthDigest(rows: SamarthReportRow[]): Promise<void>
     )
     .join("");
   const html = `
-    <p>Courses students report as <strong>not visible on Samarth</strong> (${rows.length}):</p>
+    <p>Courses students report as <strong>not visible on ${portal}</strong> (${rows.length}):</p>
     <table style="border-collapse:collapse;font-family:sans-serif;font-size:13px">
       <thead>
         <tr>${htmlHeader.map((h) => `<th style="padding:4px 10px;border:1px solid #ddd;background:#f4f4f4;text-align:left">${h}</th>`).join("")}</tr>
@@ -96,7 +111,7 @@ export async function sendSamarthDigest(rows: SamarthReportRow[]): Promise<void>
   await getTransport().sendMail({
     from: `Degree Planner <${from}>`,
     to,
-    subject: `Samarth pre-reg gaps — ${rows.length} course${rows.length !== 1 ? "s" : ""}`,
+    subject: `${portal} pre-reg gaps — ${rows.length} course${rows.length !== 1 ? "s" : ""}`,
     text,
     html,
   });
