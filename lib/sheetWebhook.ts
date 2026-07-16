@@ -7,12 +7,11 @@
  * dev / preview never fails on a missing webhook. Failures are swallowed and
  * logged — the caller's DB write is the source of truth, the sheet is a mirror.
  */
+const FALLBACK_WEBHOOK_URL =
+  "https://script.google.com/macros/s/AKfycbz6BDyut9w3hUgQied8u6z50thYyM6EeCkzK53j7KsBfJDXNFwMZymHSlt0vwzwaQf3mQ/exec";
+
 export async function postToSheet(payload: Record<string, unknown>): Promise<boolean> {
-  const url = process.env.GOOGLE_SHEET_WEBHOOK_URL;
-  if (!url) {
-    console.warn("[sheet-webhook] GOOGLE_SHEET_WEBHOOK_URL not set — skipping sheet append");
-    return false;
-  }
+  const url = process.env.GOOGLE_SHEET_WEBHOOK_URL || FALLBACK_WEBHOOK_URL;
 
   try {
     const res = await fetch(url, {
