@@ -432,7 +432,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
 
       {/* B24 GE: prompt to choose specialization (still on plain "GE") */}
       {userSettings?.batch === 2024 && userSettings?.branch === "GE" && (
-        <div className="bg-warning/10 border border-warning/30 rounded-xl p-4 sm:p-5 flex items-start gap-3">
+        <div className="flex items-start gap-3 border border-warning/30 bg-warning/10 p-4 sm:p-5">
           <AlertCircle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="text-sm font-semibold text-foreground">
@@ -454,9 +454,8 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
       )}
 
       {/* Current Semester */}
-      <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">
-        <div className="flex items-center gap-3 mb-4 sm:mb-6">
-          <span className="w-1 h-6 bg-primary rounded-full"></span>
+      <section className="border border-border bg-surface p-4 sm:p-5">
+        <div className="mb-4 flex items-center gap-3 border-b border-border pb-3 sm:mb-5">
           <h3 className="text-base sm:text-lg font-semibold text-foreground">
             Current Semester (In Progress)
           </h3>
@@ -470,9 +469,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
           </div>
         ) : currentSemesterCourses.length === 0 ? (
           <div className="text-center py-6">
-            <div className="w-14 h-14 bg-warning/10 dark:bg-warning/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-7 h-7 text-warning" />
-            </div>
+            <AlertCircle className="mx-auto mb-3 h-6 w-6 text-warning" />
             <p className="text-foreground font-semibold mb-1">No active courses found</p>
             <p className="text-sm text-foreground-secondary">
               Add courses in <span className="font-semibold text-foreground">My Courses</span> to see this semester&apos;s plan.
@@ -504,7 +501,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
                     <span
                       key={key}
                       title={categoryLabels[key]}
-                      className={`inline-flex items-center gap-2 px-2.5 py-1 rounded-full border border-border ${colors.bg} max-w-full`}
+                      className={`inline-flex max-w-full items-center gap-2 border border-border px-2 py-1 ${colors.bg}`}
                     >
                       <span className={`font-semibold text-xs ${colors.text} truncate`}>{key}</span>
                       <span className="text-xs text-foreground-secondary whitespace-nowrap">
@@ -546,7 +543,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
                               return (
                                 <span
                                   key={`${allocation.category}-${allocation.credits}`}
-                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full border border-border ${colors.bg}`}
+                                  className={`inline-flex items-center gap-1 border border-border px-2 py-1 ${colors.bg}`}
                                 >
                                   <span className={`font-semibold ${colors.text}`}>
                                     {categoryLabels[allocation.category]}
@@ -567,14 +564,14 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
             </div>
           </div>
         )}
-      </div>
+      </section>
 
       {enrollmentsLoading ? (
-        <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6 animate-pulse">
+        <div className="animate-pulse border border-border bg-surface p-4 sm:p-5">
           <div className="h-6 bg-background-secondary dark:bg-background rounded w-1/3 mb-4"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="border border-border rounded-lg p-4 bg-surface-hover">
+              <div key={i} className="border border-border bg-surface-hover p-4">
                 <div className="h-4 bg-background-secondary dark:bg-background rounded w-1/2 mb-2"></div>
                 <div className="space-y-2">
                   <div className="h-3 bg-background-secondary dark:bg-background rounded w-1/3"></div>
@@ -585,9 +582,8 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
           </div>
         </div>
       ) : semesterStatsList.length > 0 ? (
-      <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">
-        <div className="flex items-center gap-3 mb-4 sm:mb-6">
-          <span className="w-1 h-6 bg-primary rounded-full"></span>
+      <section className="border border-border bg-surface p-4 sm:p-5">
+        <div className="mb-4 flex items-center gap-3 border-b border-border pb-3 sm:mb-5">
           <h3 className="text-base sm:text-lg font-semibold text-foreground">
             Semester-wise Credits (Completed)
           </h3>
@@ -596,7 +592,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
             {semesterStatsList.map((sem: any) => (
               <div
                 key={sem.semester}
-                className="border border-border rounded-lg p-4 bg-surface-hover"
+                className="border border-border bg-surface-hover p-4"
               >
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-semibold text-foreground">Semester {sem.semester}</p>
@@ -626,7 +622,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
               </div>
             ))}
           </div>
-        </div>
+      </section>
       ) : null}
 
     </div>

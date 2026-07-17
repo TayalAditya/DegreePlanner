@@ -11,11 +11,7 @@ import {
   GraduationCap,
   Calendar,
   TrendingUp,
-  Award,
-  Target,
-  Sparkles,
   ArrowRight,
-  Clock,
   CheckCircle,
   CalendarCheck,
 } from "lucide-react";
@@ -31,8 +27,6 @@ export default async function DashboardPage() {
   let currentSemester = 1;
   let activeCoursesCount = 0;
   let completedCoursesCount = 0;
-  let totalCreditsRequired = 160;
-  let doingMTP = true;
   let isProfileShared = false;
   let shareToken: string | null = null;
   // Prefetch cheap server-side data for DashboardOverview (eliminates all 3 client API calls)
@@ -82,12 +76,6 @@ export default async function DashboardPage() {
         (e) => e.status === "COMPLETED" && e.grade !== "F"
       ).length;
 
-      if (primaryProgram?.program?.totalCreditsRequired) {
-        totalCreditsRequired = primaryProgram.program.totalCreditsRequired;
-      }
-      if (userRecord?.doingMTP !== undefined) {
-        doingMTP = userRecord.doingMTP;
-      }
       isProfileShared = userRecord?.isProfileShared ?? false;
       shareToken = userRecord?.shareToken ?? null;
 
@@ -157,56 +145,37 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="space-y-4 sm:space-y-8">
-      {/* Hero Header */}
-      <div className="relative overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
-        <div
-          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10"
-          aria-hidden="true"
-        />
-
-        <div className="relative p-6 sm:p-8 md:p-10">
-          <div className="flex items-center gap-2 text-sm font-medium text-foreground-secondary">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <TimeGreeting />
-          </div>
-
-          <h1 className="mt-2 text-2xl sm:text-3xl md:text-4xl font-semibold tracking-tight text-foreground">
-            Welcome back, {firstName}
-          </h1>
-
-          {session?.user?.branch && session?.user?.batch ? (
-            <div className="mt-4 flex flex-wrap gap-2">
-              <span className="px-3 py-1.5 rounded-full border border-border bg-background-secondary/70 text-sm font-medium text-foreground-secondary">
-                {session.user.branch}
-              </span>
-              <span className="px-3 py-1.5 rounded-full border border-border bg-background-secondary/70 text-sm font-medium text-foreground-secondary">
-                Batch {session.user.batch}
-              </span>
-              {session.user.enrollmentId && (
-                <span className="px-3 py-1.5 rounded-full border border-border bg-background-secondary/70 text-sm font-medium text-foreground-secondary">
-                  {session.user.enrollmentId}
-                </span>
-              )}
-              <ShareProfileButton isShared={isProfileShared} shareToken={shareToken} />
-            </div>
-          ) : (
-            <p className="mt-3 text-sm sm:text-base text-foreground-secondary max-w-2xl">
-              Track your academic progress, plan your courses, and keep everything in one place.
-            </p>
-          )}
+    <div className="space-y-6">
+      <header className="border-b border-border pb-5 sm:pb-6">
+        <div className="text-sm text-foreground-secondary">
+          <TimeGreeting />
         </div>
-      </div>
+
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+          Welcome back, {firstName}
+        </h1>
+
+        {session?.user?.branch && session?.user?.batch ? (
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-foreground-secondary">
+            <span className="border border-border bg-background px-2.5 py-1">{session.user.branch}</span>
+            <span className="border border-border bg-background px-2.5 py-1">Batch {session.user.batch}</span>
+            {session.user.enrollmentId && (
+              <span className="border border-border bg-background px-2.5 py-1">{session.user.enrollmentId}</span>
+            )}
+            <ShareProfileButton isShared={isProfileShared} shareToken={shareToken} />
+          </div>
+        ) : (
+          <p className="mt-3 text-sm text-foreground-secondary">
+            Review your courses, credits, and current-semester plan.
+          </p>
+        )}
+      </header>
 
       {/* Pre-Registration Banner */}
       {isPreReg && upcomingSemester && (
-        <div className="relative overflow-hidden rounded-2xl border border-success/30 bg-success/5 shadow-sm">
-          <div
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-success/10 via-transparent to-info/5"
-            aria-hidden="true"
-          />
-          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4 p-5 sm:p-6">
-            <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-success/15 flex items-center justify-center">
+        <div className="border border-success/30 bg-success/5">
+          <div className="flex flex-col items-start gap-4 p-4 sm:flex-row sm:items-center">
+            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center bg-success/10">
               <CalendarCheck className="w-5 h-5 text-success" />
             </div>
             <div className="flex-1 min-w-0">
@@ -229,10 +198,10 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Quick Stats */}
+      {/* Current status */}
       <div>
-        <h2 className="text-lg sm:text-xl font-semibold text-foreground mb-4">Overview</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
+        <h2 className="mb-3 text-base font-semibold text-foreground">Current status</h2>
+        <div className="grid grid-cols-1 divide-y divide-border border border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <StatCard
             icon={<BookOpen className="w-full h-full" />}
             label="Current Semester"
@@ -270,38 +239,30 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Quick Actions Grid */}
+      {/* Shortcuts */}
       <div>
-        <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Quick Actions</h2>
-          <span className="text-xs sm:text-sm text-foreground-secondary hidden sm:block">Jump to what you need</span>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-foreground">Shortcuts</h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <div className="grid grid-cols-1 gap-px overflow-hidden border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
               <Link
                 key={action.href}
                 href={action.href}
-                className={`group relative overflow-hidden bg-surface rounded-xl border border-border p-4 sm:p-6 transition-all duration-200 hover:shadow-md hover:-translate-y-px will-change-transform focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 min-w-0 ${action.hoverBorder}`}
+                className="group flex min-w-0 items-center gap-3 bg-surface px-4 py-3.5 transition-colors hover:bg-background-secondary focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
               >
-                <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gradient-to-br from-background-secondary/60 via-transparent to-background-secondary/60" />
-
-                <div className="relative z-10">
-                  <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${action.iconBg} flex items-center justify-center mb-3 sm:mb-4 transition-transform duration-200 group-hover:scale-[1.03]`}>
-                    <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${action.iconText}`} />
-                  </div>
-                  <h3 className="font-semibold text-foreground text-sm sm:text-base mb-1 sm:mb-2 group-hover:text-primary transition-colors truncate">
+                <Icon className={`h-4 w-4 flex-shrink-0 ${action.iconText}`} />
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-sm font-medium text-foreground">
                     {action.title}
                   </h3>
-                  <p className="text-xs sm:text-sm text-foreground-secondary hidden sm:block mb-4">
+                  <p className="mt-0.5 hidden text-xs text-foreground-secondary sm:block">
                     {action.description}
                   </p>
-                  <div className="hidden sm:flex items-center text-sm font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity">
-                    Get started
-                    <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-0.5 transition-transform" />
-                  </div>
                 </div>
+                <ArrowRight className="h-4 w-4 flex-shrink-0 text-foreground-muted transition-transform group-hover:translate-x-0.5" />
               </Link>
             );
           })}
@@ -316,56 +277,6 @@ export default async function DashboardPage() {
         initialEnrollments={initialEnrollments}
       />
 
-      {/* Tips & Reminders */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-surface rounded-xl border border-border p-6 shadow-sm border-l-4 border-l-info/40">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-info/10 rounded-xl border border-info/20 flex items-center justify-center">
-              <Target className="w-5 h-5 text-info" />
-            </div>
-            <h3 className="font-semibold text-foreground">Academic Goals</h3>
-          </div>
-          <ul className="space-y-3">
-            <li className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-              <span className="text-foreground-secondary">Complete {totalCreditsRequired} credits for degree</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
-              <span className="text-foreground-secondary">Maintain CGPA above 8.0 for honours</span>
-            </li>
-            {doingMTP && (
-              <li className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-warning mt-0.5 flex-shrink-0" />
-                <span className="text-foreground-secondary">Complete MTP in final year</span>
-              </li>
-            )}
-          </ul>
-        </div>
-
-        <div className="bg-surface rounded-xl border border-border p-6 shadow-sm border-l-4 border-l-primary/40">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-primary/10 rounded-xl border border-primary/20 flex items-center justify-center">
-              <Award className="w-5 h-5 text-primary" />
-            </div>
-            <h3 className="font-semibold text-foreground">Quick Tips</h3>
-          </div>
-          <ul className="space-y-3">
-            <li className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-              <span className="text-foreground-secondary">Plan your electives based on interests</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-secondary rounded-full mt-2 flex-shrink-0"></div>
-              <span className="text-foreground-secondary">Check prerequisites before enrolling</span>
-            </li>
-            <li className="flex items-start gap-3">
-              <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-              <span className="text-foreground-secondary">Track your credit distribution regularly</span>
-            </li>
-          </ul>
-        </div>
-      </div>
     </div>
   );
 }
