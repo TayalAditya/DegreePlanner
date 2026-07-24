@@ -70,7 +70,7 @@ export function PYQView({ isAdmin }: PYQViewProps) {
   // Upload form state
   const [uploadCourseCode, setUploadCourseCode] = useState("");
   const [uploadExamType, setUploadExamType] = useState("MIDSEM");
-  const [uploadFileUrl, setUploadFileUrl] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadTitle, setUploadTitle] = useState("");
   const [uploadSemester, setUploadSemester] = useState("");
   const [uploadYear, setUploadYear] = useState("");
@@ -173,25 +173,33 @@ export function PYQView({ isAdmin }: PYQViewProps) {
   }, [filteredPapers]);
 
   const handleUpload = async () => {
-    if (!uploadCourseCode || !uploadFileUrl || !uploadSemester || !uploadYear) {
-      showToast("error", "Please fill in all required fields");
+    if (!uploadCourseCode || !uploadFile || !uploadSemester || !uploadYear) {
+      showToast("error", "Please fill in all required fields and choose a file");
+      return;
+    }
+
+    // Client-side guard for a fast error before the network round-trip.
+    const MAX = 10 * 1024 * 1024;
+    if (uploadFile.size > MAX) {
+      showToast("error", "File too large. Maximum size is 10MB");
       return;
     }
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/pyq", {
+      const form = new FormData();
+      form.append("file", uploadFile);
+      form.append("courseCode", uploadCourseCode);
+      form.append("examType", uploadExamType);
+      if (uploadTitle) form.append("title", uploadTitle);
+      form.append("semester", uploadSemester);
+      form.append("year", uploadYear);
+      form.append("term", uploadTerm);
+
+      // No Content-Type header — browser sets the multipart boundary.
+      const res = await fetch("/api/pyq/upload", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          courseCode: uploadCourseCode,
-          examType: uploadExamType,
-          fileUrl: uploadFileUrl,
-          title: uploadTitle || undefined,
-          semester: uploadSemester,
-          year: uploadYear,
-          term: uploadTerm,
-        }),
+        body: form,
       });
 
       if (!res.ok) {
@@ -204,7 +212,7 @@ export function PYQView({ isAdmin }: PYQViewProps) {
       setShowUploadModal(false);
       setUploadCourseCode("");
       setUploadExamType("MIDSEM");
-      setUploadFileUrl("");
+      setUploadFile(null);
       setUploadTitle("");
       setUploadSemester("");
       setUploadYear("");
@@ -424,18 +432,22 @@ export function PYQView({ isAdmin }: PYQViewProps) {
                 </div>
               </div>
 
-              {/* File URL (Google Drive link) */}
+              {/* File upload */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">
-                  File Link (Google Drive / direct URL) <span className="text-error">*</span>
+                  Paper file (PDF / image / doc, max 10MB) <span className="text-error">*</span>
                 </label>
                 <input
-                  type="url"
-                  value={uploadFileUrl}
-                  onChange={(e) => setUploadFileUrl(e.target.value)}
-                  placeholder="https://drive.google.com/..."
-                  className="w-full px-4 py-2.5 bg-surface border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground placeholder-foreground-secondary"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                  onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
+                  className="w-full px-4 py-2.5 bg-surface border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:bg-primary file:text-white file:font-medium file:cursor-pointer"
                 />
+                {uploadFile && (
+                  <p className="mt-1 text-xs text-foreground-secondary">
+                    {uploadFile.name} · {(uploadFile.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                )}
               </div>
 
               {/* Optional title */}
@@ -462,7 +474,7 @@ export function PYQView({ isAdmin }: PYQViewProps) {
               </button>
               <button
                 onClick={handleUpload}
-                disabled={submitting || !uploadCourseCode || !uploadFileUrl || !uploadSemester || !uploadYear}
+                disabled={submitting || !uploadCourseCode || !uploadFile || !uploadSemester || !uploadYear}
                 className="px-6 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-hover font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {submitting ? (
@@ -671,7 +683,7 @@ function PaperRow({
           </button>
         )}
         <a
-          href={paper.fileUrl}
+          href={`/api/pyq/${paper.id}/view`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 font-medium text-sm transition-colors"

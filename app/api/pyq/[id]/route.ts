@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { isDocumentsAdmin } from "@/lib/permissions";
+import { deleteFromBlob } from "@/lib/blobStorage";
 
 const VALID_STATUSES = new Set(["PENDING", "APPROVED", "REJECTED"]);
 
@@ -70,6 +71,8 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
     }
 
     await prisma.previousYearPaper.delete({ where: { id } });
+    // Remove the stored file (no-op for legacy external links).
+    await deleteFromBlob(paper.fileUrl);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("PYQ delete error:", error);
