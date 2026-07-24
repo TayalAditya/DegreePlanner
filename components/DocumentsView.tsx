@@ -39,6 +39,7 @@ type DocumentRecord = {
   description?: string | null;
   category: string;
   fileUrl?: string | null;
+  blobPathname?: string | null;
   fileName?: string | null;
   fileSize?: number | null;
   mimeType?: string | null;
@@ -56,6 +57,15 @@ function normalizeUrlInput(raw: string): string {
   if (!trimmed) return trimmed;
   if (trimmed.startsWith("/") || trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
   return `https://${trimmed}`;
+}
+
+/**
+ * Resolve the URL to open/preview a document. Blob-backed uploads go through
+ * the auth-checked proxy; legacy external links open directly.
+ */
+function resolveDocHref(doc: Pick<DocumentRecord, "id" | "fileUrl" | "blobPathname">): string {
+  if (doc.blobPathname) return `/api/documents/${doc.id}/view`;
+  return doc.fileUrl ? normalizeUrlInput(doc.fileUrl) : "";
 }
 
 function getDriveFolderId(url: string): string | null {
@@ -125,7 +135,25 @@ function getYouTubeVideoId(url: string): string | null {
   return null;
 }
 
-function getPreviewConfig(fileUrl: string | null | undefined): PreviewConfig {
+function getPreviewConfig(doc: DocumentRecord | null | undefined): PreviewConfig {
+  if (!doc) return { kind: "none", reason: "No URL available for preview." };
+
+  // Blob-backed uploads preview through the auth-checked proxy; detect type
+  // from the stored mimeType/fileName since the proxy URL has no extension.
+  if (doc.blobPathname) {
+    const src = `/api/documents/${doc.id}/view`;
+    const mime = (doc.mimeType || "").toLowerCase();
+    const name = (doc.fileName || "").toLowerCase();
+    if (mime.startsWith("image/") || /\.(png|jpe?g|gif|webp|svg)$/.test(name)) {
+      return { kind: "image", src, alt: "Document preview" };
+    }
+    if (mime === "application/pdf" || name.endsWith(".pdf")) {
+      return { kind: "iframe", src, title: "Document preview" };
+    }
+    return { kind: "none", reason: "Preview not available for this file type. Use Open to download." };
+  }
+
+  const fileUrl = doc.fileUrl;
   if (!fileUrl) return { kind: "none", reason: "No URL available for preview." };
 
   const raw = fileUrl.trim();
@@ -227,7 +255,7 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
     });
   }, [documents, searchQuery]);
 
-  const previewConfig = useMemo(() => getPreviewConfig(previewDoc?.fileUrl), [previewDoc?.fileUrl]);
+  const previewConfig = useMemo(() => getPreviewConfig(previewDoc), [previewDoc]);
 
   useEffect(() => {
     if (!previewDoc && !isAddLinkOpen && !editingDoc) return;
@@ -285,6 +313,48 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
       await queryClient.invalidateQueries({ queryKey: ["documents", userId, selectedCategory] });
     } catch (error: any) {
       showToast("error", error?.message || "Failed to add link");
+    }
+  };
+
+  const handleUploadDoc = async (payload: {
+    title: string;
+    description?: string;
+    category: string;
+    file: File;
+    isPublic: boolean;
+  }) => {
+    if (!payload.title.trim()) {
+      showToast("warning", "Title is required");
+      return;
+    }
+    if (payload.file.size > 10 * 1024 * 1024) {
+      showToast("warning", "File is too large (max 10MB)");
+      return;
+    }
+
+    try {
+      const form = new FormData();
+      form.append("file", payload.file);
+      form.append("title", payload.title.trim());
+      if (payload.description?.trim()) form.append("description", payload.description.trim());
+      form.append("category", payload.category);
+      form.append("isPublic", String(payload.isPublic));
+
+      const res = await fetch("/api/documents/upload", {
+        method: "POST",
+        body: form,
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error || "Failed to upload document");
+      }
+
+      showToast("success", "Document uploaded");
+      setIsAddLinkOpen(false);
+      await queryClient.invalidateQueries({ queryKey: ["documents", userId, selectedCategory] });
+    } catch (error: any) {
+      showToast("error", error?.message || "Failed to upload document");
     }
   };
 
@@ -507,7 +577,7 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
                 {previewDoc.fileUrl && (
                   <div className="mt-4 flex items-center justify-end">
                     <a
-                      href={normalizeUrlInput(previewDoc.fileUrl)}
+                      href={resolveDocHref(previewDoc)}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary-hover transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
@@ -540,6 +610,7 @@ export function DocumentsView({ userId, role, canManageDocuments }: DocumentsVie
           <AddLinkModal
             onClose={() => setIsAddLinkOpen(false)}
             onSubmit={handleCreateLinkDoc}
+            onUpload={handleUploadDoc}
           />
         )}
       </>
@@ -621,7 +692,7 @@ function DocumentCard({
         </button>
         {document.fileUrl && (
           <a
-            href={normalizeUrlInput(document.fileUrl)}
+            href={resolveDocHref(document)}
             target="_blank"
             rel="noreferrer"
             className="px-3 py-2 bg-primary text-white rounded-md text-sm font-medium hover:bg-primary-hover flex items-center gap-2 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
@@ -782,12 +853,16 @@ function EditDocumentModal({
 function AddLinkModal({
   onClose,
   onSubmit,
+  onUpload,
 }: {
   onClose: () => void;
   onSubmit: (payload: { title: string; description?: string; category: string; url: string; isPublic: boolean }) => void;
+  onUpload: (payload: { title: string; description?: string; category: string; file: File; isPublic: boolean }) => void;
 }) {
+  const [mode, setMode] = useState<"upload" | "link">("upload");
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
   const [category, setCategory] = useState(CATEGORIES[0]?.value || "FORMS");
   const [description, setDescription] = useState("");
   const [isPublic, setIsPublic] = useState(true);
@@ -800,7 +875,7 @@ function AddLinkModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm transition-opacity duration-150"
       role="dialog"
       aria-modal="true"
-      aria-label="Add link or embed"
+      aria-label="Add document"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -808,9 +883,9 @@ function AddLinkModal({
       >
         <div className="flex items-center justify-between gap-4 p-5 border-b border-border">
           <div>
-            <h2 className="text-lg font-bold text-foreground">Add Link / Embed</h2>
+            <h2 className="text-lg font-bold text-foreground">Add Document</h2>
             <p className="text-sm text-foreground-secondary mt-1">
-              Paste a Google Drive file/folder link, a YouTube link, or a Canva presentation link. We&apos;ll try to embed it automatically.
+              Upload a file (PDF, Word, or image) or paste a Google Drive / YouTube / Canva link to embed.
             </p>
           </div>
           <button
@@ -823,6 +898,27 @@ function AddLinkModal({
         </div>
 
         <div className="p-5 space-y-4">
+          <div className="inline-flex rounded-lg border border-border p-1 bg-background-secondary dark:bg-background">
+            <button
+              type="button"
+              onClick={() => setMode("upload")}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                mode === "upload" ? "bg-primary text-white" : "text-foreground-secondary hover:text-foreground"
+              }`}
+            >
+              Upload file
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("link")}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                mode === "link" ? "bg-primary text-white" : "text-foreground-secondary hover:text-foreground"
+              }`}
+            >
+              Paste link
+            </button>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">Title</label>
             <input
@@ -833,15 +929,33 @@ function AddLinkModal({
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">URL</label>
-            <input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://drive.google.com/file/d/...  or  https://drive.google.com/drive/folders/...  or  https://www.canva.com/design/...  or  https://youtu.be/..."
-              className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-            />
-          </div>
+          {mode === "upload" ? (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">File</label>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="w-full text-sm text-foreground-secondary file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-white hover:file:bg-primary-hover file:cursor-pointer"
+              />
+              {file && (
+                <p className="mt-2 text-xs text-foreground-secondary">
+                  {file.name} — {(file.size / (1024 * 1024)).toFixed(2)} MB
+                </p>
+              )}
+              <p className="mt-1 text-xs text-foreground-secondary">Max 10MB. PDF, Word, or image files.</p>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">URL</label>
+              <input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://drive.google.com/file/d/...  or  https://drive.google.com/drive/folders/...  or  https://www.canva.com/design/...  or  https://youtu.be/..."
+                className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-foreground focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
+              />
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -896,21 +1010,20 @@ function AddLinkModal({
               if (isSubmitting) return;
               setIsSubmitting(true);
               try {
-                await onSubmit({
-                  title,
-                  description,
-                  category,
-                  url,
-                  isPublic,
-                });
+                if (mode === "upload") {
+                  if (!file) return;
+                  await onUpload({ title, description, category, file, isPublic });
+                } else {
+                  await onSubmit({ title, description, category, url, isPublic });
+                }
               } finally {
                 setIsSubmitting(false);
               }
             }}
             className="px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (mode === "upload" && !file)}
           >
-            {isSubmitting ? "Adding..." : "Add"}
+            {isSubmitting ? (mode === "upload" ? "Uploading..." : "Adding...") : mode === "upload" ? "Upload" : "Add"}
           </button>
         </div>
       </div>

@@ -2,21 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-// import { put } from "@vercel/blob"; // Uncomment when @vercel/blob is installed
 import { z } from "zod";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { isDocumentsAdmin } from "@/lib/permissions";
-
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_FILE_TYPES = [
-  "application/pdf",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-];
+import {
+  uploadToBlob,
+  validateUploadFile,
+  isBlobConfigured,
+} from "@/lib/blobStorage";
 
 const documentSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
@@ -85,62 +77,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
+    const fileError = validateUploadFile(file);
+    if (fileError) {
+      return NextResponse.json({ error: fileError }, { status: 400 });
+    }
+
+    if (!isBlobConfigured()) {
       return NextResponse.json(
-        { error: "File too large. Maximum size is 10MB" },
-        { status: 400 }
+        { error: "File storage is not configured. Please contact an administrator." },
+        { status: 503 }
       );
     }
 
-    // Validate file type
-    if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { error: "Invalid file type. Allowed: PDF, DOC, DOCX, JPG, PNG, GIF" },
-        { status: 400 }
-      );
-    }
-
-    // File upload handling
-    let fileUrl: string;
-    let fileName: string = file.name;
-    let fileSize: number = file.size;
-    let mimeType: string = file.type;
-
-    // For development: Save to public/uploads/documents/
-    // For production: Use Vercel Blob Storage (uncomment below)
-    
-    if (process.env.NODE_ENV === "production" && process.env.BLOB_READ_WRITE_TOKEN) {
-      // Production: Use Vercel Blob Storage
-      // Uncomment when @vercel/blob is installed:
-      // const { put } = await import("@vercel/blob");
-      // const blob = await put(fileName, file, {
-      //   access: isPublic ? "public" : "private",
-      //   addRandomSuffix: true,
-      // });
-      // fileUrl = blob.url;
-      
-      // Fallback if blob not configured
-      fileUrl = `/api/documents/files/${Date.now()}-${fileName}`;
-    } else {
-      // Development: Save to local filesystem
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      
-      // Create unique filename with timestamp
-      const timestamp = Date.now();
-      const uniqueFileName = `${timestamp}-${fileName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      
-      // Save to public/uploads/documents/
-      const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'documents');
-      await mkdir(uploadDir, { recursive: true });
-      
-      const filePath = path.join(uploadDir, uniqueFileName);
-      await writeFile(filePath, buffer);
-      
-      // URL accessible from browser
-      fileUrl = `/uploads/documents/${uniqueFileName}`;
-    }
+    // Store the file in Vercel Blob (durable; the raw URL is never exposed to
+    // clients — access goes through /api/documents/[id]/view).
+    const stored = await uploadToBlob(file, { prefix: "documents" });
 
     // Create document record
     const document = await prisma.document.create({
@@ -149,10 +100,11 @@ export async function POST(request: NextRequest) {
         title: validatedData.title,
         description: validatedData.description || null,
         category: validatedData.category,
-        fileUrl,
-        fileName,
-        fileSize,
-        mimeType,
+        fileUrl: stored.url,
+        blobPathname: stored.pathname,
+        fileName: stored.fileName,
+        fileSize: stored.fileSize,
+        mimeType: stored.mimeType,
         isPublic: validatedData.isPublic,
       },
     });

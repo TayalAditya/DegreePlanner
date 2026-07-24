@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { isDocumentsAdmin } from "@/lib/permissions";
+import { deleteFromBlob } from "@/lib/blobStorage";
 
 const DOCUMENT_CATEGORIES = new Set([
   "FORMS",
@@ -143,7 +144,7 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
 
     const doc = await prisma.document.findUnique({
       where: { id },
-      select: { id: true, userId: true, title: true },
+      select: { id: true, userId: true, title: true, fileUrl: true },
     });
 
     if (!doc) {
@@ -156,6 +157,8 @@ export async function DELETE(_req: NextRequest, context: { params: Promise<{ id:
     }
 
     await prisma.document.delete({ where: { id } });
+    // Remove the stored file (no-op for legacy external links).
+    await deleteFromBlob(doc.fileUrl);
 
     return NextResponse.json({ ok: true });
   } catch (error) {
