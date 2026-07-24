@@ -46,6 +46,8 @@ model User {
   createdTimetableEntries  TimetableEntry[]      @relation("TimetableCreatedBy")
   updatedTimetableEntries  TimetableEntry[]      @relation("TimetableUpdatedBy")
   programs                 UserProgram[]
+  pyqUploads               PreviousYearPaper[]   @relation("PyqUploader")
+  pyqReviews               PreviousYearPaper[]   @relation("PyqReviewer")
 
   @@index([email])
   @@index([enrollmentId])
@@ -156,6 +158,7 @@ model Course {
   prerequisiteFor    CoursePrerequisite[]  @relation("PrerequisiteFor")
   courseSuggestions  CourseSuggestion[]
   programCourses     ProgramCourse[]
+  pyqPapers          PreviousYearPaper[]
   timetableEntries   TimetableEntry[]
 
   @@index([code])
@@ -666,4 +669,49 @@ enum DocumentCategory {
   CERTIFICATES
   TRANSCRIPTS
   OTHER
+}
+
+enum ExamType {
+  QUIZ
+  MIDSEM
+  ENDSEM
+  OTHER
+}
+
+enum PYQStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model PreviousYearPaper {
+  id           String    @id @default(cuid())
+  courseId      String
+  courseCode    String
+  courseName   String
+  semester     Int       // academic semester (1-8+)
+  year         Int       // calendar year (e.g. 2025)
+  term         Term      // FALL / SPRING / SUMMER
+  examType     ExamType
+  title        String?   // optional display title
+  fileUrl      String    // stored file path served via /api/pyq/[id]/view
+  fileName     String?
+  fileSize     Int?
+  mimeType     String?
+  uploadedById String
+  status       PYQStatus @default(PENDING)
+  reviewedById String?
+  reviewedAt   DateTime?
+  reviewNote   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  course       Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  uploadedBy   User      @relation("PyqUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+  reviewedBy   User?     @relation("PyqReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([courseId])
+  @@index([courseCode])
+  @@index([uploadedById])
+  @@index([examType])
+  @@index([status])
 }
