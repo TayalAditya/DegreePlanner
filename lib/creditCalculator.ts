@@ -61,9 +61,30 @@ type CreditClassificationState = {
  * e.g. EE-205 is the same course as EE-202 (Electromagnetics & Wave Propagation).
  */
 const COURSE_EQUIVALENTS: Record<string, string> = {
-  EE205: "EE202",
-  AR503: "AR520",
+  // EE
+  EE205: "EE202",   // Electromagnetics & Wave Propagation
+  EE212: "EE210",   // Digital System Design
+  EE316: "EE304",   // Communication Systems
   EE302: "EE301",
+  // MNC: MA ↔ CS
+  MA312: "CS212",   // Design of Algorithms
+  MA313: "CS304",   // Formal Languages & Automata Theory
+  CS214: "CS201",   // Computer Organisation
+  // CE
+  CE301: "CE310",   // Strength of Materials and Structures
+  CE301P: "CE310P", // Strength of Materials Lab
+  CE302: "CE311",   // Geotechnical Engineering
+  CE302P: "CE311P", // Geotechnical Engineering Lab
+  CE203P: "CE354P", // Building/Construction Materials Lab
+  // ME
+  ME308: "ME215",   // Manufacturing Engineering 1
+  // VLSI
+  EE311: "VL201",   // Semiconductor Device for ICs
+  // CS/DSAI
+  CS669: "DS413",   // Pattern Recognition / Statistical Learning
+  CS515: "CS213",   // Advanced CS Practicum / Reverse Engineering
+  // Architecture
+  AR503: "AR520",
 };
 
 export interface MTPEligibility {
