@@ -1,11 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 
-// Show the nudge at most once per ~30 days.
-const COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
-const LS_KEY = "pmd.🌟.feedback_spotlight_seen";
+// Once the user actually submits feedback, stay quiet for 15 days.
+const REVIEWED_COOLDOWN_MS = 15 * 24 * 60 * 60 * 1000;
+// Until then, keep nudging — but leave a 5 min gap between appearances.
+const NUDGE_INTERVAL_MS = 5 * 60 * 1000;
+
+// Last time we showed/dismissed the nudge. This is only UI pacing, so keeping
+// it per-device in localStorage is fine — the "already reviewed" decision is
+// made server-side against the user's account (see hasReviewedRecently).
+const SHOWN_KEY = "pmd.🌟.feedback_spotlight_seen";
 
 // How long the tab must sit idle (no meaningful interaction) before we nudge.
 const IDLE_MS = 6000;
@@ -19,19 +25,32 @@ interface Rect {
   height: number;
 }
 
-function dueForNudge(): boolean {
+// Server truth: has this user (on any device) left feedback in the last 15 days?
+async function hasReviewedRecently(): Promise<boolean> {
   try {
-    const last = localStorage.getItem(LS_KEY);
-    if (!last) return true;
-    return Date.now() - Number(last) > COOLDOWN_MS;
+    const res = await fetch("/api/feedback", { cache: "no-store" });
+    if (!res.ok) return false;
+    const rows: Array<{ createdAt?: string }> = await res.json();
+    const latest = rows?.[0]?.createdAt ? new Date(rows[0].createdAt).getTime() : 0;
+    return latest > 0 && Date.now() - latest < REVIEWED_COOLDOWN_MS;
   } catch {
     return false;
   }
 }
 
-function markSeen() {
+// Local pacing gate only — the 5 min gap between nudges on this device.
+function pacedRecently(): boolean {
   try {
-    localStorage.setItem(LS_KEY, String(Date.now()));
+    const shown = localStorage.getItem(SHOWN_KEY);
+    return !!shown && Date.now() - Number(shown) < NUDGE_INTERVAL_MS;
+  } catch {
+    return false;
+  }
+}
+
+function markShown() {
+  try {
+    localStorage.setItem(SHOWN_KEY, String(Date.now()));
   } catch {
     /* ignore */
   }
@@ -40,9 +59,12 @@ function markSeen() {
 export function FeedbackSpotlight() {
   const { data: session } = useSession();
   const [rect, setRect] = useState<Rect | null>(null);
+  // Cached server truth: is the user inside their 15-day post-review quiet
+  // window? null = not yet known (don't nudge until we've checked).
+  const reviewedRef = useRef<boolean | null>(null);
 
   const dismiss = useCallback(() => {
-    markSeen();
+    markShown();
     setRect(null);
   }, []);
 
@@ -55,13 +77,18 @@ export function FeedbackSpotlight() {
 
   useEffect(() => {
     if (!session?.user) return;
-    if (!dueForNudge()) return;
+    // Already showing — the reposition effect owns it.
+    if (rect) return;
 
     let idleTimer: number | undefined;
+    let cancelled = false;
 
     const arm = () => {
       window.clearTimeout(idleTimer);
       idleTimer = window.setTimeout(() => {
+        // Server says they reviewed recently, or we nudged <5 min ago — skip.
+        if (reviewedRef.current !== false) return;
+        if (pacedRecently()) return;
         const btn = document.getElementById(TRIGGER_ID);
         if (!btn) return;
         const r = btn.getBoundingClientRect();
@@ -71,16 +98,26 @@ export function FeedbackSpotlight() {
       }, IDLE_MS);
     };
 
+    // Refresh the server-side "reviewed recently" flag, then re-arm.
+    const refresh = async () => {
+      reviewedRef.current = await hasReviewedRecently();
+      if (!cancelled) arm();
+    };
+
     // Reset the idle countdown on interaction so we only nudge a quiet screen.
     const events: Array<keyof DocumentEventMap> = ["mousemove", "keydown", "scroll", "touchstart"];
-    const onActivity = () => {
-      if (!rect) arm();
-    };
+    const onActivity = () => arm();
     events.forEach((e) => document.addEventListener(e, onActivity, { passive: true }));
-    arm();
+
+    // Re-check on a cadence so the nudge reappears after its 5 min gap
+    // (and picks up reviews made on other devices) without a page reload.
+    const poll = window.setInterval(refresh, NUDGE_INTERVAL_MS);
+    refresh();
 
     return () => {
+      cancelled = true;
       window.clearTimeout(idleTimer);
+      window.clearInterval(poll);
       events.forEach((e) => document.removeEventListener(e, onActivity));
     };
   }, [session?.user, rect]);

@@ -127,8 +127,8 @@ export async function POST(request: NextRequest) {
     }
 
     // ── Pre-registration gate ─────────────────────────────────────────────────
-    // Sem 3 (B25), Sem 5 (B24), Sem 7 (B23) open for registration on July 15 2026.
-    const PRE_REG_OPEN = new Date("2026-07-15T00:00:00+05:30");
+    // Sem 3 (B25), Sem 5 (B24), Sem 7 (B23) open for registration on August 15 2026.
+    const PRE_REG_OPEN = new Date("2026-08-15T00:00:00+05:30");
     const isPreRegLocked = new Date() < PRE_REG_OPEN;
     if (isPreRegLocked && term === "FALL" && year === 2026) {
       const batch = session.user.batch;
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       if (lockedSem !== null && Number(semester) === lockedSem) {
         return NextResponse.json(
           {
-            error: `Semester ${lockedSem} registration opens on 15 July 2026. Pre-registration will be available from that date.`,
+            error: `Semester ${lockedSem} registration opens on 15 August 2026. Pre-registration will be available from that date.`,
           },
           { status: 403 }
         );

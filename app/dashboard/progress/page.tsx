@@ -660,21 +660,24 @@ export default function ProgressPage() {
     );
     const mtp1Completed = completedMtpComponents.has(1);
     const mtp2Completed = completedMtpComponents.has(2);
-    const istpCompleted = istpCreditsCompleted >= 4;
     const isBSProgram = getCurriculumBranchCode(user?.branch || "") === "BSCS";
+    const programmeIstpCredits = isBSProgram
+      ? 0
+      : Math.max(0, (programCredits.mtpIstpCredits ?? 12) - MTP_TOTAL_CREDITS);
+    const istpCompleted = programmeIstpCredits === 0 || istpCreditsCompleted >= programmeIstpCredits;
 
     let mtpRequired = MTP_TOTAL_CREDITS;
-    let istpRequired = isBSProgram ? 0 : 4;
+    let istpRequired = programmeIstpCredits;
     let deAdjustment = 0; // DE credit adjustment when skipping MTP/MTP-2
     let feAdjustment = 0; // FE credit adjustment when skipping ISTP
 
-    if (!isBSProgram && !istpCompleted && !doingISTPPref) {
+    if (programmeIstpCredits > 0 && !istpCompleted && !doingISTPPref) {
       istpRequired = 0;
       if (isBatch22) {
         deAdjustment += 3;
         feAdjustment += 1;
       } else {
-        feAdjustment += 4;
+        feAdjustment += programmeIstpCredits;
       }
     }
 

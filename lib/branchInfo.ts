@@ -37,6 +37,11 @@ export function getProgramLookupBranchCode(branch?: string | null, batch?: numbe
   // Batch-2024/2025 branches have dedicated program rows with updated IC/DC/DE/FE credits.
   if (batch === 2024 && B24_PROGRAM_BRANCHES.has(normalized)) return `${normalized}_B24`;
   if (batch === 2025 && (normalized === "CE" || normalized === "BE" || normalized === "EP")) return `${normalized}_B25`;
+  // Chemical Engineering is introduced only for the 2026 intake.  It has no
+  // generic programme row, so older/future batches cannot silently inherit it.
+  if (batch === 2026 && normalized === "CHE") return "CHE_B26";
+  if (batch === 2026 && normalized === "QS") return "QS_B26";
+  if (batch === 2026 && normalized === "AG") return "AG_B26";
   return normalized;
 }
 
@@ -102,13 +107,16 @@ export function getDepartmentForBranch(branch?: string | null): string | null {
     case "GE":
       return "School of Mechanical and Materials Engineering";
     case "CE":
+    case "AG":
       return "School of Environmental and Natural Sciences";
     case "EP":
+    case "QS":
       return "School of Physical Sciences";
     case "BE":
       return "School of Bioengineering";
     case "BSCS":
     case "CH":
+    case "CHE":
       return "School of Chemical Sciences";
     default:
       return null;
@@ -128,9 +136,12 @@ export function inferBranchFromProgram(program?: string | null): string | null {
   if (normalized.includes("materials science") || /\bmse\b/.test(normalized)) return "MSE";
   if (normalized.includes("mechanical")) return "ME";
   if (normalized.includes("civil")) return "CE";
+  if (normalized.includes("agricultural engineering") || /\bag\b/.test(normalized)) return "AG";
   if (normalized.includes("engineering physics") || /\bep\b/.test(normalized)) return "EP";
+  if (normalized.includes("quantum science") || /\bqs\b/.test(normalized)) return "QS";
   if (normalized.includes("general engineering")) return "GE";
   if (normalized.includes("bio engineering") || normalized.includes("bioengineering")) return "BE";
+  if (normalized.includes("chemical engineering") || /\bche\b/.test(normalized)) return "CHE";
   if (normalized.includes("chemical sciences") || /\bbscs\b/.test(normalized)) return "BSCS";
   return null;
 }

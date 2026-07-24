@@ -1117,9 +1117,10 @@ export default function PreRegistrationPage() {
       }
 
       // Prevent selecting both members of an equivalent set (e.g. EE-210 ≡ EE-212).
-      // Only one of a pair may be registered — match on either direction.
+      // Only one of a pair may be registered — including an auto-added
+      // compulsory component such as CS-212 versus MA-312.
       const equivSelected = data?.offerings.find((o) => {
-        if (!selected.has(o.id) || o.id === offering.id) return false;
+        if ((!selected.has(o.id) && !o.isCompulsory) || o.id === offering.id) return false;
         return (
           (offering.equivalentCourseIds ?? []).includes(o.courseId ?? "") ||
           (o.equivalentCourseIds ?? []).includes(offering.courseId ?? "")

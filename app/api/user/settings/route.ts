@@ -103,7 +103,7 @@ export async function PATCH(req: NextRequest) {
     if (branch) {
       const validBranches = [
         "CSE", "DSE", "DSAI", "EE", "ME", "CE", "BE",
-        "EP", "MNC", "MSE", "GE", "MEVLSI", "BSCS",
+        "EP", "MNC", "MSE", "GE", "MEVLSI", "BSCS", "CHE", "QS", "AG",
         "GE-ROBO", "GE-MECH", "GE-COMM", "GE-FIN",
       ];
       if (!validBranches.includes(branch)) {

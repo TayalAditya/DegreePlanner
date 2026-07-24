@@ -822,7 +822,9 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
 
                         <div
                           className={`grid grid-cols-1 gap-3 ${
-                            primaryProgram.program.code === "BSCS" ? "sm:grid-cols-2" : "sm:grid-cols-3"
+                            primaryProgram.program.code === "BSCS" || primaryProgram.program.mtpIstpCredits <= MTP_TOTAL_CREDITS
+                              ? "sm:grid-cols-2"
+                              : "sm:grid-cols-3"
                           }`}
                         >
                           <label className="flex items-start gap-3 rounded-lg border border-border bg-background-secondary p-3 text-sm text-foreground hover:border-primary/40">
@@ -857,7 +859,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                             </span>
                           </label>
 
-                          {primaryProgram.program.code !== "BSCS" && (
+                          {primaryProgram.program.code !== "BSCS" && primaryProgram.program.mtpIstpCredits > MTP_TOTAL_CREDITS && (
                             <label className="flex items-start gap-3 rounded-lg border border-border bg-background-secondary p-3 text-sm text-foreground hover:border-primary/40">
                               <input
                                 type="checkbox"
@@ -881,6 +883,8 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                             <span>
                               Research & Communication: {primaryProgram.program.mtpIstpCredits - MTP_TOTAL_CREDITS} cr
                             </span>
+                          ) : primaryProgram.program.mtpIstpCredits <= MTP_TOTAL_CREDITS ? (
+                            <span>This curriculum has an 8-credit MTP requirement and no ISTP.</span>
                           ) : (
                             <span>Unchecked MTP credits move to DE; unchecked ISTP credits move to FE.</span>
                           )}

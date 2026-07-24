@@ -9,7 +9,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { computeEnrollmentCreditBreakdown } from "@/lib/progressCreditBreakdown";
 import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
-import { getMtpCourseCode, MTP_COMPONENT_CREDITS } from "@/lib/mtpConfig";
+import { getMtpCourseCode, MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
 
 interface Program {
   id: string;
@@ -724,7 +724,9 @@ export default function ProgramsClient({
 
                         <div
                           className={`grid grid-cols-1 gap-3 ${
-                            primaryProgram.program.code === "BSCS" ? "md:grid-cols-2" : "md:grid-cols-3"
+                            primaryProgram.program.code === "BSCS" || primaryProgram.program.mtpIstpCredits <= MTP_TOTAL_CREDITS
+                              ? "md:grid-cols-2"
+                              : "md:grid-cols-3"
                           }`}
                         >
                           {/* MTP-1 */}
@@ -790,7 +792,7 @@ export default function ProgramsClient({
                           </label>
 
                           {/* ISTP */}
-                          {primaryProgram.program.code !== "BSCS" && (
+                          {primaryProgram.program.code !== "BSCS" && primaryProgram.program.mtpIstpCredits > MTP_TOTAL_CREDITS && (
                             <label
                               className={`flex items-start gap-4 p-4 bg-background-secondary dark:bg-background rounded-xl border-2 transition-colors hover:border-primary/50 focus-within:ring-4 focus-within:ring-primary/20 ${
                                 doingISTP ? "border-primary/40" : "border-border"

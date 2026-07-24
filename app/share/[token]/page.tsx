@@ -160,24 +160,27 @@ function buildRequiredCredits(
   );
   const mtp1Completed = completedMtpComponents.has(1);
   const mtp2Completed = completedMtpComponents.has(2);
-  const istpCompleted = categoryCredits.ISTP >= 4;
+  const programmeIstpCredits = isBSProgram
+    ? 0
+    : Math.max(0, (program?.mtpIstpCredits ?? 12) - MTP_TOTAL_CREDITS);
+  const istpCompleted = programmeIstpCredits === 0 || categoryCredits.ISTP >= programmeIstpCredits;
 
   const doingMTP1Pref = user.doingMTP ?? true;
   const doingMTP2Pref = user.doingMTP2 ?? true;
   const doingISTPPref = user.doingISTP ?? true;
 
   let mtpRequired = MTP_TOTAL_CREDITS;
-  let istpRequired = isBSProgram ? 0 : 4;
+  let istpRequired = programmeIstpCredits;
   let deAdjustment = 0;
   let feAdjustment = 0;
 
-  if (!isBSProgram && !istpCompleted && !doingISTPPref) {
+  if (programmeIstpCredits > 0 && !istpCompleted && !doingISTPPref) {
     istpRequired = 0;
     if (isBatch22) {
       deAdjustment += 3;
       feAdjustment += 1;
     } else {
-      feAdjustment += 4;
+      feAdjustment += programmeIstpCredits;
     }
   }
 

@@ -40,14 +40,18 @@ const BRANCHES = [
   { code: "GE-COMM", name: "General Engineering – Communication Tech" },
   { code: "GE-ROBO", name: "General Engineering – AI & Robotics" },
   { code: "BSCS", name: "B.S. Chemical Sciences" },
+  { code: "CHE", name: "B.Tech Chemical Engineering (B26)" },
+  { code: "QS", name: "B.Tech Quantum Science & Engineering (B26)" },
+  { code: "AG", name: "B.Tech Agricultural Engineering & Data Analytics (B26)" },
 ];
 
-// "" = all batches (default/generic); "2023"/"2024"/"2025" = batch-specific override
+// "" = all batches (default/generic); named years are batch-specific overrides.
 const BATCHES = [
   { value: "", label: "All Batches (Default)" },
   { value: "2023", label: "B23 (2023)" },
   { value: "2024", label: "B24 (2024)" },
   { value: "2025", label: "B25 (2025)" },
+  { value: "2026", label: "B26 (2026)" },
 ];
 
 const COURSE_CATEGORIES = [

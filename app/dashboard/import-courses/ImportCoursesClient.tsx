@@ -1218,6 +1218,9 @@ export default function ImportCoursesPage({
               <option value="GE">GE</option>
               <option value="MEVLSI">MEVLSI</option>
               <option value="BSCS">BSCS (B.S. Chemical Sciences)</option>
+              {userBatch === 2026 && <option value="CHE">CHE (B.Tech Chemical Engineering)</option>}
+              {userBatch === 2026 && <option value="QS">QS (B.Tech Quantum Science &amp; Engineering)</option>}
+              {userBatch === 2026 && <option value="AG">AG (B.Tech Agricultural Engineering &amp; Data Analytics)</option>}
             </select>
             {branch && (
               <p className="text-xs text-foreground-secondary mt-1">

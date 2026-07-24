@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 const BATCHES = [
+  { value: 2026, label: "B26" },
   { value: 2025, label: "B25" },
   { value: 2024, label: "B24" },
   { value: 2023, label: "B23" },
@@ -27,6 +28,9 @@ const BRANCHES = [
   { code: "GE-ROBO", name: "General Engineering (AI & Robotics)",    type: "BTech" },
   { code: "GE-FIN",  name: "General Engineering (Fintech)",          type: "BTech" },
   { code: "BSCS",    name: "Chemical Sciences",                      type: "BS"    },
+  { code: "CHE",     name: "Chemical Engineering",                   type: "BTech" },
+  { code: "QS",      name: "Quantum Science & Engineering",          type: "BTech" },
+  { code: "AG",      name: "Agricultural Engineering & Data Analytics", type: "BTech" },
 ];
 
 export function ImpersonateSelector() {

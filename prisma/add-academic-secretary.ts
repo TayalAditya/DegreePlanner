@@ -6,6 +6,7 @@ async function main() {
   const emails = [
     "academic_secretary@students.iitmandi.ac.in",
     "sae@iitmandi.ac.in",
+    "adcourses@iitmandi.ac.in",
   ];
 
   for (const email of emails) {

@@ -263,6 +263,56 @@ export const BRANCH_CONFIGS: Record<string, BranchConfig> = {
     minSemesterForMTP: 7,  // MTP in final year (Semesters 7 & 8)
   },
 
+  // Introduced for the B26 intake.  The B26 credit split is confirmed by the
+  // Quantum Science curriculum owner: IC 60 + DC 39 + DE 27 + FE 22 + MTP/ISTP 12.
+  QS: {
+    code: 'QS',
+    name: 'Quantum Science & Engineering',
+    fullName: 'B.Tech in Quantum Science & Engineering',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 39,
+    deCredits: 27,
+    feCredits: 22,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 7,
+  },
+
+  // Introduced for the B26 intake. IC 57 comprises IC compulsory 36,
+  // compulsory IC baskets 6 and HSS/IKS 15.
+  AG: {
+    code: 'AG',
+    name: 'Agricultural Engineering with Data Analytics',
+    fullName: 'B.Tech in Agricultural Engineering with Data Analytics',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 57,
+    dcCredits: 49,
+    deCredits: 17,
+    feCredits: 25,
+    mtpIstpCredits: 12,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 7,
+  },
+
+  // Introduced for the B26 intake. The programme has MTP only (no ISTP).
+  CHE: {
+    code: 'CHE',
+    name: 'Chemical Engineering',
+    fullName: 'B.Tech in Chemical Engineering',
+    type: 'BTech',
+    totalCredits: 160,
+    icCredits: 60,
+    dcCredits: 56,
+    deCredits: 15,
+    feCredits: 21,
+    mtpIstpCredits: 8,
+    minCreditsForMTP: 90,
+    minSemesterForMTP: 7,
+  },
+
   // BS Program - Different structure
   BSCS: {
     code: 'BSCS',
