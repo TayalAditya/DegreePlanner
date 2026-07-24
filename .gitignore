@@ -82,3 +82,11 @@ scripts/backups/
 
 degreeplanner_backup.sql
 public/data/README.md
+
+# Throwaway investigation/debug artifacts (one-off, never commit)
+scripts/_*
+scripts/__pycache__/
+scripts/*.json
+scripts/*.txt
+tasks.txt
+/*.xlsx
