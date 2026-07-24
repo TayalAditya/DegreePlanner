@@ -182,6 +182,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(!hasInitialData);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [selectedDept, setSelectedDept] = useState<SchoolFilter>("all");
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [addingCourse, setAddingCourse] = useState<Course | null>(null);
@@ -325,8 +326,17 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       course.name.toLowerCase().includes(searchLower) ||
       course.department.toLowerCase().includes(searchLower);
     const matchesDept = selectedDept === "all" || getCourseSchoolKey(course) === selectedDept;
-    return matchesSearch && matchesDept;
-  }), [allCourses, searchLower, searchNormalized, selectedDept]);
+
+    // Category filter: check against the branch-specific category map
+    let matchesCategory = true;
+    if (selectedCategories.size > 0) {
+      const normalizedCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const category = dbCourseCategoryMap.get(normalizedCode);
+      matchesCategory = !!category && selectedCategories.has(category);
+    }
+
+    return matchesSearch && matchesDept && matchesCategory;
+  }), [allCourses, searchLower, searchNormalized, selectedDept, selectedCategories, dbCourseCategoryMap]);
 
   const departmentGroups = useMemo(() => {
     const bySchool: Record<string, Course[]> = {};
@@ -1268,6 +1278,47 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
               </select>
             </div>
 
+            {/* Category Filter Pills */}
+            {user?.branch && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-medium text-foreground-secondary mr-1">Category:</span>
+                {(["IC", "DC", "DE", "HSS", "IKS", "FE"] as const).map((cat) => {
+                  const active = selectedCategories.has(cat);
+                  const colors = categoryColors[cat] ?? categoryColors.DC;
+                  return (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setSelectedCategories((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(cat)) next.delete(cat);
+                          else next.add(cat);
+                          return next;
+                        });
+                        setSearchResultsLimit(20);
+                      }}
+                      className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition-all ${
+                        active
+                          ? `${colors.bg} ${colors.text} ${colors.border} ring-2 ring-current/20`
+                          : "bg-surface border-border text-foreground-secondary hover:border-foreground-secondary/40"
+                      }`}
+                    >
+                      {cat === "IC" ? "IC" : cat}
+                    </button>
+                  );
+                })}
+                {selectedCategories.size > 0 && (
+                  <button
+                    onClick={() => { setSelectedCategories(new Set()); setSearchResultsLimit(20); }}
+                    className="px-2 py-1.5 text-sm text-foreground-secondary hover:text-foreground transition-colors"
+                    title="Clear category filters"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Course List */}
             {filteredCourses.length === 0 ? (
               <div className="text-center py-12 bg-surface rounded-xl border border-border">
@@ -1318,6 +1369,18 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                               className="px-3 py-1 bg-surface-hover rounded font-medium text-foreground"
                             >
                               {schoolKey}
+                            </span>
+                          );
+                        })()}
+                        {(() => {
+                          const normalizedCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                          const cat = dbCourseCategoryMap.get(normalizedCode);
+                          if (!cat) return null;
+                          const colors = categoryColors[cat as keyof typeof categoryColors];
+                          if (!colors) return null;
+                          return (
+                            <span className={`px-3 py-1 rounded font-medium text-xs ${colors.bg} ${colors.text}`}>
+                              {cat}
                             </span>
                           );
                         })()}
@@ -1461,6 +1524,18 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                                           <span className="px-3 py-1 bg-surface-hover rounded font-medium text-foreground">
                                             L{course.level}
                                           </span>
+                                          {(() => {
+                                            const normalizedCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                                            const cat = dbCourseCategoryMap.get(normalizedCode);
+                                            if (!cat) return null;
+                                            const colors = categoryColors[cat as keyof typeof categoryColors];
+                                            if (!colors) return null;
+                                            return (
+                                              <span className={`px-2.5 py-1 rounded font-medium text-xs ${colors.bg} ${colors.text}`}>
+                                                {cat}
+                                              </span>
+                                            );
+                                          })()}
                                           {enrolledCourseIds.has(course.id) ? (
                                             <span className="px-3 py-1 bg-success/10 text-success rounded font-medium border border-success/30 ml-auto">
                                               ✓ Enrolled
