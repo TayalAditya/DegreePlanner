@@ -392,6 +392,7 @@ model Document {
   description String?
   category    DocumentCategory
   fileUrl     String?
+  blobPathname String?         // Vercel Blob object key; null for legacy external links
   fileName    String?
   fileSize    Int?
   mimeType    String?
@@ -694,7 +695,8 @@ model PreviousYearPaper {
   term         Term      // FALL / SPRING / SUMMER
   examType     ExamType
   title        String?   // optional display title
-  fileUrl      String    // stored file path served via /api/pyq/[id]/view
+  fileUrl      String    // blob URL (server-side only) or legacy external link
+  blobPathname String?   // Vercel Blob object key; null for legacy external links
   fileName     String?
   fileSize     Int?
   mimeType     String?
