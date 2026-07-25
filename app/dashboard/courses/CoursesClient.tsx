@@ -240,6 +240,10 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   }, [tab, catalogLoaded, allCourses.length]);
 
   useEffect(() => {
+    // This endpoint returns the complete branch/batch category map. It is only
+    // needed to classify catalog items, so do not make it compete with the
+    // first paint of the default "My Courses" tab.
+    if (tab !== "catalog") return;
     const branch = user?.branch;
     if (!branch) return;
     const controller = new AbortController();
@@ -262,7 +266,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
 
     loadCourseCategoryMap();
     return () => controller.abort();
-  }, [user?.branch]);
+  }, [tab, user?.branch]);
 
   const loadData = async () => {
     try {

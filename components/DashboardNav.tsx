@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut } from "next-auth/react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -30,9 +31,15 @@ import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import { NotificationBell } from "./NotificationBell";
 import { FeedbackButton } from "./FeedbackButton";
-import { FeedbackSpotlight } from "./FeedbackSpotlight";
 import { BrandMark } from "./BrandMark";
 import { ACAD_SEC_EMAILS, isDocumentsAdmin } from "@/lib/permissions";
+
+// The nudge only appears after the user has been idle. Keeping it out of the
+// navigation chunk shortens the initial mobile dashboard download.
+const FeedbackSpotlight = dynamic(
+  () => import("./FeedbackSpotlight").then((module) => module.FeedbackSpotlight),
+  { ssr: false }
+);
 
 interface DashboardNavProps {
   user: {

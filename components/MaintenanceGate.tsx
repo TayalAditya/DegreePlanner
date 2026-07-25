@@ -12,12 +12,12 @@ type MaintenanceResponse = {
   canManage: boolean;
 };
 
-const POLL_INTERVAL_MS = 5_000;
+const POLL_INTERVAL_MS = 30_000;
 
 /**
  * Protects already-open dashboard tabs too. The server layout covers fresh
- * navigations, while this short poll makes an active shutdown visible without
- * requiring students to manually reload.
+ * navigations; a modest, visibility-aware poll keeps background tabs from
+ * continuously hitting the authenticated maintenance endpoint.
  */
 export function MaintenanceGate() {
   const { status } = useSession();
@@ -30,6 +30,7 @@ export function MaintenanceGate() {
 
     let cancelled = false;
     const load = async () => {
+      if (document.visibilityState !== "visible") return;
       try {
         const response = await fetch("/api/maintenance", { cache: "no-store" });
         if (!response.ok) return;
@@ -42,9 +43,15 @@ export function MaintenanceGate() {
 
     void load();
     const interval = window.setInterval(() => void load(), POLL_INTERVAL_MS);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [status]);
 

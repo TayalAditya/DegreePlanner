@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getServerSession } from "next-auth";
 import { z } from "zod";
 
 import { authOptions } from "@/lib/auth";
-import { getMaintenanceStatus, MAINTENANCE_WINDOW_ID } from "@/lib/maintenance";
+import {
+  getMaintenanceStatus,
+  MAINTENANCE_CACHE_TAG,
+  MAINTENANCE_WINDOW_ID,
+} from "@/lib/maintenance";
 import { isDocumentsAdmin } from "@/lib/permissions";
 import prisma from "@/lib/prisma";
 
@@ -68,6 +73,10 @@ export async function PATCH(request: NextRequest) {
         update: { endsAt: null, message: null },
       });
     }
+
+    // Fresh dashboard requests should observe the new setting immediately,
+    // despite the short shared read cache used to reduce request-time DB work.
+    revalidateTag(MAINTENANCE_CACHE_TAG, { expire: 0 });
 
     return NextResponse.json({
       ...(await getMaintenanceStatus()),
