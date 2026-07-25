@@ -5,12 +5,16 @@ import {
   FileQuestion,
   Search,
   Upload,
-  ExternalLink,
+  Eye,
   X,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Check,
   Ban,
   Trash2,
+  ShieldCheck,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { formatCourseCode } from "@/lib/utils";
@@ -24,9 +28,9 @@ interface PYQPaper {
   term: string;
   examType: string;
   title: string | null;
-  fileUrl: string;
   status: string;
   createdAt: string;
+  previewAvailable: boolean;
   uploadedBy: {
     name: string | null;
     enrollmentId: string | null;
@@ -76,6 +80,14 @@ export function PYQView({ isAdmin }: PYQViewProps) {
   const [uploadYear, setUploadYear] = useState("");
   const [uploadTerm, setUploadTerm] = useState("FALL");
   const [submitting, setSubmitting] = useState(false);
+  const [preview, setPreview] = useState<{
+    paper: PYQPaper;
+    page: number;
+    pageCount: number | null;
+  } | null>(null);
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -104,6 +116,62 @@ export function PYQView({ isAdmin }: PYQViewProps) {
   }, [showToast]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  useEffect(() => {
+    if (!preview) {
+      setPreviewImageUrl(null);
+      setPreviewError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    let objectUrl: string | null = null;
+    setPreviewImageUrl(null);
+    setPreviewError(null);
+    setPreviewLoading(true);
+
+    void (async () => {
+      try {
+        const response = await fetch(`/api/pyq/${preview.paper.id}/preview?page=${preview.page}`, {
+          signal: controller.signal,
+          cache: "no-store",
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => null);
+          throw new Error(data?.error || "Could not load the protected preview.");
+        }
+
+        const pageCount = Number(response.headers.get("X-PYQ-Page-Count"));
+        objectUrl = URL.createObjectURL(await response.blob());
+        setPreviewImageUrl(objectUrl);
+        if (Number.isInteger(pageCount) && pageCount > 0) {
+          setPreview((current) => current ? { ...current, pageCount } : current);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setPreviewError(error instanceof Error ? error.message : "Could not load the protected preview.");
+        }
+      } finally {
+        if (!controller.signal.aborted) setPreviewLoading(false);
+      }
+    })();
+
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [preview?.paper.id, preview?.page]);
+
+  useEffect(() => {
+    if (!preview) return;
+    const blockBrowserSaveAndPrint = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && ["p", "s"].includes(event.key.toLowerCase())) {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener("keydown", blockBrowserSaveAndPrint, true);
+    return () => window.removeEventListener("keydown", blockBrowserSaveAndPrint, true);
+  }, [preview]);
 
   // Unique enrolled courses for the upload dropdown
   const enrolledCourses = useMemo(() => {
@@ -318,8 +386,96 @@ export function PYQView({ isAdmin }: PYQViewProps) {
               papers={coursePapers}
               isAdmin={isAdmin}
               onChanged={loadData}
+              onPreview={(paper) => setPreview({ paper, page: 1, pageCount: null })}
             />
           ))}
+        </div>
+      )}
+
+      {preview && (
+        <div
+          onClick={() => setPreview(null)}
+          onContextMenu={(event) => event.preventDefault()}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-5"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Protected question-paper viewer"
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            className="w-full max-w-5xl max-h-[95vh] overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-border p-4 sm:p-5">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 text-primary">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span className="text-xs font-semibold">Protected viewer</span>
+                </div>
+                <h2 className="mt-1 truncate text-base font-bold text-foreground sm:text-lg">
+                  {preview.paper.title ?? `${formatCourseCode(preview.paper.courseCode)} question paper`}
+                </h2>
+                <p className="mt-1 text-xs text-foreground-secondary">
+                  Watermarked to your account. Saving, sharing, printing, or redistributing is prohibited.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreview(null)}
+                className="rounded-lg p-2 text-foreground-secondary transition-colors hover:bg-surface-hover hover:text-foreground"
+                aria-label="Close protected viewer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex min-h-[52vh] max-h-[72vh] items-center justify-center overflow-auto bg-background-secondary p-3 sm:p-5">
+              {previewLoading && (
+                <div className="flex items-center gap-2 text-sm text-foreground-secondary">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  Loading protected preview...
+                </div>
+              )}
+              {previewError && (
+                <p className="max-w-md text-center text-sm text-error">{previewError}</p>
+              )}
+              {previewImageUrl && !previewError && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={previewImageUrl}
+                  alt={`Watermarked question-paper page ${preview.page}`}
+                  draggable={false}
+                  onDragStart={(event) => event.preventDefault()}
+                  className="max-h-[68vh] w-auto max-w-full select-none rounded border border-border bg-white shadow-sm"
+                />
+              )}
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-border p-3 sm:p-4">
+              <p className="text-xs text-foreground-secondary">
+                Page {preview.page}{preview.pageCount ? ` of ${preview.pageCount}` : ""}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPreview((current) => current && { ...current, page: current.page - 1 })}
+                  disabled={previewLoading || preview.page === 1}
+                  className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreview((current) => current && { ...current, page: current.page + 1 })}
+                  disabled={previewLoading || Boolean(preview.pageCount && preview.page >= preview.pageCount)}
+                  className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -435,11 +591,11 @@ export function PYQView({ isAdmin }: PYQViewProps) {
               {/* File upload */}
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Paper file (PDF / image / doc, max 10MB) <span className="text-error">*</span>
+                  Paper file (PDF / JPG / PNG, max 10MB) <span className="text-error">*</span>
                 </label>
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif"
+                  accept=".pdf,.jpg,.jpeg,.png"
                   onChange={(e) => setUploadFile(e.target.files?.[0] ?? null)}
                   className="w-full px-4 py-2.5 bg-surface border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-foreground file:mr-3 file:px-3 file:py-1.5 file:rounded-md file:border-0 file:bg-primary file:text-white file:font-medium file:cursor-pointer"
                 />
@@ -504,12 +660,14 @@ function CourseGroup({
   papers,
   isAdmin,
   onChanged,
+  onPreview,
 }: {
   code: string;
   name: string;
   papers: PYQPaper[];
   isAdmin?: boolean;
   onChanged: () => void;
+  onPreview: (paper: PYQPaper) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
 
@@ -552,7 +710,7 @@ function CourseGroup({
       {expanded && (
         <div className="border-t border-border divide-y divide-border">
           {papers.map((paper) => (
-            <PaperRow key={paper.id} paper={paper} isAdmin={isAdmin} onChanged={onChanged} />
+            <PaperRow key={paper.id} paper={paper} isAdmin={isAdmin} onChanged={onChanged} onPreview={onPreview} />
           ))}
         </div>
       )}
@@ -571,10 +729,12 @@ function PaperRow({
   paper,
   isAdmin,
   onChanged,
+  onPreview,
 }: {
   paper: PYQPaper;
   isAdmin?: boolean;
   onChanged: () => void;
+  onPreview: (paper: PYQPaper) => void;
 }) {
   const examInfo = EXAM_TYPE_MAP[paper.examType];
   const termLabel = paper.term.charAt(0) + paper.term.slice(1).toLowerCase();
@@ -682,15 +842,16 @@ function PaperRow({
             <Trash2 className="w-4 h-4" />
           </button>
         )}
-        <a
-          href={`/api/pyq/${paper.id}/view`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 font-medium text-sm transition-colors"
+        <button
+          type="button"
+          onClick={() => onPreview(paper)}
+          disabled={!paper.previewAvailable}
+          title={paper.previewAvailable ? "Open protected viewer" : "This paper must be migrated to protected storage before it can be viewed"}
+          className="flex items-center gap-1.5 px-3 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 font-medium text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <ExternalLink className="w-4 h-4" />
-          <span className="hidden sm:inline">Open</span>
-        </a>
+          <Eye className="w-4 h-4" />
+          <span className="hidden sm:inline">View</span>
+        </button>
       </div>
     </div>
   );

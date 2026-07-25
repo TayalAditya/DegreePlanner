@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
   },
   // pdf-parse uses native Node.js fs — keep it outside the webpack bundle
-  serverExternalPackages: ["pdf-parse"],
+  serverExternalPackages: ["pdf-parse", "pdfjs-dist", "@napi-rs/canvas"],
   // Ensure runtime-loaded PDFs are bundled for Vercel/serverless functions.
   outputFileTracingIncludes: {
     "/api/auth/[...nextauth]": ["./docs/*.pdf"],

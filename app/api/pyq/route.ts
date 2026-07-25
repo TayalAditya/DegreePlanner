@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { isDocumentsAdmin } from "@/lib/permissions";
-import { VALID_EXAM_TYPES, createPaper } from "@/lib/pyqShared";
+import { VALID_EXAM_TYPES, toPaperForClient } from "@/lib/pyqShared";
 
 export async function GET(req: NextRequest) {
   try {
@@ -44,40 +44,18 @@ export async function GET(req: NextRequest) {
       orderBy: [{ year: "desc" }, { createdAt: "desc" }],
     });
 
-    return NextResponse.json(papers);
+    return NextResponse.json(papers.map(toPaperForClient));
   } catch (error) {
     console.error("PYQ fetch error:", error);
     return NextResponse.json({ error: "Failed to fetch papers" }, { status: 500 });
   }
 }
 
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const { courseCode, examType, fileUrl, title, semester, year, term } = body;
-
-    const result = await createPaper(session.user, {
-      courseCode,
-      examType,
-      fileUrl,
-      title,
-      semester,
-      year,
-      term,
-    });
-
-    if (!result.ok) {
-      return NextResponse.json({ error: result.error }, { status: result.status });
-    }
-
-    return NextResponse.json(result.paper, { status: 201 });
-  } catch (error) {
-    console.error("PYQ create error:", error);
-    return NextResponse.json({ error: "Failed to upload paper" }, { status: 500 });
-  }
+export async function POST(_req: NextRequest) {
+  // Arbitrary URLs cannot be protected: the source owner controls them and a
+  // direct redirect would reintroduce downloads. QPs must use /api/pyq/upload.
+  return NextResponse.json(
+    { error: "Direct links are disabled. Upload a PDF, JPG, or PNG through the protected upload endpoint." },
+    { status: 405, headers: { Allow: "GET" } }
+  );
 }

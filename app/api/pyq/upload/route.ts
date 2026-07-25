@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { createPaper } from "@/lib/pyqShared";
-import { uploadToBlob, validateUploadFile, isBlobConfigured } from "@/lib/blobStorage";
+import { createPaper, toPaperForClient } from "@/lib/pyqShared";
+import {
+  deletePrivatePyqBlob,
+  isPrivatePyqBlobConfigured,
+  uploadPyqToPrivateBlob,
+  validatePyqUploadFile,
+} from "@/lib/pyqProtectedStorage";
 
 // POST /api/pyq/upload — multipart upload of an actual paper file.
 // Enrollment-gated (students may only upload for a course+semester they are
@@ -15,9 +20,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!isBlobConfigured()) {
+    if (!isPrivatePyqBlobConfigured()) {
       return NextResponse.json(
-        { error: "File storage is not configured. Please contact an administrator." },
+        { error: "Protected question-paper storage is not configured. Please contact an administrator." },
         { status: 503 }
       );
     }
@@ -35,14 +40,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const fileError = validateUploadFile(file);
+    const fileError = validatePyqUploadFile(file);
     if (fileError) {
       return NextResponse.json({ error: fileError }, { status: 400 });
     }
 
-    // Store the file first so a validation failure below doesn't upload,
-    // then create the DB record; if the record fails we clean the blob up.
-    const stored = await uploadToBlob(file, { prefix: "pyq" });
+    // QPs always go to the dedicated private Blob store. This is deliberately
+    // separate from general documents, which may be intentionally public.
+    const stored = await uploadPyqToPrivateBlob(file);
 
     const result = await createPaper(session.user, {
       courseCode: courseCode ?? "",
@@ -60,12 +65,11 @@ export async function POST(req: NextRequest) {
 
     if (!result.ok) {
       // Roll back the orphaned blob before returning the validation error.
-      const { deleteFromBlob } = await import("@/lib/blobStorage");
-      await deleteFromBlob(stored.url);
+      await deletePrivatePyqBlob(stored.url);
       return NextResponse.json({ error: result.error }, { status: result.status });
     }
 
-    return NextResponse.json(result.paper, { status: 201 });
+    return NextResponse.json(toPaperForClient(result.paper), { status: 201 });
   } catch (error) {
     console.error("PYQ upload error:", error);
     return NextResponse.json({ error: "Failed to upload paper" }, { status: 500 });

@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { isDocumentsAdmin } from "@/lib/permissions";
+import { isPreviewablePyqMimeType, isPrivatePyqBlobUrl } from "@/lib/pyqProtectedStorage";
 
 export const VALID_EXAM_TYPES = new Set(["QUIZ", "MIDSEM", "ENDSEM", "OTHER"]);
 export const VALID_TERMS = new Set(["FALL", "SPRING", "SUMMER"]);
@@ -18,9 +19,59 @@ export type PaperFields = {
   mimeType?: string | null;
 };
 
+export type PaperForClientResponse = {
+  id: string;
+  courseCode: string;
+  courseName: string;
+  semester: number;
+  year: number;
+  term: string;
+  examType: string;
+  title: string | null;
+  status: string;
+  createdAt: Date;
+  previewAvailable: boolean;
+  uploadedBy: {
+    name: string | null;
+    enrollmentId: string | null;
+  };
+};
+
+type PaperWithUploader = Omit<PaperForClientResponse, "previewAvailable"> & {
+  fileUrl: string;
+  blobPathname: string | null;
+  mimeType: string | null;
+};
+
 export type CreatePaperResult =
-  | { ok: true; paper: unknown }
+  | { ok: true; paper: PaperWithUploader }
   | { ok: false; status: number; error: string };
+
+/**
+ * The API contract for a paper list must never expose fileUrl, pathname, or
+ * filename. A public Blob URL is an access token when the backing store is
+ * public, so leaking it defeats every route-level permission check.
+ */
+export function toPaperForClient(paper: PaperWithUploader): PaperForClientResponse {
+  return {
+    id: paper.id,
+    courseCode: paper.courseCode,
+    courseName: paper.courseName,
+    semester: paper.semester,
+    year: paper.year,
+    term: paper.term,
+    examType: paper.examType,
+    title: paper.title,
+    status: paper.status,
+    createdAt: paper.createdAt,
+    previewAvailable: Boolean(
+      paper.blobPathname &&
+      isPrivatePyqBlobUrl(paper.fileUrl) &&
+      isPreviewablePyqMimeType(paper.mimeType)
+    ),
+    uploadedBy: paper.uploadedBy,
+  };
+}
 
 /**
  * Shared create path for PYQ papers used by both the JSON (link) route and the

@@ -16,12 +16,14 @@
     "mappings:dry": "tsx scripts/update-course-mappings-from-docs.ts --dry-run",
     "mappings:update": "tsx scripts/update-course-mappings-from-docs.ts",
     "seed:mtp": "tsx scripts/seed-mtp-courses.ts",
-    "verify:default-dc": "tsx scripts/verify-default-curriculum-dc.ts"
+    "verify:default-dc": "tsx scripts/verify-default-curriculum-dc.ts",
+    "pyq:migrate-private": "tsx scripts/migrate-pyq-to-private-blob.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.89",
     "@auth/prisma-adapter": "^2.7.4",
     "@hookform/resolvers": "^3.9.1",
     "@prisma/client": "^6.19.2",
