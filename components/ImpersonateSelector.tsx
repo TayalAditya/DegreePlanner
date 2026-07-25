@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 const BATCHES = [
   { value: 2026, label: "B26" },
@@ -33,7 +35,9 @@ const BRANCHES = [
   { code: "AG",      name: "Agricultural Engineering & Data Analytics", type: "BTech" },
 ];
 
-export function ImpersonateSelector() {
+export function ImpersonateSelector({ onComplete }: { onComplete: () => void }) {
+  const { update } = useSession();
+  const router = useRouter();
   const [batch, setBatch] = useState<number | null>(null);
   const [branch, setBranch] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -56,10 +60,11 @@ export function ImpersonateSelector() {
         throw new Error(data.error || "Setup failed");
       }
 
-      // Mark setup done for this browser session, then hard-reload so the
-      // JWT callback re-reads branch/batch from DB and AcadSecGate sees the key.
-      sessionStorage.setItem("acadSecSetup", "1");
-      window.location.reload();
+      // Store completion in the signed-in session rather than browser storage.
+      // That survives a route refresh and any canonical-domain redirect.
+      await update({ acadSecSelectionComplete: true });
+      onComplete();
+      router.refresh();
     } catch (e: any) {
       setError(e.message || "Something went wrong");
       setLoading(false);

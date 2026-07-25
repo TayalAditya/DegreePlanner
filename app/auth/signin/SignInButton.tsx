@@ -2,17 +2,13 @@
 
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 export function SignInButton() {
   const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const rawCallbackUrl = searchParams.get("callbackUrl");
   const callbackUrl = rawCallbackUrl?.startsWith("/") ? rawCallbackUrl : "/dashboard";
-
-  useEffect(() => {
-    sessionStorage.removeItem("acadSecSetup");
-  }, []);
 
   const handleSignIn = async () => {
     setIsLoading(true);

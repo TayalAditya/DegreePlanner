@@ -11,6 +11,7 @@ declare module "next-auth" {
       department?: string | null;
       branch?: string | null;
       batch?: number | null;
+      acadSecSelectionComplete?: boolean;
     } & DefaultSession["user"];
   }
 

@@ -415,7 +415,7 @@ export const authOptions: NextAuthOptions = {
       await logAttempt("approved");
       return true;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
       const tokenEmail = (token as any).email as string | undefined;
       const acadSecEmail = user?.email || tokenEmail;
       const isAcadSec = isAcadSecEmail(acadSecEmail);
@@ -431,15 +431,32 @@ export const authOptions: NextAuthOptions = {
           if (approvedUser) {
             token.branch = approvedUser.branch;
             token.batch = approvedUser.batch;
+          } else {
+            // Some shared academic-secretary accounts have no ApprovedUser row.
+            // Their current preview target is saved on User by the selector route.
+            const dbUser = await prisma.user.findUnique({
+              where: { email: acadSecEmail },
+              select: { branch: true, batch: true },
+            });
+            token.branch = dbUser?.branch ?? null;
+            token.batch = dbUser?.batch ?? null;
           }
         } catch {
           // non-fatal – stale branch/batch in token is acceptable
+        }
+        // This marker belongs to the current authentication session. It is reset
+        // below on a fresh sign-in, so each new login still starts at the selector.
+        if (trigger === "update" && (session as any)?.acadSecSelectionComplete === true) {
+          (token as any).acadSecSelectionComplete = true;
         }
         return token;
       }
 
       // On first sign in (user object exists)
       if (user && user.email) {
+        if (isAcadSec) {
+          (token as any).acadSecSelectionComplete = false;
+        }
         console.log("📝 jwt callback - new user:", user.email);
         
         try {
@@ -578,6 +595,7 @@ export const authOptions: NextAuthOptions = {
           session.user.department = (token as any).department;
           session.user.branch = (token as any).branch;
           session.user.batch = (token as any).batch;
+          session.user.acadSecSelectionComplete = Boolean((token as any).acadSecSelectionComplete);
         }
       }
       return session;
