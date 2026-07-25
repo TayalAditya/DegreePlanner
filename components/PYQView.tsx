@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { signOut, useSession } from "next-auth/react";
+import { signOut } from "next-auth/react";
 import {
   FileQuestion,
   Search,
@@ -63,7 +63,6 @@ const EXAM_TYPES = [
 const EXAM_TYPE_MAP = Object.fromEntries(EXAM_TYPES.map((t) => [t.value, t]));
 
 export function PYQView({ isAdmin }: PYQViewProps) {
-  const { data: session } = useSession();
   const [papers, setPapers] = useState<PYQPaper[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +89,6 @@ export function PYQView({ isAdmin }: PYQViewProps) {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [watermarkTime, setWatermarkTime] = useState(() => Date.now());
 
   const secureExit = useCallback(() => {
     setPreviewImageUrl(null);
@@ -233,21 +231,6 @@ export function PYQView({ isAdmin }: PYQViewProps) {
       window.removeEventListener("resize", checkDockedDevTools);
     };
   }, [preview, secureExit]);
-
-  useEffect(() => {
-    if (!preview) return;
-    setWatermarkTime(Date.now());
-    const interval = window.setInterval(() => setWatermarkTime(Date.now()), 10_000);
-    return () => window.clearInterval(interval);
-  }, [preview]);
-
-  const viewerLabel = session?.user?.enrollmentId || session?.user?.email || "Authenticated viewer";
-  const liveWatermark = `${viewerLabel} | View only | ${new Intl.DateTimeFormat("en-IN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZone: "Asia/Kolkata",
-  }).format(new Date(watermarkTime))}`;
 
   // Unique enrolled courses for the upload dropdown
   const enrolledCourses = useMemo(() => {
@@ -491,7 +474,7 @@ export function PYQView({ isAdmin }: PYQViewProps) {
                   {preview.paper.title ?? `${formatCourseCode(preview.paper.courseCode)} question paper`}
                 </h2>
                 <p className="mt-1 text-xs text-foreground-secondary">
-                  Watermarked to your account. Saving, sharing, printing, or redistributing is prohibited.
+                  The original file cannot be downloaded or printed from this viewer.
                 </p>
               </div>
               <button
@@ -518,22 +501,12 @@ export function PYQView({ isAdmin }: PYQViewProps) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={previewImageUrl}
-                  alt={`Watermarked question-paper page ${preview.page}`}
+                  alt={`Question-paper page ${preview.page}`}
                   draggable={false}
                   onDragStart={(event) => event.preventDefault()}
                   className="max-h-[68vh] w-auto max-w-full select-none rounded border border-border bg-white shadow-sm"
                 />
               )}
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-10 grid grid-cols-2 content-around gap-y-16 overflow-hidden px-4 text-center text-[11px] font-bold uppercase tracking-wide text-red-900/45 select-none sm:grid-cols-3 sm:text-xs"
-              >
-                {Array.from({ length: 12 }, (_, index) => (
-                  <span key={index} className="-rotate-[24deg] whitespace-nowrap">
-                    {liveWatermark}
-                  </span>
-                ))}
-              </div>
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-border p-3 sm:p-4">

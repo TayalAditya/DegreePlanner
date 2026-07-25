@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -33,44 +33,7 @@ function noStoreImageResponse(image: Buffer, pageCount: number) {
   });
 }
 
-function drawWatermark(
-  context: SKRSContext2D,
-  width: number,
-  height: number,
-  viewer: string
-) {
-  const timestamp = new Intl.DateTimeFormat("en-IN", {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZone: "Asia/Kolkata",
-  }).format(new Date());
-  const text = `${viewer} | PlanMyDegree view only | ${timestamp}`;
-
-  context.save();
-  context.fillStyle = "rgba(185, 28, 28, 0.30)";
-  context.font = "bold 22px Arial";
-  context.translate(width / 2, height / 2);
-  context.rotate(-Math.PI / 6);
-
-  for (let y = -height; y < height; y += 145) {
-    for (let x = -width; x < width; x += 330) {
-      context.fillText(text, x, y);
-    }
-  }
-  context.restore();
-
-  context.save();
-  context.fillStyle = "rgba(127, 29, 29, 0.75)";
-  context.font = "bold 14px Arial";
-  context.fillText(text, 22, Math.max(26, height - 22));
-  context.restore();
-}
-
-async function renderPdfPage(pdfBytes: Buffer, pageNumber: number, viewer: string) {
+async function renderPdfPage(pdfBytes: Buffer, pageNumber: number) {
   const task = getDocument({ data: new Uint8Array(pdfBytes) });
   try {
     const pdf = await task.promise;
@@ -90,15 +53,13 @@ async function renderPdfPage(pdfBytes: Buffer, pageNumber: number, viewer: strin
       canvas: canvas as unknown as HTMLCanvasElement,
       viewport,
     }).promise;
-    drawWatermark(context, canvas.width, canvas.height, viewer);
-
     return { image: canvas.toBuffer("image/jpeg", 84), pageCount: pdf.numPages };
   } finally {
     await task.destroy();
   }
 }
 
-async function renderImagePage(imageBytes: Buffer, viewer: string) {
+async function renderImagePage(imageBytes: Buffer) {
   const source = await loadImage(imageBytes);
   const scale = Math.min(1, MAX_RENDER_DIMENSION / Math.max(source.width, source.height));
   const width = Math.max(1, Math.round(source.width * scale));
@@ -106,13 +67,12 @@ async function renderImagePage(imageBytes: Buffer, viewer: string) {
   const canvas = createCanvas(width, height);
   const context = canvas.getContext("2d");
   context.drawImage(source, 0, 0, width, height);
-  drawWatermark(context, width, height, viewer);
   return { image: canvas.toBuffer("image/jpeg", 84), pageCount: 1 };
 }
 
 // GET /api/pyq/[id]/preview?page=1
 // The original file never reaches the browser. Each request is a short-lived,
-// personalized raster preview, so neither PDF download controls nor original
+// raster preview, so neither PDF download controls nor original
 // document bytes are available to the user.
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
@@ -161,13 +121,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     }
 
     const bytes = Buffer.from(await new Response(stored.stream).arrayBuffer());
-    const viewer = [session.user.enrollmentId, session.user.email]
-      .filter((value): value is string => Boolean(value))
-      .join(" | ") || session.user.id;
     const rendered = paper.mimeType === "application/pdf"
-      ? await renderPdfPage(bytes, pageNumber, viewer)
+      ? await renderPdfPage(bytes, pageNumber)
       : pageNumber === 1
-        ? await renderImagePage(bytes, viewer)
+        ? await renderImagePage(bytes)
         : null;
 
     if (!rendered) {
