@@ -40,20 +40,24 @@ function drawWatermark(
   viewer: string
 ) {
   const timestamp = new Intl.DateTimeFormat("en-IN", {
-    dateStyle: "medium",
-    timeStyle: "short",
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
     timeZone: "Asia/Kolkata",
   }).format(new Date());
   const text = `${viewer} | PlanMyDegree view only | ${timestamp}`;
 
   context.save();
-  context.fillStyle = "rgba(185, 28, 28, 0.20)";
-  context.font = "bold 20px Arial";
+  context.fillStyle = "rgba(185, 28, 28, 0.30)";
+  context.font = "bold 22px Arial";
   context.translate(width / 2, height / 2);
   context.rotate(-Math.PI / 6);
 
-  for (let y = -height; y < height; y += 170) {
-    for (let x = -width; x < width; x += 390) {
+  for (let y = -height; y < height; y += 145) {
+    for (let x = -width; x < width; x += 330) {
       context.fillText(text, x, y);
     }
   }
@@ -157,7 +161,9 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     }
 
     const bytes = Buffer.from(await new Response(stored.stream).arrayBuffer());
-    const viewer = session.user.enrollmentId || session.user.email || session.user.id;
+    const viewer = [session.user.enrollmentId, session.user.email]
+      .filter((value): value is string => Boolean(value))
+      .join(" | ") || session.user.id;
     const rendered = paper.mimeType === "application/pdf"
       ? await renderPdfPage(bytes, pageNumber, viewer)
       : pageNumber === 1

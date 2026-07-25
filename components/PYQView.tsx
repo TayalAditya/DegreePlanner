@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { signOut, useSession } from "next-auth/react";
 import {
   FileQuestion,
   Search,
@@ -62,6 +63,7 @@ const EXAM_TYPES = [
 const EXAM_TYPE_MAP = Object.fromEntries(EXAM_TYPES.map((t) => [t.value, t]));
 
 export function PYQView({ isAdmin }: PYQViewProps) {
+  const { data: session } = useSession();
   const [papers, setPapers] = useState<PYQPaper[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,6 +90,13 @@ export function PYQView({ isAdmin }: PYQViewProps) {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [watermarkTime, setWatermarkTime] = useState(() => Date.now());
+
+  const secureExit = useCallback(() => {
+    setPreviewImageUrl(null);
+    setPreview(null);
+    void signOut({ callbackUrl: "/auth/signin" });
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -165,13 +174,80 @@ export function PYQView({ isAdmin }: PYQViewProps) {
   useEffect(() => {
     if (!preview) return;
     const blockBrowserSaveAndPrint = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && ["p", "s"].includes(event.key.toLowerCase())) {
+      const key = event.key.toLowerCase();
+      const command = event.ctrlKey || event.metaKey;
+      const devToolsShortcut =
+        event.key === "F12" ||
+        (command && event.shiftKey && ["i", "j", "c"].includes(key));
+
+      if (devToolsShortcut) {
+        event.preventDefault();
+        event.stopPropagation();
+        secureExit();
+        return;
+      }
+
+      if (command && ["p", "s"].includes(key)) {
         event.preventDefault();
       }
     };
     window.addEventListener("keydown", blockBrowserSaveAndPrint, true);
     return () => window.removeEventListener("keydown", blockBrowserSaveAndPrint, true);
+  }, [preview, secureExit]);
+
+  useEffect(() => {
+    if (!preview) return;
+
+    const closeOnHide = () => {
+      if (document.visibilityState === "hidden") {
+        setPreviewImageUrl(null);
+        setPreview(null);
+      }
+    };
+
+    document.addEventListener("visibilitychange", closeOnHide);
+    window.addEventListener("pagehide", closeOnHide);
+    return () => {
+      document.removeEventListener("visibilitychange", closeOnHide);
+      window.removeEventListener("pagehide", closeOnHide);
+    };
   }, [preview]);
+
+  useEffect(() => {
+    if (!preview) return;
+
+    // Browsers intentionally do not expose a reliable "DevTools is open" API.
+    // This catches the common docked-console case; keyboard shortcuts above cover
+    // the normal open paths. It is a deterrent, never the security boundary.
+    const checkDockedDevTools = () => {
+      const widthGap = window.outerWidth - window.innerWidth;
+      const heightGap = window.outerHeight - window.innerHeight;
+      if (widthGap > 200 || heightGap > 200) secureExit();
+    };
+
+    checkDockedDevTools();
+    const interval = window.setInterval(checkDockedDevTools, 750);
+    window.addEventListener("resize", checkDockedDevTools);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("resize", checkDockedDevTools);
+    };
+  }, [preview, secureExit]);
+
+  useEffect(() => {
+    if (!preview) return;
+    setWatermarkTime(Date.now());
+    const interval = window.setInterval(() => setWatermarkTime(Date.now()), 10_000);
+    return () => window.clearInterval(interval);
+  }, [preview]);
+
+  const viewerLabel = session?.user?.enrollmentId || session?.user?.email || "Authenticated viewer";
+  const liveWatermark = `${viewerLabel} | View only | ${new Intl.DateTimeFormat("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZone: "Asia/Kolkata",
+  }).format(new Date(watermarkTime))}`;
 
   // Unique enrolled courses for the upload dropdown
   const enrolledCourses = useMemo(() => {
@@ -428,7 +504,7 @@ export function PYQView({ isAdmin }: PYQViewProps) {
               </button>
             </div>
 
-            <div className="flex min-h-[52vh] max-h-[72vh] items-center justify-center overflow-auto bg-background-secondary p-3 sm:p-5">
+            <div className="relative flex min-h-[52vh] max-h-[72vh] items-center justify-center overflow-auto bg-background-secondary p-3 sm:p-5">
               {previewLoading && (
                 <div className="flex items-center gap-2 text-sm text-foreground-secondary">
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -448,6 +524,16 @@ export function PYQView({ isAdmin }: PYQViewProps) {
                   className="max-h-[68vh] w-auto max-w-full select-none rounded border border-border bg-white shadow-sm"
                 />
               )}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-10 grid grid-cols-2 content-around gap-y-16 overflow-hidden px-4 text-center text-[11px] font-bold uppercase tracking-wide text-red-900/45 select-none sm:grid-cols-3 sm:text-xs"
+              >
+                {Array.from({ length: 12 }, (_, index) => (
+                  <span key={index} className="-rotate-[24deg] whitespace-nowrap">
+                    {liveWatermark}
+                  </span>
+                ))}
+              </div>
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-border p-3 sm:p-4">
