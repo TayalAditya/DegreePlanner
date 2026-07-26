@@ -7,7 +7,7 @@ import { creditCalculator } from "@/lib/creditCalculator";
 import RoadmapClient, { type RoadmapData, type RoadmapCourse } from "./RoadmapClient";
 
 const ROADMAP_SEMESTERS = [5, 6, 7, 8];
-const ELECTIVE_CATEGORIES = new Set(["DE", "FE", "HSS", "PE"]);
+const PLANNING_OPTION_CATEGORIES = new Set(["DC", "DE", "FE", "HSS", "IKS"]);
 const REQUIRED_CATEGORIES = new Set(["IC", "DC", "MTP", "ISTP"]);
 
 function asRoadmapCategory(category: string) {
@@ -56,7 +56,7 @@ export default async function RoadmapPage() {
   const normalizedCandidates = new Set(branchCandidates.map(normalizeBranchCode));
   const batchValues = ["", String(batchYear)];
 
-  const [mappedCourses, enrollments, offerings, programProgress] = await Promise.all([
+  const [mappedCourses, enrollments, offerings, registeredEnrollments, programProgress] = await Promise.all([
     prisma.course.findMany({
       where: {
         isActive: true,
@@ -149,6 +149,43 @@ export default async function RoadmapPage() {
         },
       },
     }),
+    // Actual registration records are a stronger planning signal than a
+    // generic odd/even assumption. These rows tell us what a prior cohort in
+    // the same branch really registered for in the matching semester cycle.
+    prisma.courseEnrollment.findMany({
+      where: {
+        semester: { gte: 3, lt: currentSemester },
+        status: { not: "DROPPED" },
+        user: {
+          branch: { in: branchCandidates },
+          batch: { not: null },
+        },
+      },
+      select: {
+        userId: true,
+        semester: true,
+        year: true,
+        term: true,
+        user: { select: { batch: true } },
+        course: {
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            credits: true,
+            department: true,
+            description: true,
+            branchMappings: {
+              select: {
+                branch: true,
+                batch: true,
+                courseCategory: true,
+              },
+            },
+          },
+        },
+      },
+    }),
     primaryProgram
       ? creditCalculator.calculateProgramProgress(userId, primaryProgram.programId)
       : Promise.resolve(null),
@@ -220,12 +257,19 @@ export default async function RoadmapPage() {
     .filter((record) => record.internships.length > 0 || record.exchangeCourses.length > 0)
     .sort((a, b) => a.semester - b.semester);
 
-  const semesters: RoadmapData["semesters"] = ROADMAP_SEMESTERS.map((semester) => ({
+  // The degree roadmap is a forward plan. Past semesters remain in the
+  // transcript/progress calculation, but they must not offer selectable
+  // courses or clutter the completion path.
+  const planningSemesterNumbers = ROADMAP_SEMESTERS.filter(
+    (semester) => semester >= Math.max(5, currentSemester)
+  );
+  const semesters: RoadmapData["semesters"] = planningSemesterNumbers.map((semester) => ({
     semester,
-    status: semester < currentSemester ? "past" : semester === currentSemester ? "current" : "future",
+    status: semester === currentSemester ? "current" : "future",
     requiredCourses: [],
-      mappedElectives: [],
+    mappedElectives: [],
     liveOptions: [],
+    registeredOptions: [],
     historicalOptions: [],
   }));
   const semesterByNumber = new Map(semesters.map((semester) => [semester.semester, semester]));
@@ -305,7 +349,7 @@ export default async function RoadmapPage() {
         : offering.categoryOverride ?? mappingCategory ?? "FE"
     );
 
-    if (!ELECTIVE_CATEGORIES.has(category)) return null;
+    if (!PLANNING_OPTION_CATEGORIES.has(category)) return null;
     if (offering.course && completedCourseIds.has(offering.course.id)) return null;
 
     return {
@@ -321,6 +365,62 @@ export default async function RoadmapPage() {
     };
   };
 
+  type RegisteredCourseSignal = {
+    course: (typeof registeredEnrollments)[number]["course"];
+    category: string;
+    semester: number;
+    year: number;
+    term: "FALL" | "SPRING" | "SUMMER";
+    batchYear: number;
+    studentIds: Set<string>;
+  };
+  const registrationSignals = new Map<string, RegisteredCourseSignal>();
+  for (const enrollment of registeredEnrollments) {
+    if (isSemesterExchangeCourse(enrollment.course)) continue;
+    const batch = enrollment.user.batch;
+    if (!batch) continue;
+
+    const category = asRoadmapCategory(
+      resolveBaseCategory(
+        { code: enrollment.course.code, branchMappings: enrollment.course.branchMappings },
+        branch,
+        batchYear
+      )
+    );
+    if (!PLANNING_OPTION_CATEGORIES.has(category)) continue;
+
+    const key = `${enrollment.course.id}:${enrollment.semester}:${enrollment.year}:${enrollment.term}:${batch}`;
+    const signal = registrationSignals.get(key) ?? {
+      course: enrollment.course,
+      category,
+      semester: enrollment.semester,
+      year: enrollment.year,
+      term: enrollment.term,
+      batchYear: batch,
+      studentIds: new Set<string>(),
+    };
+    signal.studentIds.add(enrollment.userId);
+    registrationSignals.set(key, signal);
+  }
+
+  const isNewerRegistrationSignal = (candidate: RegisteredCourseSignal, current: RegisteredCourseSignal) =>
+    candidate.year > current.year ||
+    (candidate.year === current.year && candidate.semester > current.semester) ||
+    (candidate.year === current.year && candidate.semester === current.semester && candidate.studentIds.size > current.studentIds.size);
+
+  const latestRegisteredBySemester = new Map<number, Map<string, RegisteredCourseSignal>>();
+  for (const targetSemester of planningSemesterNumbers) {
+    const latestForTarget = new Map<string, RegisteredCourseSignal>();
+    for (const signal of registrationSignals.values()) {
+      if (signal.semester % 2 !== targetSemester % 2) continue;
+      const current = latestForTarget.get(signal.course.id);
+      if (!current || isNewerRegistrationSignal(signal, current)) {
+        latestForTarget.set(signal.course.id, signal);
+      }
+    }
+    latestRegisteredBySemester.set(targetSemester, latestForTarget);
+  }
+
   for (const semester of semesters) {
     const publishedCodes = new Set<string>();
     for (const offering of offerings) {
@@ -330,6 +430,28 @@ export default async function RoadmapPage() {
       if (!option || publishedCodes.has(option.code)) continue;
       publishedCodes.add(option.code);
       semester.liveOptions.push(option);
+    }
+
+    const registeredCodes = new Set<string>();
+    for (const signal of latestRegisteredBySemester.get(semester.semester)?.values() ?? []) {
+      if (completedCourseIds.has(signal.course.id) || registeredCodes.has(signal.course.code)) continue;
+      registeredCodes.add(signal.course.code);
+      semester.registeredOptions.push({
+        id: signal.course.id,
+        code: signal.course.code,
+        name: signal.course.name,
+        credits: signal.course.credits,
+        category: signal.category,
+        completed: false,
+        source: "registered",
+        lastRegistered: {
+          semester: signal.semester,
+          year: signal.year,
+          term: signal.term,
+          batchYear: signal.batchYear,
+          registrations: signal.studentIds.size,
+        },
+      });
     }
 
     // A matching odd/even-term offering is a planning clue, never a promise.
@@ -347,7 +469,7 @@ export default async function RoadmapPage() {
 
     for (const offering of historicalCandidates) {
       const option = toOfferingOption(offering, "historical", semester.semester);
-      if (!option || historicalCodes.has(option.code) || publishedCodes.has(option.code)) continue;
+      if (!option || historicalCodes.has(option.code) || publishedCodes.has(option.code) || registeredCodes.has(option.code)) continue;
       historicalCodes.add(option.code);
       semester.historicalOptions.push(option);
     }
@@ -357,6 +479,7 @@ export default async function RoadmapPage() {
     semester.requiredCourses.sort(sortCourses);
     semester.mappedElectives.sort(sortCourses);
     semester.liveOptions.sort(sortCourses);
+    semester.registeredOptions.sort(sortCourses);
     semester.historicalOptions.sort(sortCourses);
   }
 
