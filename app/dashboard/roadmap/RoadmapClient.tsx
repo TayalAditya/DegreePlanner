@@ -63,6 +63,20 @@ export type RoadmapData = {
     remaining: number;
     bySemester: Record<string, number>;
   };
+  recordedExperience: Array<{
+    semester: number;
+    internships: Array<{
+      code: string;
+      name: string;
+      type: "remote" | "onsite";
+      status: string;
+    }>;
+    exchangeCourses: Array<{
+      code: string;
+      name: string;
+      status: string;
+    }>;
+  }>;
 };
 
 type InternshipType = "none" | "remote" | "onsite" | "semex";
@@ -112,6 +126,13 @@ function optionPool(semester: RoadmapData["semesters"][number]) {
 
 function nextSameParitySemester(fromSemester: number, semesters: number[]) {
   return semesters.find((semester) => semester > fromSemester && semester % 2 === fromSemester % 2) ?? null;
+}
+
+function recordedStatusLabel(status: string) {
+  if (status === "COMPLETED") return "Completed";
+  if (status === "IN_PROGRESS") return "In progress";
+  if (status === "FAILED") return "Attempt recorded";
+  return "Recorded";
 }
 
 export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
@@ -390,6 +411,13 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
   const liveSemesterLabels = data.semesters
     .filter((semester) => semester.liveOptions.length > 0)
     .map((semester) => `${semesterLabel(semester.semester)} ${semester.liveOptions[0].offeringYear ?? ""}`.trim());
+  const recordedExperienceBySemester = new Map(
+    data.recordedExperience.map((experience) => [experience.semester, experience])
+  );
+  const recordedHistoryLabels = data.recordedExperience.flatMap((experience) => [
+    ...experience.internships.map((internship) => `Sem ${experience.semester} ${internship.code}`),
+    ...(experience.exchangeCourses.length > 0 ? [`Sem ${experience.semester} SemEx`] : []),
+  ]);
 
   const chooseScenario = (type: InternshipType, semester: InternshipSemester = 6) => {
     setInternshipType(type);
@@ -455,6 +483,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
             <span className="rounded-full bg-surface-hover px-3 py-1.5 text-foreground-secondary">Curriculum mapped</span>
             {liveSemesterLabels.length > 0 && (
               <span className="rounded-full bg-success/10 px-3 py-1.5 text-success">Live options: {liveSemesterLabels.join(", ")}</span>
+            )}
+            {recordedHistoryLabels.length > 0 && (
+              <span className="rounded-full bg-info/10 px-3 py-1.5 text-info">Recorded history: {recordedHistoryLabels.join(", ")}</span>
             )}
           </div>
           <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Plan the rest of your degree, not just the next registration.</h1>
@@ -532,7 +563,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                 {internshipType === "remote"
                   ? "Remote 396P can run with at most 9 credits alongside, so use the estimate to keep the semester intentionally light."
                   : internshipType === "onsite"
-                  ? "Onsite 399P is a no-course semester. Any pending DC is automatically moved to the next same-parity semester; special requirements remain visible for approval."
+                  ? internshipSemester === 8
+                    ? "Onsite 399P remains selectable in Sem 8, but needs Dean approval. It is a no-course semester; any pending DC is moved to the next same-parity slot if one exists."
+                    : "Onsite 399P is a no-course semester. Any pending DC is automatically moved to the next same-parity semester; special requirements remain visible for approval."
                   : "Semester Exchange is available from Sem 5 to 7 for up to two contiguous semesters. Each pending DC can use an existing recorded equivalent or move to the next same-parity home semester."}
               </p>
             </div>
@@ -665,6 +698,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
               : [];
             const exchangeEquivalentCourses = pathway.exchangeEquivalents.get(semester.semester) ?? [];
             const sourceDcCourses = semester.requiredCourses.filter((course) => !course.completed && course.category === "DC");
+            const recordedExperience = recordedExperienceBySemester.get(semester.semester);
 
             return (
               <div key={semester.semester} className="contents">
@@ -689,10 +723,37 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                         <div>
                           <p className="text-xs font-semibold text-foreground">{isOnsite ? "DP-399P · Onsite internship" : isSemEx ? "Semester Exchange · transfer-credit path" : "DP-396P · Remote internship"}</p>
                           <p className="mt-1 text-xs leading-5 text-foreground-secondary">
-                            {isOnsite ? "Pending DC has moved to the next same-parity semester, and local elective estimation is locked." : isSemEx ? "Resolve every DC through a recorded equivalent or a same-parity home-semester shift." : "Keep your selected courses at or below 9 credits alongside the internship."}
+                            {isOnsite ? semester.semester === 8 ? "Sem 8 onsite requires Dean approval. There is no later same-parity slot in this roadmap, so unresolved DC must use an approved completion route." : "Pending DC has moved to the next same-parity semester, and local elective estimation is locked." : isSemEx ? "Resolve every DC through a recorded equivalent or a same-parity home-semester shift." : "Keep your selected courses at or below 9 credits alongside the internship."}
                           </p>
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {recordedExperience && (
+                    <div className="mt-3 space-y-2">
+                      {recordedExperience.internships.map((internship) => (
+                        <div key={internship.code} className="rounded-xl border border-accent/25 bg-accent/10 p-3">
+                          <div className="flex gap-2">
+                            <BriefcaseBusiness className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+                            <div>
+                              <p className="text-xs font-semibold text-foreground">Recorded {internship.type === "onsite" ? "onsite" : "remote"} semester internship · {internship.code}</p>
+                              <p className="mt-1 text-xs leading-5 text-foreground-secondary">{internship.name} · {recordedStatusLabel(internship.status)}. Pulled from your course-enrolment history, not this browser draft.</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {recordedExperience.exchangeCourses.length > 0 && (
+                        <div className="rounded-xl border border-info/25 bg-info/10 p-3">
+                          <div className="flex gap-2">
+                            <Globe className="mt-0.5 h-4 w-4 shrink-0 text-info" />
+                            <div>
+                              <p className="text-xs font-semibold text-foreground">Recorded Semester Exchange</p>
+                              <p className="mt-1 text-xs leading-5 text-foreground-secondary">{recordedExperience.exchangeCourses.map((course) => `${course.code} (${recordedStatusLabel(course.status)})`).join(", ")}. Partner-university course history is treated as SemEx evidence.</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 

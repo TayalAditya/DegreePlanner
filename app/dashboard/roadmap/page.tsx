@@ -100,7 +100,17 @@ export default async function RoadmapPage() {
         grade: true,
         isPassFail: true,
         passFailCredits: true,
-        course: { select: { credits: true } },
+        isInternship: true,
+        internshipType: true,
+        course: {
+          select: {
+            credits: true,
+            code: true,
+            name: true,
+            department: true,
+            description: true,
+          },
+        },
       },
     }),
     prisma.courseOffering.findMany({
@@ -155,6 +165,53 @@ export default async function RoadmapPage() {
     const key = String(enrollment.semester);
     passFailBySemester[key] = (passFailBySemester[key] ?? 0) + credits;
   }
+  const recordedExperienceBySemester = new Map<number, RoadmapData["recordedExperience"][number]>();
+  const recordExperience = (semester: number) => {
+    const existing = recordedExperienceBySemester.get(semester);
+    if (existing) return existing;
+    const record: RoadmapData["recordedExperience"][number] = {
+      semester,
+      internships: [],
+      exchangeCourses: [],
+    };
+    recordedExperienceBySemester.set(semester, record);
+    return record;
+  };
+
+  // A registered course at a partner university is the clearest available
+  // record that the student actually went on SemEx. Keep this history separate
+  // from the forward-looking simulator, rather than guessing a future path.
+  for (const enrollment of enrollments) {
+    if (enrollment.status === "DROPPED" || !ROADMAP_SEMESTERS.includes(enrollment.semester)) continue;
+    const courseCode = enrollment.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const source = `${enrollment.course.department} ${enrollment.course.description ?? ""}`.toLowerCase();
+    const record = recordExperience(enrollment.semester);
+    const internshipType = enrollment.internshipType === "ONSITE" || courseCode.endsWith("399P")
+      ? "onsite"
+      : enrollment.internshipType === "REMOTE" || courseCode.endsWith("396P")
+      ? "remote"
+      : null;
+
+    if (internshipType && !record.internships.some((item) => item.code === enrollment.course.code)) {
+      record.internships.push({
+        code: enrollment.course.code,
+        name: enrollment.course.name,
+        type: internshipType,
+        status: enrollment.status,
+      });
+    }
+
+    if (source.includes("semester exchange") && !record.exchangeCourses.some((item) => item.code === enrollment.course.code)) {
+      record.exchangeCourses.push({
+        code: enrollment.course.code,
+        name: enrollment.course.name,
+        status: enrollment.status,
+      });
+    }
+  }
+  const recordedExperience = Array.from(recordedExperienceBySemester.values())
+    .filter((record) => record.internships.length > 0 || record.exchangeCourses.length > 0)
+    .sort((a, b) => a.semester - b.semester);
 
   const semesters: RoadmapData["semesters"] = ROADMAP_SEMESTERS.map((semester) => ({
     semester,
@@ -316,6 +373,7 @@ export default async function RoadmapPage() {
       remaining: Math.max(0, 9 - (user?.totalPassFailCredits ?? 0)),
       bySemester: passFailBySemester,
     },
+    recordedExperience,
     storageKey: `degree-roadmap:${userId}:${normalizeBranchCode(branch)}:${batchYear}`,
   };
 
