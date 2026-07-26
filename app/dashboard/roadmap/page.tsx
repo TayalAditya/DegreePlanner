@@ -19,6 +19,11 @@ function sortCourses(a: RoadmapCourse, b: RoadmapCourse) {
   return a.code.localeCompare(b.code);
 }
 
+function isSemesterExchangeCourse(course: { department: string | null; description: string | null }) {
+  const source = `${course.department ?? ""} ${course.description ?? ""}`.toLowerCase();
+  return source.includes("semester exchange");
+}
+
 export default async function RoadmapPage() {
   const session = await getSession();
   const userId = session?.user?.id;
@@ -69,6 +74,8 @@ export default async function RoadmapPage() {
         name: true,
         credits: true,
         ltpc: true,
+        department: true,
+        description: true,
         equivalents: {
           select: { equivalent: { select: { code: true, name: true } } },
         },
@@ -224,6 +231,11 @@ export default async function RoadmapPage() {
   const semesterByNumber = new Map(semesters.map((semester) => [semester.semester, semester]));
 
   for (const course of mappedCourses) {
+    // Partner-university rows are transfer options for a SemEx plan, not
+    // duplicate home-curriculum commitments. They stay available through
+    // recorded equivalences, but must never inflate the normal roadmap.
+    if (isSemesterExchangeCourse(course)) continue;
+
     const mapping = pickBranchMapping(course.branchMappings, branch, batchYear) as
       | (typeof course.branchMappings)[number]
       | undefined;

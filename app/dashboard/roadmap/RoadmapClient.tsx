@@ -145,6 +145,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
   const [exchangeResolutions, setExchangeResolutions] = useState<Record<string, ExchangeResolution>>({});
   const [semexDuration, setSemexDuration] = useState<1 | 2>(1);
   const [onsiteAddOnSemester, setOnsiteAddOnSemester] = useState<InternshipSemester | null>(null);
+  const [remoteAddOnSemester, setRemoteAddOnSemester] = useState<InternshipSemester | null>(null);
   const [passFailSelections, setPassFailSelections] = useState<Record<string, string[]>>({});
   const [showFullRoadmap, setShowFullRoadmap] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -163,6 +164,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
           exchangeResolutions?: Record<string, ExchangeResolution>;
           semexDuration?: 1 | 2;
           onsiteAddOnSemester?: InternshipSemester | null;
+          remoteAddOnSemester?: InternshipSemester | null;
           passFailSelections?: Record<string, string[]>;
         };
         if (parsed.internshipType === "none" || parsed.internshipType === "remote" || parsed.internshipType === "onsite" || parsed.internshipType === "semex") {
@@ -183,6 +185,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
         if (parsed.onsiteAddOnSemester === 5 || parsed.onsiteAddOnSemester === 6 || parsed.onsiteAddOnSemester === 7 || parsed.onsiteAddOnSemester === 8) {
           setOnsiteAddOnSemester(parsed.onsiteAddOnSemester);
         }
+        if (parsed.remoteAddOnSemester === 5 || parsed.remoteAddOnSemester === 6 || parsed.remoteAddOnSemester === 7 || parsed.remoteAddOnSemester === 8) {
+          setRemoteAddOnSemester(parsed.remoteAddOnSemester);
+        }
         if (parsed.passFailSelections && typeof parsed.passFailSelections === "object") {
           setPassFailSelections(parsed.passFailSelections);
         }
@@ -198,9 +203,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     if (!data || !hydrated) return;
     window.localStorage.setItem(
       data.storageKey,
-      JSON.stringify({ internshipType, internshipSemester, selections, exchangeResolutions, semexDuration, onsiteAddOnSemester, passFailSelections })
+      JSON.stringify({ internshipType, internshipSemester, selections, exchangeResolutions, semexDuration, onsiteAddOnSemester, remoteAddOnSemester, passFailSelections })
     );
-  }, [data, hydrated, internshipType, internshipSemester, selections, exchangeResolutions, semexDuration, onsiteAddOnSemester, passFailSelections]);
+  }, [data, hydrated, internshipType, internshipSemester, selections, exchangeResolutions, semexDuration, onsiteAddOnSemester, remoteAddOnSemester, passFailSelections]);
 
   const selectedCoursesBySemester = useMemo(() => {
     const selected = new Map<number, RoadmapCourse[]>();
@@ -228,6 +233,14 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     return [];
   }, [internshipType, internshipSemester, semexDuration, onsiteAddOnSemester]);
 
+  const remoteSemesters = useMemo<number[]>(() => {
+    if (internshipType === "remote") return [internshipSemester];
+    if (internshipType === "semex" && !onsiteAddOnSemester && remoteAddOnSemester && semexSemesters.includes(remoteAddOnSemester)) {
+      return [remoteAddOnSemester];
+    }
+    return [];
+  }, [internshipType, internshipSemester, onsiteAddOnSemester, remoteAddOnSemester, semexSemesters]);
+
   const passFailPlan = useMemo(() => {
     if (!data) return null;
 
@@ -250,16 +263,22 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
       0
     );
     // 399P is a 9-credit P/F exception and cannot coexist with any other P/F
-    // course. 396P consumes six P/F credits in its own semester.
+    // course. 396P consumes six P/F credits in its own semester, including an
+    // approved 396P that runs alongside Semester Exchange.
     const hasOnsiteInternship = onsiteSemesters.length > 0;
+    const hasRemoteInternship = remoteSemesters.length > 0;
     const onsitePathConflictsWithPF = hasOnsiteInternship &&
       (data.passFail.used > 0 || totalSelectedPF > 0);
+    const remotePathConflictsWithPF = hasRemoteInternship && (
+      (data.passFail.bySemester[String(remoteSemesters[0])] ?? 0) > 0 ||
+      (perSemesterPlanned[remoteSemesters[0]] ?? 0) > 0
+    );
     const internshipPF = hasOnsiteInternship
       ? onsitePathConflictsWithPF ? 0 : 9
-      : internshipType === "remote" ? 6 : 0;
+      : hasRemoteInternship ? 6 : 0;
     const forcedPFBySemester: Record<number, number> = {};
-    if (internshipType === "remote") {
-      forcedPFBySemester[internshipSemester] = internshipPF;
+    if (hasRemoteInternship) {
+      forcedPFBySemester[remoteSemesters[0]] = internshipPF;
     } else if (hasOnsiteInternship && !onsitePathConflictsWithPF) {
       forcedPFBySemester[onsiteSemesters[0]] = internshipPF;
     }
@@ -287,7 +306,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
       )
       .filter(({ semester }) => {
         const isInternshipSemester =
-          (internshipType === "remote" && internshipSemester === semester) ||
+          remoteSemesters.includes(semester) ||
           onsiteSemesters.includes(semester);
         const isSemExSemester = internshipType === "semex" && semexSemesters.includes(semester);
         return !isInternshipSemester && !isSemExSemester;
@@ -314,9 +333,88 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
       suggestedCredits: courseCreditTotal(suggestions.map((item) => item.course)),
       semesterRemaining,
       onsitePathConflictsWithPF,
-      internshipFitsBudget: !onsitePathConflictsWithPF && data.passFail.used + internshipPF + totalSelectedPF <= 9,
+      remotePathConflictsWithPF,
+      internshipFitsBudget: !onsitePathConflictsWithPF && !remotePathConflictsWithPF && data.passFail.used + internshipPF + totalSelectedPF <= 9,
     };
-  }, [data, internshipType, internshipSemester, onsiteSemesters, passFailSelections, selectedCoursesBySemester, semexSemesters]);
+  }, [data, internshipType, onsiteSemesters, passFailSelections, remoteSemesters, selectedCoursesBySemester, semexSemesters]);
+
+  const requirementAdjustments = useMemo(() => {
+    if (!data?.creditSummary) return [];
+
+    const blockedSemesters = new Set([...semexSemesters, ...onsiteSemesters]);
+    const adjustments: Array<{
+      key: "istp" | "mtp-1" | "mtp-2";
+      fromCategory: "ISTP" | "MTP";
+      toCategory: "FE" | "DE";
+      semester: number;
+      credits: number;
+      courseIds: string[];
+    }> = [];
+
+    // ISTP is a Sem 6 component. If a no-local-course path occupies Sem 6,
+    // it cannot be pushed to Sem 8, so its still-pending credits become FE.
+    if (blockedSemesters.has(6) && data.creditSummary.byBucket.istp > 0) {
+      const istpCourses = data.semesters
+        .find((semester) => semester.semester === 6)
+        ?.requiredCourses.filter((course) => !course.completed && course.category === "ISTP") ?? [];
+      const credits = Math.min(
+        data.creditSummary.byBucket.istp,
+        courseCreditTotal(istpCourses) || 4
+      );
+      if (credits > 0) {
+        adjustments.push({
+          key: "istp",
+          fromCategory: "ISTP",
+          toCategory: "FE",
+          semester: 6,
+          credits,
+          courseIds: istpCourses.map((course) => course.id),
+        });
+      }
+    }
+
+    // MTP-I and MTP-II are four-credit components in Sem 7 and Sem 8. A
+    // blocked component does not transfer, so each pending component shifts to
+    // the DE requirement instead of being silently left on the old semester.
+    let remainingMtp = data.creditSummary.byBucket.mtp;
+    for (const semesterNumber of [7, 8] as const) {
+      if (!blockedSemesters.has(semesterNumber) || remainingMtp <= 0) continue;
+      const mtpCourses = data.semesters
+        .find((semester) => semester.semester === semesterNumber)
+        ?.requiredCourses.filter((course) => !course.completed && course.category === "MTP") ?? [];
+      const credits = Math.min(remainingMtp, courseCreditTotal(mtpCourses) || 4);
+      if (credits <= 0) continue;
+      adjustments.push({
+        key: semesterNumber === 7 ? "mtp-1" : "mtp-2",
+        fromCategory: "MTP",
+        toCategory: "DE",
+        semester: semesterNumber,
+        credits,
+        courseIds: mtpCourses.map((course) => course.id),
+      });
+      remainingMtp -= credits;
+    }
+
+    return adjustments;
+  }, [data, onsiteSemesters, semexSemesters]);
+
+  const adjustedCreditBuckets = useMemo(() => {
+    if (!data?.creditSummary) return null;
+    const istpToFe = requirementAdjustments
+      .filter((adjustment) => adjustment.fromCategory === "ISTP")
+      .reduce((sum, adjustment) => sum + adjustment.credits, 0);
+    const mtpToDe = requirementAdjustments
+      .filter((adjustment) => adjustment.fromCategory === "MTP")
+      .reduce((sum, adjustment) => sum + adjustment.credits, 0);
+
+    return {
+      core: data.creditSummary.byBucket.core,
+      de: data.creditSummary.byBucket.de + mtpToDe,
+      freeElective: data.creditSummary.byBucket.freeElective + istpToFe,
+      mtp: Math.max(0, data.creditSummary.byBucket.mtp - mtpToDe),
+      istp: Math.max(0, data.creditSummary.byBucket.istp - istpToFe),
+    };
+  }, [data, requirementAdjustments]);
 
   const pathway = useMemo(() => {
     const scheduled = new Map<number, ShiftedRoadmapCourse[]>();
@@ -330,6 +428,18 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     for (const semester of data.semesters) {
       scheduled.set(semester.semester, [...semester.requiredCourses]);
       exchangeEquivalents.set(semester.semester, []);
+    }
+
+    const replacementCourseIds = new Set(
+      requirementAdjustments.flatMap((adjustment) => adjustment.courseIds)
+    );
+    if (replacementCourseIds.size > 0) {
+      for (const semester of data.semesters) {
+        scheduled.set(
+          semester.semester,
+          (scheduled.get(semester.semester) ?? []).filter((course) => !replacementCourseIds.has(course.id))
+        );
+      }
     }
 
     const localSemesterBlocks = Array.from(new Set([
@@ -381,7 +491,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     }
 
     return { scheduled, exchangeEquivalents, shifted, unplaced };
-  }, [data, exchangeResolutions, onsiteSemesters, semexSemesters]);
+  }, [data, exchangeResolutions, onsiteSemesters, requirementAdjustments, semexSemesters]);
 
   const creditRunway = useMemo(() => {
     if (!data?.creditSummary) return null;
@@ -442,6 +552,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     setInternshipSemester(semester);
     if (type !== "semex") setSemexDuration(1);
     setOnsiteAddOnSemester(null);
+    setRemoteAddOnSemester(null);
     setShowFullRoadmap(false);
   };
 
@@ -474,6 +585,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     setExchangeResolutions({});
     setSemexDuration(1);
     setOnsiteAddOnSemester(null);
+    setRemoteAddOnSemester(null);
     setPassFailSelections({});
     setShowFullRoadmap(false);
     window.localStorage.removeItem(data.storageKey);
@@ -495,11 +607,15 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
 
   const scenarioSemesters = internshipType === "semex" ? [5, 6, 7] : [6, 7, 8];
   const onsiteAddOnOptions = [6, 7, 8].filter((semester) => semester % 2 !== internshipSemester % 2) as InternshipSemester[];
+  const remoteAddOnOptions = semexSemesters as InternshipSemester[];
   const hasPathChanges = internshipType !== "none";
+  const replacedRequirementCourseIds = new Set(
+    requirementAdjustments.flatMap((adjustment) => adjustment.courseIds)
+  );
   const specialApprovalChanges = data.semesters.flatMap((semester) =>
     (semexSemesters.includes(semester.semester) || onsiteSemesters.includes(semester.semester))
       ? semester.requiredCourses
-        .filter((course) => !course.completed && course.category !== "DC")
+        .filter((course) => !course.completed && course.category !== "DC" && !replacedRequirementCourseIds.has(course.id))
         .map((course) => ({ course, semester: semester.semester }))
       : []
   );
@@ -620,7 +736,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                   ? internshipSemester === 8
                     ? "Onsite 399P remains selectable in Sem 8, but needs Dean approval. It is a no-course semester; any pending DC is moved to the next same-parity slot if one exists."
                     : "Onsite 399P is a no-course semester. Any pending DC is automatically moved to the next same-parity semester; special requirements remain visible for approval."
-                  : "Semester Exchange is available from Sem 5 to 7 for up to two contiguous semesters. Each pending DC can use an existing recorded equivalent or move to the next same-parity home semester."}
+                  : "Semester Exchange is available from Sem 5 to 7 for up to two contiguous semesters. Each pending DC can use an existing recorded equivalent or move to the next same-parity home semester; an approved 396P can also run in one selected SemEx semester."}
               </p>
             </div>
             <div className="inline-flex rounded-xl border border-border bg-surface p-1">
@@ -633,6 +749,12 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                     if (internshipType === "semex") {
                       if (semester === 7) setSemexDuration(1);
                       setOnsiteAddOnSemester((current) => current && current % 2 !== semester % 2 ? current : null);
+                      setRemoteAddOnSemester((current) => {
+                        const nextSemesters = semexDuration === 2 && semester < 7
+                          ? [semester, semester + 1]
+                          : [semester];
+                        return current && nextSemesters.includes(current) ? current : null;
+                      });
                     }
                   }}
                   className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
@@ -650,8 +772,23 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
           <div className="mt-3 flex flex-col gap-2 rounded-2xl border border-info/20 bg-info/5 p-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm leading-6 text-foreground-secondary"><span className="font-semibold text-foreground">Exchange duration:</span> {semexDuration === 2 ? `Sem ${internshipSemester} and Sem ${internshipSemester + 1} will both route DC.` : "Route DC for one exchange semester."}</p>
             <div className="inline-flex rounded-xl border border-border bg-surface p-1">
-              <button type="button" onClick={() => setSemexDuration(1)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${semexDuration === 1 ? "bg-info text-white" : "text-foreground-secondary hover:bg-surface-hover"}`}>1 semester</button>
+              <button type="button" onClick={() => { setSemexDuration(1); setRemoteAddOnSemester((current) => current === internshipSemester ? current : null); }} className={`rounded-lg px-3 py-2 text-xs font-semibold ${semexDuration === 1 ? "bg-info text-white" : "text-foreground-secondary hover:bg-surface-hover"}`}>1 semester</button>
               <button type="button" onClick={() => { setSemexDuration(2); setOnsiteAddOnSemester(null); }} disabled={internshipSemester === 7} className={`rounded-lg px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45 ${semexDuration === 2 ? "bg-info text-white" : "text-foreground-secondary hover:bg-surface-hover"}`}>2 consecutive</button>
+            </div>
+          </div>
+        )}
+
+        {internshipType === "semex" && (
+          <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-accent/20 bg-accent/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Add DP-396P in a SemEx semester</p>
+              <p className="mt-1 text-xs leading-5 text-foreground-secondary">396P can run with Semester Exchange only with approval. It uses 6 P/F credits, so it cannot be combined with 399P in this draft.</p>
+            </div>
+            <div className="inline-flex flex-wrap rounded-xl border border-border bg-surface p-1">
+              <button type="button" onClick={() => setRemoteAddOnSemester(null)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${remoteAddOnSemester === null ? "bg-surface-hover text-foreground" : "text-foreground-secondary hover:bg-surface-hover"}`}>No 396P</button>
+              {remoteAddOnOptions.map((semester) => (
+                <button key={semester} type="button" onClick={() => { setRemoteAddOnSemester(semester); setOnsiteAddOnSemester(null); }} disabled={onsiteAddOnSemester !== null} className={`rounded-lg px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45 ${remoteAddOnSemester === semester ? "bg-accent text-white" : "text-foreground-secondary hover:bg-surface-hover"}`}>396P · Sem {semester}</button>
+              ))}
             </div>
           </div>
         )}
@@ -665,7 +802,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
             <div className="inline-flex flex-wrap rounded-xl border border-border bg-surface p-1">
               <button type="button" onClick={() => setOnsiteAddOnSemester(null)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${onsiteAddOnSemester === null ? "bg-surface-hover text-foreground" : "text-foreground-secondary hover:bg-surface-hover"}`}>No 399P</button>
               {onsiteAddOnOptions.map((semester) => (
-                <button key={semester} type="button" onClick={() => setOnsiteAddOnSemester(semester)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${onsiteAddOnSemester === semester ? "bg-warning text-white" : "text-foreground-secondary hover:bg-surface-hover"}`}>399P · Sem {semester}</button>
+                <button key={semester} type="button" onClick={() => { setOnsiteAddOnSemester(semester); setRemoteAddOnSemester(null); }} disabled={remoteAddOnSemester !== null} className={`rounded-lg px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45 ${onsiteAddOnSemester === semester ? "bg-warning text-white" : "text-foreground-secondary hover:bg-surface-hover"}`}>399P · Sem {semester}</button>
               ))}
             </div>
           </div>
@@ -682,7 +819,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
           <div className="dp-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Still required</p>
             <p className="mt-2 text-2xl font-bold text-primary">{formatCredits(data.creditSummary.remaining)}</p>
-            <p className="mt-1 text-xs text-foreground-secondary">Core {formatCredits(data.creditSummary.byBucket.core)} · DE {formatCredits(data.creditSummary.byBucket.de)} · FE {formatCredits(data.creditSummary.byBucket.freeElective)}</p>
+            <p className="mt-1 text-xs text-foreground-secondary">Core {formatCredits(adjustedCreditBuckets?.core ?? data.creditSummary.byBucket.core)} · DE {formatCredits(adjustedCreditBuckets?.de ?? data.creditSummary.byBucket.de)} · FE {formatCredits(adjustedCreditBuckets?.freeElective ?? data.creditSummary.byBucket.freeElective)}</p>
           </div>
           <div className="dp-card p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">This path allocates</p>
@@ -726,7 +863,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
             </div>
             <div className={`rounded-xl border p-3 ${passFailPlan.internshipFitsBudget ? "border-primary/15 bg-primary/5" : "border-warning/25 bg-warning/10"}`}>
               <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Planner signal</p>
-              <p className="mt-1 text-xs leading-5 text-foreground-secondary">{!passFailPlan.internshipFitsBudget ? passFailPlan.onsitePathConflictsWithPF ? "399P uses all 9 P/F credits and cannot coexist with prior or planned P/F courses. This onsite path is not feasible until that conflict is cleared." : "This internship path exceeds your remaining 9-credit P/F allowance. Change the internship or clear earlier P/F before relying on it." : passFailPlan.suggestions.length > 0 ? `A valid ${formatCredits(passFailPlan.suggestedCredits)} FE P/F combination is ready below.` : passFailPlan.totalRemaining > 0 ? "Select an FE in an available semester to receive a P/F recommendation." : "Your current draft uses the available P/F capacity."}</p>
+              <p className="mt-1 text-xs leading-5 text-foreground-secondary">{!passFailPlan.internshipFitsBudget ? passFailPlan.onsitePathConflictsWithPF ? "399P uses all 9 P/F credits and cannot coexist with prior or planned P/F courses. This onsite path is not feasible until that conflict is cleared." : passFailPlan.remotePathConflictsWithPF ? "396P already uses the 6-credit P/F cap in that semester. Clear the other P/F selection before relying on this path." : "This internship path exceeds your remaining 9-credit P/F allowance. Change the internship or clear earlier P/F before relying on it." : passFailPlan.suggestions.length > 0 ? `A valid ${formatCredits(passFailPlan.suggestedCredits)} FE P/F combination is ready below.` : passFailPlan.totalRemaining > 0 ? "Select an FE in an available semester to receive a P/F recommendation." : "Your current draft uses the available P/F capacity."}</p>
             </div>
           </div>
           {passFailPlan.internshipFitsBudget && passFailPlan.suggestions.length > 0 && (
@@ -756,17 +893,29 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
 
         {hasPathChanges && !showFullRoadmap ? (
           <div className="grid gap-3 lg:grid-cols-2">
-            {internshipType === "remote" && (
-              <article className="rounded-2xl border border-accent/25 bg-accent/10 p-4">
+            {remoteSemesters.map((semester) => (
+              <article key={`remote-${semester}`} className="rounded-2xl border border-accent/25 bg-accent/10 p-4">
                 <div className="flex gap-3">
                   <BriefcaseBusiness className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Sem {internshipSemester} · DP-396P remote internship</p>
-                    <p className="mt-1 text-xs leading-5 text-foreground-secondary">6 P/F credits; no DC is moved. Keep local coursework at or below 9 credits.</p>
+                    <p className="text-sm font-semibold text-foreground">Sem {semester} · DP-396P remote internship</p>
+                    <p className="mt-1 text-xs leading-5 text-foreground-secondary">6 P/F credits; no DC is moved. {internshipType === "semex" ? "Runs alongside Semester Exchange with approval." : "Keep local coursework at or below 9 credits."}</p>
                   </div>
                 </div>
               </article>
-            )}
+            ))}
+
+            {requirementAdjustments.map((adjustment) => (
+              <article key={adjustment.key} className="rounded-2xl border border-secondary/25 bg-secondary/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{adjustment.fromCategory === "ISTP" ? "ISTP requirement rebalanced" : adjustment.semester === 7 ? "MTP-I requirement rebalanced" : "MTP-II requirement rebalanced"}</p>
+                    <p className="mt-1 text-xs leading-5 text-foreground-secondary">{adjustment.fromCategory === "ISTP" ? `Sem 6 is occupied and ISTP is not offered in Sem 8, so ${formatCredits(adjustment.credits)} moves to Free Electives.` : `The Sem ${adjustment.semester} MTP component does not transfer, so ${formatCredits(adjustment.credits)} moves to Discipline Electives.`}</p>
+                  </div>
+                  <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${categoryStyle[adjustment.toCategory]}`}>{adjustment.fromCategory} → {adjustment.toCategory}</span>
+                </div>
+              </article>
+            ))}
 
             {semexDcChanges.map(({ course, from, resolution, destination }) => (
               <article key={course.id} className="rounded-2xl border border-info/25 bg-info/10 p-4">
@@ -821,7 +970,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
               </article>
             ))}
 
-            {internshipType !== "remote" && semexDcChanges.length === 0 && onsiteDcChanges.length === 0 && specialApprovalChanges.length === 0 && (
+            {remoteSemesters.length === 0 && semexDcChanges.length === 0 && onsiteDcChanges.length === 0 && specialApprovalChanges.length === 0 && requirementAdjustments.length === 0 && (
               <div className="rounded-2xl border border-success/25 bg-success/10 p-5 text-sm leading-6 text-foreground-secondary"><CheckCircle2 className="mb-2 h-5 w-5 text-success" />No unfinished DC or special requirement changes for the selected semester(s).</div>
             )}
           </div>
@@ -835,14 +984,15 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
             const status = statusCopy(semester.status);
             const isSemEx = internshipType === "semex" && semexSemesters.includes(semester.semester);
             const isOnsite = onsiteSemesters.includes(semester.semester);
+            const isRemote = remoteSemesters.includes(semester.semester);
             const isInternshipSemester =
               isSemEx ||
-              (internshipType === "remote" && internshipSemester === semester.semester) ||
+              isRemote ||
               isOnsite;
             const baseCredits = courseCreditTotal(requiredPending);
             const selectedCredits = courseCreditTotal(selectedCourses);
             const blockingRequirements = isOnsite || isSemEx
-              ? semester.requiredCourses.filter((course) => !course.completed && course.category !== "DC")
+              ? semester.requiredCourses.filter((course) => !course.completed && course.category !== "DC" && !replacedRequirementCourseIds.has(course.id))
               : [];
             const exchangeEquivalentCourses = pathway.exchangeEquivalents.get(semester.semester) ?? [];
             const sourceDcCourses = semester.requiredCourses.filter((course) => !course.completed && course.category === "DC");
@@ -869,9 +1019,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                       <div className="flex gap-2">
                         {isOnsite ? <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-warning" /> : isSemEx ? <Globe className="mt-0.5 h-4 w-4 shrink-0 text-info" /> : <BriefcaseBusiness className="mt-0.5 h-4 w-4 shrink-0 text-accent" />}
                         <div>
-                          <p className="text-xs font-semibold text-foreground">{isOnsite ? "DP-399P · Onsite internship" : isSemEx ? "Semester Exchange · transfer-credit path" : "DP-396P · Remote internship"}</p>
+                          <p className="text-xs font-semibold text-foreground">{isOnsite ? "DP-399P · Onsite internship" : isSemEx && isRemote ? "Semester Exchange + DP-396P · approval path" : isSemEx ? "Semester Exchange · transfer-credit path" : "DP-396P · Remote internship"}</p>
                           <p className="mt-1 text-xs leading-5 text-foreground-secondary">
-                            {isOnsite ? semester.semester === 8 ? "Sem 8 onsite requires Dean approval. There is no later same-parity slot in this roadmap, so unresolved DC must use an approved completion route." : "Pending DC has moved to the next same-parity semester, and local elective estimation is locked." : isSemEx ? "Resolve every DC through a recorded equivalent or a same-parity home-semester shift." : "Keep your selected courses at or below 9 credits alongside the internship."}
+                            {isOnsite ? semester.semester === 8 ? "Sem 8 onsite requires Dean approval. There is no later same-parity slot in this roadmap, so unresolved DC must use an approved completion route." : "Pending DC has moved to the next same-parity semester, and local elective estimation is locked." : isSemEx && isRemote ? "396P uses 6 P/F credits here; approval is required alongside the exchange transfer-credit path." : isSemEx ? "Resolve every DC through a recorded equivalent or a same-parity home-semester shift." : "Keep your selected courses at or below 9 credits alongside the internship."}
                           </p>
                         </div>
                       </div>
