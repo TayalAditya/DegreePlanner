@@ -3,9 +3,10 @@ import prisma from "@/lib/prisma";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { getBranchCandidates, normalizeBranchCode } from "@/lib/branchInfo";
 import { pickBranchMapping, resolveBaseCategory } from "@/lib/courseCategory";
+import { creditCalculator } from "@/lib/creditCalculator";
 import RoadmapClient, { type RoadmapData, type RoadmapCourse } from "./RoadmapClient";
 
-const ROADMAP_SEMESTERS = [6, 7, 8];
+const ROADMAP_SEMESTERS = [5, 6, 7, 8];
 const ELECTIVE_CATEGORIES = new Set(["DE", "FE", "HSS", "PE"]);
 const REQUIRED_CATEGORIES = new Set(["IC", "DC", "MTP", "ISTP"]);
 
@@ -26,10 +27,16 @@ export default async function RoadmapPage() {
     return null;
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { branch: true, batch: true, enrollmentId: true },
-  });
+  const [user, primaryProgram] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: userId },
+      select: { branch: true, batch: true, enrollmentId: true },
+    }),
+    prisma.userProgram.findFirst({
+      where: { userId, isPrimary: true },
+      select: { programId: true },
+    }),
+  ]);
 
   const branch = user?.branch ?? session.user.branch ?? null;
   const batchYear = inferBatchYear(user?.batch ?? session.user.batch, user?.enrollmentId ?? session.user.enrollmentId);
@@ -44,7 +51,7 @@ export default async function RoadmapPage() {
   const normalizedCandidates = new Set(branchCandidates.map(normalizeBranchCode));
   const batchValues = ["", String(batchYear)];
 
-  const [mappedCourses, enrollments, liveOfferings] = await Promise.all([
+  const [mappedCourses, enrollments, offerings, programProgress] = await Promise.all([
     prisma.course.findMany({
       where: {
         isActive: true,
@@ -62,6 +69,12 @@ export default async function RoadmapPage() {
         name: true,
         credits: true,
         ltpc: true,
+        equivalents: {
+          select: { equivalent: { select: { code: true, name: true } } },
+        },
+        equivalentFor: {
+          select: { course: { select: { code: true, name: true } } },
+        },
         branchMappings: {
           where: {
             branch: { in: branchCandidates },
@@ -84,7 +97,6 @@ export default async function RoadmapPage() {
     }),
     prisma.courseOffering.findMany({
       where: {
-        isActive: true,
         offeringSemester: { in: ROADMAP_SEMESTERS },
       },
       select: {
@@ -96,6 +108,7 @@ export default async function RoadmapPage() {
         offeringYear: true,
         branches: true,
         eligibleSems: true,
+        isActive: true,
         categoryOverride: true,
         course: {
           select: {
@@ -111,6 +124,9 @@ export default async function RoadmapPage() {
         },
       },
     }),
+    primaryProgram
+      ? creditCalculator.calculateProgramProgress(userId, primaryProgram.programId)
+      : Promise.resolve(null),
   ]);
 
   // During the pre-registration window, past-semester IN_PROGRESS rows are
@@ -129,8 +145,9 @@ export default async function RoadmapPage() {
     semester,
     status: semester < currentSemester ? "past" : semester === currentSemester ? "current" : "future",
     requiredCourses: [],
-    mappedElectives: [],
+      mappedElectives: [],
     liveOptions: [],
+    historicalOptions: [],
   }));
   const semesterByNumber = new Map(semesters.map((semester) => [semester.semester, semester]));
 
@@ -156,6 +173,14 @@ export default async function RoadmapPage() {
       category,
       completed: completedCourseIds.has(course.id),
       source: "curriculum",
+      equivalents: Array.from(
+        new Map(
+          [
+            ...course.equivalents.map((entry) => entry.equivalent),
+            ...course.equivalentFor.map((entry) => entry.course),
+          ].map((entry) => [entry.code, entry])
+        ).values()
+      ),
     };
 
     const target = semesterByNumber.get(semester)!;
@@ -166,17 +191,23 @@ export default async function RoadmapPage() {
     }
   }
 
-  for (const offering of liveOfferings) {
+  const isEligibleOffering = (offering: (typeof offerings)[number], targetSemester: number) => {
     const isEligibleForBranch =
       offering.branches.includes("ALL") ||
       offering.branches.some((offeringBranch) =>
         normalizedCandidates.has(normalizeBranchCode(offeringBranch))
       );
     const isEligibleForSemester =
-      offering.eligibleSems.length === 0 || offering.eligibleSems.includes(offering.offeringSemester);
+      offering.eligibleSems.length === 0 || offering.eligibleSems.includes(targetSemester);
 
-    if (!isEligibleForBranch || !isEligibleForSemester) continue;
+    return isEligibleForBranch && isEligibleForSemester;
+  };
 
+  const toOfferingOption = (
+    offering: (typeof offerings)[number],
+    source: "live" | "historical",
+    targetSemester: number
+  ): RoadmapCourse | null => {
     const mappingCategory = offering.course
       ? resolveBaseCategory(
           { code: offering.courseCode, branchMappings: offering.course.branchMappings },
@@ -189,27 +220,60 @@ export default async function RoadmapPage() {
         ? mappingCategory
         : offering.categoryOverride ?? mappingCategory ?? "FE"
     );
-    const target = semesterByNumber.get(offering.offeringSemester);
 
-    if (!target || !ELECTIVE_CATEGORIES.has(category)) continue;
-    if (offering.course && completedCourseIds.has(offering.course.id)) continue;
+    if (!ELECTIVE_CATEGORIES.has(category)) return null;
+    if (offering.course && completedCourseIds.has(offering.course.id)) return null;
 
-    target.liveOptions.push({
-      id: offering.id,
+    return {
+      id: source === "live" ? offering.id : `historical-${targetSemester}-${offering.id}`,
       code: offering.courseCode,
       name: offering.courseName,
       credits: offering.credits,
       category,
       completed: false,
-      source: "live",
+      source,
       offeringYear: offering.offeringYear,
-    });
+      offeringSemester: offering.offeringSemester,
+    };
+  };
+
+  for (const semester of semesters) {
+    const publishedCodes = new Set<string>();
+    for (const offering of offerings) {
+      if (!offering.isActive || offering.offeringSemester !== semester.semester) continue;
+      if (!isEligibleOffering(offering, semester.semester)) continue;
+      const option = toOfferingOption(offering, "live", semester.semester);
+      if (!option || publishedCodes.has(option.code)) continue;
+      publishedCodes.add(option.code);
+      semester.liveOptions.push(option);
+    }
+
+    // A matching odd/even-term offering is a planning clue, never a promise.
+    // As archives grow, this automatically picks the newest matching release.
+    const historicalCodes = new Set<string>();
+    const historicalCandidates = offerings
+      .filter((offering) =>
+        offering.offeringSemester % 2 === semester.semester % 2 &&
+        (!offering.isActive || offering.offeringSemester !== semester.semester) &&
+        isEligibleOffering(offering, semester.semester)
+      )
+      .sort((a, b) =>
+        b.offeringYear - a.offeringYear || b.offeringSemester - a.offeringSemester || a.courseCode.localeCompare(b.courseCode)
+      );
+
+    for (const offering of historicalCandidates) {
+      const option = toOfferingOption(offering, "historical", semester.semester);
+      if (!option || historicalCodes.has(option.code) || publishedCodes.has(option.code)) continue;
+      historicalCodes.add(option.code);
+      semester.historicalOptions.push(option);
+    }
   }
 
   for (const semester of semesters) {
     semester.requiredCourses.sort(sortCourses);
     semester.mappedElectives.sort(sortCourses);
     semester.liveOptions.sort(sortCourses);
+    semester.historicalOptions.sort(sortCourses);
   }
 
   const data: RoadmapData = {
@@ -217,6 +281,21 @@ export default async function RoadmapPage() {
     batchYear,
     currentSemester,
     semesters,
+    creditSummary: programProgress
+      ? {
+          totalRequired: programProgress.required.total,
+          completed: programProgress.completed.total,
+          remaining: programProgress.remaining.total,
+          byBucket: {
+            core: programProgress.remaining.core,
+            de: programProgress.remaining.de,
+            freeElective: programProgress.remaining.freeElective,
+            mtp: programProgress.remaining.mtp,
+            istp: programProgress.remaining.istp,
+            pe: programProgress.remaining.pe,
+          },
+        }
+      : null,
     storageKey: `degree-roadmap:${userId}:${normalizeBranchCode(branch)}:${batchYear}`,
   };
 

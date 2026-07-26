@@ -8,6 +8,7 @@ import {
   CalendarClock,
   CheckCircle2,
   CircleAlert,
+  Globe,
   GitBranch,
   GraduationCap,
   LockKeyhole,
@@ -25,8 +26,10 @@ export type RoadmapCourse = {
   credits: number;
   category: string;
   completed: boolean;
-  source: "curriculum" | "live";
+  source: "curriculum" | "live" | "historical";
   offeringYear?: number;
+  offeringSemester?: number;
+  equivalents?: Array<{ code: string; name: string }>;
 };
 
 export type RoadmapData = {
@@ -40,12 +43,28 @@ export type RoadmapData = {
     requiredCourses: RoadmapCourse[];
     mappedElectives: RoadmapCourse[];
     liveOptions: RoadmapCourse[];
+    historicalOptions: RoadmapCourse[];
   }>;
+  creditSummary: {
+    totalRequired: number;
+    completed: number;
+    remaining: number;
+    byBucket: {
+      core: number;
+      de: number;
+      freeElective: number;
+      mtp: number;
+      istp: number;
+      pe: number;
+    };
+  } | null;
 };
 
-type InternshipType = "none" | "remote" | "onsite";
-type InternshipSemester = 6 | 7 | 8;
+type InternshipType = "none" | "remote" | "onsite" | "semex";
+type InternshipSemester = 5 | 6 | 7 | 8;
 type CourseFilter = "all" | "DE" | "FE" | "HSS" | "PE";
+type ExchangeResolution = "equivalent" | "shift";
+type ShiftedRoadmapCourse = RoadmapCourse & { shiftedFrom?: number };
 
 const categoryStyle: Record<string, string> = {
   IC: "bg-info/10 text-info border-info/15",
@@ -82,6 +101,14 @@ function FlowConnector() {
   );
 }
 
+function optionPool(semester: RoadmapData["semesters"][number]) {
+  return semester.liveOptions.length > 0 ? semester.liveOptions : semester.historicalOptions;
+}
+
+function nextSameParitySemester(fromSemester: number, semesters: number[]) {
+  return semesters.find((semester) => semester > fromSemester && semester % 2 === fromSemester % 2) ?? null;
+}
+
 export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
   const [internshipType, setInternshipType] = useState<InternshipType>("none");
   const [internshipSemester, setInternshipSemester] = useState<InternshipSemester>(6);
@@ -89,6 +116,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
   const [exploringSemester, setExploringSemester] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<CourseFilter>("all");
+  const [exchangeResolutions, setExchangeResolutions] = useState<Record<string, ExchangeResolution>>({});
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -102,15 +130,19 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
           internshipType?: InternshipType;
           internshipSemester?: InternshipSemester;
           selections?: Record<string, string[]>;
+          exchangeResolutions?: Record<string, ExchangeResolution>;
         };
-        if (parsed.internshipType === "none" || parsed.internshipType === "remote" || parsed.internshipType === "onsite") {
+        if (parsed.internshipType === "none" || parsed.internshipType === "remote" || parsed.internshipType === "onsite" || parsed.internshipType === "semex") {
           setInternshipType(parsed.internshipType);
         }
-        if (parsed.internshipSemester === 6 || parsed.internshipSemester === 7 || parsed.internshipSemester === 8) {
+        if (parsed.internshipSemester === 5 || parsed.internshipSemester === 6 || parsed.internshipSemester === 7 || parsed.internshipSemester === 8) {
           setInternshipSemester(parsed.internshipSemester);
         }
         if (parsed.selections && typeof parsed.selections === "object") {
           setSelections(parsed.selections);
+        }
+        if (parsed.exchangeResolutions && typeof parsed.exchangeResolutions === "object") {
+          setExchangeResolutions(parsed.exchangeResolutions);
         }
       }
     } catch {
@@ -124,9 +156,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     if (!data || !hydrated) return;
     window.localStorage.setItem(
       data.storageKey,
-      JSON.stringify({ internshipType, internshipSemester, selections })
+      JSON.stringify({ internshipType, internshipSemester, selections, exchangeResolutions })
     );
-  }, [data, hydrated, internshipType, internshipSemester, selections]);
+  }, [data, hydrated, internshipType, internshipSemester, selections, exchangeResolutions]);
 
   const selectedCoursesBySemester = useMemo(() => {
     const selected = new Map<number, RoadmapCourse[]>();
@@ -134,10 +166,101 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
 
     for (const semester of data.semesters) {
       const ids = new Set(selections[String(semester.semester)] ?? []);
-      selected.set(semester.semester, semester.liveOptions.filter((course) => ids.has(course.id)));
+      selected.set(semester.semester, optionPool(semester).filter((course) => ids.has(course.id)));
     }
     return selected;
   }, [data, selections]);
+
+  const pathway = useMemo(() => {
+    const scheduled = new Map<number, ShiftedRoadmapCourse[]>();
+    const exchangeEquivalents = new Map<number, RoadmapCourse[]>();
+    const shifted: Array<{ course: RoadmapCourse; from: number; to: number }> = [];
+    const unplaced: Array<{ course: RoadmapCourse; from: number }> = [];
+
+    if (!data) return { scheduled, exchangeEquivalents, shifted, unplaced };
+
+    const semesterNumbers = data.semesters.map((semester) => semester.semester);
+    for (const semester of data.semesters) {
+      scheduled.set(semester.semester, [...semester.requiredCourses]);
+      exchangeEquivalents.set(semester.semester, []);
+    }
+
+    const blocksLocalSemester =
+      (internshipType === "onsite" || internshipType === "semex") &&
+      data.semesters.some((semester) => semester.semester === internshipSemester);
+
+    if (!blocksLocalSemester) return { scheduled, exchangeEquivalents, shifted, unplaced };
+
+    const source = data.semesters.find((semester) => semester.semester === internshipSemester);
+    if (!source) return { scheduled, exchangeEquivalents, shifted, unplaced };
+
+    for (const course of source.requiredCourses) {
+      // Only DC work is auto-routed. MTP/ISTP and other special requirements
+      // need a programme-level decision instead of an invented rule.
+      if (course.completed || course.category !== "DC") continue;
+
+      const resolution = exchangeResolutions[course.id] ??
+        (course.equivalents && course.equivalents.length > 0 ? "equivalent" : "shift");
+      const canUseEquivalent =
+        internshipType === "semex" &&
+        resolution === "equivalent" &&
+        Boolean(course.equivalents?.length);
+
+      scheduled.set(
+        source.semester,
+        (scheduled.get(source.semester) ?? []).filter((scheduledCourse) => scheduledCourse.id !== course.id)
+      );
+
+      if (canUseEquivalent) {
+        exchangeEquivalents.set(source.semester, [
+          ...(exchangeEquivalents.get(source.semester) ?? []),
+          course,
+        ]);
+        continue;
+      }
+
+      const destination = nextSameParitySemester(source.semester, semesterNumbers);
+      if (!destination) {
+        unplaced.push({ course, from: source.semester });
+        continue;
+      }
+
+      scheduled.set(destination, [
+        ...(scheduled.get(destination) ?? []),
+        { ...course, shiftedFrom: source.semester },
+      ]);
+      shifted.push({ course, from: source.semester, to: destination });
+    }
+
+    return { scheduled, exchangeEquivalents, shifted, unplaced };
+  }, [data, internshipType, internshipSemester, exchangeResolutions]);
+
+  const creditRunway = useMemo(() => {
+    if (!data?.creditSummary) return null;
+
+    let mappedCredits = 0;
+    let selectedCredits = 0;
+    let transferCredits = 0;
+    for (const semester of data.semesters) {
+      mappedCredits += courseCreditTotal(
+        (pathway.scheduled.get(semester.semester) ?? []).filter((course) => !course.completed)
+      );
+      transferCredits += courseCreditTotal(pathway.exchangeEquivalents.get(semester.semester) ?? []);
+      selectedCredits += courseCreditTotal(selectedCoursesBySemester.get(semester.semester) ?? []);
+    }
+
+    const internshipCredits = internshipType === "onsite" ? 9 : internshipType === "remote" ? 6 : 0;
+    const plannedCredits = mappedCredits + transferCredits + selectedCredits + internshipCredits;
+
+    return {
+      mappedCredits,
+      selectedCredits,
+      transferCredits,
+      internshipCredits,
+      plannedCredits,
+      stillUnallocated: Math.max(0, data.creditSummary.remaining - plannedCredits),
+    };
+  }, [data, internshipType, pathway, selectedCoursesBySemester]);
 
   if (!data) {
     return (
@@ -152,7 +275,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
   }
 
   const openExplorer = data.semesters.find((semester) => semester.semester === exploringSemester) ?? null;
-  const isOnsiteSemesterLocked = internshipType === "onsite" && internshipSemester === exploringSemester;
+  const isAwaySemesterLocked =
+    (internshipType === "onsite" || internshipType === "semex") &&
+    internshipSemester === exploringSemester;
   const liveSemesterLabels = data.semesters
     .filter((semester) => semester.liveOptions.length > 0)
     .map((semester) => `${semesterLabel(semester.semester)} ${semester.liveOptions[0].offeringYear ?? ""}`.trim());
@@ -163,7 +288,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
   };
 
   const toggleSelection = (semester: number, courseId: string) => {
-    if (internshipType === "onsite" && internshipSemester === semester) return;
+    if ((internshipType === "onsite" || internshipType === "semex") && internshipSemester === semester) return;
     setSelections((current) => {
       const key = String(semester);
       const selected = new Set(current[key] ?? []);
@@ -177,8 +302,11 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     setInternshipType("none");
     setInternshipSemester(6);
     setSelections({});
+    setExchangeResolutions({});
     window.localStorage.removeItem(data.storageKey);
   };
+
+  const scenarioSemesters = internshipType === "semex" ? [5, 6, 7] : [6, 7, 8];
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -194,7 +322,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
           </div>
           <h1 className="text-balance text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Plan the rest of your degree, not just the next registration.</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-foreground-secondary sm:text-base">
-            Draft your Semester 6–8 course path, then pressure-test it against a semester-long internship. Your committed courses come from the branch and batch curriculum; elective picks only come from published offerings.
+            Draft your Semester 5–8 course path, then pressure-test it against an internship or Semester Exchange. Your commitments come from the branch and batch curriculum; availability is either published or clearly marked as a same-parity historical estimate.
           </p>
         </div>
       </section>
@@ -203,15 +331,15 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Path simulator</p>
-            <h2 className="mt-1 text-lg font-bold text-foreground">What kind of semester-long internship are you planning around?</h2>
-            <p className="mt-1 text-sm text-foreground-secondary">This changes the workload signal below. It does not submit or change your registration.</p>
+            <h2 className="mt-1 text-lg font-bold text-foreground">Which degree path do you want to test?</h2>
+            <p className="mt-1 text-sm text-foreground-secondary">This models a practical completion path. It does not submit or change your registration.</p>
           </div>
           <button type="button" onClick={resetDraft} className="dp-btn dp-btn-ghost shrink-0 text-xs">
             <RotateCcw className="h-4 w-4" /> Reset draft
           </button>
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-3">
+        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <button
             type="button"
             onClick={() => chooseScenario("none")}
@@ -245,6 +373,17 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
             <p className="mt-3 text-sm font-semibold text-foreground">Onsite internship path</p>
             <p className="mt-1 text-xs leading-5 text-foreground-secondary">Reserve a DP-399P semester and surface any curriculum work that needs rescheduling.</p>
           </button>
+          <button
+            type="button"
+            onClick={() => chooseScenario("semex", 5)}
+            className={`rounded-2xl border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/20 ${
+              internshipType === "semex" ? "border-primary bg-primary/10" : "border-border bg-surface hover:bg-surface-hover"
+            }`}
+          >
+            <Globe className="h-5 w-5 text-info" />
+            <p className="mt-3 text-sm font-semibold text-foreground">Semester Exchange path</p>
+            <p className="mt-1 text-xs leading-5 text-foreground-secondary">Test Sem 5, 6 or 7 with recorded equivalences or same-parity DC shifts.</p>
+          </button>
         </div>
 
         {internshipType !== "none" && (
@@ -255,11 +394,13 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                 <span className="font-semibold text-foreground">Place it in:</span>{" "}
                 {internshipType === "remote"
                   ? "Remote 396P can run with at most 9 credits alongside, so use the estimate to keep the semester intentionally light."
-                  : "Onsite 399P is treated as a no-course semester. Any required course shown there needs a separate academic rescheduling decision."}
+                  : internshipType === "onsite"
+                  ? "Onsite 399P is a no-course semester. Any pending DC is automatically moved to the next same-parity semester; special requirements remain visible for approval."
+                  : "Semester Exchange is available here for Sem 5, 6 and 7. Each pending DC can use an existing recorded equivalent or move to the next same-parity home semester."}
               </p>
             </div>
             <div className="inline-flex rounded-xl border border-border bg-surface p-1">
-              {([6, 7, 8] as InternshipSemester[]).map((semester) => (
+              {(scenarioSemesters as InternshipSemester[]).map((semester) => (
                 <button
                   key={semester}
                   type="button"
@@ -276,6 +417,31 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
         )}
       </section>
 
+      {creditRunway && data.creditSummary && (
+        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Degree credit runway">
+          <div className="dp-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Degree progress</p>
+            <p className="mt-2 text-2xl font-bold text-foreground">{formatCredits(data.creditSummary.completed)} <span className="text-sm font-medium text-foreground-secondary">/ {formatCredits(data.creditSummary.totalRequired)}</span></p>
+            <p className="mt-1 text-xs text-foreground-secondary">Already counted by the programme credit calculator</p>
+          </div>
+          <div className="dp-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Still required</p>
+            <p className="mt-2 text-2xl font-bold text-primary">{formatCredits(data.creditSummary.remaining)}</p>
+            <p className="mt-1 text-xs text-foreground-secondary">Core {formatCredits(data.creditSummary.byBucket.core)} · DE {formatCredits(data.creditSummary.byBucket.de)} · FE {formatCredits(data.creditSummary.byBucket.freeElective)}</p>
+          </div>
+          <div className="dp-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">This path allocates</p>
+            <p className="mt-2 text-2xl font-bold text-success">{formatCredits(creditRunway.plannedCredits)}</p>
+            <p className="mt-1 text-xs text-foreground-secondary">Mapped {formatCredits(creditRunway.mappedCredits)} · picks {formatCredits(creditRunway.selectedCredits)}{creditRunway.internshipCredits > 0 ? ` · internship ${formatCredits(creditRunway.internshipCredits)}` : ""}</p>
+          </div>
+          <div className={`rounded-2xl border p-4 ${creditRunway.stillUnallocated > 0 || pathway.unplaced.length > 0 ? "border-warning/25 bg-warning/10" : "border-success/25 bg-success/10"}`}>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">After this path</p>
+            <p className={`mt-2 text-2xl font-bold ${creditRunway.stillUnallocated > 0 || pathway.unplaced.length > 0 ? "text-warning" : "text-success"}`}>{formatCredits(creditRunway.stillUnallocated)}</p>
+            <p className="mt-1 text-xs text-foreground-secondary">{pathway.unplaced.length > 0 ? `${pathway.unplaced.length} DC course${pathway.unplaced.length === 1 ? "" : "s"} need a post-Sem 8 decision.` : "Still to allocate through remaining electives or approved transfer credits."}</p>
+          </div>
+        </section>
+      )}
+
       <section aria-label="Semester pathway" className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -288,14 +454,20 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
         <div className="xl:flex xl:items-stretch">
           {data.semesters.map((semester, index) => {
             const selectedCourses = selectedCoursesBySemester.get(semester.semester) ?? [];
-            const requiredPending = semester.requiredCourses.filter((course) => !course.completed);
+            const scheduledCourses = pathway.scheduled.get(semester.semester) ?? [];
+            const requiredPending = scheduledCourses.filter((course) => !course.completed);
             const markedElectives = semester.mappedElectives.filter((course) => !course.completed);
             const status = statusCopy(semester.status);
             const isInternshipSemester = internshipType !== "none" && internshipSemester === semester.semester;
             const isOnsite = isInternshipSemester && internshipType === "onsite";
+            const isSemEx = isInternshipSemester && internshipType === "semex";
             const baseCredits = courseCreditTotal(requiredPending);
             const selectedCredits = courseCreditTotal(selectedCourses);
-            const blockingRequirements = isOnsite ? requiredPending : [];
+            const blockingRequirements = isOnsite || isSemEx
+              ? semester.requiredCourses.filter((course) => !course.completed && course.category !== "DC")
+              : [];
+            const exchangeEquivalentCourses = pathway.exchangeEquivalents.get(semester.semester) ?? [];
+            const sourceDcCourses = semester.requiredCourses.filter((course) => !course.completed && course.category === "DC");
 
             return (
               <div key={semester.semester} className="contents">
@@ -314,39 +486,71 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                   </div>
 
                   {isInternshipSemester && (
-                    <div className={`mt-4 rounded-xl border p-3 ${isOnsite ? "border-warning/25 bg-warning/10" : "border-accent/25 bg-accent/10"}`}>
+                    <div className={`mt-4 rounded-xl border p-3 ${isOnsite ? "border-warning/25 bg-warning/10" : isSemEx ? "border-info/25 bg-info/10" : "border-accent/25 bg-accent/10"}`}>
                       <div className="flex gap-2">
-                        {isOnsite ? <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-warning" /> : <BriefcaseBusiness className="mt-0.5 h-4 w-4 shrink-0 text-accent" />}
+                        {isOnsite ? <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-warning" /> : isSemEx ? <Globe className="mt-0.5 h-4 w-4 shrink-0 text-info" /> : <BriefcaseBusiness className="mt-0.5 h-4 w-4 shrink-0 text-accent" />}
                         <div>
-                          <p className="text-xs font-semibold text-foreground">{isOnsite ? "DP-399P · Onsite internship" : "DP-396P · Remote internship"}</p>
+                          <p className="text-xs font-semibold text-foreground">{isOnsite ? "DP-399P · Onsite internship" : isSemEx ? "Semester Exchange · transfer-credit path" : "DP-396P · Remote internship"}</p>
                           <p className="mt-1 text-xs leading-5 text-foreground-secondary">
-                            {isOnsite ? "Elective estimation is locked for this semester." : "Keep your selected courses at or below 9 credits alongside the internship."}
+                            {isOnsite ? "Pending DC has moved to the next same-parity semester, and local elective estimation is locked." : isSemEx ? "Resolve every DC through a recorded equivalent or a same-parity home-semester shift." : "Keep your selected courses at or below 9 credits alongside the internship."}
                           </p>
                         </div>
                       </div>
                     </div>
                   )}
 
+                  {isSemEx && sourceDcCourses.length > 0 && (
+                    <div className="mt-3 space-y-2 rounded-xl border border-info/20 bg-info/5 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-info">Resolve DC during SemEx</p>
+                      {sourceDcCourses.map((course) => {
+                        const defaultResolution: ExchangeResolution = course.equivalents?.length ? "equivalent" : "shift";
+                        const resolution = exchangeResolutions[course.id] ?? defaultResolution;
+                        const hasEquivalent = Boolean(course.equivalents?.length);
+                        return (
+                          <div key={course.id} className="rounded-lg border border-border bg-surface p-2.5">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-mono text-[11px] font-bold text-foreground">{course.code}</p>
+                                <p className="mt-0.5 text-[11px] leading-4 text-foreground-secondary">{hasEquivalent ? `Recorded equivalent: ${course.equivalents!.map((item) => item.code).join(", ")}` : "No recorded equivalent in Degree Planner."}</p>
+                              </div>
+                              <div className="inline-flex rounded-lg bg-surface-hover p-0.5">
+                                {hasEquivalent && <button type="button" onClick={() => setExchangeResolutions((current) => ({ ...current, [course.id]: "equivalent" }))} className={`rounded-md px-2 py-1 text-[10px] font-semibold ${resolution === "equivalent" ? "bg-info text-white" : "text-foreground-secondary"}`}>Equivalent</button>}
+                                <button type="button" onClick={() => setExchangeResolutions((current) => ({ ...current, [course.id]: "shift" }))} className={`rounded-md px-2 py-1 text-[10px] font-semibold ${resolution === "shift" ? "bg-primary text-primary-foreground" : "text-foreground-secondary"}`}>Shift</button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div className="mt-4 space-y-3">
                     <div>
                       <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Mapped commitments</p>
-                      {semester.requiredCourses.length === 0 ? (
-                        <p className="mt-2 text-xs leading-5 text-foreground-secondary">No compulsory course is mapped here in the current curriculum data.</p>
+                      {scheduledCourses.length === 0 ? (
+                        <p className="mt-2 text-xs leading-5 text-foreground-secondary">{isOnsite ? "Pending DC has been moved forward by this onsite path." : isSemEx ? "Pending DC is being resolved through exchange equivalence or a same-parity shift." : "No compulsory course is mapped here in the current curriculum data."}</p>
                       ) : (
                         <div className="mt-2 space-y-2">
-                          {semester.requiredCourses.map((course) => (
+                          {scheduledCourses.map((course) => (
                             <div key={course.id} className={`rounded-xl border px-3 py-2 ${course.completed ? "border-border bg-surface-hover/50 opacity-65" : "border-border bg-surface"}`}>
                               <div className="flex items-center justify-between gap-2">
                                 <span className="font-mono text-[11px] font-bold text-foreground">{course.code}</span>
                                 <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${categoryStyle[course.category] ?? categoryStyle.FE}`}>{course.category}</span>
                               </div>
                               <p className="mt-1 text-xs leading-5 text-foreground-secondary">{course.name}</p>
-                              <p className="mt-1 text-[11px] font-medium text-foreground-secondary">{course.completed ? "Done" : formatCredits(course.credits)}</p>
+                              <p className="mt-1 text-[11px] font-medium text-foreground-secondary">{course.completed ? "Done" : course.shiftedFrom ? `Shifted from Sem ${course.shiftedFrom} · ${formatCredits(course.credits)}` : formatCredits(course.credits)}</p>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
+
+                    {exchangeEquivalentCourses.length > 0 && (
+                      <div className="rounded-xl border border-info/20 bg-info/5 p-3">
+                        <p className="text-[11px] font-semibold text-info">Planned through an equivalent</p>
+                        <p className="mt-1 text-xs leading-5 text-foreground-secondary">{exchangeEquivalentCourses.map((course) => course.code).join(", ")} · {formatCredits(courseCreditTotal(exchangeEquivalentCourses))}. Transfer-credit approval is still required before departure.</p>
+                      </div>
+                    )}
 
                     {markedElectives.length > 0 && (
                       <div>
@@ -366,21 +570,24 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="text-xs font-semibold text-foreground">Your elective estimate</p>
-                        <p className="mt-0.5 text-[11px] text-foreground-secondary">{selectedCourses.length > 0 ? `${selectedCourses.length} course${selectedCourses.length === 1 ? "" : "s"} · ${formatCredits(selectedCredits)}` : "No live offering selected"}</p>
+                        <p className="mt-0.5 text-[11px] text-foreground-secondary">{selectedCourses.length > 0 ? `${selectedCourses.length} course${selectedCourses.length === 1 ? "" : "s"} · ${formatCredits(selectedCredits)}` : semester.liveOptions.length > 0 ? "No published offering selected" : semester.historicalOptions.length > 0 ? "No historical estimate selected" : "No offering history available"}</p>
                       </div>
-                      {semester.liveOptions.length > 0 && (
-                        <button type="button" onClick={() => { setExploringSemester(semester.semester); setSearch(""); setFilter("all"); }} disabled={isOnsite} className="dp-btn dp-btn-soft min-h-0 px-3 py-2 text-xs disabled:cursor-not-allowed">
+                      {optionPool(semester).length > 0 && (
+                        <button type="button" onClick={() => { setExploringSemester(semester.semester); setSearch(""); setFilter("all"); }} disabled={isOnsite || isSemEx} className="dp-btn dp-btn-soft min-h-0 px-3 py-2 text-xs disabled:cursor-not-allowed">
                           <Plus className="h-3.5 w-3.5" /> Options
                         </button>
                       )}
                     </div>
-                    {semester.liveOptions.length === 0 && (
-                      <p className="mt-2 text-[11px] leading-5 text-foreground-secondary">Live offerings have not been published for this semester yet. This is deliberately not guessed from the catalog.</p>
+                    {semester.liveOptions.length === 0 && semester.historicalOptions.length > 0 && (
+                      <p className="mt-2 text-[11px] leading-5 text-warning">Estimated from the most recent matching odd/even offering. Treat it as a planning hint until the official list is published.</p>
+                    )}
+                    {semester.liveOptions.length === 0 && semester.historicalOptions.length === 0 && (
+                      <p className="mt-2 text-[11px] leading-5 text-foreground-secondary">No matching odd/even offering history has been imported yet, so the planner will not invent an elective list.</p>
                     )}
                     {selectedCourses.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {selectedCourses.map((course) => (
-                          <button key={course.id} type="button" onClick={() => toggleSelection(semester.semester, course.id)} disabled={isOnsite} className="rounded-lg border border-success/20 bg-success/10 px-2 py-1 text-left text-[11px] font-medium text-success transition-colors hover:bg-success/15 disabled:cursor-not-allowed">
+                          <button key={course.id} type="button" onClick={() => toggleSelection(semester.semester, course.id)} disabled={isOnsite || isSemEx} className="rounded-lg border border-success/20 bg-success/10 px-2 py-1 text-left text-[11px] font-medium text-success transition-colors hover:bg-success/15 disabled:cursor-not-allowed">
                             {course.code} <span className="text-success/80">×</span>
                           </button>
                         ))}
@@ -392,7 +599,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                     <div className="mt-4 rounded-xl border border-warning/25 bg-warning/10 p-3">
                       <div className="flex gap-2">
                         <CircleAlert className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-                        <p className="text-xs leading-5 text-foreground-secondary"><span className="font-semibold text-foreground">Decision needed:</span> {blockingRequirements.map((course) => course.code).join(", ")} still appear as mapped commitments. Confirm their rescheduling before treating this as an onsite semester.</p>
+                        <p className="text-xs leading-5 text-foreground-secondary"><span className="font-semibold text-foreground">Separate approval needed:</span> {blockingRequirements.map((course) => course.code).join(", ")} are not auto-shifted because only DC follows the same-parity planner rule. Confirm their treatment before finalizing this path.</p>
                       </div>
                     </div>
                   )}
@@ -420,11 +627,11 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
             </div>
             <div className="rounded-xl bg-surface-hover p-3">
               <p className="text-xs font-semibold text-foreground">2. Add real choices</p>
-              <p className="mt-1 text-xs leading-5 text-foreground-secondary">The Options drawer only exposes electives from published offerings for that semester.</p>
+              <p className="mt-1 text-xs leading-5 text-foreground-secondary">Published offerings are selectable first; matching odd/even history is available only as a clearly marked estimate.</p>
             </div>
             <div className="rounded-xl bg-surface-hover p-3">
               <p className="text-xs font-semibold text-foreground">3. Test the trade-off</p>
-              <p className="mt-1 text-xs leading-5 text-foreground-secondary">Move the internship from Sem 6 to 7 or 8 and see which commitments require a decision.</p>
+              <p className="mt-1 text-xs leading-5 text-foreground-secondary">Move an onsite internship or SemEx and see DC shift automatically, with special cases held for approval.</p>
             </div>
           </div>
         </div>
@@ -440,7 +647,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
       </section>
 
       {openExplorer && (() => {
-        const visibleOptions = openExplorer.liveOptions.filter((course) => {
+        const explorerOptions = optionPool(openExplorer);
+        const isHistoricalEstimate = openExplorer.liveOptions.length === 0;
+        const visibleOptions = explorerOptions.filter((course) => {
           const matchesFilter = filter === "all" || course.category === filter;
           const text = `${course.code} ${course.name}`.toLowerCase();
           return matchesFilter && text.includes(search.trim().toLowerCase());
@@ -455,9 +664,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
             <div className="relative max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-t-3xl border border-border bg-surface shadow-xl sm:rounded-3xl">
               <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-5 sm:px-6">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Published offerings</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{isHistoricalEstimate ? "Historical odd/even estimate" : "Published offerings"}</p>
                   <h2 className="mt-1 text-xl font-bold text-foreground">Choose a Sem {openExplorer.semester} estimate</h2>
-                  <p className="mt-1 text-xs leading-5 text-foreground-secondary">{openExplorer.liveOptions.length} eligible option{openExplorer.liveOptions.length === 1 ? "" : "s"} from the currently published list.</p>
+                  <p className="mt-1 text-xs leading-5 text-foreground-secondary">{explorerOptions.length} eligible option{explorerOptions.length === 1 ? "" : "s"}{isHistoricalEstimate ? ". This is a same-parity planning signal, not the official release." : " from the currently published list."}</p>
                 </div>
                 <button type="button" onClick={() => setExploringSemester(null)} className="dp-icon-btn h-10 w-10 shrink-0" aria-label="Close options"><X className="h-4 w-4" /></button>
               </div>
@@ -478,10 +687,10 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
               </div>
 
               <div className="max-h-[52vh] overflow-y-auto px-5 py-4 sm:px-6">
-                {isOnsiteSemesterLocked ? (
-                  <div className="rounded-2xl border border-warning/25 bg-warning/10 p-5 text-sm leading-6 text-foreground-secondary"><LockKeyhole className="mb-2 h-5 w-5 text-warning" />This is currently an onsite internship semester, so course selection stays locked. Switch the simulator path if you want to compare electives here.</div>
+                {isAwaySemesterLocked ? (
+                  <div className="rounded-2xl border border-warning/25 bg-warning/10 p-5 text-sm leading-6 text-foreground-secondary"><LockKeyhole className="mb-2 h-5 w-5 text-warning" />This semester is currently reserved for an onsite internship or Semester Exchange, so local elective selection stays locked. Switch the simulator path if you want to compare electives here.</div>
                 ) : visibleOptions.length === 0 ? (
-                  <p className="py-10 text-center text-sm text-foreground-secondary">No published option matches that search.</p>
+                  <p className="py-10 text-center text-sm text-foreground-secondary">No matching option is available in this list.</p>
                 ) : (
                   <div className="space-y-2">
                     {visibleOptions.map((course) => {
