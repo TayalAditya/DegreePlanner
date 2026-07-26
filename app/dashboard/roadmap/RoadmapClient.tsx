@@ -89,7 +89,7 @@ export type RoadmapData = {
 
 type InternshipType = "none" | "remote" | "onsite" | "semex";
 type InternshipSemester = 5 | 6 | 7 | 8;
-type CourseFilter = "all" | "DC" | "DE" | "FE" | "HSS" | "IKS";
+type CourseFilter = "all" | "DC" | "DE" | "FE" | "HSS_IKS";
 type ExchangeResolution = "equivalent" | "shift";
 type ShiftedRoadmapCourse = RoadmapCourse & { shiftedFrom?: number };
 
@@ -103,6 +103,14 @@ const categoryStyle: Record<string, string> = {
   MTP: "bg-error/10 text-error border-error/15",
   ISTP: "bg-accent/10 text-accent border-accent/15",
 };
+
+const COURSE_FILTERS: Array<{ value: CourseFilter; label: string }> = [
+  { value: "all", label: "All" },
+  { value: "DC", label: "DC" },
+  { value: "DE", label: "DE" },
+  { value: "FE", label: "FE" },
+  { value: "HSS_IKS", label: "HSS + IKS" },
+];
 
 const semesterLabel = (semester: number) => `Semester ${semester}`;
 
@@ -1277,7 +1285,8 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
         const isRegistrationBacked = openExplorer.liveOptions.length === 0 && openExplorer.registeredOptions.length > 0;
         const isHistoricalEstimate = openExplorer.liveOptions.length === 0 && openExplorer.registeredOptions.length === 0;
         const visibleOptions = explorerOptions.filter((course) => {
-          const matchesFilter = filter === "all" || course.category === filter;
+          const matchesFilter = filter === "all" ||
+            (filter === "HSS_IKS" ? course.category === "HSS" || course.category === "IKS" : course.category === filter);
           const text = `${course.code} ${course.name}`.toLowerCase();
           return matchesFilter && text.includes(search.trim().toLowerCase());
         });
@@ -1305,9 +1314,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                   <input id="roadmap-course-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search code or course name" className="dp-field pl-10" autoFocus />
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {(["all", "DC", "DE", "FE", "HSS", "IKS"] as CourseFilter[]).map((option) => (
-                    <button key={option} type="button" onClick={() => setFilter(option)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${filter === option ? "bg-primary text-primary-foreground" : "bg-surface-hover text-foreground-secondary hover:text-foreground"}`}>
-                      {option === "all" ? "All" : option}
+                  {COURSE_FILTERS.map((option) => (
+                    <button key={option.value} type="button" onClick={() => setFilter(option.value)} aria-label={option.label} title={option.label} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${filter === option.value ? "bg-primary text-primary-foreground" : "bg-surface-hover text-foreground-secondary hover:text-foreground"}`}>
+                      {option.value === "HSS_IKS" ? <><span className="sm:hidden">H+I</span><span className="hidden sm:inline">HSS + IKS</span></> : option.label}
                     </button>
                   ))}
                 </div>
