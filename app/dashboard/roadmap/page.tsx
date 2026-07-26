@@ -423,13 +423,18 @@ export default async function RoadmapPage() {
 
   for (const semester of semesters) {
     const publishedCodes = new Set<string>();
-    for (const offering of offerings) {
-      if (!offering.isActive || offering.offeringSemester !== semester.semester) continue;
-      if (!isEligibleOffering(offering, semester.semester)) continue;
-      const option = toOfferingOption(offering, "live", semester.semester);
-      if (!option || publishedCodes.has(option.code)) continue;
-      publishedCodes.add(option.code);
-      semester.liveOptions.push(option);
+    // An official list belongs only to the student's next registration term.
+    // For later future semesters, use the recorded cohort evidence below so a
+    // stale active offering never looks like a promised future opening.
+    if (semester.semester === currentSemester) {
+      for (const offering of offerings) {
+        if (!offering.isActive || offering.offeringSemester !== semester.semester) continue;
+        if (!isEligibleOffering(offering, semester.semester)) continue;
+        const option = toOfferingOption(offering, "live", semester.semester);
+        if (!option || publishedCodes.has(option.code)) continue;
+        publishedCodes.add(option.code);
+        semester.liveOptions.push(option);
+      }
     }
 
     const registeredCodes = new Set<string>();

@@ -163,7 +163,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
   const [onsiteAddOnSemester, setOnsiteAddOnSemester] = useState<InternshipSemester | null>(null);
   const [remoteAddOnSemester, setRemoteAddOnSemester] = useState<InternshipSemester | null>(null);
   const [passFailSelections, setPassFailSelections] = useState<Record<string, string[]>>({});
-  const [showFullRoadmap, setShowFullRoadmap] = useState(false);
+  const [showFullRoadmap, setShowFullRoadmap] = useState(true);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -582,7 +582,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     if (type !== "semex") setSemexDuration(1);
     setOnsiteAddOnSemester(null);
     setRemoteAddOnSemester(null);
-    setShowFullRoadmap(false);
+    setShowFullRoadmap(true);
   };
 
   const toggleSelection = (semester: number, courseId: string) => {
@@ -619,7 +619,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     setOnsiteAddOnSemester(null);
     setRemoteAddOnSemester(null);
     setPassFailSelections({});
-    setShowFullRoadmap(false);
+    setShowFullRoadmap(true);
     window.localStorage.removeItem(data.storageKey);
   };
 
