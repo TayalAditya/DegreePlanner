@@ -1288,9 +1288,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
         return (
           <div className="fixed inset-0 z-[70] flex items-end bg-black/45 p-0 sm:items-center sm:justify-center sm:p-6" role="dialog" aria-modal="true" aria-label={`Options for semester ${openExplorer.semester}`}>
             <button type="button" aria-label="Close options" className="absolute inset-0 cursor-default" onClick={() => setExploringSemester(null)} />
-            <div className="relative max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-t-3xl border border-border bg-surface shadow-xl sm:rounded-3xl">
-              <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-5 sm:px-6">
-                <div>
+            <div className="relative flex h-[calc(100dvh-0.75rem)] w-full max-w-3xl flex-col overflow-hidden rounded-t-3xl border border-border bg-surface shadow-xl sm:h-[90vh] sm:max-h-[46rem] sm:rounded-3xl">
+              <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-5 sm:px-6">
+                <div className="min-w-0">
                   <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{isRegistrationBacked ? "Actual registration evidence" : isHistoricalEstimate ? "Imported odd/even history" : "Published offerings"}</p>
                   <h2 className="mt-1 text-xl font-bold text-foreground">Review Sem {openExplorer.semester} openings</h2>
                   <p className="mt-1 text-xs leading-5 text-foreground-secondary">{explorerOptions.length} eligible option{explorerOptions.length === 1 ? "" : "s"}{isRegistrationBacked ? ". Each course shows the most recent same-branch registration record; it is evidence, not a future promise." : isHistoricalEstimate ? ". This is an imported planning signal, not the official release." : " from the currently published list."}</p>
@@ -1298,7 +1298,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                 <button type="button" onClick={() => setExploringSemester(null)} className="dp-icon-btn h-10 w-10 shrink-0" aria-label="Close options"><X className="h-4 w-4" /></button>
               </div>
 
-              <div className="border-b border-border px-5 py-4 sm:px-6">
+              <div className="shrink-0 border-b border-border px-5 py-4 sm:px-6">
                 <label className="sr-only" htmlFor="roadmap-course-search">Search course openings</label>
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
@@ -1313,7 +1313,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                 </div>
               </div>
 
-              <div className="max-h-[52vh] overflow-y-auto px-5 py-4 sm:px-6">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-4 sm:px-6">
                 {isAwaySemesterLocked ? (
                   <div className="rounded-2xl border border-warning/25 bg-warning/10 p-5 text-sm leading-6 text-foreground-secondary"><LockKeyhole className="mb-2 h-5 w-5 text-warning" />This semester is currently reserved for an onsite internship or Semester Exchange, so local elective selection stays locked. Switch the simulator path if you want to compare electives here.</div>
                 ) : visibleOptions.length === 0 ? (
@@ -1344,7 +1344,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                 )}
               </div>
 
-              <div className="flex flex-col gap-3 border-t border-border bg-surface-hover/50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <div className="flex shrink-0 flex-col gap-3 border-t border-border bg-surface-hover/50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                 <p className={`text-xs ${exceedsRemoteGuidance ? "font-semibold text-warning" : "text-foreground-secondary"}`}>{selectedIds.size} planned course{selectedIds.size === 1 ? "" : "s"} · {formatCredits(selectedCredits)}{exceedsRemoteGuidance ? " — above the 9-credit 396P guideline; approval needed" : ""}</p>
                 <button type="button" onClick={() => setExploringSemester(null)} className="dp-btn dp-btn-primary px-4 py-2 text-xs">Done</button>
               </div>
