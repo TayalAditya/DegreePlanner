@@ -30,7 +30,7 @@ export default async function RoadmapPage() {
   const [user, primaryProgram] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { branch: true, batch: true, enrollmentId: true },
+      select: { branch: true, batch: true, enrollmentId: true, totalPassFailCredits: true },
     }),
     prisma.userProgram.findFirst({
       where: { userId, isPrimary: true },
@@ -93,7 +93,15 @@ export default async function RoadmapPage() {
     }),
     prisma.courseEnrollment.findMany({
       where: { userId },
-      select: { courseId: true, semester: true, status: true, grade: true },
+      select: {
+        courseId: true,
+        semester: true,
+        status: true,
+        grade: true,
+        isPassFail: true,
+        passFailCredits: true,
+        course: { select: { credits: true } },
+      },
     }),
     prisma.courseOffering.findMany({
       where: {
@@ -140,6 +148,13 @@ export default async function RoadmapPage() {
       )
       .map((enrollment) => enrollment.courseId)
   );
+  const passFailBySemester: Record<string, number> = {};
+  for (const enrollment of enrollments) {
+    if (!enrollment.isPassFail || enrollment.status === "DROPPED" || enrollment.status === "FAILED") continue;
+    const credits = enrollment.passFailCredits || enrollment.course.credits;
+    const key = String(enrollment.semester);
+    passFailBySemester[key] = (passFailBySemester[key] ?? 0) + credits;
+  }
 
   const semesters: RoadmapData["semesters"] = ROADMAP_SEMESTERS.map((semester) => ({
     semester,
@@ -296,6 +311,11 @@ export default async function RoadmapPage() {
           },
         }
       : null,
+    passFail: {
+      used: user?.totalPassFailCredits ?? 0,
+      remaining: Math.max(0, 9 - (user?.totalPassFailCredits ?? 0)),
+      bySemester: passFailBySemester,
+    },
     storageKey: `degree-roadmap:${userId}:${normalizeBranchCode(branch)}:${batchYear}`,
   };
 
