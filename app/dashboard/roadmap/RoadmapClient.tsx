@@ -144,7 +144,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
   const [filter, setFilter] = useState<CourseFilter>("all");
   const [exchangeResolutions, setExchangeResolutions] = useState<Record<string, ExchangeResolution>>({});
   const [semexDuration, setSemexDuration] = useState<1 | 2>(1);
+  const [onsiteAddOnSemester, setOnsiteAddOnSemester] = useState<InternshipSemester | null>(null);
   const [passFailSelections, setPassFailSelections] = useState<Record<string, string[]>>({});
+  const [showFullRoadmap, setShowFullRoadmap] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -160,6 +162,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
           selections?: Record<string, string[]>;
           exchangeResolutions?: Record<string, ExchangeResolution>;
           semexDuration?: 1 | 2;
+          onsiteAddOnSemester?: InternshipSemester | null;
           passFailSelections?: Record<string, string[]>;
         };
         if (parsed.internshipType === "none" || parsed.internshipType === "remote" || parsed.internshipType === "onsite" || parsed.internshipType === "semex") {
@@ -177,6 +180,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
         if (parsed.semexDuration === 1 || parsed.semexDuration === 2) {
           setSemexDuration(parsed.semexDuration);
         }
+        if (parsed.onsiteAddOnSemester === 5 || parsed.onsiteAddOnSemester === 6 || parsed.onsiteAddOnSemester === 7 || parsed.onsiteAddOnSemester === 8) {
+          setOnsiteAddOnSemester(parsed.onsiteAddOnSemester);
+        }
         if (parsed.passFailSelections && typeof parsed.passFailSelections === "object") {
           setPassFailSelections(parsed.passFailSelections);
         }
@@ -192,9 +198,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     if (!data || !hydrated) return;
     window.localStorage.setItem(
       data.storageKey,
-      JSON.stringify({ internshipType, internshipSemester, selections, exchangeResolutions, semexDuration, passFailSelections })
+      JSON.stringify({ internshipType, internshipSemester, selections, exchangeResolutions, semexDuration, onsiteAddOnSemester, passFailSelections })
     );
-  }, [data, hydrated, internshipType, internshipSemester, selections, exchangeResolutions, semexDuration, passFailSelections]);
+  }, [data, hydrated, internshipType, internshipSemester, selections, exchangeResolutions, semexDuration, onsiteAddOnSemester, passFailSelections]);
 
   const selectedCoursesBySemester = useMemo(() => {
     const selected = new Map<number, RoadmapCourse[]>();
@@ -213,6 +219,14 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     if (semexDuration === 2 && internshipSemester < 7) planned.push(internshipSemester + 1);
     return planned;
   }, [internshipType, internshipSemester, semexDuration]);
+
+  const onsiteSemesters = useMemo<number[]>(() => {
+    if (internshipType === "onsite") return [internshipSemester];
+    if (internshipType === "semex" && semexDuration === 1 && onsiteAddOnSemester && onsiteAddOnSemester % 2 !== internshipSemester % 2) {
+      return [onsiteAddOnSemester];
+    }
+    return [];
+  }, [internshipType, internshipSemester, semexDuration, onsiteAddOnSemester]);
 
   const passFailPlan = useMemo(() => {
     if (!data) return null;
@@ -237,14 +251,17 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     );
     // 399P is a 9-credit P/F exception and cannot coexist with any other P/F
     // course. 396P consumes six P/F credits in its own semester.
-    const onsitePathConflictsWithPF = internshipType === "onsite" &&
+    const hasOnsiteInternship = onsiteSemesters.length > 0;
+    const onsitePathConflictsWithPF = hasOnsiteInternship &&
       (data.passFail.used > 0 || totalSelectedPF > 0);
-    const internshipPF = internshipType === "onsite"
+    const internshipPF = hasOnsiteInternship
       ? onsitePathConflictsWithPF ? 0 : 9
       : internshipType === "remote" ? 6 : 0;
     const forcedPFBySemester: Record<number, number> = {};
-    if (internshipType === "remote" || (internshipType === "onsite" && !onsitePathConflictsWithPF)) {
+    if (internshipType === "remote") {
       forcedPFBySemester[internshipSemester] = internshipPF;
+    } else if (hasOnsiteInternship && !onsitePathConflictsWithPF) {
+      forcedPFBySemester[onsiteSemesters[0]] = internshipPF;
     }
     const totalRemaining = Math.max(0, 9 - data.passFail.used - internshipPF - totalSelectedPF);
     const semesterRemaining: Record<number, number> = {};
@@ -260,7 +277,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     let suggestionRemaining = totalRemaining;
     const tentativePerSemester = { ...perSemesterPlanned };
 
-    const candidates = internshipType === "onsite" || data.creditSummary?.byBucket.freeElective === 0
+    const candidates = hasOnsiteInternship || data.creditSummary?.byBucket.freeElective === 0
       ? []
       : data.semesters
       .flatMap((semester) =>
@@ -269,7 +286,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
           .map((course) => ({ semester: semester.semester, course }))
       )
       .filter(({ semester }) => {
-        const isInternshipSemester = internshipType === "remote" && internshipSemester === semester;
+        const isInternshipSemester =
+          (internshipType === "remote" && internshipSemester === semester) ||
+          onsiteSemesters.includes(semester);
         const isSemExSemester = internshipType === "semex" && semexSemesters.includes(semester);
         return !isInternshipSemester && !isSemExSemester;
       })
@@ -297,7 +316,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
       onsitePathConflictsWithPF,
       internshipFitsBudget: !onsitePathConflictsWithPF && data.passFail.used + internshipPF + totalSelectedPF <= 9,
     };
-  }, [data, internshipType, internshipSemester, passFailSelections, selectedCoursesBySemester, semexSemesters]);
+  }, [data, internshipType, internshipSemester, onsiteSemesters, passFailSelections, selectedCoursesBySemester, semexSemesters]);
 
   const pathway = useMemo(() => {
     const scheduled = new Map<number, ShiftedRoadmapCourse[]>();
@@ -313,11 +332,10 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
       exchangeEquivalents.set(semester.semester, []);
     }
 
-    const localSemesterBlocks = internshipType === "onsite"
-      ? [internshipSemester]
-      : internshipType === "semex"
-      ? semexSemesters
-      : [];
+    const localSemesterBlocks = Array.from(new Set([
+      ...semexSemesters,
+      ...onsiteSemesters,
+    ])).sort((a, b) => a - b);
 
     for (const sourceSemester of localSemesterBlocks) {
       const source = data.semesters.find((semester) => semester.semester === sourceSemester);
@@ -331,7 +349,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
         const resolution = exchangeResolutions[course.id] ??
           (course.equivalents && course.equivalents.length > 0 ? "equivalent" : "shift");
         const canUseEquivalent =
-          internshipType === "semex" &&
+          semexSemesters.includes(source.semester) &&
           resolution === "equivalent" &&
           Boolean(course.equivalents?.length);
 
@@ -363,7 +381,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     }
 
     return { scheduled, exchangeEquivalents, shifted, unplaced };
-  }, [data, internshipType, internshipSemester, exchangeResolutions, semexSemesters]);
+  }, [data, exchangeResolutions, onsiteSemesters, semexSemesters]);
 
   const creditRunway = useMemo(() => {
     if (!data?.creditSummary) return null;
@@ -406,7 +424,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
 
   const openExplorer = data.semesters.find((semester) => semester.semester === exploringSemester) ?? null;
   const isAwaySemesterLocked =
-    (internshipType === "onsite" && internshipSemester === exploringSemester) ||
+    (exploringSemester !== null && onsiteSemesters.includes(exploringSemester)) ||
     (internshipType === "semex" && exploringSemester !== null && semexSemesters.includes(exploringSemester));
   const liveSemesterLabels = data.semesters
     .filter((semester) => semester.liveOptions.length > 0)
@@ -423,11 +441,13 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     setInternshipType(type);
     setInternshipSemester(semester);
     if (type !== "semex") setSemexDuration(1);
+    setOnsiteAddOnSemester(null);
+    setShowFullRoadmap(false);
   };
 
   const toggleSelection = (semester: number, courseId: string) => {
     if (
-      (internshipType === "onsite" && internshipSemester === semester) ||
+      onsiteSemesters.includes(semester) ||
       (internshipType === "semex" && semexSemesters.includes(semester))
     ) return;
     const key = String(semester);
@@ -453,7 +473,9 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     setSelections({});
     setExchangeResolutions({});
     setSemexDuration(1);
+    setOnsiteAddOnSemester(null);
     setPassFailSelections({});
+    setShowFullRoadmap(false);
     window.localStorage.removeItem(data.storageKey);
   };
 
@@ -472,6 +494,38 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
   };
 
   const scenarioSemesters = internshipType === "semex" ? [5, 6, 7] : [6, 7, 8];
+  const onsiteAddOnOptions = [6, 7, 8].filter((semester) => semester % 2 !== internshipSemester % 2) as InternshipSemester[];
+  const hasPathChanges = internshipType !== "none";
+  const specialApprovalChanges = data.semesters.flatMap((semester) =>
+    (semexSemesters.includes(semester.semester) || onsiteSemesters.includes(semester.semester))
+      ? semester.requiredCourses
+        .filter((course) => !course.completed && course.category !== "DC")
+        .map((course) => ({ course, semester: semester.semester }))
+      : []
+  );
+  const semexDcChanges = data.semesters.flatMap((semester) =>
+    semexSemesters.includes(semester.semester)
+      ? semester.requiredCourses
+        .filter((course) => !course.completed && course.category === "DC")
+        .map((course) => ({
+          course,
+          from: semester.semester,
+          resolution: exchangeResolutions[course.id] ?? (course.equivalents?.length ? "equivalent" : "shift") as ExchangeResolution,
+          destination: nextSameParitySemester(semester.semester, data.semesters.map((item) => item.semester)),
+        }))
+      : []
+  );
+  const onsiteDcChanges = data.semesters.flatMap((semester) =>
+    onsiteSemesters.includes(semester.semester)
+      ? semester.requiredCourses
+        .filter((course) => !course.completed && course.category === "DC")
+        .map((course) => ({
+          course,
+          from: semester.semester,
+          destination: nextSameParitySemester(semester.semester, data.semesters.map((item) => item.semester)),
+        }))
+      : []
+  );
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -576,7 +630,10 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
                   type="button"
                   onClick={() => {
                     setInternshipSemester(semester);
-                    if (internshipType === "semex" && semester === 7) setSemexDuration(1);
+                    if (internshipType === "semex") {
+                      if (semester === 7) setSemexDuration(1);
+                      setOnsiteAddOnSemester((current) => current && current % 2 !== semester % 2 ? current : null);
+                    }
                   }}
                   className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
                     internshipSemester === semester ? "bg-primary text-primary-foreground shadow-sm" : "text-foreground-secondary hover:bg-surface-hover"
@@ -594,7 +651,22 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
             <p className="text-sm leading-6 text-foreground-secondary"><span className="font-semibold text-foreground">Exchange duration:</span> {semexDuration === 2 ? `Sem ${internshipSemester} and Sem ${internshipSemester + 1} will both route DC.` : "Route DC for one exchange semester."}</p>
             <div className="inline-flex rounded-xl border border-border bg-surface p-1">
               <button type="button" onClick={() => setSemexDuration(1)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${semexDuration === 1 ? "bg-info text-white" : "text-foreground-secondary hover:bg-surface-hover"}`}>1 semester</button>
-              <button type="button" onClick={() => setSemexDuration(2)} disabled={internshipSemester === 7} className={`rounded-lg px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45 ${semexDuration === 2 ? "bg-info text-white" : "text-foreground-secondary hover:bg-surface-hover"}`}>2 consecutive</button>
+              <button type="button" onClick={() => { setSemexDuration(2); setOnsiteAddOnSemester(null); }} disabled={internshipSemester === 7} className={`rounded-lg px-3 py-2 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-45 ${semexDuration === 2 ? "bg-info text-white" : "text-foreground-secondary hover:bg-surface-hover"}`}>2 consecutive</button>
+            </div>
+          </div>
+        )}
+
+        {internshipType === "semex" && semexDuration === 1 && (
+          <div className="mt-3 flex flex-col gap-3 rounded-2xl border border-warning/20 bg-warning/5 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-foreground">Or pair this one SemEx with an onsite 399P</p>
+              <p className="mt-1 text-xs leading-5 text-foreground-secondary">Choose one opposite-parity semester only. For example, SemEx 5 can pair with 399P in Sem 6 or 8; this keeps both disruptions from occupying the same odd/even cycle.</p>
+            </div>
+            <div className="inline-flex flex-wrap rounded-xl border border-border bg-surface p-1">
+              <button type="button" onClick={() => setOnsiteAddOnSemester(null)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${onsiteAddOnSemester === null ? "bg-surface-hover text-foreground" : "text-foreground-secondary hover:bg-surface-hover"}`}>No 399P</button>
+              {onsiteAddOnOptions.map((semester) => (
+                <button key={semester} type="button" onClick={() => setOnsiteAddOnSemester(semester)} className={`rounded-lg px-3 py-2 text-xs font-semibold ${onsiteAddOnSemester === semester ? "bg-warning text-white" : "text-foreground-secondary hover:bg-surface-hover"}`}>399P · Sem {semester}</button>
+              ))}
             </div>
           </div>
         )}
@@ -672,12 +744,88 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
       <section aria-label="Semester pathway" className="space-y-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Your pathway</p>
-            <h2 className="mt-1 text-xl font-bold text-foreground">The graduation flow, with the pressure points visible.</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">{hasPathChanges && !showFullRoadmap ? "Only what changes" : "Your pathway"}</p>
+            <h2 className="mt-1 text-xl font-bold text-foreground">{hasPathChanges && !showFullRoadmap ? "DC moves and exchange swaps for this path." : "The graduation flow, with the pressure points visible."}</h2>
           </div>
-          <p className="text-xs text-foreground-secondary">Draft saved only in this browser for now.</p>
+          {hasPathChanges ? (
+            <button type="button" onClick={() => setShowFullRoadmap((current) => !current)} className="dp-btn dp-btn-ghost shrink-0 px-3 py-2 text-xs">{showFullRoadmap ? "Show only changes" : "View full plan"}</button>
+          ) : (
+            <p className="text-xs text-foreground-secondary">Draft saved only in this browser for now.</p>
+          )}
         </div>
 
+        {hasPathChanges && !showFullRoadmap ? (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {internshipType === "remote" && (
+              <article className="rounded-2xl border border-accent/25 bg-accent/10 p-4">
+                <div className="flex gap-3">
+                  <BriefcaseBusiness className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Sem {internshipSemester} · DP-396P remote internship</p>
+                    <p className="mt-1 text-xs leading-5 text-foreground-secondary">6 P/F credits; no DC is moved. Keep local coursework at or below 9 credits.</p>
+                  </div>
+                </div>
+              </article>
+            )}
+
+            {semexDcChanges.map(({ course, from, resolution, destination }) => (
+              <article key={course.id} className="rounded-2xl border border-info/25 bg-info/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-xs font-bold text-foreground">{course.code}</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">{course.name}</p>
+                  </div>
+                  <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${categoryStyle.DC}`}>DC</span>
+                </div>
+                <p className="mt-3 text-xs font-semibold text-info">Sem {from} · Semester Exchange</p>
+                {course.equivalents?.length ? (
+                  <div className="mt-3 inline-flex rounded-lg bg-surface/80 p-0.5">
+                    <button type="button" onClick={() => setExchangeResolutions((current) => ({ ...current, [course.id]: "equivalent" }))} className={`rounded-md px-2.5 py-1.5 text-[11px] font-semibold ${resolution === "equivalent" ? "bg-info text-white" : "text-foreground-secondary"}`}>Swap with equivalent</button>
+                    <button type="button" onClick={() => setExchangeResolutions((current) => ({ ...current, [course.id]: "shift" }))} className={`rounded-md px-2.5 py-1.5 text-[11px] font-semibold ${resolution === "shift" ? "bg-primary text-primary-foreground" : "text-foreground-secondary"}`}>Shift at home</button>
+                  </div>
+                ) : null}
+                <p className="mt-3 text-xs leading-5 text-foreground-secondary">
+                  {resolution === "equivalent" && course.equivalents?.length
+                    ? `Swap: take a recorded partner equivalent (${course.equivalents.map((item) => item.code).join(", ")}) during SemEx.`
+                    : destination
+                    ? `Move: Sem ${from} → Sem ${destination}, the next same-parity home semester.`
+                    : "No same-parity home semester remains in Sem 5–8. An approved completion route is required."}
+                </p>
+              </article>
+            ))}
+
+            {onsiteDcChanges.map(({ course, from, destination }) => (
+              <article key={course.id} className="rounded-2xl border border-warning/25 bg-warning/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-xs font-bold text-foreground">{course.code}</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">{course.name}</p>
+                  </div>
+                  <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${categoryStyle.DC}`}>DC</span>
+                </div>
+                <p className="mt-3 text-xs font-semibold text-warning">Sem {from} · DP-399P onsite internship</p>
+                <p className="mt-3 text-xs leading-5 text-foreground-secondary">{destination ? `Move: Sem ${from} → Sem ${destination}, the next same-parity home semester.` : "No same-parity home semester remains in Sem 5–8. An approved completion route is required."}</p>
+              </article>
+            ))}
+
+            {specialApprovalChanges.map(({ course, semester }) => (
+              <article key={`${semester}-${course.id}`} className="rounded-2xl border border-warning/25 bg-warning/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-mono text-xs font-bold text-foreground">{course.code}</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">{course.name}</p>
+                  </div>
+                  <span className={`rounded-full border px-2 py-1 text-[10px] font-semibold ${categoryStyle[course.category] ?? categoryStyle.FE}`}>{course.category}</span>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-foreground-secondary">Sem {semester} is occupied by {semexSemesters.includes(semester) ? "Semester Exchange" : "399P"}. This requirement is not auto-moved; confirm its treatment with the programme.</p>
+              </article>
+            ))}
+
+            {internshipType !== "remote" && semexDcChanges.length === 0 && onsiteDcChanges.length === 0 && specialApprovalChanges.length === 0 && (
+              <div className="rounded-2xl border border-success/25 bg-success/10 p-5 text-sm leading-6 text-foreground-secondary"><CheckCircle2 className="mb-2 h-5 w-5 text-success" />No unfinished DC or special requirement changes for the selected semester(s).</div>
+            )}
+          </div>
+        ) : (
         <div className="xl:flex xl:items-stretch">
           {data.semesters.map((semester, index) => {
             const selectedCourses = selectedCoursesBySemester.get(semester.semester) ?? [];
@@ -686,7 +834,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
             const markedElectives = semester.mappedElectives.filter((course) => !course.completed);
             const status = statusCopy(semester.status);
             const isSemEx = internshipType === "semex" && semexSemesters.includes(semester.semester);
-            const isOnsite = internshipType === "onsite" && internshipSemester === semester.semester;
+            const isOnsite = onsiteSemesters.includes(semester.semester);
             const isInternshipSemester =
               isSemEx ||
               (internshipType === "remote" && internshipSemester === semester.semester) ||
@@ -870,6 +1018,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
             );
           })}
         </div>
+        )}
       </section>
 
       <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
