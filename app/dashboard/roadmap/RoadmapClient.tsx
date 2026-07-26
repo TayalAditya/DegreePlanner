@@ -683,7 +683,6 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     { label: "FE", credits: adjustedCreditBuckets?.freeElective ?? data.creditSummary?.byBucket.freeElective ?? 0 },
     { label: "MTP", credits: adjustedCreditBuckets?.mtp ?? data.creditSummary?.byBucket.mtp ?? 0 },
     { label: "ISTP", credits: adjustedCreditBuckets?.istp ?? data.creditSummary?.byBucket.istp ?? 0 },
-    { label: "PE", credits: data.creditSummary?.byBucket.pe ?? 0 },
   ];
 
   return (
