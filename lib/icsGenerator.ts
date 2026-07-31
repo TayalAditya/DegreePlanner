@@ -63,7 +63,10 @@ function escapeICSText(text: string): string {
     .replace(/\n/g, "\\n");
 }
 
-export function generateICS(entries: TimetableEntry[], endDate: Date = new Date("2026-05-01")): string {
+export function generateICS(
+  entries: TimetableEntry[],
+  endDate: Date = new Date("2026-11-30T23:59:59+05:30"),
+): string {
   const lines: string[] = [];
   
   // ICS header

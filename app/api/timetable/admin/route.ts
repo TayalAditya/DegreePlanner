@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { parseOfficialCorrectionNotes } from "@/lib/officialTimetable";
 
 // Get all pending timetable entries (admin only)
 export async function GET(req: NextRequest) {
@@ -50,7 +51,21 @@ export async function GET(req: NextRequest) {
       ],
     });
 
-    return NextResponse.json({ entries: pendingEntries });
+    return NextResponse.json({
+      entries: pendingEntries.map((entry) => {
+        const correction = parseOfficialCorrectionNotes(entry.notes);
+        return {
+          ...entry,
+          ...(correction
+            ? {
+                notes: correction.userNotes || null,
+                isOfficialCorrection: true,
+                replacesOfficial: correction.replacesOfficial,
+              }
+            : {}),
+        };
+      }),
+    });
   } catch (error) {
     console.error("Admin timetable fetch error:", error);
     return NextResponse.json(

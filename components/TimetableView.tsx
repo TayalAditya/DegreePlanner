@@ -21,6 +21,7 @@ import { useConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./ToastProvider";
 import { formatCourseCode, formatCredits } from "@/lib/utils";
 import { downloadICS } from "@/lib/icsGenerator";
+import { IC_SLOTS, LAB_SLOTS, NON_IC_FOURTH_SESSION, NON_IC_SLOTS, normalizeTimetableCourseCode } from "@/lib/officialTimetable";
 
 interface TimetableViewProps {
   userId: string;
@@ -64,12 +65,6 @@ type Term = "FALL" | "SPRING" | "SUMMER";
 type ClassType = "LECTURE" | "LAB" | "TUTORIAL" | "SEMINAR" | "WORKSHOP" | "TA_DUTY";
 type TimetableKind = "NON_IC" | "IC";
 
-type SlotSession = {
-  dayOfWeek: DayOfWeek;
-  startTime: string;
-  endTime: string;
-};
-
 type MeetingDraft = {
   id: string;
   dayOfWeek: DayOfWeek;
@@ -80,93 +75,6 @@ type MeetingDraft = {
   classType: ClassType;
 };
 
-const NON_IC_SLOTS: Record<string, SlotSession[]> = {
-  A: [
-    { dayOfWeek: "MONDAY", startTime: "08:00", endTime: "08:50" },
-    { dayOfWeek: "TUESDAY", startTime: "11:00", endTime: "11:50" },
-    { dayOfWeek: "THURSDAY", startTime: "09:00", endTime: "09:50" },
-  ],
-  B: [
-    { dayOfWeek: "MONDAY", startTime: "09:00", endTime: "09:50" },
-    { dayOfWeek: "TUESDAY", startTime: "12:00", endTime: "12:50" },
-    { dayOfWeek: "THURSDAY", startTime: "10:00", endTime: "10:50" },
-  ],
-  C: [
-    { dayOfWeek: "MONDAY", startTime: "10:00", endTime: "10:50" },
-    { dayOfWeek: "WEDNESDAY", startTime: "08:00", endTime: "08:50" },
-    { dayOfWeek: "THURSDAY", startTime: "11:00", endTime: "11:50" },
-  ],
-  D: [
-    { dayOfWeek: "MONDAY", startTime: "11:00", endTime: "11:50" },
-    { dayOfWeek: "WEDNESDAY", startTime: "09:00", endTime: "09:50" },
-    { dayOfWeek: "THURSDAY", startTime: "12:00", endTime: "12:50" },
-  ],
-  E: [
-    { dayOfWeek: "MONDAY", startTime: "12:00", endTime: "12:50" },
-    { dayOfWeek: "WEDNESDAY", startTime: "11:00", endTime: "11:50" },
-    { dayOfWeek: "FRIDAY", startTime: "09:00", endTime: "09:50" },
-  ],
-  F: [
-    { dayOfWeek: "TUESDAY", startTime: "08:00", endTime: "08:50" },
-    { dayOfWeek: "WEDNESDAY", startTime: "10:00", endTime: "10:50" },
-    { dayOfWeek: "FRIDAY", startTime: "11:00", endTime: "11:50" },
-  ],
-  G: [
-    { dayOfWeek: "TUESDAY", startTime: "09:00", endTime: "09:50" },
-    { dayOfWeek: "THURSDAY", startTime: "08:00", endTime: "08:50" },
-    { dayOfWeek: "FRIDAY", startTime: "10:00", endTime: "10:50" },
-  ],
-  H: [
-    { dayOfWeek: "TUESDAY", startTime: "10:00", endTime: "10:50" },
-    { dayOfWeek: "WEDNESDAY", startTime: "12:00", endTime: "12:50" },
-    { dayOfWeek: "FRIDAY", startTime: "08:00", endTime: "08:50" },
-  ],
-};
-
-const IC_SLOTS: Record<string, SlotSession[]> = {
-  A: [
-    { dayOfWeek: "MONDAY", startTime: "09:00", endTime: "09:50" },
-    { dayOfWeek: "WEDNESDAY", startTime: "09:00", endTime: "09:50" },
-    { dayOfWeek: "FRIDAY", startTime: "09:00", endTime: "09:50" },
-  ],
-  B: [
-    { dayOfWeek: "MONDAY", startTime: "11:00", endTime: "11:50" },
-    { dayOfWeek: "WEDNESDAY", startTime: "11:00", endTime: "11:50" },
-    { dayOfWeek: "FRIDAY", startTime: "11:00", endTime: "11:50" },
-  ],
-  C: [
-    { dayOfWeek: "TUESDAY", startTime: "10:00", endTime: "10:50" },
-    { dayOfWeek: "THURSDAY", startTime: "10:00", endTime: "10:50" },
-  ],
-  D: [
-    { dayOfWeek: "MONDAY", startTime: "10:00", endTime: "10:50" },
-    { dayOfWeek: "TUESDAY", startTime: "09:00", endTime: "09:50" },
-    { dayOfWeek: "WEDNESDAY", startTime: "10:00", endTime: "10:50" },
-    { dayOfWeek: "FRIDAY", startTime: "10:00", endTime: "10:50" },
-  ],
-  E: [
-    { dayOfWeek: "TUESDAY", startTime: "11:00", endTime: "11:50" },
-    { dayOfWeek: "THURSDAY", startTime: "11:00", endTime: "11:50" },
-  ],
-  F: [
-    { dayOfWeek: "MONDAY", startTime: "12:00", endTime: "12:50" },
-    { dayOfWeek: "WEDNESDAY", startTime: "12:00", endTime: "12:50" },
-    { dayOfWeek: "FRIDAY", startTime: "12:00", endTime: "12:50" },
-  ],
-  G: [
-    { dayOfWeek: "TUESDAY", startTime: "12:00", endTime: "12:50" },
-    { dayOfWeek: "THURSDAY", startTime: "12:00", endTime: "12:50" },
-  ],
-  H: [{ dayOfWeek: "THURSDAY", startTime: "09:00", endTime: "09:50" }],
-};
-
-const LAB_SLOTS: Record<string, SlotSession[]> = {
-  L1: [{ dayOfWeek: "MONDAY", startTime: "14:00", endTime: "17:00" }],
-  L2: [{ dayOfWeek: "TUESDAY", startTime: "14:00", endTime: "17:00" }],
-  L3: [{ dayOfWeek: "WEDNESDAY", startTime: "14:00", endTime: "17:00" }],
-  L4: [{ dayOfWeek: "THURSDAY", startTime: "14:00", endTime: "17:00" }],
-  L5: [{ dayOfWeek: "FRIDAY", startTime: "14:00", endTime: "17:00" }],
-};
 
 const makeId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
@@ -264,6 +172,14 @@ interface TimetableEntry {
   courseId?: string | null;
   googleEventId?: string | null;
   isApproved: boolean;
+  isOfficial?: boolean;
+  isOfficialCorrection?: boolean;
+  canReportCorrection?: boolean;
+  replacesOfficial?: {
+    dayOfWeek: DayOfWeek;
+    startTime: string;
+    endTime: string;
+  };
   approvedById?: string | null;
   approvedAt?: Date | null;
   createdById?: string | null;
@@ -311,6 +227,7 @@ type TimetableEntryPayload = {
   classType?: ClassType;
   instructor?: string;
   notes?: string;
+  requestApproval?: boolean;
 };
 
 type BulkCreatePayload = {
@@ -325,6 +242,12 @@ type TimetableResponse = {
   courses: CourseOption[];
   completedCourses: CourseOption[];
   entries: TimetableEntry[];
+  planWarnings?: {
+    hasSavedPlan: boolean;
+    totalCredits: number;
+    overThirtyCredits: boolean;
+    clashes: Array<{ first: string; second: string }>;
+  };
 };
 
 type TimetableAutofillData = {
@@ -334,8 +257,38 @@ type TimetableAutofillData = {
     nonIc: Record<string, { slot?: string; classroom?: string }>;
     ic: Record<string, { slot?: string; classroom?: string }>;
   };
-  pcLab: Record<string, { kind: "IC" | "NON_IC"; slot: string; venue: string; time: string }>;
+  pcLab: Record<string, {
+    kind: "IC" | "NON_IC";
+    slot?: string;
+    day?: string;
+    venue?: string;
+    time?: string;
+    allocations?: Array<{
+      branches?: string[];
+      slot: string;
+      day: string;
+      venue: string;
+      time: string;
+      classType?: "LAB" | "TUTORIAL";
+    }>;
+  }>;
 };
+
+function findOfficialVenue(data: TimetableAutofillData | undefined, courseCode: string): string | undefined {
+  if (!data || !courseCode) return undefined;
+  const normalized = normalizeTimetableCourseCode(courseCode);
+  const defaults = { ...data.defaults.nonIc, ...data.defaults.ic };
+  const direct = defaults[normalized]?.classroom?.trim();
+  if (direct) return direct;
+
+  // Older cached data may only contain a section code such as HS-202-2.
+  // Use it only when every matching section agrees on the same classroom.
+  const candidates = Object.entries(defaults)
+    .filter(([code, value]) => code.replace(/-\d+Y?$/, "") === normalized && value.classroom?.trim())
+    .map(([, value]) => value.classroom!.trim());
+  const unique = Array.from(new Set(candidates));
+  return unique.length === 1 ? unique[0] : undefined;
+}
 
 function suggestKindAndSlot(
   courseCode: string,
@@ -515,20 +468,37 @@ export function TimetableView({ userId }: TimetableViewProps) {
   const saveEntryMutation = useMutation({
     mutationFn: async (args: { id?: string; payload: TimetableEntryPayload }) => {
       const { id, payload } = args;
-      const res = await fetch(id ? `/api/timetable/${id}` : "/api/timetable", {
-        method: id ? "PATCH" : "POST",
+      const reportingOfficial = Boolean(id?.startsWith("official:"));
+      const res = await fetch(id && !reportingOfficial ? `/api/timetable/${id}` : "/api/timetable", {
+        method: id && !reportingOfficial ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(reportingOfficial ? {
+          ...payload,
+          requestApproval: true,
+          replacesOfficial: editingEntry ? {
+            dayOfWeek: editingEntry.dayOfWeek,
+            startTime: editingEntry.startTime,
+            endTime: editingEntry.endTime,
+          } : undefined,
+        } : payload),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) {
-        throw new Error(data?.error || (id ? "Failed to update class" : "Failed to add class"));
+        throw new Error(data?.error || (id ? "Failed to submit timetable change" : "Failed to add class"));
       }
       return data as TimetableEntry;
     },
-    onSuccess: async () => {
+    onSuccess: async (_, variables) => {
       await queryClient.invalidateQueries({ queryKey: ["timetable", userId] });
-      showToast("success", editingEntry ? "Class updated" : "Class added");
+      const reportedOfficial = Boolean(variables.id?.startsWith("official:"));
+      showToast(
+        "success",
+        reportedOfficial || editingEntry?.isOfficialCorrection
+          ? "Correction reported — waiting for admin approval"
+          : editingEntry
+            ? "Class updated"
+            : "Class added",
+      );
       setModalOpen(false);
       setEditingEntry(null);
     },
@@ -645,13 +615,36 @@ export function TimetableView({ userId }: TimetableViewProps) {
     setModalOpen(true);
   };
 
-  const openEdit = (entry: TimetableEntry) => {
+  const openEdit = async (entry: TimetableEntry) => {
+    if (entry.isOfficial && entry.canReportCorrection === false) {
+      showToast("info", "This official class is visible from pre-registration, but it is not linked to the course catalog yet.");
+      return;
+    }
+    if (entry.isOfficial) {
+      const ok = await confirm({
+        title: "Report a timetable correction?",
+        message: `${formatCourseCode(entry.course?.code || "This course")} is shown from the approved Aug–Nov 2026 timetable. Any slot, time, or venue change you submit will be sent to the admin for approval; the official schedule stays visible until it is approved.`,
+        confirmText: "Report correction",
+      });
+      if (!ok) return;
+    } else if (entry.isOfficialCorrection) {
+      const ok = await confirm({
+        title: "Update this approved correction?",
+        message: "Your update will be sent for admin approval. The currently approved timing remains visible until the update is approved.",
+        confirmText: "Update correction",
+      });
+      if (!ok) return;
+    }
     setAddingTaDuty(false);
     setEditingEntry(entry);
     setModalOpen(true);
   };
 
   const handleDelete = async (entry: TimetableEntry) => {
+    if (entry.isOfficial || entry.isOfficialCorrection) {
+      showToast("info", "Approved timetable classes cannot be deleted. Open the class to report a correction.");
+      return;
+    }
     const ok = await confirm({
       title: "Delete class?",
       message: `This will remove ${entry.course?.code || "this class"} from the shared timetable for everyone enrolled in this course.`,
@@ -684,6 +677,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
   const [calendarExporting, setCalendarExporting] = useState(false);
   const [autofillPickerOpen, setAutofillPickerOpen] = useState(false);
   const [autofillSelected, setAutofillSelected] = useState<Set<string>>(new Set());
+  const [planWarningDismissed, setPlanWarningDismissed] = useState(false);
   const handleClearAllCalendar = async () => {
     const synced = entries.filter((e) => e.googleEventId);
     if (synced.length === 0) {
@@ -720,7 +714,13 @@ export function TimetableView({ userId }: TimetableViewProps) {
   const courses = useMemo(() => timetable?.courses ?? [], [timetable?.courses]);
   const completedCourses = useMemo(() => timetable?.completedCourses ?? [], [timetable?.completedCourses]);
   const isAdmin = Boolean(timetable?.isAdmin);
-  const entries = useMemo<TimetableEntry[]>(() => timetable?.entries ?? [], [timetable?.entries]);
+  const entries = useMemo<TimetableEntry[]>(() =>
+    (timetable?.entries ?? []).map((entry) => {
+      if (entry.venue || !entry.course?.code) return entry;
+      const officialVenue = findOfficialVenue(autofillData, entry.course.code);
+      return officialVenue ? { ...entry, venue: officialVenue } : entry;
+    }),
+  [timetable?.entries, autofillData]);
   const canAddClass = courses.length > 0 && Boolean(context);
   const canAddTaDuty = Boolean(context);
 
@@ -807,7 +807,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
         }
       }
     } catch {
-      const endDate = new Date("2026-05-01");
+      const endDate = new Date("2026-11-30T23:59:59+05:30");
       downloadICS(entries, `timetable-${context?.term || "current"}.ics`, endDate);
       showToast("warning", "Network error — calendar file downloaded as backup");
     } finally {
@@ -825,6 +825,50 @@ export function TimetableView({ userId }: TimetableViewProps) {
 
   return (
     <div className="space-y-6">
+      {!planWarningDismissed && timetable?.planWarnings &&
+        (timetable.planWarnings.overThirtyCredits || timetable.planWarnings.clashes.length > 0) && (
+          <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="plan-warning-title">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+              onClick={() => setPlanWarningDismissed(true)}
+              aria-label="Close warning"
+            />
+            <div className="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl border border-warning/30 bg-surface shadow-2xl p-5 sm:p-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-xl bg-warning/10 flex items-center justify-center shrink-0">
+                  <AlertCircle className="w-6 h-6 text-warning" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h2 id="plan-warning-title" className="text-lg font-semibold text-foreground">Please modify your pre-registration</h2>
+                  <p className="mt-1 text-sm leading-6 text-foreground-secondary">
+                    You have selected courses with clashing timings or a plan exceeding the 30-credit limit. Modify your pre-registration, save it, then come back to see the corrected timetable.
+                  </p>
+                </div>
+                <button type="button" onClick={() => setPlanWarningDismissed(true)} className="dp-icon-btn shrink-0" aria-label="Close">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-warning/20 bg-warning/5 px-4 py-3 space-y-2 text-sm">
+                {timetable.planWarnings.overThirtyCredits && (
+                  <p className="font-medium text-warning">{formatCredits(timetable.planWarnings.totalCredits)} credits selected · maximum 30</p>
+                )}
+                {timetable.planWarnings.clashes.map((clash) => (
+                  <p key={`${clash.first}-${clash.second}`} className="text-foreground-secondary">
+                    <span className="font-medium text-foreground">{formatCourseCode(clash.first)}</span> clashes with <span className="font-medium text-foreground">{formatCourseCode(clash.second)}</span>
+                  </p>
+                ))}
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row gap-2">
+                <button type="button" onClick={() => setPlanWarningDismissed(true)} className="dp-btn dp-btn-outline sm:flex-1">View timetable anyway</button>
+                <a href="/dashboard/pre-registration" className="dp-btn dp-btn-primary sm:flex-1 text-center">Modify pre-registration</a>
+              </div>
+            </div>
+          </div>
+        )}
+
       {/* Admin Pending Approvals */}
       {isAdmin && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
@@ -835,7 +879,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
             </h3>
           </div>
           <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
-            Only changes submitted <span className="font-medium">without a Slot</span> need approval. Slot-based classes and TA duties are auto-approved.
+            Official timetable corrections and unscheduled/free-slot submissions wait for approval. TA duties remain personal and auto-approved.
           </p>
           {pendingData && pendingData.entries.length === 0 ? (
             <div className="text-xs text-amber-800 dark:text-amber-200 bg-white/60 dark:bg-surface/50 border border-amber-200/60 dark:border-amber-800/60 rounded-lg p-3">
@@ -852,10 +896,20 @@ export function TimetableView({ userId }: TimetableViewProps) {
                   <p className="text-sm font-medium text-foreground">
                     {formatCourseCode(entry.course?.code || "")} - {entry.classType}
                   </p>
+                  {entry.isOfficialCorrection && entry.replacesOfficial && (
+                    <p className="mt-1 inline-flex rounded-full border border-amber-300/70 bg-amber-100/80 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
+                      Official correction · replaces{" "}
+                      {entry.replacesOfficial.dayOfWeek.charAt(0) + entry.replacesOfficial.dayOfWeek.slice(1).toLowerCase()}{" "}
+                      {entry.replacesOfficial.startTime}-{entry.replacesOfficial.endTime}
+                    </p>
+                  )}
                   <p className="text-xs text-foreground-secondary mt-0.5">
                     {entry.dayOfWeek.charAt(0) + entry.dayOfWeek.slice(1).toLowerCase()} · {entry.startTime} - {entry.endTime}
                     {entry.venue && ` · ${entry.venue}`}
                   </p>
+                  {entry.notes && (
+                    <p className="mt-1 text-xs text-foreground-secondary">Note: {entry.notes}</p>
+                  )}
                   <p className="text-xs text-foreground-muted mt-1">
                     Created by: {entry.createdBy?.name || entry.createdBy?.email || "Unknown"} ({entry.createdBy?.enrollmentId || "N/A"})
                   </p>
@@ -1360,6 +1414,32 @@ function AutofillPickerModal({
   );
 }
 
+function timeToWeekMinutes(timeStr: string) {
+  const [hours, minutes] = timeStr.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function findWeekSlotIndex(time: string) {
+  const exact = WEEK_VIEW_TIMES.indexOf(time);
+  if (exact >= 0) return exact;
+  const minutes = timeToWeekMinutes(time);
+  for (let index = WEEK_VIEW_TIMES.length - 1; index >= 0; index--) {
+    if (timeToWeekMinutes(WEEK_VIEW_TIMES[index]) <= minutes) return index;
+  }
+  return 0;
+}
+
+function calculateWeekRowSpan(startTime: string, endTime: string) {
+  const startIndex = findWeekSlotIndex(startTime);
+  const endMinutes = timeToWeekMinutes(endTime);
+  let count = 0;
+  for (let index = startIndex; index < WEEK_VIEW_TIMES.length; index++) {
+    if (timeToWeekMinutes(WEEK_VIEW_TIMES[index]) < endMinutes) count++;
+    else break;
+  }
+  return Math.max(1, count);
+}
+
 function WeekView({
   timetable,
   onEdit,
@@ -1371,41 +1451,13 @@ function WeekView({
   onDelete: (entry: TimetableEntry) => void;
   onDeleteCalendar: (entry: TimetableEntry) => void;
 }) {
-  const timeToMinutes = (timeStr: string) => {
-    const [h, m] = timeStr.split(':').map(Number);
-    return h * 60 + m;
-  };
-
-  // Find the slot index that contains this time (floor to nearest 30-min slot)
-  const findSlotIndex = (time: string) => {
-    const exact = WEEK_VIEW_TIMES.indexOf(time);
-    if (exact >= 0) return exact;
-    const mins = timeToMinutes(time);
-    for (let i = WEEK_VIEW_TIMES.length - 1; i >= 0; i--) {
-      if (timeToMinutes(WEEK_VIEW_TIMES[i]) <= mins) return i;
-    }
-    return 0;
-  };
-
-  // How many 30-min slot rows does this entry span?
-  const calculateRowSpan = (startTime: string, endTime: string) => {
-    const startIdx = findSlotIndex(startTime);
-    const endMins = timeToMinutes(endTime);
-    let count = 0;
-    for (let i = startIdx; i < WEEK_VIEW_TIMES.length; i++) {
-      if (timeToMinutes(WEEK_VIEW_TIMES[i]) < endMins) count++;
-      else break;
-    }
-    return Math.max(1, count);
-  };
-
   // Track rows spanned by an entry so we skip rendering them
   const coveredCellsByDay = useMemo(() => {
     const map: Record<string, Set<number>> = Object.fromEntries(WEEK_DAYS.map((d) => [d, new Set<number>()]));
     for (const entry of timetable) {
       if (!WEEK_DAYS.includes(entry.dayOfWeek)) continue;
-      const startIdx = findSlotIndex(entry.startTime);
-      const rowSpan = calculateRowSpan(entry.startTime, entry.endTime);
+      const startIdx = findWeekSlotIndex(entry.startTime);
+      const rowSpan = calculateWeekRowSpan(entry.startTime, entry.endTime);
       for (let i = 1; i < rowSpan; i++) {
         map[entry.dayOfWeek]?.add(startIdx + i);
       }
@@ -1415,11 +1467,11 @@ function WeekView({
 
   // Get entry that starts within a given slot's 30-min window
   const getEntry = (day: string, slotIdx: number) => {
-    const slotMins = timeToMinutes(WEEK_VIEW_TIMES[slotIdx]);
-    const nextMins = slotIdx + 1 < WEEK_VIEW_TIMES.length ? timeToMinutes(WEEK_VIEW_TIMES[slotIdx + 1]) : slotMins + 30;
+    const slotMins = timeToWeekMinutes(WEEK_VIEW_TIMES[slotIdx]);
+    const nextMins = slotIdx + 1 < WEEK_VIEW_TIMES.length ? timeToWeekMinutes(WEEK_VIEW_TIMES[slotIdx + 1]) : slotMins + 30;
     return timetable.find(e => {
       if (e.dayOfWeek !== day) return false;
-      const startMins = timeToMinutes(e.startTime);
+      const startMins = timeToWeekMinutes(e.startTime);
       return startMins >= slotMins && startMins < nextMins;
     });
   };
@@ -1466,8 +1518,8 @@ function WeekView({
                     );
                   }
 
-                  const rowSpan = calculateRowSpan(entry.startTime, entry.endTime);
-                  const durationMins = timeToMinutes(entry.endTime) - timeToMinutes(entry.startTime);
+                  const rowSpan = calculateWeekRowSpan(entry.startTime, entry.endTime);
+                  const durationMins = timeToWeekMinutes(entry.endTime) - timeToWeekMinutes(entry.startTime);
                   const isLong = durationMins >= 90; // 1.5h+
                   const color = getCourseColor(entry.course?.code || "", entry.classType);
 
@@ -1508,15 +1560,17 @@ function WeekView({
                             </div>
                           )}
                         </button>
-                        {/* Delete from timetable */}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); onDelete(entry); }}
-                          className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
-                          aria-label="Delete class"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        {/* Official workbook entries are reported, not deleted. */}
+                        {!entry.isOfficial && !entry.isOfficialCorrection && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onDelete(entry); }}
+                            className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100 transition-all"
+                            aria-label="Delete class"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
                         {/* Remove from Google Calendar */}
                         {entry.googleEventId && (
                           <button
@@ -1563,7 +1617,7 @@ function ListView({
         <Calendar className="w-12 h-12 text-foreground-secondary mx-auto mb-3 opacity-50" />
         <p className="text-foreground-secondary">No schedule added yet</p>
         <p className="text-xs text-foreground-muted mt-2">
-          Add timings for your enrolled courses — updates show up for everyone taking that course.
+          No published timing is available for the selected courses yet.
         </p>
       </div>
     );
@@ -1572,8 +1626,8 @@ function ListView({
   return (
     <div className="space-y-4">
       {groupedByDay.map(({ day, classes }) => (
-        <div key={day} className="bg-surface dark:bg-surface rounded-lg border border-border p-4 sm:p-6">
-          <h3 className="text-base sm:text-lg font-semibold text-foreground mb-3 capitalize">{day.charAt(0) + day.slice(1).toLowerCase()}</h3>
+        <div key={day} className="bg-surface rounded-2xl border border-border p-3 sm:p-6 shadow-sm">
+          <h3 className="sticky top-0 z-10 -mx-3 -mt-3 mb-3 rounded-t-2xl border-b border-border/70 bg-surface/95 px-4 py-3 text-sm sm:static sm:m-0 sm:mb-3 sm:border-0 sm:bg-transparent sm:p-0 sm:text-lg font-semibold text-foreground backdrop-blur capitalize">{day.charAt(0) + day.slice(1).toLowerCase()}</h3>
           <div className="space-y-2 sm:space-y-3">
             {classes.map((entry) => {
               const color = getCourseColor(entry.course?.code || "", entry.classType);
@@ -1608,6 +1662,11 @@ function ListView({
                     <span className={`px-2 py-0.5 border ${color.border} ${color.text} rounded text-xs font-medium`}>
                       {CLASS_TYPE_LABEL[entry.classType] || entry.classType}
                     </span>
+                    {(entry.isOfficial || entry.isOfficialCorrection) && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-success/25 bg-success/10 px-2 py-0.5 text-[11px] font-semibold text-success">
+                        <CheckCircle className="h-3 w-3" /> {entry.isOfficialCorrection ? "Approved correction" : "Approved"}
+                      </span>
+                    )}
                   </div>
                 </button>
                 <div className="flex items-center gap-1 sm:ml-2 flex-shrink-0 self-end sm:self-auto">
@@ -1630,14 +1689,16 @@ function ListView({
                   >
                     <Edit className="w-4 h-4" />
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => onDelete(entry)}
-                    className="min-w-[44px] min-h-[44px] flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                    aria-label="Delete class"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {!entry.isOfficial && !entry.isOfficialCorrection && (
+                    <button
+                      type="button"
+                      onClick={() => onDelete(entry)}
+                      className="min-w-[44px] min-h-[44px] flex items-center justify-center text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      aria-label="Delete class"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
               );
@@ -1901,6 +1962,8 @@ function TimetableEntryModal({
   const endOptions = useMemo(() => END_TIMES.filter((t) => t > startTime), [startTime]);
 
   const title = (() => {
+    if (initial?.isOfficial) return "Report timetable correction";
+    if (initial?.isOfficialCorrection) return "Update timetable correction";
     if (initial) return initial.classType === "TA_DUTY" ? "Edit TA duty" : "Edit class";
     if (defaultClassType === "TA_DUTY") return "Add TA duty";
     return "Add classes";
@@ -2410,7 +2473,7 @@ function TimetableEntryModal({
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                {initial && (
+                {initial && !initial.isOfficial && !initial.isOfficialCorrection && (
                   <button
                     type="button"
                     onClick={() => onDeleteEntry(initial)}
@@ -2451,16 +2514,22 @@ function TimetableEntryModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={saving || (!isEditing && drafts.length === 0)}
+                  disabled={saving || (!isEditing && activeDrafts.length === 0)}
                   className="w-full sm:flex-1 px-4 py-2.5 rounded-xl bg-primary text-white font-semibold hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {initial ? "Save changes" : `Add classes (${drafts.length})`}
+                  {initial?.isOfficial || initial?.isOfficialCorrection
+                    ? "Submit correction"
+                    : initial
+                      ? "Save changes"
+                      : `Add classes (${activeDrafts.length})`}
                 </button>
               </div>
 
               <p className="text-xs text-foreground-secondary">
-                Changes update the shared timetable for everyone enrolled in the selected course.
+                {initial?.isOfficial || initial?.isOfficialCorrection
+                  ? "The approved timetable stays visible until an admin approves this correction."
+                  : "Changes update the shared timetable for everyone enrolled in the selected course."}
               </p>
             </form>
       </div>

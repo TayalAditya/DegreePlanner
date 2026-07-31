@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { createHash } from "node:crypto";
 
 // @ts-ignore - googleapis types might not be available in dev
 import { google } from "googleapis";
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
-    const endDate = new Date("2026-05-01");
+    const endDate = new Date("2026-11-30T23:59:59+05:30");
     const createdEvents: { entryId: string; eventId: string }[] = [];
     const failedEvents: { entryId: string; error: string }[] = [];
 
@@ -184,6 +185,30 @@ export async function POST(request: NextRequest) {
       };
 
       try {
+        const isOfficialEntry = entry.id.startsWith("official:");
+        if (isOfficialEntry) {
+          // Workbook-backed entries do not have a TimetableEntry database row.
+          // Use a stable Google event ID so exporting again updates the same
+          // event instead of failing after insertion or creating duplicates.
+          const eventId = `pmd${createHash("sha256").update(`${session.user.id}|${entry.id}`).digest("hex").slice(0, 40)}`;
+          try {
+            await calendar.events.update({
+              calendarId: "primary",
+              eventId,
+              requestBody: event,
+            });
+          } catch (updateError: any) {
+            const status = updateError?.response?.status ?? updateError?.code;
+            if (status !== 404) throw updateError;
+            await calendar.events.insert({
+              calendarId: "primary",
+              requestBody: { ...event, id: eventId },
+            });
+          }
+          createdEvents.push({ entryId: entry.id, eventId });
+          continue;
+        }
+
         // If this entry already has a Google event, delete it first to avoid duplicates
         if (entry.googleEventId) {
           try {

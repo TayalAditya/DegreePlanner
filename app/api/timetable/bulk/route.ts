@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import { ClassType, DayOfWeek, EnrollmentStatus } from "@prisma/client";
 import { getCurrentTimetableContext } from "@/lib/timetable";
 import { isApproveableSlot } from "@/lib/timetableSlots";
+import officialTimetableData from "@/lib/timetable-autofill-data.json";
+import { buildOfficialCourseMeetings, type OfficialTimetableData } from "@/lib/officialTimetable";
 
 type BulkEntryInput = {
   dayOfWeek: DayOfWeek;
@@ -115,6 +117,46 @@ export async function POST(req: NextRequest) {
           { status: 403 }
         );
       }
+
+      if (session.user.role !== "ADMIN" && !allTaDuty) {
+        const [course, offering, profile] = await Promise.all([
+          prisma.course.findUnique({
+            where: { id: courseId },
+            select: { code: true, credits: true },
+          }),
+          prisma.courseOffering.findFirst({
+            where: {
+              courseId,
+              offeringSemester: context.semester,
+              offeringYear: context.year,
+            },
+            select: { courseCode: true, credits: true, slots: true },
+          }),
+          prisma.user.findUnique({
+            where: { id: session.user.id },
+            select: { branch: true },
+          }),
+        ]);
+        const scheduleCode = offering?.courseCode ?? course?.code;
+        const officialMeetings = scheduleCode
+          ? buildOfficialCourseMeetings(
+              officialTimetableData as unknown as OfficialTimetableData,
+              scheduleCode,
+              {
+                credits: offering?.credits ?? course?.credits,
+                branch: profile?.branch,
+                fallbackSlot: offering?.slots,
+                fallbackKind: scheduleCode.toUpperCase().startsWith("IC-") ? "IC" : "NON_IC",
+              },
+            )
+          : [];
+        if (officialMeetings.length > 0) {
+          return NextResponse.json(
+            { error: "This course already has an approved timetable. Open a class to report a correction." },
+            { status: 409 },
+          );
+        }
+      }
     }
 
     // Basic dedupe within payload
@@ -183,6 +225,7 @@ export async function POST(req: NextRequest) {
             createdById: session.user.id,
             updatedById: session.user.id,
             isApproved: autoApprove,
+            ...(autoApprove && { approvedById: session.user.id, approvedAt: new Date() }),
           },
           include: {
             course: {

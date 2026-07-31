@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { ClassType, DayOfWeek, EnrollmentStatus } from "@prisma/client";
 import { getCurrentTimetableContext } from "@/lib/timetable";
+import {
+  parseOfficialCorrectionNotes,
+  withOfficialCorrectionMarker,
+} from "@/lib/officialTimetable";
 
 export async function GET(
   req: NextRequest,
@@ -45,7 +49,7 @@ export async function GET(
       (isAdmin || entry.createdById === session.user.id);
 
     // TA duties can be accessed by creator/admin without current enrollment check
-    if (!isOwnTaDuty && entry.courseId) {
+    if (!isAdmin && !isOwnTaDuty && entry.courseId) {
       const isEnrolled = await prisma.courseEnrollment.findFirst({
         where: {
           userId: session.user.id,
@@ -58,12 +62,41 @@ export async function GET(
         select: { id: true },
       });
 
-      if (!isEnrolled) {
+      const savedPlan = !isEnrolled
+        ? await prisma.preRegistrationPlan.findUnique({
+            where: {
+              userId_offeringSemester_offeringYear: {
+                userId: session.user.id,
+                offeringSemester: context.semester,
+                offeringYear: context.year,
+              },
+            },
+            select: { selectedIds: true },
+          })
+        : null;
+      const isPlanned = savedPlan
+        ? Boolean(await prisma.courseOffering.findFirst({
+            where: { id: { in: savedPlan.selectedIds }, courseId: entry.courseId },
+            select: { id: true },
+          }))
+        : false;
+
+      if (!isEnrolled && !isPlanned) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
 
-    return NextResponse.json(entry);
+    const correction = parseOfficialCorrectionNotes(entry.notes);
+    return NextResponse.json({
+      ...entry,
+      ...(correction
+        ? {
+            notes: correction.userNotes || null,
+            isOfficialCorrection: true,
+            replacesOfficial: correction.replacesOfficial,
+          }
+        : {}),
+    });
   } catch (error) {
     console.error("Timetable fetch error:", error);
     return NextResponse.json(
@@ -99,12 +132,13 @@ export async function PATCH(
     }
 
     const isAdmin = session.user.role === "ADMIN";
+    const officialCorrection = parseOfficialCorrectionNotes(existing.notes);
     const isOwnTaDuty =
       existing.classType === ClassType.TA_DUTY &&
       (isAdmin || existing.createdById === session.user.id);
 
     // TA duties can be edited by creator/admin without current enrollment check
-    if (!isOwnTaDuty && existing.courseId) {
+    if (!isAdmin && !isOwnTaDuty && existing.courseId) {
       const isEnrolled = await prisma.courseEnrollment.findFirst({
         where: {
           userId: session.user.id,
@@ -117,7 +151,26 @@ export async function PATCH(
         select: { id: true },
       });
 
-      if (!isEnrolled) {
+      const savedPlan = !isEnrolled
+        ? await prisma.preRegistrationPlan.findUnique({
+            where: {
+              userId_offeringSemester_offeringYear: {
+                userId: session.user.id,
+                offeringSemester: context.semester,
+                offeringYear: context.year,
+              },
+            },
+            select: { selectedIds: true },
+          })
+        : null;
+      const isPlanned = savedPlan
+        ? Boolean(await prisma.courseOffering.findFirst({
+            where: { id: { in: savedPlan.selectedIds }, courseId: existing.courseId },
+            select: { id: true },
+          }))
+        : false;
+
+      if (!isEnrolled && !isPlanned) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
@@ -160,7 +213,11 @@ export async function PATCH(
     if (body.roomNumber !== undefined) data.roomNumber = body.roomNumber;
     if (body.building !== undefined) data.building = body.building;
     if (body.instructor !== undefined) data.instructor = body.instructor;
-    if (body.notes !== undefined) data.notes = body.notes;
+    if (body.notes !== undefined) {
+      data.notes = officialCorrection
+        ? withOfficialCorrectionMarker(body.notes, officialCorrection.replacesOfficial)
+        : body.notes;
+    }
 
     if (body.classType !== undefined) {
       if (!Object.values(ClassType).includes(body.classType)) {
@@ -233,12 +290,20 @@ export async function DELETE(
     }
 
     const isAdmin = session.user.role === "ADMIN";
+    const officialCorrection = parseOfficialCorrectionNotes(entry.notes);
     const isOwnTaDuty =
       entry.classType === ClassType.TA_DUTY &&
       (isAdmin || entry.createdById === session.user.id);
 
+    if (officialCorrection && !isAdmin) {
+      return NextResponse.json(
+        { error: "Approved timetable corrections cannot be deleted. Submit another correction instead." },
+        { status: 409 },
+      );
+    }
+
     // TA duties can be deleted by creator/admin without current enrollment check
-    if (!isOwnTaDuty && entry.courseId) {
+    if (!isAdmin && !isOwnTaDuty && entry.courseId) {
       const isEnrolled = await prisma.courseEnrollment.findFirst({
         where: {
           userId: session.user.id,
