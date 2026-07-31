@@ -55,11 +55,12 @@ export async function GET() {
     const selectedIds = savedPlan?.selectedIds ?? [];
     const [plannedOfferings, directPlannedCourses] = selectedIds.length > 0
       ? await Promise.all([
+          // The plan is already scoped to the current term. Preserve its exact
+          // selections even when a migrated offering still carries its
+          // curriculum semester (for example, Sem 7) as metadata.
           prisma.courseOffering.findMany({
             where: {
               id: { in: selectedIds },
-              offeringSemester: context.semester,
-              offeringYear: context.year,
             },
             select: {
               id: true, courseId: true, courseCode: true, courseName: true, credits: true, slots: true,
@@ -426,8 +427,6 @@ export async function POST(req: NextRequest) {
             where: {
               id: { in: plan.selectedIds },
               courseId,
-              offeringSemester: context.semester,
-              offeringYear: context.year,
             },
             select: { courseCode: true, credits: true, slots: true },
           })
