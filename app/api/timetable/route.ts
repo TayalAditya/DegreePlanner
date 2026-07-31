@@ -49,7 +49,7 @@ export async function GET() {
         },
         select: { selectedIds: true, registrationTypes: true },
       }),
-      prisma.user.findUnique({ where: { id: session.user.id }, select: { branch: true } }),
+      prisma.user.findUnique({ where: { id: session.user.id }, select: { branch: true, batch: true } }),
     ]);
 
     const selectedIds = savedPlan?.selectedIds ?? [];
@@ -63,7 +63,7 @@ export async function GET() {
               id: { in: selectedIds },
             },
             select: {
-              id: true, courseId: true, courseCode: true, courseName: true, credits: true, slots: true,
+              id: true, courseId: true, courseCode: true, courseName: true, credits: true, slots: true, offeringSemester: true, offeringYear: true,
               course: { select: { id: true, code: true, name: true, credits: true } },
             },
           }),
@@ -73,6 +73,50 @@ export async function GET() {
           }),
         ])
       : [[], []];
+
+    const registrationTypes = { ...((savedPlan?.registrationTypes as Record<string, string> | null) ?? {}) };
+    const normalizedBranch = String(profile?.branch ?? "").trim().toUpperCase();
+    const rawBatch = Number(profile?.batch);
+    const batchYear = rawBatch > 0 && rawBatch < 100 ? 2000 + rawBatch : rawBatch;
+    const isB25MevlsiSem3 =
+      context.semester === 3 &&
+      context.year === 2026 &&
+      batchYear === 2025 &&
+      ["MEVLSI", "VL", "VLSI"].includes(normalizedBranch);
+    const normalizedCode = (code: string) => code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+
+    // Plans saved before the B25 MEVLSI recode can still point at EE-311.
+    // Render VL-201 in its place without mutating the student's saved plan;
+    // the pre-registration save endpoint already persists this canonical form.
+    let timetableOfferings = plannedOfferings;
+    if (isB25MevlsiSem3) {
+      const staleEe311 = plannedOfferings.find((offering) => normalizedCode(offering.courseCode) === "EE311");
+      if (staleEe311) {
+        const canonicalVl201 =
+          plannedOfferings.find((offering) => normalizedCode(offering.courseCode) === "VL201") ??
+          await prisma.courseOffering.findFirst({
+            where: {
+              courseCode: "VL-201",
+              offeringSemester: staleEe311.offeringSemester,
+              offeringYear: staleEe311.offeringYear,
+            },
+            select: {
+              id: true, courseId: true, courseCode: true, courseName: true, credits: true, slots: true, offeringSemester: true, offeringYear: true,
+              course: { select: { id: true, code: true, name: true, credits: true } },
+            },
+          });
+        if (canonicalVl201) {
+          timetableOfferings = [
+            ...plannedOfferings.filter((offering) => normalizedCode(offering.courseCode) !== "EE311"),
+            ...(plannedOfferings.some((offering) => offering.id === canonicalVl201.id) ? [] : [canonicalVl201]),
+          ];
+          if (registrationTypes[staleEe311.id] && !registrationTypes[canonicalVl201.id]) {
+            registrationTypes[canonicalVl201.id] = registrationTypes[staleEe311.id];
+          }
+          delete registrationTypes[staleEe311.id];
+        }
+      }
+    }
 
     type DisplayCourse = { id: string; code: string; name: string; credits: number };
     const scheduleCodeByCourseId = new Map<string, string>();
@@ -84,7 +128,7 @@ export async function GET() {
     );
     for (const enrollment of currentEnrollments) reportableCourseIds.add(enrollment.course.id);
 
-    for (const offering of plannedOfferings) {
+    for (const offering of timetableOfferings) {
       const displayCourse: DisplayCourse = offering.course ?? {
         id: `offering:${offering.id}`,
         code: offering.courseCode,
@@ -202,10 +246,9 @@ export async function GET() {
       (a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.startTime.localeCompare(b.startTime),
     );
 
-    const registrationTypes = (savedPlan?.registrationTypes as Record<string, string> | null) ?? {};
-    const offeringIds = new Set(plannedOfferings.map((offering) => offering.id));
+    const offeringIds = new Set(timetableOfferings.map((offering) => offering.id));
     const plannedItems = [
-      ...plannedOfferings.map((offering) => ({
+      ...timetableOfferings.map((offering) => ({
         selectedId: offering.id,
         courseId: displayCourseIdByOfferingId.get(offering.id) ?? offering.courseId,
         code: offering.courseCode,
