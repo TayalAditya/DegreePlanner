@@ -21,7 +21,8 @@ export async function GET() {
     }
 
     const context = await getCurrentTimetableContext(session.user.id);
-    const [currentEnrollments, completedEnrollments, savedPlan, profile] = await Promise.all([
+    const normalizedCode = (code: string) => code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
+    const [currentEnrollments, completedEnrollments, savedPlan, profile, equivalencies] = await Promise.all([
       prisma.courseEnrollment.findMany({
         where: {
           userId: session.user.id,
@@ -50,17 +51,28 @@ export async function GET() {
         select: { selectedIds: true, registrationTypes: true },
       }),
       prisma.user.findUnique({ where: { id: session.user.id }, select: { branch: true, batch: true } }),
+      prisma.courseEquivalent.findMany({
+        select: {
+          courseId: true,
+          equivalentId: true,
+          course: { select: { code: true } },
+          equivalent: { select: { code: true } },
+        },
+      }),
     ]);
 
     const selectedIds = savedPlan?.selectedIds ?? [];
-    const [plannedOfferings, directPlannedCourses] = selectedIds.length > 0
+    const [selectedOfferings, selectedDirectCourses] = selectedIds.length > 0
       ? await Promise.all([
           // The plan is already scoped to the current term. Preserve its exact
           // selections even when a migrated offering still carries its
-          // curriculum semester (for example, Sem 7) as metadata.
+          // curriculum semester (for example, Sem 7) as metadata. An inactive
+          // offering, however, has been withdrawn and must not remain visible
+          // merely because an older saved plan still contains its ID.
           prisma.courseOffering.findMany({
             where: {
               id: { in: selectedIds },
+              isActive: true,
             },
             select: {
               id: true, courseId: true, courseCode: true, courseName: true, credits: true, slots: true, offeringSemester: true, offeringYear: true,
@@ -74,6 +86,49 @@ export async function GET() {
         ])
       : [[], []];
 
+    // A completed course fulfils every code in its equivalence component.
+    // Saved plans predate completion/import corrections, so filter those stale
+    // aliases here as well as on the pre-registration screen. Build the full
+    // undirected component rather than relying on row direction or one hop.
+    const equivalentIdsByCourseId = new Map<string, Set<string>>();
+    const courseCodeById = new Map<string, string>();
+    const linkEquivalentIds = (left: string, right: string) => {
+      if (!equivalentIdsByCourseId.has(left)) equivalentIdsByCourseId.set(left, new Set());
+      equivalentIdsByCourseId.get(left)!.add(right);
+    };
+    for (const equivalency of equivalencies) {
+      linkEquivalentIds(equivalency.courseId, equivalency.equivalentId);
+      linkEquivalentIds(equivalency.equivalentId, equivalency.courseId);
+      courseCodeById.set(equivalency.courseId, equivalency.course.code);
+      courseCodeById.set(equivalency.equivalentId, equivalency.equivalent.code);
+    }
+
+    const fulfilledCourseIds = new Set(completedEnrollments.map((enrollment) => enrollment.courseId));
+    const equivalenceQueue = Array.from(fulfilledCourseIds);
+    for (let index = 0; index < equivalenceQueue.length; index++) {
+      for (const equivalentId of equivalentIdsByCourseId.get(equivalenceQueue[index]) ?? []) {
+        if (fulfilledCourseIds.has(equivalentId)) continue;
+        fulfilledCourseIds.add(equivalentId);
+        equivalenceQueue.push(equivalentId);
+      }
+    }
+    const fulfilledCourseCodes = new Set(
+      completedEnrollments.map((enrollment) => normalizedCode(enrollment.course.code)),
+    );
+    for (const courseId of fulfilledCourseIds) {
+      const code = courseCodeById.get(courseId);
+      if (code) fulfilledCourseCodes.add(normalizedCode(code));
+    }
+    const isFulfilledCourse = (courseId: string | null, code: string) =>
+      Boolean(courseId && fulfilledCourseIds.has(courseId)) || fulfilledCourseCodes.has(normalizedCode(code));
+
+    const plannedOfferings = selectedOfferings.filter(
+      (offering) => !isFulfilledCourse(offering.courseId, offering.courseCode),
+    );
+    const directPlannedCourses = selectedDirectCourses.filter(
+      (course) => !isFulfilledCourse(course.id, course.code),
+    );
+
     const registrationTypes = { ...((savedPlan?.registrationTypes as Record<string, string> | null) ?? {}) };
     const normalizedBranch = String(profile?.branch ?? "").trim().toUpperCase();
     const rawBatch = Number(profile?.batch);
@@ -83,8 +138,6 @@ export async function GET() {
       context.year === 2026 &&
       batchYear === 2025 &&
       ["MEVLSI", "VL", "VLSI"].includes(normalizedBranch);
-    const normalizedCode = (code: string) => code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
-
     // Plans saved before the B25 MEVLSI recode can still point at EE-311.
     // Render VL-201 in its place without mutating the student's saved plan;
     // the pre-registration save endpoint already persists this canonical form.

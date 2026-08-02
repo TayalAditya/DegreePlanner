@@ -416,6 +416,11 @@ export function TimetableView({ userId }: TimetableViewProps) {
       if (!res.ok) throw new Error("Failed to fetch timetable");
       return res.json();
     },
+    // Saved plans and course withdrawals can change on another dashboard page
+    // (or another tab). Always reconcile with the server when this view opens
+    // or regains focus instead of briefly showing the previous plan snapshot.
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const { data: autofillData } = useQuery<TimetableAutofillData>({
