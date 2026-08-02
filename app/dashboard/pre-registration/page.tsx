@@ -800,17 +800,38 @@ export default function PreRegistrationPage() {
         const plan = d.savedPlan;
         if (plan && plan.selectedIds.length > 0) {
           const offeringById = new Map(d.offerings.map((o: Offering) => [o.id, o]));
+          const catalogCourseById = new Map(
+            (Array.isArray(courses) ? courses : []).map((course: InternshipCourse) => [course.id, course])
+          );
+          const specialCourseIds = new Set(
+            (Array.isArray(courses) ? courses : [])
+              .filter((course: InternshipCourse) => /(?:396P|399P|498P)$/i.test(course.code.replace(/[^A-Z0-9]/gi, "")))
+              .map((course: InternshipCourse) => course.id)
+          );
           const restoredSlots = new Set<string>();
           const restoredIds = new Set<string>();
           const restoredExtra = new Set<string>();
+          const excludedSelections: string[] = [];
           for (const id of plan.selectedIds) {
             const o = offeringById.get(id);
             if (!o) {
               // Not an offering ID — must be MTP/internship Course ID
-              restoredExtra.add(id);
+              if (specialCourseIds.has(id)) {
+                restoredExtra.add(id);
+              } else {
+                excludedSelections.push(`${catalogCourseById.get(id)?.code ?? "A saved course"} is no longer offered`);
+              }
               continue;
             }
             // Skip compulsory courses — they're auto-shown, don't add to selected
+            if (o.completedInSemester !== null) {
+              excludedSelections.push(
+                o.completedVia
+                  ? `${o.courseCode} is already completed via ${o.completedVia}`
+                  : `${o.courseCode} is already completed`
+              );
+              continue;
+            }
             if (o.isCompulsory) continue;
             const oSlots = parseSlots(o.slots);
             if (oSlots.some((s) => restoredSlots.has(s))) continue;
@@ -818,17 +839,25 @@ export default function PreRegistrationPage() {
             restoredIds.add(id);
           }
           setSelected(restoredIds);
-          if (restoredExtra.size > 0) setSelectedExtra(restoredExtra);
-          setSaved(true);
+          setSelectedExtra(restoredExtra);
           // Restore registration types
           if (plan.registrationTypes && Object.keys(plan.registrationTypes).length > 0) {
+            const validSelectedIds = new Set([...restoredIds, ...restoredExtra]);
             const m = new Map<string, RegType>();
             for (const [id, type] of Object.entries(plan.registrationTypes)) {
-              if (type === "PASS_FAIL" || type === "AUDIT" || type === "REGULAR") m.set(id, type);
+              if (validSelectedIds.has(id) && (type === "PASS_FAIL" || type === "AUDIT" || type === "REGULAR")) {
+                m.set(id, type);
+              }
             }
             setRegTypes(m);
           }
-          setSaved(true);
+          setSaved(excludedSelections.length === 0);
+          if (excludedSelections.length > 0) {
+            showToast(
+              "info",
+              `${excludedSelections.join("; ")}. Review the updated plan and save it to remove these stale selections.`
+            );
+          }
         }
 
         if (Array.isArray(courses)) {
@@ -1169,6 +1198,13 @@ export default function PreRegistrationPage() {
     if (!data) return;
     setSaving(true);
     try {
+      const selectedIds = Array.from(new Set([
+        ...data.offerings
+          .filter((o) => o.completedInSemester === null && (o.isCompulsory || selected.has(o.id)))
+          .map((o) => o.id),
+        ...selectedExtra,
+      ]));
+      const selectedIdSet = new Set(selectedIds);
       const res = await fetch("/api/pre-registration/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1176,14 +1212,10 @@ export default function PreRegistrationPage() {
           semester: data.offeringSemester,
           year: data.offeringYear,
           // Include compulsory IC/DC courses so admin plans page shows the full picture
-          selectedIds: [
-            ...selected,
-            ...selectedExtra,
-            ...data.offerings
-              .filter((o) => o.isCompulsory && o.completedInSemester === null)
-              .map((o) => o.id),
-          ],
-          registrationTypes: Object.fromEntries(regTypes),
+          selectedIds,
+          registrationTypes: Object.fromEntries(
+            Array.from(regTypes).filter(([id]) => selectedIdSet.has(id))
+          ),
         }),
       });
       if (!res.ok) throw new Error();

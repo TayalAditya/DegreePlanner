@@ -323,7 +323,7 @@ export async function GET() {
 
       // Backlog only if due in a PAST semester and not done — future-semester courses are never backlog
       const isBacklog = effectiveCompulsorySem != null && effectiveCompulsorySem < offeringSemester && !isCompleted;
-      const isCompulsory = isCompulsoryCategory && !iksBlocked && (semesterMatches || isBacklog);
+      const isCompulsory = !isCompleted && isCompulsoryCategory && !iksBlocked && (semesterMatches || isBacklog);
 
       return {
         id: o.id,
