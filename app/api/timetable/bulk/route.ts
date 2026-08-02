@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
         const [course, offering, profile] = await Promise.all([
           prisma.course.findUnique({
             where: { id: courseId },
-            select: { code: true, credits: true },
+            select: { code: true, credits: true, ltpc: true },
           }),
           prisma.courseOffering.findFirst({
             where: {
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
               offeringSemester: context.semester,
               offeringYear: context.year,
             },
-            select: { courseCode: true, credits: true, slots: true },
+            select: { courseCode: true, credits: true, ltpc: true, slots: true },
           }),
           prisma.user.findUnique({
             where: { id: session.user.id },
@@ -144,6 +144,7 @@ export async function POST(req: NextRequest) {
               scheduleCode,
               {
                 credits: offering?.credits ?? course?.credits,
+                ltpc: offering?.ltpc ?? course?.ltpc,
                 branch: profile?.branch,
                 fallbackSlot: offering?.slots,
                 fallbackKind: scheduleCode.toUpperCase().startsWith("IC-") ? "IC" : "NON_IC",

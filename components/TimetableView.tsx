@@ -21,14 +21,21 @@ import { useConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./ToastProvider";
 import { formatCourseCode, formatCredits } from "@/lib/utils";
 import { downloadICS } from "@/lib/icsGenerator";
-import { IC_SLOTS, LAB_SLOTS, NON_IC_FOURTH_SESSION, NON_IC_SLOTS, normalizeTimetableCourseCode } from "@/lib/officialTimetable";
+import {
+  IC_SLOTS,
+  LAB_SLOTS,
+  NON_IC_FOURTH_SESSION,
+  NON_IC_SLOTS,
+  normalizeTimetableCourseCode,
+  requiresFourthNonIcTheorySession,
+} from "@/lib/officialTimetable";
 
 interface TimetableViewProps {
   userId: string;
 }
 
 const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
-const WEEK_DAYS = DAYS.slice(0, 5); // Mon–Fri only (no Saturday in week view)
+const WEEK_DAYS = DAYS;
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
 const minutesToTime = (minutes: number) => `${pad2(Math.floor(minutes / 60))}:${pad2(minutes % 60)}`;
@@ -82,22 +89,22 @@ const makeId = () => {
 };
 
 const COURSE_COLORS = [
-  { bg: "bg-blue-100 dark:bg-blue-900/30", border: "border-blue-500", text: "text-blue-700 dark:text-blue-300", hover: "hover:bg-blue-150 dark:hover:bg-blue-900/40" },
-  { bg: "bg-green-100 dark:bg-green-900/30", border: "border-green-500", text: "text-green-700 dark:text-green-300", hover: "hover:bg-green-150 dark:hover:bg-green-900/40" },
-  { bg: "bg-purple-100 dark:bg-purple-900/30", border: "border-purple-500", text: "text-purple-700 dark:text-purple-300", hover: "hover:bg-purple-150 dark:hover:bg-purple-900/40" },
-  { bg: "bg-orange-100 dark:bg-orange-900/30", border: "border-orange-500", text: "text-orange-700 dark:text-orange-300", hover: "hover:bg-orange-150 dark:hover:bg-orange-900/40" },
-  { bg: "bg-pink-100 dark:bg-pink-900/30", border: "border-pink-500", text: "text-pink-700 dark:text-pink-300", hover: "hover:bg-pink-150 dark:hover:bg-pink-900/40" },
-  { bg: "bg-teal-100 dark:bg-teal-900/30", border: "border-teal-500", text: "text-teal-700 dark:text-teal-300", hover: "hover:bg-teal-150 dark:hover:bg-teal-900/40" },
-  { bg: "bg-indigo-100 dark:bg-indigo-900/30", border: "border-indigo-500", text: "text-indigo-700 dark:text-indigo-300", hover: "hover:bg-indigo-150 dark:hover:bg-indigo-900/40" },
-  { bg: "bg-red-100 dark:bg-red-900/30", border: "border-red-500", text: "text-red-700 dark:text-red-300", hover: "hover:bg-red-150 dark:hover:bg-red-900/40" },
-  { bg: "bg-yellow-100 dark:bg-yellow-900/30", border: "border-yellow-500", text: "text-yellow-700 dark:text-yellow-300", hover: "hover:bg-yellow-150 dark:hover:bg-yellow-900/40" },
-  { bg: "bg-cyan-100 dark:bg-cyan-900/30", border: "border-cyan-500", text: "text-cyan-700 dark:text-cyan-300", hover: "hover:bg-cyan-150 dark:hover:bg-cyan-900/40" },
+  { bg: "bg-blue-500/10 dark:bg-blue-400/10", border: "border-blue-500/45 dark:border-blue-400/35", text: "text-blue-800 dark:text-blue-200", hover: "hover:bg-blue-500/15 dark:hover:bg-blue-400/15", accent: "bg-blue-500" },
+  { bg: "bg-emerald-500/10 dark:bg-emerald-400/10", border: "border-emerald-500/45 dark:border-emerald-400/35", text: "text-emerald-800 dark:text-emerald-200", hover: "hover:bg-emerald-500/15 dark:hover:bg-emerald-400/15", accent: "bg-emerald-500" },
+  { bg: "bg-violet-500/10 dark:bg-violet-400/10", border: "border-violet-500/45 dark:border-violet-400/35", text: "text-violet-800 dark:text-violet-200", hover: "hover:bg-violet-500/15 dark:hover:bg-violet-400/15", accent: "bg-violet-500" },
+  { bg: "bg-orange-500/10 dark:bg-orange-400/10", border: "border-orange-500/45 dark:border-orange-400/35", text: "text-orange-800 dark:text-orange-200", hover: "hover:bg-orange-500/15 dark:hover:bg-orange-400/15", accent: "bg-orange-500" },
+  { bg: "bg-pink-500/10 dark:bg-pink-400/10", border: "border-pink-500/45 dark:border-pink-400/35", text: "text-pink-800 dark:text-pink-200", hover: "hover:bg-pink-500/15 dark:hover:bg-pink-400/15", accent: "bg-pink-500" },
+  { bg: "bg-teal-500/10 dark:bg-teal-400/10", border: "border-teal-500/45 dark:border-teal-400/35", text: "text-teal-800 dark:text-teal-200", hover: "hover:bg-teal-500/15 dark:hover:bg-teal-400/15", accent: "bg-teal-500" },
+  { bg: "bg-indigo-500/10 dark:bg-indigo-400/10", border: "border-indigo-500/45 dark:border-indigo-400/35", text: "text-indigo-800 dark:text-indigo-200", hover: "hover:bg-indigo-500/15 dark:hover:bg-indigo-400/15", accent: "bg-indigo-500" },
+  { bg: "bg-rose-500/10 dark:bg-rose-400/10", border: "border-rose-500/45 dark:border-rose-400/35", text: "text-rose-800 dark:text-rose-200", hover: "hover:bg-rose-500/15 dark:hover:bg-rose-400/15", accent: "bg-rose-500" },
+  { bg: "bg-amber-500/10 dark:bg-amber-400/10", border: "border-amber-500/45 dark:border-amber-400/35", text: "text-amber-800 dark:text-amber-200", hover: "hover:bg-amber-500/15 dark:hover:bg-amber-400/15", accent: "bg-amber-500" },
+  { bg: "bg-cyan-500/10 dark:bg-cyan-400/10", border: "border-cyan-500/45 dark:border-cyan-400/35", text: "text-cyan-800 dark:text-cyan-200", hover: "hover:bg-cyan-500/15 dark:hover:bg-cyan-400/15", accent: "bg-cyan-500" },
 ];
 
 function getCourseColor(courseCode: string, classType?: string): typeof COURSE_COLORS[0] {
   // Special color for TA duties
   if (classType === "TA_DUTY") {
-    return { bg: "bg-amber-100 dark:bg-amber-900/30", border: "border-amber-600", text: "text-amber-800 dark:text-amber-200", hover: "hover:bg-amber-150 dark:hover:bg-amber-900/40" };
+    return { bg: "bg-amber-500/10 dark:bg-amber-400/10", border: "border-amber-500/45 dark:border-amber-400/35", text: "text-amber-800 dark:text-amber-200", hover: "hover:bg-amber-500/15 dark:hover:bg-amber-400/15", accent: "bg-amber-500" };
   }
   const hash = courseCode.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return COURSE_COLORS[hash % COURSE_COLORS.length];
@@ -215,6 +222,7 @@ interface CourseOption {
   code: string;
   name: string;
   credits: number;
+  ltpc?: string | null;
 }
 
 type TimetableEntryPayload = {
@@ -324,6 +332,7 @@ function suggestKindAndSlot(
 function buildEntriesFromSlot(opts: {
   slotRaw: string;
   kind: TimetableKind;
+  ltpc?: string | null;
   defaultVenue: string;
   pcLab?: TimetableAutofillData["pcLab"][string];
 }): { entries: Array<Omit<TimetableEntryPayload, "courseId">>; warnings: string[] } {
@@ -352,6 +361,20 @@ function buildEntriesFromSlot(opts: {
           dayOfWeek: s.dayOfWeek,
           startTime: s.startTime,
           endTime: s.endTime,
+          slot: token,
+          venue: opts.defaultVenue || undefined,
+          classType: "LECTURE",
+        });
+      }
+      const fourth =
+        opts.kind === "NON_IC" && requiresFourthNonIcTheorySession(opts.ltpc)
+          ? NON_IC_FOURTH_SESSION[token]
+          : undefined;
+      if (fourth) {
+        next.push({
+          dayOfWeek: fourth.dayOfWeek,
+          startTime: fourth.startTime,
+          endTime: fourth.endTime,
           slot: token,
           venue: opts.defaultVenue || undefined,
           classType: "LECTURE",
@@ -753,6 +776,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
       const result = buildEntriesFromSlot({
         slotRaw: suggestion.slot,
         kind: suggestion.kind,
+        ltpc: c.ltpc,
         defaultVenue: suggestion.classroom,
         pcLab: suggestion.pcLab,
       });
@@ -1445,7 +1469,212 @@ function calculateWeekRowSpan(startTime: string, endTime: string) {
   return Math.max(1, count);
 }
 
+const WEEK_VIEW_START_MINUTES = 8 * 60;
+const WEEK_VIEW_END_MINUTES = 20 * 60;
+const WEEK_HOUR_HEIGHT = 76;
+const WEEK_VIEW_HOURS = Array.from(
+  { length: (WEEK_VIEW_END_MINUTES - WEEK_VIEW_START_MINUTES) / 60 + 1 },
+  (_, index) => WEEK_VIEW_START_MINUTES + index * 60,
+);
+
+type WeekEventLayout = {
+  entry: TimetableEntry;
+  start: number;
+  end: number;
+  lane: number;
+  laneCount: number;
+};
+
+function layoutWeekDay(entries: TimetableEntry[]): WeekEventLayout[] {
+  const visible = entries
+    .map((entry) => ({
+      entry,
+      start: Math.max(WEEK_VIEW_START_MINUTES, timeToWeekMinutes(entry.startTime)),
+      end: Math.min(WEEK_VIEW_END_MINUTES, timeToWeekMinutes(entry.endTime)),
+    }))
+    .filter((entry) => entry.end > entry.start)
+    .sort((left, right) => left.start - right.start || left.end - right.end);
+
+  const layouts: WeekEventLayout[] = [];
+  let cluster: typeof visible = [];
+  let clusterEnd = -Infinity;
+  const flushCluster = () => {
+    if (cluster.length === 0) return;
+    const active: Array<{ end: number; lane: number }> = [];
+    const positioned: WeekEventLayout[] = [];
+    let laneCount = 0;
+    for (const item of cluster) {
+      for (let index = active.length - 1; index >= 0; index--) {
+        if (active[index].end <= item.start) active.splice(index, 1);
+      }
+      const occupied = new Set(active.map((item) => item.lane));
+      let lane = 0;
+      while (occupied.has(lane)) lane++;
+      active.push({ end: item.end, lane });
+      laneCount = Math.max(laneCount, lane + 1);
+      positioned.push({ ...item, lane, laneCount: 1 });
+    }
+    layouts.push(...positioned.map((item) => ({ ...item, laneCount })));
+    cluster = [];
+    clusterEnd = -Infinity;
+  };
+
+  for (const item of visible) {
+    if (cluster.length > 0 && item.start >= clusterEnd) flushCluster();
+    cluster.push(item);
+    clusterEnd = Math.max(clusterEnd, item.end);
+  }
+  flushCluster();
+  return layouts;
+}
+
 function WeekView({
+  timetable,
+  onEdit,
+  onDelete,
+  onDeleteCalendar,
+}: {
+  timetable: TimetableEntry[];
+  onEdit: (entry: TimetableEntry) => void;
+  onDelete: (entry: TimetableEntry) => void;
+  onDeleteCalendar: (entry: TimetableEntry) => void;
+}) {
+  const layoutsByDay = useMemo(
+    () => new Map(WEEK_DAYS.map((day) => [day, layoutWeekDay(timetable.filter((entry) => entry.dayOfWeek === day))])),
+    [timetable],
+  );
+  const sessionCount = timetable.filter((entry) => WEEK_DAYS.includes(entry.dayOfWeek)).length;
+  const labCount = timetable.filter((entry) => entry.classType === "LAB").length;
+  const canvasHeight = ((WEEK_VIEW_END_MINUTES - WEEK_VIEW_START_MINUTES) / 60) * WEEK_HOUR_HEIGHT;
+
+  if (sessionCount === 0) {
+    return (
+      <div className="rounded-3xl border border-border bg-surface p-10 text-center shadow-sm">
+        <Calendar className="mx-auto mb-3 h-12 w-12 text-foreground-secondary opacity-50" />
+        <p className="font-medium text-foreground">No timetable sessions yet</p>
+        <p className="mt-1 text-sm text-foreground-secondary">Published classes appear here as soon as a course has a schedule.</p>
+      </div>
+    );
+  }
+
+  return (
+    <section className="overflow-hidden rounded-3xl border border-border bg-surface shadow-sm" aria-label="Weekly course calendar">
+      <div className="flex flex-col gap-3 border-b border-border bg-gradient-to-br from-primary/[0.07] via-surface to-surface px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Weekly schedule</p>
+          <p className="mt-0.5 text-xs text-foreground-secondary">All published sessions, including Saturday labs</p>
+        </div>
+        <div className="flex items-center gap-2 text-xs font-medium text-foreground-secondary">
+          <span className="rounded-full border border-border bg-surface px-2.5 py-1">{sessionCount} sessions</span>
+          {labCount > 0 && <span className="rounded-full border border-border bg-surface px-2.5 py-1">{labCount} labs</span>}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto overscroll-x-contain p-2 sm:p-3">
+        <div className="min-w-[940px]">
+          <div className="grid" style={{ gridTemplateColumns: `72px repeat(${WEEK_DAYS.length}, minmax(138px, 1fr))` }}>
+            <div className="px-2 pb-2 pt-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground-muted">Time</div>
+            {WEEK_DAYS.map((day) => {
+              const count = layoutsByDay.get(day)?.length ?? 0;
+              return (
+                <div key={day} className="border-l border-border px-3 pb-2 pt-1">
+                  <div className="rounded-xl bg-background-secondary/70 px-3 py-2">
+                    <p className="text-sm font-semibold text-foreground">{day.slice(0, 3)}</p>
+                    <p className="text-[11px] font-medium text-foreground-secondary">{count === 0 ? "Free" : `${count} session${count === 1 ? "" : "s"}`}</p>
+                  </div>
+                </div>
+              );
+            })}
+
+            <div className="relative border-t border-border bg-background-secondary/45" style={{ height: `${canvasHeight}px` }}>
+              {WEEK_VIEW_HOURS.map((minutes) => (
+                <span
+                  key={minutes}
+                  className="absolute right-3 -translate-y-1/2 text-[11px] font-medium tabular-nums text-foreground-muted"
+                  style={{ top: `${((minutes - WEEK_VIEW_START_MINUTES) / 60) * WEEK_HOUR_HEIGHT}px` }}
+                >
+                  {minutesToTime(minutes)}
+                </span>
+              ))}
+            </div>
+
+            {WEEK_DAYS.map((day) => (
+              <div key={day} className="relative overflow-hidden border-l border-t border-border bg-surface" style={{ height: `${canvasHeight}px` }}>
+                {WEEK_VIEW_HOURS.slice(0, -1).map((minutes) => (
+                  <div
+                    key={minutes}
+                    className="absolute inset-x-0 border-t border-dashed border-border/70"
+                    style={{ top: `${((minutes - WEEK_VIEW_START_MINUTES) / 60) * WEEK_HOUR_HEIGHT}px` }}
+                  />
+                ))}
+                {(layoutsByDay.get(day) ?? []).map((layout) => {
+                  const { entry } = layout;
+                  const color = getCourseColor(entry.course?.code || "", entry.classType);
+                  const duration = layout.end - layout.start;
+                  const isLong = duration >= 85;
+                  const top = ((layout.start - WEEK_VIEW_START_MINUTES) / 60) * WEEK_HOUR_HEIGHT + 3;
+                  const height = Math.max(48, (duration / 60) * WEEK_HOUR_HEIGHT - 6);
+                  return (
+                    <div
+                      key={entry.id}
+                      className="group absolute z-[1]"
+                      style={{
+                        top: `${top}px`,
+                        height: `${height}px`,
+                        left: `calc(${(layout.lane / layout.laneCount) * 100}% + 4px)`,
+                        width: `calc(${100 / layout.laneCount}% - 8px)`,
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => onEdit(entry)}
+                        className={`relative h-full w-full overflow-hidden rounded-xl border ${color.border} ${color.bg} ${color.hover} px-2.5 py-2 text-left shadow-sm transition duration-150 hover:-translate-y-px hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60`}
+                        title={`${entry.course?.code || "Class"} - ${entry.startTime} to ${entry.endTime}`}
+                      >
+                        <span className={`absolute inset-y-0 left-0 w-1 ${color.accent}`} />
+                        <div className="flex min-w-0 items-start justify-between gap-1 pl-1">
+                          <p className={`truncate text-xs font-bold ${color.text}`}>{formatCourseCode(entry.course?.code || "")}</p>
+                          <span className={`shrink-0 rounded-md border ${color.border} bg-surface/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${color.text}`}>{entry.classType === "LECTURE" ? "Class" : CLASS_TYPE_LABEL[entry.classType]}</span>
+                        </div>
+                        <p className={`mt-0.5 pl-1 text-[11px] font-medium tabular-nums ${color.text} opacity-80`}>{entry.startTime} - {entry.endTime}</p>
+                        {isLong && <p className={`mt-1 line-clamp-2 pl-1 text-[11px] leading-4 ${color.text} opacity-90`}>{entry.course?.name || "Scheduled class"}</p>}
+                        {isLong && entry.venue && <p className={`mt-1 flex items-center gap-1 truncate pl-1 text-[10px] ${color.text} opacity-75`}><MapPin className="h-3 w-3 shrink-0" />{entry.venue}</p>}
+                      </button>
+                      {entry.googleEventId && (
+                        <button
+                          type="button"
+                          onClick={(event) => { event.stopPropagation(); onDeleteCalendar(entry); }}
+                          className="absolute right-1 top-1 hidden h-6 w-6 items-center justify-center rounded-md bg-surface/90 text-foreground-secondary shadow-sm transition hover:text-primary group-hover:flex focus:flex"
+                          aria-label="Remove from Google Calendar"
+                          title="Remove from Google Calendar"
+                        >
+                          <Calendar className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                      {!entry.isOfficial && !entry.isOfficialCorrection && (
+                        <button
+                          type="button"
+                          onClick={(event) => { event.stopPropagation(); onDelete(entry); }}
+                          className="absolute bottom-1 right-1 hidden h-6 w-6 items-center justify-center rounded-md bg-surface/90 text-red-500 shadow-sm transition hover:bg-red-50 group-hover:flex focus:flex"
+                          aria-label="Delete class"
+                          title="Delete class"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function LegacyWeekView({
   timetable,
   onEdit,
   onDelete,
@@ -1878,6 +2107,21 @@ function TimetableEntryModal({
             slot: token,
             venue: defaultVenue || undefined,
             classType: defaultDraftClassType,
+          });
+        }
+        const fourth =
+          kind === "NON_IC" && requiresFourthNonIcTheorySession(selectedCourse?.ltpc)
+            ? NON_IC_FOURTH_SESSION[token]
+            : undefined;
+        if (fourth) {
+          next.push({
+            id: `slot|${token}|${fourth.dayOfWeek}|${fourth.startTime}|${fourth.endTime}|LECTURE`,
+            dayOfWeek: fourth.dayOfWeek,
+            startTime: fourth.startTime,
+            endTime: fourth.endTime,
+            slot: token,
+            venue: defaultVenue || undefined,
+            classType: "LECTURE",
           });
         }
         continue;

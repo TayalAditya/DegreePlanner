@@ -96,6 +96,19 @@ export const NON_IC_FOURTH_SESSION: Record<string, OfficialSlotSession> = {
   F: { dayOfWeek: "MONDAY", startTime: "17:00", endTime: "17:50" },
 };
 
+/**
+ * The fourth Non-IC theory meeting represents the tutorial/theory hour of a
+ * 4-credit course. A practical component earns that credit in its lab block,
+ * so a generic `credits >= 4` check incorrectly creates an extra 5–6 PM
+ * lecture for 3-0-2-4 courses.
+ */
+export function requiresFourthNonIcTheorySession(ltpc?: string | null): boolean {
+  const normalized = String(ltpc ?? "")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, "");
+  return normalized === "3-1-0-4" || normalized === "4-0-0-4";
+}
+
 // IC slots from the official Aug–Dec 2026 IC timetable workbook.
 export const IC_SLOTS: Record<string, OfficialSlotSession[]> = {
   A: [
@@ -233,6 +246,7 @@ export function buildOfficialCourseMeetings(
   courseCode: string,
   options: {
     credits?: number;
+    ltpc?: string | null;
     branch?: string | null;
     fallbackSlot?: string | null;
     fallbackVenue?: string | null;
@@ -256,8 +270,10 @@ export function buildOfficialCourseMeetings(
       for (const session of sessions ?? []) {
         meetings.push({ ...session, slot: token, venue, classType: "LECTURE" });
       }
-      const credits = course?.credit ?? options.credits ?? 0;
-      const fourth = kind === "NON_IC" && credits >= 4 ? NON_IC_FOURTH_SESSION[token] : undefined;
+      const fourth =
+        kind === "NON_IC" && requiresFourthNonIcTheorySession(options.ltpc)
+          ? NON_IC_FOURTH_SESSION[token]
+          : undefined;
       if (fourth) meetings.push({ ...fourth, slot: token, venue, classType: "LECTURE" });
     } else if (/^L[1-5]$/.test(token)) {
       for (const session of LAB_SLOTS[token] ?? []) {

@@ -31,12 +31,12 @@ export async function GET() {
           term: context.term,
           status: EnrollmentStatus.IN_PROGRESS,
         },
-        include: { course: { select: { id: true, code: true, name: true, credits: true } } },
+        include: { course: { select: { id: true, code: true, name: true, credits: true, ltpc: true } } },
         orderBy: [{ course: { code: "asc" } }],
       }),
       prisma.courseEnrollment.findMany({
         where: { userId: session.user.id, status: EnrollmentStatus.COMPLETED },
-        include: { course: { select: { id: true, code: true, name: true, credits: true } } },
+        include: { course: { select: { id: true, code: true, name: true, credits: true, ltpc: true } } },
         orderBy: [{ updatedAt: "desc" }],
         distinct: ["courseId"],
       }),
@@ -75,13 +75,13 @@ export async function GET() {
               isActive: true,
             },
             select: {
-              id: true, courseId: true, courseCode: true, courseName: true, credits: true, slots: true, offeringSemester: true, offeringYear: true,
-              course: { select: { id: true, code: true, name: true, credits: true } },
+              id: true, courseId: true, courseCode: true, courseName: true, credits: true, ltpc: true, slots: true, offeringSemester: true, offeringYear: true,
+              course: { select: { id: true, code: true, name: true, credits: true, ltpc: true } },
             },
           }),
           prisma.course.findMany({
             where: { id: { in: selectedIds } },
-            select: { id: true, code: true, name: true, credits: true },
+            select: { id: true, code: true, name: true, credits: true, ltpc: true },
           }),
         ])
       : [[], []];
@@ -154,8 +154,8 @@ export async function GET() {
               offeringYear: staleEe311.offeringYear,
             },
             select: {
-              id: true, courseId: true, courseCode: true, courseName: true, credits: true, slots: true, offeringSemester: true, offeringYear: true,
-              course: { select: { id: true, code: true, name: true, credits: true } },
+              id: true, courseId: true, courseCode: true, courseName: true, credits: true, ltpc: true, slots: true, offeringSemester: true, offeringYear: true,
+              course: { select: { id: true, code: true, name: true, credits: true, ltpc: true } },
             },
           });
         if (canonicalVl201) {
@@ -171,7 +171,7 @@ export async function GET() {
       }
     }
 
-    type DisplayCourse = { id: string; code: string; name: string; credits: number };
+    type DisplayCourse = { id: string; code: string; name: string; credits: number; ltpc: string | null };
     const scheduleCodeByCourseId = new Map<string, string>();
     const offeringSlotByCourseId = new Map<string, string | null>();
     const reportableCourseIds = new Set<string>();
@@ -187,6 +187,7 @@ export async function GET() {
         code: offering.courseCode,
         name: offering.courseName,
         credits: offering.credits,
+        ltpc: offering.ltpc,
       };
       courseMap.set(displayCourse.id, displayCourse);
       displayCourseIdByOfferingId.set(offering.id, displayCourse.id);
@@ -244,6 +245,7 @@ export async function GET() {
       if (coursesWithApprovedOverrides.has(course.id)) return [];
       return buildOfficialCourseMeetings(officialData, scheduleCodeByCourseId.get(course.id) ?? course.code, {
         credits: course.credits,
+        ltpc: course.ltpc,
         branch: profile?.branch,
         fallbackSlot: offeringSlotByCourseId.get(course.id),
         fallbackKind: course.code.toUpperCase().startsWith("IC-") ? "IC" : "NON_IC",
@@ -501,7 +503,7 @@ export async function POST(req: NextRequest) {
       const [course, profile, plan] = await Promise.all([
         prisma.course.findUnique({
           where: { id: courseId },
-          select: { code: true, credits: true },
+          select: { code: true, credits: true, ltpc: true },
         }),
         prisma.user.findUnique({
           where: { id: session.user.id },
@@ -524,7 +526,7 @@ export async function POST(req: NextRequest) {
               id: { in: plan.selectedIds },
               courseId,
             },
-            select: { courseCode: true, credits: true, slots: true },
+            select: { courseCode: true, credits: true, ltpc: true, slots: true },
           })
         : null;
       const scheduleCode = plannedOffering?.courseCode ?? course?.code;
@@ -534,6 +536,7 @@ export async function POST(req: NextRequest) {
           scheduleCode,
           {
             credits: plannedOffering?.credits ?? course?.credits,
+            ltpc: plannedOffering?.ltpc ?? course?.ltpc,
             branch: profile?.branch,
             fallbackSlot: plannedOffering?.slots,
             fallbackKind: scheduleCode.toUpperCase().startsWith("IC-") ? "IC" : "NON_IC",
