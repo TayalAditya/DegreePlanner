@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (courseId) {
-      const isEnrolled = await prisma.courseEnrollment.findFirst({
+      const enrollment = await prisma.courseEnrollment.findFirst({
         where: allTaDuty
           ? {
               userId: session.user.id,
@@ -107,12 +107,32 @@ export async function POST(req: NextRequest) {
         select: { id: true },
       });
 
-      if (!isEnrolled) {
+      let isPlanned = false;
+      if (!enrollment && !allTaDuty) {
+        const plan = await prisma.preRegistrationPlan.findUnique({
+          where: {
+            userId_offeringSemester_offeringYear: {
+              userId: session.user.id,
+              offeringSemester: context.semester,
+              offeringYear: context.year,
+            },
+          },
+          select: { selectedIds: true },
+        });
+        if (plan) {
+          isPlanned = plan.selectedIds.includes(courseId) || Boolean(await prisma.courseOffering.findFirst({
+            where: { id: { in: plan.selectedIds }, courseId, isActive: true },
+            select: { id: true },
+          }));
+        }
+      }
+
+      if (!enrollment && !isPlanned) {
         return NextResponse.json(
           {
             error: allTaDuty
               ? "For TA duties, select a course you have completed"
-              : "You can only edit schedules for courses you are enrolled in",
+              : "You can only edit schedules for courses you are enrolled in or have pre-registered",
           },
           { status: 403 }
         );
