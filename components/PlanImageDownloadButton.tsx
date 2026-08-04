@@ -13,6 +13,7 @@ interface PlanImageCourse {
   instructor: string | null;
   slots: string | null;
   category: string;
+  categoryReason?: string;
   registrationType: RegistrationType;
 }
 
@@ -115,7 +116,8 @@ function loadLogo(): Promise<HTMLImageElement | null> {
 function registrationLabel(course: PlanImageCourse, categoryLabels: Record<string, string>) {
   if (course.registrationType === "PASS_FAIL") return "P/F -> FE";
   if (course.registrationType === "AUDIT") return "Audit - not in degree";
-  return `Regular - ${categoryLabels[course.category] ?? course.category}`;
+  const category = categoryLabels[course.category] ?? course.category;
+  return course.categoryReason ? `Regular - ${category}\n${course.categoryReason}` : `Regular - ${category}`;
 }
 
 export async function createPlanImageBlob({

@@ -68,6 +68,7 @@ interface PlannedCourse {
   instructor: string | null;
   slots: string | null;
   category: string;
+  categoryReason?: string;
   registrationType: RegType;
 }
 
@@ -94,6 +95,10 @@ const CATEGORY_BAR_COLOR: Record<string, string> = {
   DE: "bg-secondary", HSS: "bg-warning", IKS: "bg-warning",
   FE: "bg-success", MTP: "bg-error", ISTP: "bg-accent", AUDIT: "bg-warning",
 };
+
+// These minors use the HSS+IKS basket naturally. Their courses become FE only
+// after that basket is already fulfilled; other minor-counting courses are FE.
+const HSS_NATIVE_MINOR_CODES = new Set(["MGMT", "MGMT_B24", "GERMAN"]);
 
 // Parse slot string — handles +, &, , separators e.g. "B & L4" → ["B","L4"]
 function parseSlots(slots: string | null): string[] {
@@ -327,7 +332,7 @@ function CourseCard({
   offering, checked, disabled, onToggle, clashWith, isCompulsory, minorGroupLabel, studentInfo,
   samarthReported, onToggleSamarth,
   sootrankReported, onToggleSootrank,
-  regType, pfBudgetRemaining, onRegTypeChange,
+  regType, pfBudgetRemaining, onRegTypeChange, displayCategory, categoryReason,
 }: {
   offering: Offering & { instructorEmail?: string | null };
   checked: boolean;
@@ -344,12 +349,15 @@ function CourseCard({
   regType?: RegType;
   pfBudgetRemaining?: number;
   onRegTypeChange?: (id: string, type: RegType) => void;
+  displayCategory?: string;
+  categoryReason?: string;
 }) {
   const isCompleted = offering.completedInSemester !== null;
   const normalizedCourseCode = offering.courseCode.replace(/[^A-Z0-9]/gi, "");
   const slotLabel = offering.slots || (/(?:396P|399P|498P)$/i.test(normalizedCourseCode) ? "NS" : null);
-  const catColor = CATEGORY_COLOR[offering.resolvedCategory] ?? "bg-surface-secondary text-foreground-secondary";
-  const catLabel = CATEGORY_LABEL[offering.resolvedCategory] ?? offering.resolvedCategory;
+  const effectiveCategory = displayCategory ?? (offering.resolvedCategory === "IKS" ? "HSS" : offering.resolvedCategory);
+  const catColor = CATEGORY_COLOR[effectiveCategory] ?? "bg-surface-secondary text-foreground-secondary";
+  const catLabel = CATEGORY_LABEL[effectiveCategory] ?? effectiveCategory;
 
   return (
     // Plain div, not <label>: nested interactive elements (the "Not on Samarth"
@@ -408,7 +416,7 @@ function CourseCard({
           {checked && !isCompulsory && !isCompleted && onRegTypeChange && (
             <RegTypeSelector
               id={offering.id}
-              category={offering.resolvedCategory}
+              category={effectiveCategory}
               regType={regType ?? "REGULAR"}
               pfBudgetRemaining={pfBudgetRemaining ?? 0}
               onChange={onRegTypeChange}
@@ -434,6 +442,13 @@ function CourseCard({
           </p>
         )}
 
+        {categoryReason && !isCompleted && regType !== "PASS_FAIL" && regType !== "AUDIT" && (
+          <p className="mt-1 flex items-center gap-1 text-xs text-success">
+            <Info className="w-3 h-3" />
+            {categoryReason}
+          </p>
+        )}
+
         {/* Registration type inline warnings */}
         {checked && !isCompulsory && !isCompleted && regType === "AUDIT" && (
           <p className="mt-1 text-xs text-warning flex items-center gap-1">
@@ -444,8 +459,8 @@ function CourseCard({
         {checked && !isCompulsory && !isCompleted && regType === "PASS_FAIL" && (
           <p className="mt-1 text-xs text-accent flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" />
-            P/F counts toward FE, not {CATEGORY_LABEL[offering.resolvedCategory] ?? offering.resolvedCategory}.
-            {PF_APPROVAL_CATS.has(offering.resolvedCategory) && " DE as P/F also requires faculty & FA approval."}
+            P/F counts toward FE{effectiveCategory === "FE" ? "." : `, not ${catLabel}.`}
+            {PF_APPROVAL_CATS.has(effectiveCategory) && " DE as P/F also requires faculty & FA approval."}
           </p>
         )}
 
@@ -466,7 +481,7 @@ function CourseCard({
             const salutation = emails.length > 1 ? "Sir/Ma'am" : inferSalutation(offering.instructor);
             const code = offering.courseCode;
             const name = offering.courseName;
-            const cat = CATEGORY_LABEL[offering.resolvedCategory] ?? offering.resolvedCategory;
+            const cat = CATEGORY_LABEL[effectiveCategory] ?? effectiveCategory;
             const sem = studentInfo?.semester ?? "?";
             const branch = studentInfo?.branch ?? "";
             const studentName = studentInfo?.name ?? "Student";
@@ -1048,6 +1063,56 @@ export default function PreRegistrationPage() {
     return map;
   }, [minorData]);
 
+  // Category shown on a course is the category it will use in this plan, not
+  // merely the catalogue category. This keeps a minor/fulfilled-basket choice
+  // from looking like it still consumes DE or HSS+IKS credits.
+  const effectiveOfferingCategories = useMemo(() => {
+    const map = new Map<string, { category: string; reason?: string }>();
+    if (!data) return map;
+
+    const requirements = data.programRequirements;
+    const completed = data.completedBreakdown;
+    const minorCountsAsFE = Boolean(
+      minorData && !HSS_NATIVE_MINOR_CODES.has(minorData.minor.code),
+    );
+    const minorGroupByOfferingId = new Map<string, string>();
+    if (minorCountsAsFE && minorData) {
+      for (const group of minorData.groups) {
+        if (!group.countsTowardMinor) continue;
+        for (const course of group.courses) {
+          if (course.offering) minorGroupByOfferingId.set(course.offering.id, group.title);
+        }
+      }
+    }
+
+    for (const offering of data.offerings) {
+      const baseCategory = offering.resolvedCategory === "IKS" ? "HSS" : offering.resolvedCategory;
+      const minorGroup = minorGroupByOfferingId.get(offering.id);
+      if (minorGroup && minorData) {
+        map.set(offering.id, {
+          category: "FE",
+          reason: `Counts as FE because it is included in your selected minor (${minorGroup}).`,
+        });
+        continue;
+      }
+
+      if (requirements && completed && ["DE", "HSS"].includes(baseCategory)) {
+        const remaining = (requirements[baseCategory] ?? 0) - (completed[baseCategory] ?? 0);
+        if (remaining <= 0) {
+          const basket = baseCategory === "HSS" ? "HSS + IKS" : "DE";
+          map.set(offering.id, {
+            category: "FE",
+            reason: `Counts as FE because your ${basket} requirement is already complete.`,
+          });
+          continue;
+        }
+      }
+
+      map.set(offering.id, { category: baseCategory });
+    }
+    return map;
+  }, [data, minorData]);
+
   // Category-wise breakdown of selected + compulsory courses
   const categoryBreakdown = useMemo(() => {
     if (!data) return [];
@@ -1056,9 +1121,6 @@ export default function PreRegistrationPage() {
       const e = map.get(cat) ?? { credits: 0, count: 0 };
       map.set(cat, { credits: e.credits + credits, count: e.count + 1 });
     };
-
-    const req = data.programRequirements;
-    const done = data.completedBreakdown;
 
     for (const o of data.offerings) {
       if (!o.isCompulsory && !selected.has(o.id)) continue;
@@ -1071,16 +1133,10 @@ export default function PreRegistrationPage() {
       }
       // Every P/F course consumes only the Free Elective basket, irrespective
       // of whether its regular classification is HSS, IKS or DE.
-      let cat = registrationType === "PASS_FAIL"
+      const effective = effectiveOfferingCategories.get(o.id);
+      const cat = registrationType === "PASS_FAIL"
         ? "FE"
-        : o.resolvedCategory === "IKS"
-          ? "HSS"
-          : o.resolvedCategory;
-      // Overflow: if requirement already met, reclassify to FE
-      if (req && done && ["DE", "HSS"].includes(cat)) {
-        const remaining = (req[cat] ?? 0) - (done[cat] ?? 0);
-        if (remaining <= 0) cat = "FE";
-      }
+        : effective?.category ?? (o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory);
       add(cat, o.credits);
     }
     // Add internship / MTP-1 selections
@@ -1094,7 +1150,7 @@ export default function PreRegistrationPage() {
     }
     const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP", "AUDIT"]; // IKS merged into HSS
     return ORDER.filter((cat) => map.has(cat)).map((cat) => ({ cat, ...map.get(cat)! }));
-  }, [data, selected, selectedExtra, internshipCourses, mtp1Course, regTypes]);
+  }, [data, selected, selectedExtra, internshipCourses, mtp1Course, regTypes, effectiveOfferingCategories]);
 
   const plannedCourses = useMemo<PlannedCourse[]>(() => {
     if (!data) return [];
@@ -1104,13 +1160,12 @@ export default function PreRegistrationPage() {
       if (offering.completedInSemester !== null) continue;
       if (!offering.isCompulsory && !selected.has(offering.id)) continue;
       const registrationType = regTypes.get(offering.id) ?? "REGULAR";
+      const effective = effectiveOfferingCategories.get(offering.id);
       const category = registrationType === "PASS_FAIL"
         ? "FE"
         : registrationType === "AUDIT"
           ? "AUDIT"
-          : offering.resolvedCategory === "IKS"
-            ? "HSS"
-            : offering.resolvedCategory;
+          : effective?.category ?? (offering.resolvedCategory === "IKS" ? "HSS" : offering.resolvedCategory);
       rows.push({
         id: offering.id,
         code: offering.courseCode,
@@ -1119,6 +1174,7 @@ export default function PreRegistrationPage() {
         instructor: offering.instructor,
         slots: offering.slots,
         category,
+        categoryReason: registrationType === "REGULAR" ? effective?.reason : undefined,
         registrationType,
       });
     }
@@ -1142,7 +1198,7 @@ export default function PreRegistrationPage() {
     ];
     rows.push(...extras.filter((course) => course.selected).map(({ selected: _selected, ...course }) => course));
     return rows;
-  }, [data, selected, selectedExtra, internshipCourses, mtp1Course, regTypes]);
+  }, [data, selected, selectedExtra, internshipCourses, mtp1Course, regTypes, effectiveOfferingCategories]);
 
   const handleToggle = (offering: Offering) => {
     if (offering.isCompulsory || offering.completedInSemester !== null) return;
@@ -1217,21 +1273,8 @@ export default function PreRegistrationPage() {
       const newTotal = totalCredits + offering.credits;
       if (data && newTotal > data.creditLimit) setShowApprovalWarning(true);
 
-      // Warn if this course is in the selected minor's basket but being picked from DE/FE section.
-      // Exception: MGMT minors and GERMAN — their HS/MB courses count naturally toward HSS (up to 12 cr).
-      const HSS_MINORS = new Set(["MGMT", "MGMT_B24", "GERMAN"]);
-      if (selectedMinorCode && minorData && !HSS_MINORS.has(selectedMinorCode)) {
-        const inGroup = minorData.groups.find(
-          (g) => g.countsTowardMinor && g.courses.some((c) => c.offering?.id === offering.id)
-        );
-        if (inGroup) {
-          const cat = CATEGORY_LABEL[offering.resolvedCategory] ?? offering.resolvedCategory;
-          showToast(
-            "info",
-            `${offering.courseCode} counts toward your ${minorData.minor.name} minor (${inGroup.title}) — currently categorised as ${cat}`
-          );
-        }
-      }
+      const categoryReason = effectiveOfferingCategories.get(offering.id)?.reason;
+      if (categoryReason) showToast("info", `${offering.courseCode}: ${categoryReason}`);
     }
     setSelected(next);
     setSaved(false);
@@ -1456,10 +1499,14 @@ export default function PreRegistrationPage() {
     );
   }
 
+  const displayCategory = (offering: Offering) =>
+    effectiveOfferingCategories.get(offering.id)?.category
+    ?? (offering.resolvedCategory === "IKS" ? "HSS" : offering.resolvedCategory);
+  const displayCategoryReason = (offering: Offering) => effectiveOfferingCategories.get(offering.id)?.reason;
   const compulsory = data.offerings.filter((o) => o.isCompulsory);
-  const de = data.offerings.filter((o) => !o.isCompulsory && o.resolvedCategory === "DE" && !clashMap.has(o.id));
-  const hss = data.offerings.filter((o) => !o.isCompulsory && ["HSS", "IKS"].includes(o.resolvedCategory) && !clashMap.has(o.id));
-  const fe = data.offerings.filter((o) => !o.isCompulsory && o.resolvedCategory === "FE" && !clashMap.has(o.id));
+  const de = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "DE" && !clashMap.has(o.id));
+  const hss = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "HSS" && !clashMap.has(o.id));
+  const fe = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "FE" && !clashMap.has(o.id));
   // Group FE by school
   const feBySchool = fe.reduce<Record<string, Offering[]>>((acc, o) => {
     const key = o.school ?? "Other";
@@ -1872,6 +1919,8 @@ export default function PreRegistrationPage() {
               onToggle={() => handleToggle(o)}
               clashWith={interClashMap.get(o.id)}
               minorGroupLabel={minorOfferingLabels.get(o.id)}
+              displayCategory={displayCategory(o)}
+              categoryReason={displayCategoryReason(o)}
               studentInfo={data.studentInfo}
               samarthReported={samarthReported.has(o.id)}
               onToggleSamarth={handleToggleSamarth}
@@ -1896,6 +1945,8 @@ export default function PreRegistrationPage() {
               disabled={false}
               onToggle={() => handleToggle(o)}
               minorGroupLabel={minorOfferingLabels.get(o.id)}
+              displayCategory={displayCategory(o)}
+              categoryReason={displayCategoryReason(o)}
               studentInfo={data.studentInfo}
               samarthReported={samarthReported.has(o.id)}
               onToggleSamarth={handleToggleSamarth}
@@ -1928,6 +1979,8 @@ export default function PreRegistrationPage() {
                       disabled={false}
                       onToggle={() => handleToggle(o)}
                       minorGroupLabel={minorOfferingLabels.get(o.id)}
+                      displayCategory={displayCategory(o)}
+                      categoryReason={displayCategoryReason(o)}
                       studentInfo={data.studentInfo}
                       samarthReported={samarthReported.has(o.id)}
                       onToggleSamarth={handleToggleSamarth}
@@ -2106,7 +2159,10 @@ export default function PreRegistrationPage() {
                         <td className="px-5 py-3 text-right font-medium text-foreground">{formatCredits(course.credits)}</td>
                         <td className="px-5 py-3 text-foreground-secondary">{course.instructor ?? "—"}</td>
                         <td className="px-5 py-3 font-mono text-xs text-foreground-secondary">{course.slots ?? "—"}</td>
-                        <td className={`px-5 py-3 text-xs font-semibold ${isAudit ? "text-warning" : course.registrationType === "PASS_FAIL" ? "text-success" : "text-foreground-secondary"}`}>{type}</td>
+                        <td className={`px-5 py-3 text-xs font-semibold ${isAudit ? "text-warning" : course.registrationType === "PASS_FAIL" ? "text-success" : "text-foreground-secondary"}`}>
+                          <span className="block">{type}</span>
+                          {course.categoryReason && <span className="mt-1 block font-normal text-success">{course.categoryReason}</span>}
+                        </td>
                       </tr>
                     );
                   })}
