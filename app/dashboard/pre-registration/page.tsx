@@ -7,7 +7,11 @@ import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { PlanImageDownloadButton, createPlanImageBlob } from "@/components/PlanImageDownloadButton";
 import { formatCredits, formatCourseCode } from "@/lib/utils";
-import { MINORS } from "@/lib/minors";
+import {
+  areMinorRequirementAlternatives,
+  getMinorRequirementCountingKey,
+  MINORS,
+} from "@/lib/minors";
 import { getBatch23FacultyAdvisor } from "@/lib/batch23FacultyAdvisors";
 
 interface Offering {
@@ -1005,7 +1009,11 @@ export default function PreRegistrationPage() {
       });
 
       const completedCount = group.countsTowardMinor
-        ? courses.filter((c) => c.isCompleted).length
+        ? new Set(
+            courses
+              .filter((course) => course.isCompleted)
+              .map((course) => getMinorRequirementCountingKey(group, course.code))
+          ).size
         : 0;
       const isGroupSatisfied = group.countsTowardMinor && completedCount >= group.requiredCount;
 
@@ -1137,6 +1145,32 @@ export default function PreRegistrationPage() {
 
     // Prevent selecting if it clashes with an already-selected optional course
     if (!selected.has(offering.id)) {
+      // A minor may define a local OR pair. For Management, HS-510 and HS-504
+      // are both valid electives but occupy one minor slot, so do not let a
+      // student register both while planning that minor.
+      const selectedMinorAlternative = minorData?.groups
+        .filter((group) => group.countsTowardMinor)
+        .flatMap((group) => {
+          const current = group.courses.find((course) => course.offering?.id === offering.id);
+          if (!current) return [];
+          return group.courses
+            .filter(
+              (course) =>
+                course.offering &&
+                selected.has(course.offering.id) &&
+                course.offering.id !== offering.id &&
+                areMinorRequirementAlternatives(group, current.code, course.code)
+            )
+            .map((course) => ({ group, course }));
+        })[0];
+      if (selectedMinorAlternative) {
+        showToast(
+          "error",
+          `${offering.courseCode} and ${selectedMinorAlternative.course.code} are alternatives in ${selectedMinorAlternative.group.title}; only one can count toward this minor.`
+        );
+        return;
+      }
+
       const clash = data?.offerings.find(
         (o) => selected.has(o.id) && slotsClash(o.slots, offering.slots)
       );

@@ -3,6 +3,12 @@ export type MinorRequirementGroup = {
   title: string;
   requiredCount: number;
   courseCodes: string[];
+  /**
+   * Courses in one set are alternatives for this minor requirement: completing
+   * or planning more than one of them still fulfils only one slot. This is
+   * deliberately scoped to the minor, rather than a global course equivalence.
+   */
+  alternativeCourseCodeSets?: string[][];
   countsTowardMinor: boolean;
   note?: string;
 };
@@ -80,8 +86,9 @@ export const MINORS: MinorDefinition[] = [
           "MB-562",
           "MB-570",
         ],
+        alternativeCourseCodeSets: [["HS-510", "HS-504"]],
         countsTowardMinor: true,
-        note: "Any 2 courses (6 credits) from the electives basket.",
+        note: "Any 2 courses (6 credits) from the electives basket. HS-510 and HS-504 are alternatives, so only one counts.",
       },
     ],
   },
@@ -540,3 +547,40 @@ export const MINORS: MinorDefinition[] = [
     ],
   },
 ];
+
+function normalizeMinorCourseCode(code: string): string {
+  return code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/** Returns a stable key for counting a course inside one minor requirement. */
+export function getMinorRequirementCountingKey(
+  group: MinorRequirementGroup,
+  courseCode: string
+): string {
+  const normalizedCode = normalizeMinorCourseCode(courseCode);
+  const alternativeIndex = group.alternativeCourseCodeSets?.findIndex((set) =>
+    set.some((candidate) => normalizeMinorCourseCode(candidate) === normalizedCode)
+  );
+
+  return alternativeIndex === undefined || alternativeIndex < 0
+    ? `course:${normalizedCode}`
+    : `alternative:${alternativeIndex}`;
+}
+
+/** Whether two different courses occupy the same OR slot in a minor requirement. */
+export function areMinorRequirementAlternatives(
+  group: MinorRequirementGroup,
+  firstCourseCode: string,
+  secondCourseCode: string
+): boolean {
+  const first = normalizeMinorCourseCode(firstCourseCode);
+  const second = normalizeMinorCourseCode(secondCourseCode);
+  if (!first || !second || first === second) return false;
+
+  return Boolean(
+    group.alternativeCourseCodeSets?.some((set) => {
+      const normalizedSet = new Set(set.map(normalizeMinorCourseCode));
+      return normalizedSet.has(first) && normalizedSet.has(second);
+    })
+  );
+}
