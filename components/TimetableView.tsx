@@ -1476,13 +1476,40 @@ function calculateWeekRowSpan(startTime: string, endTime: string) {
   return Math.max(1, count);
 }
 
-const WEEK_VIEW_START_MINUTES = 8 * 60;
-const WEEK_VIEW_END_MINUTES = 20 * 60;
-const WEEK_HOUR_HEIGHT = 76;
-const WEEK_VIEW_HOURS = Array.from(
-  { length: (WEEK_VIEW_END_MINUTES - WEEK_VIEW_START_MINUTES) / 60 + 1 },
-  (_, index) => WEEK_VIEW_START_MINUTES + index * 60,
-);
+const DEFAULT_WEEK_VIEW_START_MINUTES = 8 * 60;
+const DEFAULT_WEEK_VIEW_END_MINUTES = 20 * 60;
+const MIN_WEEK_VIEW_START_MINUTES = 6 * 60;
+const MAX_WEEK_VIEW_END_MINUTES = 22 * 60;
+const DEFAULT_WEEK_HOUR_HEIGHT = 88;
+
+function getWeekViewBounds(entries: TimetableEntry[]) {
+  const timedEntries = entries
+    .map((entry) => ({ start: timeToWeekMinutes(entry.startTime), end: timeToWeekMinutes(entry.endTime) }))
+    .filter((entry) => Number.isFinite(entry.start) && Number.isFinite(entry.end) && entry.end > entry.start);
+
+  if (timedEntries.length === 0) {
+    return { start: DEFAULT_WEEK_VIEW_START_MINUTES, end: DEFAULT_WEEK_VIEW_END_MINUTES };
+  }
+
+  const earliest = Math.min(...timedEntries.map((entry) => entry.start));
+  const latest = Math.max(...timedEntries.map((entry) => entry.end));
+  const start = Math.min(
+    DEFAULT_WEEK_VIEW_START_MINUTES,
+    Math.max(MIN_WEEK_VIEW_START_MINUTES, Math.floor((earliest - 30) / 60) * 60),
+  );
+  const end = Math.max(
+    DEFAULT_WEEK_VIEW_END_MINUTES,
+    Math.min(MAX_WEEK_VIEW_END_MINUTES, Math.ceil((latest + 30) / 60) * 60),
+  );
+  return { start, end: Math.max(start + 120, end) };
+}
+
+function formatWeekDuration(minutes: number) {
+  const hours = Math.floor(minutes / 60);
+  const remainder = minutes % 60;
+  if (hours === 0) return `${remainder}m`;
+  return remainder === 0 ? `${hours}h` : `${hours}h ${remainder}m`;
+}
 
 type WeekEventLayout = {
   entry: TimetableEntry;
@@ -1492,12 +1519,12 @@ type WeekEventLayout = {
   laneCount: number;
 };
 
-function layoutWeekDay(entries: TimetableEntry[]): WeekEventLayout[] {
+function layoutWeekDay(entries: TimetableEntry[], viewStart: number, viewEnd: number): WeekEventLayout[] {
   const visible = entries
     .map((entry) => ({
       entry,
-      start: Math.max(WEEK_VIEW_START_MINUTES, timeToWeekMinutes(entry.startTime)),
-      end: Math.min(WEEK_VIEW_END_MINUTES, timeToWeekMinutes(entry.endTime)),
+      start: Math.max(viewStart, timeToWeekMinutes(entry.startTime)),
+      end: Math.min(viewEnd, timeToWeekMinutes(entry.endTime)),
     }))
     .filter((entry) => entry.end > entry.start)
     .sort((left, right) => left.start - right.start || left.end - right.end);
@@ -1546,13 +1573,25 @@ function WeekView({
   onDelete: (entry: TimetableEntry) => void;
   onDeleteCalendar: (entry: TimetableEntry) => void;
 }) {
+  const [hourHeight, setHourHeight] = useState(DEFAULT_WEEK_HOUR_HEIGHT);
+  const viewBounds = useMemo(() => getWeekViewBounds(timetable), [timetable]);
+  const weekHours = useMemo(
+    () => Array.from(
+      { length: (viewBounds.end - viewBounds.start) / 60 + 1 },
+      (_, index) => viewBounds.start + index * 60,
+    ),
+    [viewBounds.end, viewBounds.start],
+  );
   const layoutsByDay = useMemo(
-    () => new Map(WEEK_DAYS.map((day) => [day, layoutWeekDay(timetable.filter((entry) => entry.dayOfWeek === day))])),
-    [timetable],
+    () => new Map(WEEK_DAYS.map((day) => [
+      day,
+      layoutWeekDay(timetable.filter((entry) => entry.dayOfWeek === day), viewBounds.start, viewBounds.end),
+    ])),
+    [timetable, viewBounds.end, viewBounds.start],
   );
   const sessionCount = timetable.filter((entry) => WEEK_DAYS.includes(entry.dayOfWeek)).length;
   const labCount = timetable.filter((entry) => entry.classType === "LAB").length;
-  const canvasHeight = ((WEEK_VIEW_END_MINUTES - WEEK_VIEW_START_MINUTES) / 60) * WEEK_HOUR_HEIGHT;
+  const canvasHeight = ((viewBounds.end - viewBounds.start) / 60) * hourHeight;
 
   if (sessionCount === 0) {
     return (
@@ -1574,6 +1613,29 @@ function WeekView({
         <div className="flex items-center gap-2 text-xs font-medium text-foreground-secondary">
           <span className="rounded-full border border-border bg-surface px-2.5 py-1">{sessionCount} sessions</span>
           {labCount > 0 && <span className="rounded-full border border-border bg-surface px-2.5 py-1">{labCount} labs</span>}
+          <span className="hidden sm:inline-flex items-center gap-1 rounded-full border border-border bg-surface p-0.5" aria-label="Calendar zoom">
+            <button
+              type="button"
+              onClick={() => setHourHeight((height) => Math.max(68, height - 12))}
+              disabled={hourHeight <= 68}
+              className="h-6 w-6 rounded text-sm hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Compact calendar"
+              title="Compact calendar"
+            >
+              −
+            </button>
+            <span className="px-1 text-[10px]">Zoom</span>
+            <button
+              type="button"
+              onClick={() => setHourHeight((height) => Math.min(124, height + 12))}
+              disabled={hourHeight >= 124}
+              className="h-6 w-6 rounded text-sm hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Expand calendar"
+              title="Expand calendar"
+            >
+              +
+            </button>
+          </span>
         </div>
       </div>
 
@@ -1594,11 +1656,11 @@ function WeekView({
             })}
 
             <div className="relative border-t border-border bg-background-secondary/45" style={{ height: `${canvasHeight}px` }}>
-              {WEEK_VIEW_HOURS.map((minutes) => (
+              {weekHours.map((minutes) => (
                 <span
                   key={minutes}
                   className="absolute right-3 -translate-y-1/2 text-[11px] font-medium tabular-nums text-foreground-muted"
-                  style={{ top: `${((minutes - WEEK_VIEW_START_MINUTES) / 60) * WEEK_HOUR_HEIGHT}px` }}
+                  style={{ top: `${((minutes - viewBounds.start) / 60) * hourHeight}px` }}
                 >
                   {minutesToTime(minutes)}
                 </span>
@@ -1607,11 +1669,11 @@ function WeekView({
 
             {WEEK_DAYS.map((day) => (
               <div key={day} className="relative overflow-hidden border-l border-t border-border bg-surface" style={{ height: `${canvasHeight}px` }}>
-                {WEEK_VIEW_HOURS.slice(0, -1).map((minutes) => (
+                {weekHours.slice(0, -1).map((minutes) => (
                   <div
                     key={minutes}
                     className="absolute inset-x-0 border-t border-dashed border-border/70"
-                    style={{ top: `${((minutes - WEEK_VIEW_START_MINUTES) / 60) * WEEK_HOUR_HEIGHT}px` }}
+                    style={{ top: `${((minutes - viewBounds.start) / 60) * hourHeight}px` }}
                   />
                 ))}
                 {(layoutsByDay.get(day) ?? []).map((layout) => {
@@ -1619,8 +1681,8 @@ function WeekView({
                   const color = getCourseColor(entry.course?.code || "", entry.classType);
                   const duration = layout.end - layout.start;
                   const isLong = duration >= 85;
-                  const top = ((layout.start - WEEK_VIEW_START_MINUTES) / 60) * WEEK_HOUR_HEIGHT + 3;
-                  const height = Math.max(48, (duration / 60) * WEEK_HOUR_HEIGHT - 6);
+                  const top = ((layout.start - viewBounds.start) / 60) * hourHeight + 3;
+                  const height = Math.max(48, (duration / 60) * hourHeight - 6);
                   return (
                     <div
                       key={entry.id}
@@ -1643,7 +1705,9 @@ function WeekView({
                           <p className={`truncate text-xs font-bold ${color.text}`}>{formatCourseCode(entry.course?.code || "")}</p>
                           <span className={`shrink-0 rounded-md border ${color.border} bg-surface/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${color.text}`}>{entry.classType === "LECTURE" ? "Class" : CLASS_TYPE_LABEL[entry.classType]}</span>
                         </div>
-                        <p className={`mt-0.5 pl-1 text-[11px] font-medium tabular-nums ${color.text} opacity-80`}>{entry.startTime} - {entry.endTime}</p>
+                        <p className={`mt-0.5 pl-1 text-[11px] font-medium tabular-nums ${color.text} opacity-80`}>
+                          {entry.startTime} - {entry.endTime} · {formatWeekDuration(duration)}
+                        </p>
                         {isLong && <p className={`mt-1 line-clamp-2 pl-1 text-[11px] leading-4 ${color.text} opacity-90`}>{entry.course?.name || "Scheduled class"}</p>}
                         {isLong && entry.venue && <p className={`mt-1 flex items-center gap-1 truncate pl-1 text-[10px] ${color.text} opacity-75`}><MapPin className="h-3 w-3 shrink-0" />{entry.venue}</p>}
                       </button>
