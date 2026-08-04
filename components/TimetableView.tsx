@@ -248,6 +248,7 @@ type BulkCreatePayload = {
 type TimetableResponse = {
   context: { semester: number; year: number; term: Term };
   isAdmin: boolean;
+  isPublishedSchedule: boolean;
   courses: CourseOption[];
   completedCourses: CourseOption[];
   entries: TimetableEntry[];
@@ -415,6 +416,7 @@ function buildEntriesFromSlot(opts: {
 
 export function TimetableView({ userId }: TimetableViewProps) {
   const [view, setView] = useState<"week" | "list">("list");
+  const [publishedScheduleMode, setPublishedScheduleMode] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
   const [addingTaDuty, setAddingTaDuty] = useState(false);
@@ -434,9 +436,9 @@ export function TimetableView({ userId }: TimetableViewProps) {
   }, []);
 
   const { data: timetable, isLoading } = useQuery<TimetableResponse>({
-    queryKey: ["timetable", userId],
+    queryKey: ["timetable", userId, publishedScheduleMode],
     queryFn: async () => {
-      const res = await fetch("/api/timetable");
+      const res = await fetch(publishedScheduleMode ? "/api/timetable?mode=published" : "/api/timetable");
       if (!res.ok) throw new Error("Failed to fetch timetable");
       return res.json();
     },
@@ -468,7 +470,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
       }
       return res.json();
     },
-    enabled: Boolean(timetable?.context) && Boolean(timetable?.isAdmin),
+    enabled: Boolean(timetable?.context) && Boolean(timetable?.isAdmin) && publishedScheduleMode,
   });
 
   const approveMutation = useMutation({
@@ -747,6 +749,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
   const courses = useMemo(() => timetable?.courses ?? [], [timetable?.courses]);
   const completedCourses = useMemo(() => timetable?.completedCourses ?? [], [timetable?.completedCourses]);
   const isAdmin = Boolean(timetable?.isAdmin);
+  const isPublishedSchedule = Boolean(timetable?.isPublishedSchedule);
   const entries = useMemo<TimetableEntry[]>(() =>
     (timetable?.entries ?? []).map((entry) => {
       if (entry.venue || !entry.course?.code) return entry;
@@ -904,7 +907,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
         )}
 
       {/* Admin Pending Approvals */}
-      {isAdmin && (
+      {isAdmin && isPublishedSchedule && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -983,12 +986,25 @@ export function TimetableView({ userId }: TimetableViewProps) {
           </p>
           <p className="mt-1 text-xs text-foreground-secondary">
             {isAdmin
-              ? `Admin mode — ${courses.length} active current-term courses can be added or edited.`
+              ? isPublishedSchedule
+                ? `Published timetable management — ${courses.length} active current-term courses are available to edit.`
+                : `Your timetable shows only your enrolled and course-registration courses. Open management to edit the full published timetable.`
               : `Schedule is shared across everyone enrolled in a course. ${courses.length > 0 ? `${courses.length} courses found.` : "No enrolled courses found."}`}
           </p>
         </div>
 
         <div className="flex flex-col gap-2">
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => setPublishedScheduleMode((current) => !current)}
+              className="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/15 sm:w-auto"
+            >
+              <Calendar className="h-4 w-4" />
+              {isPublishedSchedule ? "Back to my timetable" : "Manage published timetable"}
+            </button>
+          )}
+
           {/* Secondary actions: icon-strip on mobile, full labels on sm+ */}
           <div className="flex items-center gap-2">
             {/* Calendar add */}
@@ -1095,7 +1111,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
               className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
               <Plus className="w-4 h-4" />
-              {isAdmin ? "Add any class" : "Add Class"}
+              {isAdmin && isPublishedSchedule ? "Add any class" : "Add Class"}
             </button>
             <button
               onClick={() => {
@@ -1113,17 +1129,25 @@ export function TimetableView({ userId }: TimetableViewProps) {
             </button>
           </div>
 
-          <TimetableImageActions
-            semester={context?.semester ?? 0}
-            term={context?.term ?? ""}
-            year={context?.year ?? 0}
-            entries={entries}
-          />
+          {!isPublishedSchedule && (
+            <TimetableImageActions
+              semester={context?.semester ?? 0}
+              term={context?.term ?? ""}
+              year={context?.year ?? 0}
+              entries={entries}
+            />
+          )}
         </div>
       </div>
 
       {view === "week" ? (
-        <WeekView timetable={entries} onEdit={openEdit} onDelete={handleDelete} onDeleteCalendar={handleDeleteCalendar} />
+        <WeekView
+          timetable={entries}
+          isPublishedSchedule={isPublishedSchedule}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+          onDeleteCalendar={handleDeleteCalendar}
+        />
       ) : (
         <ListView timetable={entries} onEdit={openEdit} onDelete={handleDelete} onDeleteCalendar={handleDeleteCalendar} />
       )}
@@ -1572,11 +1596,13 @@ function layoutWeekDay(entries: TimetableEntry[], viewStart: number, viewEnd: nu
 
 function WeekView({
   timetable,
+  isPublishedSchedule,
   onEdit,
   onDelete,
   onDeleteCalendar,
 }: {
   timetable: TimetableEntry[];
+  isPublishedSchedule?: boolean;
   onEdit: (entry: TimetableEntry) => void;
   onDelete: (entry: TimetableEntry) => void;
   onDeleteCalendar: (entry: TimetableEntry) => void;
@@ -1606,7 +1632,11 @@ function WeekView({
       <div className="rounded-3xl border border-border bg-surface p-10 text-center shadow-sm">
         <Calendar className="mx-auto mb-3 h-12 w-12 text-foreground-secondary opacity-50" />
         <p className="font-medium text-foreground">No timetable sessions yet</p>
-        <p className="mt-1 text-sm text-foreground-secondary">Published classes appear here as soon as a course has a schedule.</p>
+        <p className="mt-1 text-sm text-foreground-secondary">
+          {isPublishedSchedule
+            ? "Published classes appear here as soon as a course has a schedule."
+            : "Classes from your enrolled or course-registration plan appear here as soon as a schedule is published."}
+        </p>
       </div>
     );
   }
@@ -1616,7 +1646,11 @@ function WeekView({
       <div className="flex flex-col gap-3 border-b border-border bg-gradient-to-br from-primary/[0.07] via-surface to-surface px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div>
           <p className="text-sm font-semibold text-foreground">Weekly schedule</p>
-          <p className="mt-0.5 text-xs text-foreground-secondary">All published sessions, including Saturday labs</p>
+          <p className="mt-0.5 text-xs text-foreground-secondary">
+            {isPublishedSchedule
+              ? "All published sessions, including Saturday labs"
+              : "Your enrolled and course-registration sessions, including Saturday labs"}
+          </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-medium text-foreground-secondary">
           <span className="rounded-full border border-border bg-surface px-2.5 py-1">{sessionCount} sessions</span>

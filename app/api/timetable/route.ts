@@ -13,7 +13,7 @@ import {
   type OfficialTimetableData,
 } from "@/lib/officialTimetable";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -22,6 +22,9 @@ export async function GET() {
 
     const context = await getCurrentTimetableContext(session.user.id);
     const isAdmin = session.user.role === "ADMIN";
+    // Admins normally see the same personal timetable as every student. The
+    // complete catalogue is an explicit management view, not the default.
+    const isPublishedSchedule = isAdmin && new URL(request.url).searchParams.get("mode") === "published";
     const normalizedCode = (code: string) => code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
     const [currentEnrollments, completedEnrollments, savedPlan, profile, equivalencies, adminOfferings] = await Promise.all([
       prisma.courseEnrollment.findMany({
@@ -60,7 +63,7 @@ export async function GET() {
           equivalent: { select: { code: true } },
         },
       }),
-      isAdmin
+      isPublishedSchedule
         ? prisma.courseOffering.findMany({
             where: {
               isActive: true,
@@ -215,8 +218,8 @@ export async function GET() {
       courseMap.set(course.id, course);
       reportableCourseIds.add(course.id);
     }
-    // Admins manage the shared timetable, not just their personal registration.
-    // Give them every active course in the current timetable catalogue.
+    // The all-course catalogue is loaded only in the explicit admin management
+    // view. The normal admin view remains their enrolled/planned timetable.
     for (const offering of adminOfferings) {
       if (!offering.course) continue;
       courseMap.set(offering.course.id, offering.course);
@@ -238,7 +241,7 @@ export async function GET() {
         semester: context.semester,
         year: context.year,
         term: context.term,
-        ...(isAdmin ? {} : { OR: visibilityClauses, isApproved: true }),
+        ...(isPublishedSchedule ? {} : { OR: visibilityClauses, isApproved: true }),
       },
       include: {
         course: { select: { id: true, code: true, name: true, credits: true } },
@@ -363,6 +366,7 @@ export async function GET() {
     return NextResponse.json({
       context,
       isAdmin,
+      isPublishedSchedule,
       courses,
       completedCourses,
       entries,
