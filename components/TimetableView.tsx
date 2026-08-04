@@ -644,18 +644,18 @@ export function TimetableView({ userId }: TimetableViewProps) {
   };
 
   const openEdit = async (entry: TimetableEntry) => {
-    if (entry.isOfficial && entry.canReportCorrection === false) {
+    if (!isAdmin && entry.isOfficial && entry.canReportCorrection === false) {
       showToast("info", "This official class is visible from course registration, but it is not linked to the course catalog yet.");
       return;
     }
-    if (entry.isOfficial) {
+    if (!isAdmin && entry.isOfficial) {
       const ok = await confirm({
         title: "Report a timetable correction?",
         message: `${formatCourseCode(entry.course?.code || "This course")} is shown from the approved Aug–Nov 2026 timetable. Any slot, time, or venue change you submit will be sent to the admin for approval; the official schedule stays visible until it is approved.`,
         confirmText: "Report correction",
       });
       if (!ok) return;
-    } else if (entry.isOfficialCorrection) {
+    } else if (!isAdmin && entry.isOfficialCorrection) {
       const ok = await confirm({
         title: "Update this approved correction?",
         message: "Your update will be sent for admin approval. The currently approved timing remains visible until the update is approved.",
@@ -669,8 +669,12 @@ export function TimetableView({ userId }: TimetableViewProps) {
   };
 
   const handleDelete = async (entry: TimetableEntry) => {
-    if (entry.isOfficial || entry.isOfficialCorrection) {
+    if (entry.isOfficial) {
       showToast("info", "Approved timetable classes cannot be deleted. Open the class to report a correction.");
+      return;
+    }
+    if (entry.isOfficialCorrection && !isAdmin) {
+      showToast("info", "Approved timetable corrections cannot be deleted. Submit another correction instead.");
       return;
     }
     const ok = await confirm({
@@ -977,7 +981,9 @@ export function TimetableView({ userId }: TimetableViewProps) {
             {context ? `Semester ${context.semester} · ${context.term} ${context.year}` : "Current semester"}
           </p>
           <p className="mt-1 text-xs text-foreground-secondary">
-            Schedule is shared across everyone enrolled in a course. {courses.length > 0 ? `${courses.length} courses found.` : "No enrolled courses found."}
+            {isAdmin
+              ? `Admin mode — ${courses.length} active current-term courses can be added or edited.`
+              : `Schedule is shared across everyone enrolled in a course. ${courses.length > 0 ? `${courses.length} courses found.` : "No enrolled courses found."}`}
           </p>
         </div>
 
@@ -1079,7 +1085,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
             <button
               onClick={() => {
                 if (!canAddClass) {
-                  showToast("warning", "Enroll in current semester courses to build the shared timetable");
+                  showToast("warning", isAdmin ? "No active current-term courses are available" : "Enroll in current semester courses to build the shared timetable");
                   return;
                 }
                 openAdd();
@@ -1088,7 +1094,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
               className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
               <Plus className="w-4 h-4" />
-              Add Class
+              {isAdmin ? "Add any class" : "Add Class"}
             </button>
             <button
               onClick={() => {
@@ -1152,6 +1158,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
             onSaveBulk={(payload) => bulkCreateMutation.mutate(payload)}
             onDeleteEntry={handleDelete}
             deleting={deleteEntryMutation.isPending}
+            isAdmin={isAdmin}
             defaultClassType={addingTaDuty ? "TA_DUTY" : undefined}
           />
         )}
@@ -1955,6 +1962,7 @@ function TimetableEntryModal({
   onSaveBulk,
   onDeleteEntry,
   deleting,
+  isAdmin,
   defaultClassType,
 }: {
   initial: TimetableEntry | null;
@@ -1967,6 +1975,7 @@ function TimetableEntryModal({
   onSaveBulk: (payload: BulkCreatePayload) => void;
   onDeleteEntry: (entry: TimetableEntry) => void;
   deleting: boolean;
+  isAdmin: boolean;
   defaultClassType?: ClassType;
 }) {
   const { showToast } = useToast();
@@ -2211,8 +2220,8 @@ function TimetableEntryModal({
   const endOptions = useMemo(() => END_TIMES.filter((t) => t > startTime), [startTime]);
 
   const title = (() => {
-    if (initial?.isOfficial) return "Report timetable correction";
-    if (initial?.isOfficialCorrection) return "Update timetable correction";
+    if (initial?.isOfficial) return isAdmin ? "Edit approved class" : "Report timetable correction";
+    if (initial?.isOfficialCorrection) return isAdmin ? "Edit approved class" : "Update timetable correction";
     if (initial) return initial.classType === "TA_DUTY" ? "Edit TA duty" : "Edit class";
     if (defaultClassType === "TA_DUTY") return "Add TA duty";
     return "Add classes";
@@ -2722,7 +2731,7 @@ function TimetableEntryModal({
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                {initial && !initial.isOfficial && !initial.isOfficialCorrection && (
+                {initial && !initial.isOfficial && (!initial.isOfficialCorrection || isAdmin) && (
                   <button
                     type="button"
                     onClick={() => onDeleteEntry(initial)}
@@ -2768,7 +2777,7 @@ function TimetableEntryModal({
                 >
                   {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                   {initial?.isOfficial || initial?.isOfficialCorrection
-                    ? "Submit correction"
+                    ? isAdmin ? "Save changes" : "Submit correction"
                     : initial
                       ? "Save changes"
                       : `Add classes (${activeDrafts.length})`}
@@ -2777,7 +2786,9 @@ function TimetableEntryModal({
 
               <p className="text-xs text-foreground-secondary">
                 {initial?.isOfficial || initial?.isOfficialCorrection
-                  ? "The approved timetable stays visible until an admin approves this correction."
+                  ? isAdmin
+                    ? "Your changes are applied to the shared timetable immediately."
+                    : "The approved timetable stays visible until an admin approves this correction."
                   : "Changes update the shared timetable for everyone enrolled in the selected course."}
               </p>
             </form>

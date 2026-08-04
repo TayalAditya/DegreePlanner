@@ -21,8 +21,9 @@ export async function GET() {
     }
 
     const context = await getCurrentTimetableContext(session.user.id);
+    const isAdmin = session.user.role === "ADMIN";
     const normalizedCode = (code: string) => code.replace(/[^A-Z0-9]/gi, "").toUpperCase();
-    const [currentEnrollments, completedEnrollments, savedPlan, profile, equivalencies] = await Promise.all([
+    const [currentEnrollments, completedEnrollments, savedPlan, profile, equivalencies, adminOfferings] = await Promise.all([
       prisma.courseEnrollment.findMany({
         where: {
           userId: session.user.id,
@@ -59,6 +60,21 @@ export async function GET() {
           equivalent: { select: { code: true } },
         },
       }),
+      isAdmin
+        ? prisma.courseOffering.findMany({
+            where: {
+              isActive: true,
+              offeringSemester: context.semester,
+              offeringYear: context.year,
+              courseId: { not: null },
+            },
+            select: {
+              courseCode: true,
+              slots: true,
+              course: { select: { id: true, code: true, name: true, credits: true, ltpc: true } },
+            },
+          })
+        : Promise.resolve([]),
     ]);
 
     const selectedIds = savedPlan?.selectedIds ?? [];
@@ -199,10 +215,18 @@ export async function GET() {
       courseMap.set(course.id, course);
       reportableCourseIds.add(course.id);
     }
+    // Admins manage the shared timetable, not just their personal registration.
+    // Give them every active course in the current timetable catalogue.
+    for (const offering of adminOfferings) {
+      if (!offering.course) continue;
+      courseMap.set(offering.course.id, offering.course);
+      scheduleCodeByCourseId.set(offering.course.id, offering.courseCode);
+      offeringSlotByCourseId.set(offering.course.id, offering.slots);
+      reportableCourseIds.add(offering.course.id);
+    }
     const courses = Array.from(courseMap.values()).sort((a, b) => a.code.localeCompare(b.code));
     const completedCourses = completedEnrollments.map((enrollment) => enrollment.course).sort((a, b) => a.code.localeCompare(b.code));
     const courseIds = courses.map((course) => course.id);
-    const isAdmin = session.user.role === "ADMIN";
 
     const visibilityClauses: Array<Record<string, unknown>> = [
       { classType: ClassType.TA_DUTY, createdById: session.user.id },
@@ -214,8 +238,7 @@ export async function GET() {
         semester: context.semester,
         year: context.year,
         term: context.term,
-        OR: visibilityClauses,
-        ...(isAdmin ? {} : { isApproved: true }),
+        ...(isAdmin ? {} : { OR: visibilityClauses, isApproved: true }),
       },
       include: {
         course: { select: { id: true, code: true, name: true, credits: true } },
@@ -364,6 +387,7 @@ export async function POST(req: NextRequest) {
     }
 
     const context = await getCurrentTimetableContext(session.user.id);
+    const isAdmin = session.user.role === "ADMIN";
     const body = await req.json();
     const {
       courseId,
@@ -450,7 +474,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      if (!enrollment && !isPlanned) {
+      if (!isAdmin && !enrollment && !isPlanned) {
         return NextResponse.json(
           {
             error: taDutyCourseCheck
@@ -484,7 +508,6 @@ export async function POST(req: NextRequest) {
     // For regular entries: auto-approve only when the submitted slot+day+time
     // exactly matches the official timetable slot tables (A-H, L1-L5).
     // Free/unscheduled slots (FS, FS1, FS2, NS) and anything else → pending approval.
-    const isAdmin = session.user.role === "ADMIN";
     const slotValue = typeof slot === "string" ? slot.trim() || undefined : undefined;
     const hasValidReplacement =
       replacesOfficial &&
@@ -568,11 +591,11 @@ export async function POST(req: NextRequest) {
     }
 
     const autoApprove =
-      !requestApproval && (
-        isAdmin ||
+      isAdmin ||
+      (!requestApproval && (
         selectedClassType === ClassType.TA_DUTY ||
         isApproveableSlot(slotValue, dayOfWeek, startTime)
-      );
+      ));
     const storedNotes = requestApproval && hasValidReplacement
       ? withOfficialCorrectionMarker(
           typeof notes === "string" ? notes : null,
