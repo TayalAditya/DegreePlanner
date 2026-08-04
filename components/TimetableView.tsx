@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useConfirmDialog } from "./ConfirmDialog";
 import { useToast } from "./ToastProvider";
+import { TimetableImageActions } from "./TimetableImageActions";
 import { formatCourseCode, formatCredits } from "@/lib/utils";
 import { downloadICS } from "@/lib/icsGenerator";
 import {
@@ -1111,6 +1112,13 @@ export function TimetableView({ userId }: TimetableViewProps) {
               Add TA Duty
             </button>
           </div>
+
+          <TimetableImageActions
+            semester={context?.semester ?? 0}
+            term={context?.term ?? ""}
+            year={context?.year ?? 0}
+            entries={entries}
+          />
         </div>
       </div>
 
