@@ -1,7 +1,7 @@
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
-import { addCredits, formatCourseCode, minCredits, subtractCredits } from "@/lib/utils";
+import { addCredits, minCredits, subtractCredits } from "@/lib/utils";
 
 type CategoryKey = "IC" | "IC_BASKET" | "DC" | "DE" | "FE" | "HSS" | "IKS" | "MTP" | "ISTP" | "NOT_IN_DEGREE";
 
@@ -47,7 +47,6 @@ type Options = {
   programIcCredits?: number | null;
   requiredDE?: number;
   includeCurrentSemesterCredits?: boolean;
-  nonMgmtMinorCourseCodes?: Set<string>;
 };
 
 const ICB1_CODES = new Set(["IC131", "IC136", "IC230"]);
@@ -148,7 +147,6 @@ export function computeEnrollmentCreditBreakdown({
   programIcCredits,
   requiredDE = 0,
   includeCurrentSemesterCredits = false,
-  nonMgmtMinorCourseCodes,
 }: Options) {
   const categoryCredits = emptyCategoryCredits();
   const icBasketUsed = { ic1: false, ic2: false };
@@ -158,13 +156,6 @@ export function computeEnrollmentCreditBreakdown({
   const shouldCount = (enrollment: EnrollmentLike) => {
     if (enrollment.status === "COMPLETED") return !enrollment.grade || enrollment.grade !== "F";
     return includeCurrentSemesterCredits && enrollment.status === "IN_PROGRESS";
-  };
-
-  const applyMinorDeOverride = (enrollment: EnrollmentLike, category: CategoryKey): CategoryKey => {
-    if (category !== "DE") return category;
-    const courseCode = formatCourseCode(enrollment.course?.code ?? "");
-    if (!courseCode || !nonMgmtMinorCourseCodes?.has(courseCode)) return category;
-    return "FE";
   };
 
   const batchStr = userBatch ? String(userBatch) : "";
@@ -221,7 +212,7 @@ export function computeEnrollmentCreditBreakdown({
 
       const mapping = pickMapping(enrollment, rawBranch, checkBranch);
       if (mapping?.courseCategory === "DC") return "DC";
-      if (mapping?.courseCategory === "DE") return applyMinorDeOverride(enrollment, "DE");
+      if (mapping?.courseCategory === "DE") return "DE";
       return "FE";
     }
 
@@ -233,7 +224,7 @@ export function computeEnrollmentCreditBreakdown({
     if (mapping?.courseCategory === "NA") return "FE";
     if (mapping?.courseCategory === "IKS" && isIkCourse) return "HSS";
     if (mapping?.courseCategory && mapping.courseCategory in categoryCredits) {
-      return applyMinorDeOverride(enrollment, mapping.courseCategory as CategoryKey);
+      return mapping.courseCategory as CategoryKey;
     }
     if ((enrollment.course?.branchMappings || []).length > 0) return "FE";
 
@@ -243,16 +234,16 @@ export function computeEnrollmentCreditBreakdown({
     const specialDpCategory = getSpecialDpCategory(normalizedCode);
     if (specialDpCategory) return specialDpCategory;
 
-    if (enrollment.courseType === "DE") return applyMinorDeOverride(enrollment, "DE");
+    if (enrollment.courseType === "DE") return "DE";
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     if (enrollment.courseType === "CORE") return "DC";
 
     const upperCode = String(courseCode || "").toUpperCase();
     if (userBranch === "CSE" && (upperCode.startsWith("DS") || upperCode.startsWith("CS"))) {
-      return applyMinorDeOverride(enrollment, "DE");
+      return "DE";
     }
     if (isDataScienceBranch(userBranch) && (upperCode.startsWith("DS") || upperCode.startsWith("CS"))) {
-      return applyMinorDeOverride(enrollment, "DE");
+      return "DE";
     }
 
     return "FE";

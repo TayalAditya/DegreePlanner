@@ -8,7 +8,6 @@ import { addCredits, formatCourseCode, formatCredits, minCredits, subtractCredit
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
-import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 
 interface DashboardOverviewProps {
@@ -100,30 +99,6 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
   });
 
   const allEnrollments = enrollments || [];
-  const minorPlanner = useMinorPlannerSelection();
-  const nonMgmtMinorCourseCodes = useMemo(() => {
-    if (!minorPlanner.enabled) return new Set<string>();
-    const eligible = buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
-    if (!minorPlanner.countedCourseCodesConfigured) return eligible;
-
-    const selected = new Set(
-      (minorPlanner.countedCourseCodes ?? [])
-        .map((c) => formatCourseCode(String(c ?? "")))
-        .filter((c) => Boolean(c))
-    );
-
-    const out = new Set<string>();
-    selected.forEach((code) => {
-      if (eligible.has(code)) out.add(code);
-    });
-    return out;
-  }, [
-    minorPlanner.enabled,
-    minorPlanner.codes,
-    minorPlanner.countedCourseCodes,
-    minorPlanner.countedCourseCodesConfigured,
-  ]);
-
   const latestInProgressSemester =
     allEnrollments.length > 0
       ? Math.max(
@@ -194,13 +169,6 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     if (enrollment.isPassFail) return "FE";
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course?.code ?? "")) return "FE";
-
-    const applyMinorDeOverride = (category: keyof typeof categoryLabels): keyof typeof categoryLabels => {
-      if (category !== "DE") return category;
-      const code = formatCourseCode(enrollment.course?.code ?? "");
-      if (!code) return category;
-      return nonMgmtMinorCourseCodes.has(code) ? "FE" : category;
-    };
 
     const code = enrollment.course?.code?.toUpperCase() || "";
     const normalizedCode = normalizeCourseCode(code);
@@ -278,7 +246,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
         if (mapping.courseCategory === "IKS") {
           return "HSS";
         }
-        return applyMinorDeOverride(mapping.courseCategory as keyof typeof categoryLabels);
+        return mapping.courseCategory as keyof typeof categoryLabels;
       }
 
       // Mappings exist but none matched this student's branch → FE
@@ -288,8 +256,8 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     if (isIkCourse) return "HSS"; // IK-xxx → HSS+IKS basket, no cap consumed
 
     // Branch-specific course patterns
-    if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return applyMinorDeOverride("DE");
-    if (isDataScienceBranch(userSettings?.branch) && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) return applyMinorDeOverride("DE");
+    if (userSettings?.branch === "CSE" && normalizedCode.startsWith("DS")) return "DE";
+    if (isDataScienceBranch(userSettings?.branch) && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) return "DE";
 
     if (normalizedCode.startsWith("IC")) return "IC";
 
@@ -298,7 +266,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
 
     if (enrollment.courseType === "MTP") return "MTP";
     if (enrollment.courseType === "ISTP") return "ISTP";
-    if (enrollment.courseType === "DE") return applyMinorDeOverride("DE");
+    if (enrollment.courseType === "DE") return "DE";
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     if (enrollment.courseType === "CORE") return "DC";
     return "FE";
@@ -425,7 +393,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
       semesterStatsList: semStatsList,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allEnrollments, userSettings, nonMgmtMinorCourseCodes, mappingBranchAliases, currentSemester]);
+  }, [allEnrollments, userSettings, mappingBranchAliases, currentSemester]);
 
   return (
     <div className="space-y-6">

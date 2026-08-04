@@ -16,7 +16,6 @@ import {
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, getCurriculumBranchCode, isDataScienceBranch } from "@/lib/branchInfo";
 import { getBatchAdjustedCredits } from "@/lib/branches";
-import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { normalizeCourseCode } from "@/lib/parseTranscript";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import {
@@ -180,37 +179,6 @@ export default function ProgressPage() {
     return null;
   }, [user?.batch, user?.enrollmentId]);
 
-  const minorPlanner = useMinorPlannerSelection();
-  const nonMgmtMinorCourseCodes = useMemo(() => {
-    if (!minorPlanner.enabled) return new Set<string>();
-    const eligible = buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
-    if (!minorPlanner.countedCourseCodesConfigured) return eligible;
-
-    const selected = new Set(
-      (minorPlanner.countedCourseCodes ?? [])
-        .map((c) => formatCourseCode(String(c ?? "")))
-        .filter((c) => Boolean(c))
-    );
-
-    const out = new Set<string>();
-    selected.forEach((code) => {
-      if (eligible.has(code)) out.add(code);
-    });
-    return out;
-  }, [
-    minorPlanner.enabled,
-    minorPlanner.codes,
-    minorPlanner.countedCourseCodes,
-    minorPlanner.countedCourseCodesConfigured,
-  ]);
-
-  const applyMinorDeOverride = (category: CourseCategory, enrollment: Enrollment): CourseCategory => {
-    if (category !== "DE") return category;
-    const code = formatCourseCode(enrollment.course.code);
-    if (!code) return category;
-    return nonMgmtMinorCourseCodes.has(code) ? "FE" : category;
-  };
-
   const mappingBranchAliases = useMemo(() => {
     if (!user?.branch) return [];
     return getBranchCandidates(user.branch).filter((branch) => branch !== "COMMON");
@@ -288,7 +256,7 @@ export default function ProgressPage() {
         const mapping = pickRelevantBranchMapping(user.branch, enrollment.course.branchMappings);
 
         if (mapping?.courseCategory === "DC") return "DC";
-        if (mapping?.courseCategory === "DE") return applyMinorDeOverride("DE", enrollment);
+        if (mapping?.courseCategory === "DE") return "DE";
       }
 
       return "FE";
@@ -338,9 +306,9 @@ export default function ProgressPage() {
       );
       if (specificMapping && specificMapping.courseCategory in categoryLabels) {
         if (specificMapping.courseCategory === "IKS") return "HSS";
-        return applyMinorDeOverride(specificMapping.courseCategory as CourseCategory, enrollment);
+        return specificMapping.courseCategory as CourseCategory;
       }
-      return applyMinorDeOverride("DE", enrollment);
+      return "DE";
     }
 
     if (enrollment.course.branchMappings && enrollment.course.branchMappings.length > 0 && user?.branch) {
@@ -358,7 +326,7 @@ export default function ProgressPage() {
       if (mapping && mapping.courseCategory in categoryLabels) {
         // IK-xxx / IKS-mapped → HSS+IKS basket without consuming HS cap.
         if (mapping.courseCategory === "IKS") return "HSS";
-        const resolvedCat = applyMinorDeOverride(mapping.courseCategory as CourseCategory, enrollment);
+        const resolvedCat = mapping.courseCategory as CourseCategory;
         // Apply HSS cap for non-HS-prefix courses mapped to HSS (e.g. German intensive courses)
         if (resolvedCat === "HSS" && hssUsed) {
           hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
@@ -382,7 +350,7 @@ export default function ProgressPage() {
 
     switch (enrollment.courseType) {
       case "DE":
-        return applyMinorDeOverride("DE", enrollment);
+        return "DE";
       case "PE":
         return getCurriculumBranchCode(user?.branch || "") === "BSCS" ? "PE" : "FE";
       case "FREE_ELECTIVE":
@@ -781,7 +749,7 @@ export default function ProgressPage() {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const progress = useMemo(() => calculateProgress(), [enrollments, user, programCredits, nonMgmtMinorCourseCodes, mappingBranchAliases, includeCurrentSemesterCredits]);
+  const progress = useMemo(() => calculateProgress(), [enrollments, user, programCredits, mappingBranchAliases, includeCurrentSemesterCredits]);
 
   if (loading) {
     return <ProgressSkeleton />;

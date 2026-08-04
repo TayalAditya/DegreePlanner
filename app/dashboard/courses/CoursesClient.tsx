@@ -21,7 +21,6 @@ import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
 import { getSpecialDpCategory, getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { addCredits, formatCourseCode, formatCredits, subtractCredits, sumCredits } from "@/lib/utils";
-import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
@@ -424,37 +423,6 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   const passFailUsed = user?.totalPassFailCredits ?? 0;
   const passFailRemaining = Math.max(0, maxPassFailCredits - passFailUsed);
 
-  const minorPlanner = useMinorPlannerSelection();
-  const nonMgmtMinorCourseCodes = useMemo(() => {
-    if (!minorPlanner.enabled) return new Set<string>();
-    const eligible = buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
-    if (!minorPlanner.countedCourseCodesConfigured) return eligible;
-
-    const selected = new Set(
-      (minorPlanner.countedCourseCodes ?? [])
-        .map((c) => formatCourseCode(String(c ?? "")))
-        .filter((c) => Boolean(c))
-    );
-
-    const out = new Set<string>();
-    selected.forEach((code) => {
-      if (eligible.has(code)) out.add(code);
-    });
-    return out;
-  }, [
-    minorPlanner.enabled,
-    minorPlanner.codes,
-    minorPlanner.countedCourseCodes,
-    minorPlanner.countedCourseCodesConfigured,
-  ]);
-
-  const applyMinorDeOverride = (category: string, enrollment: Enrollment): string => {
-    if (category !== "DE") return category;
-    const code = formatCourseCode(enrollment.course.code);
-    if (!code) return category;
-    return nonMgmtMinorCourseCodes.has(code) ? "FE" : category;
-  };
-
   // Calculate credits by category
   const getCourseCategory = (
     enrollment: Enrollment,
@@ -534,7 +502,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
         if (mapping.courseCategory === "IKS") {
           return "HSS";
         }
-        return applyMinorDeOverride(mapping.courseCategory, enrollment);
+        return mapping.courseCategory;
       }
 
       // No branch-specific mapping found — apply hard prefix rules before defaulting to FE.
@@ -546,7 +514,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       const isCSorDS2 = code.startsWith("CS") || code.startsWith("DS");
       const isCsDsException2 = ["396P","399P","010"].some(s => normalizedCode.endsWith(s)) || normalizedCode === "DS302";
       if (isCSorDS2 && !isCsDsException2 && (user?.branch === "CSE" || isDataScienceBranch(user?.branch))) {
-        return applyMinorDeOverride("DE", enrollment);
+        return "DE";
       }
 
       // Course has branch mappings but none apply → FE
@@ -562,7 +530,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     const isCSorDS = code.startsWith("CS") || code.startsWith("DS");
     const isCsDsException = ["396P","399P","010"].some(s => normalizedCode.endsWith(s)) || normalizedCode === "DS302";
     if (isCSorDS && !isCsDsException && (user?.branch === "CSE" || isDataScienceBranch(user?.branch))) {
-      return applyMinorDeOverride("DE", enrollment);
+      return "DE";
     }
     
     if (normalizedCode.startsWith("IC")) return "IC";
@@ -574,7 +542,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     // Fallback to courseType mapping
     switch (enrollment.courseType) {
       case "DE":
-        return applyMinorDeOverride("DE", enrollment);
+        return "DE";
       case "FREE_ELECTIVE":
       case "PE":
         return "FE";

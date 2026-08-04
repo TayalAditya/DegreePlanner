@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 const ProgressChart = dynamic(() => import("@/components/ProgressChart").then(m => ({ default: m.ProgressChart })), { ssr: false, loading: () => <div className="h-64 animate-pulse bg-surface-elevated rounded-xl" /> });
 const MinorPlannerCard = dynamic(() => import("@/components/MinorPlannerCard").then(m => ({ default: m.MinorPlannerCard })), { ssr: false, loading: () => <div className="h-24 animate-pulse bg-surface rounded-lg border border-border" /> });
 import { useConfirmDialog } from "@/components/ConfirmDialog";
-import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
+import { useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { computeEnrollmentCreditBreakdown } from "@/lib/progressCreditBreakdown";
 import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
 import { getMtpCourseCode, MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
@@ -161,29 +161,6 @@ export default function ProgramsClient({
     const codes = [...(minorPlanner.countedCourseCodes ?? [])].filter(Boolean).sort();
     return codes.join(",");
   }, [minorPlanner.enabled, minorPlanner.countedCourseCodes]);
-
-  const nonMgmtMinorCourseCodes = useMemo(() => {
-    if (!minorPlanner.enabled) return new Set<string>();
-    const eligible = buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
-    if (!minorPlanner.countedCourseCodesConfigured) return eligible;
-
-    const selected = new Set(
-      (minorPlanner.countedCourseCodes ?? [])
-        .map((code) => formatCourseCode(String(code ?? "")))
-        .filter(Boolean)
-    );
-
-    const out = new Set<string>();
-    selected.forEach((code) => {
-      if (eligible.has(code)) out.add(code);
-    });
-    return out;
-  }, [
-    minorPlanner.enabled,
-    minorPlanner.codes,
-    minorPlanner.countedCourseCodes,
-    minorPlanner.countedCourseCodesConfigured,
-  ]);
 
   const primaryProgram = userPrograms.find((p) => p.isPrimary);
   const programEnrollments = primaryProgram?.program?.id
@@ -384,7 +361,6 @@ export default function ProgramsClient({
       programIcCredits: primaryProgram?.program.icCredits,
       requiredDE: Number(progressData?.required?.de ?? 0),
       includeCurrentSemesterCredits,
-      nonMgmtMinorCourseCodes,
     });
 
     const counted = (key: string) => {
@@ -414,7 +390,6 @@ export default function ProgramsClient({
     userSettings?.branch,
     inferredBatch,
     includeCurrentSemesterCredits,
-    nonMgmtMinorCourseCodes,
     primaryProgram?.program.icCredits,
     displayedDcRequirement,
   ]);

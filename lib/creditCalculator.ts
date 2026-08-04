@@ -1,6 +1,5 @@
 import { CourseType, EnrollmentStatus, ProgramType } from "@prisma/client";
 import prisma from "@/lib/prisma";
-import { buildNonMgmtMinorCountedCourseCodeSet } from "@/lib/minorPlanner";
 import { normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
 import { getBatchAdjustedCredits } from "@/lib/branches";
@@ -14,7 +13,6 @@ import {
 } from "@/lib/mtpConfig";
 import {
   addCredits,
-  formatCourseCode,
   formatCredits,
   maxCredits,
   minCredits,
@@ -257,24 +255,6 @@ export class CreditCalculator {
       total: program.totalCreditsRequired,
     };
 
-    const minorEligibleCourseCodes = buildNonMgmtMinorCountedCourseCodeSet(options?.minorCodes ?? []);
-    const minorDeToFeCourseCodes = (() => {
-      const selected = options?.minorCountedCourseCodes;
-      if (selected === undefined) return minorEligibleCourseCodes;
-
-      const selectedSet = new Set<string>();
-      for (const raw of selected) {
-        const formatted = formatCourseCode(String(raw ?? ""));
-        if (formatted) selectedSet.add(formatted);
-      }
-
-      const out = new Set<string>();
-      selectedSet.forEach((code) => {
-        if (minorEligibleCourseCodes.has(code)) out.add(code);
-      });
-      return out;
-    })();
-
     const classificationState: CreditClassificationState = {
       icBasketUsed: { ic1: false, ic2: false },
       hssCreditsAccumulated: 0,
@@ -287,7 +267,6 @@ export class CreditCalculator {
         (!e.grade || e.grade !== "F") // Exclude failed courses
       ),
       user?.branch || undefined,
-      minorDeToFeCourseCodes,
       user?.batch ?? null,
       classificationState,
       program.icCredits
@@ -296,7 +275,6 @@ export class CreditCalculator {
     const inProgress = this.calculateCreditsByType(
       enrollments.filter((e) => e.status === EnrollmentStatus.IN_PROGRESS),
       user?.branch || undefined,
-      minorDeToFeCourseCodes,
       user?.batch ?? null,
       classificationState,
       program.icCredits
@@ -516,7 +494,6 @@ export class CreditCalculator {
       isInternship?: boolean;
     }>,
     branch?: string,
-    minorDeToFeCourseCodes?: Set<string>,
     batchYear?: number | null,
     classificationState?: CreditClassificationState,
     programIcCredits?: number
@@ -595,19 +572,10 @@ export class CreditCalculator {
       subtractBreakdownCredits("total", ignored); // undo the total increment for credits that don't count
     };
 
-    const shouldOverrideDeToFe = (courseCode: string): boolean => {
-      if (!minorDeToFeCourseCodes || minorDeToFeCourseCodes.size === 0) return false;
-      const formatted = formatCourseCode(courseCode);
-      if (!formatted) return false;
-      return minorDeToFeCourseCodes.has(formatted);
-    };
-
-    const addDeCredits = (credits: number, courseCode: string) => {
-      if (shouldOverrideDeToFe(courseCode)) {
-        addBreakdownCredits("freeElective", credits);
-      } else {
-        addBreakdownCredits("de", credits);
-      }
+    // A course retains the category defined by its official branch mapping.
+    // Minor planning is tracked separately and must not relabel a DE as an FE.
+    const addDeCredits = (credits: number) => {
+      addBreakdownCredits("de", credits);
     };
 
     sortedEnrollments.forEach((enrollment) => {
@@ -685,7 +653,7 @@ export class CreditCalculator {
         if (basketFallbackCategory === "DC") {
           addBreakdownCredits("core", credits);
         } else if (basketFallbackCategory === "DE") {
-          addDeCredits(credits, enrollment.course.code);
+          addDeCredits(credits);
         } else {
           addBreakdownCredits("freeElective", credits);
         }
@@ -718,7 +686,7 @@ export class CreditCalculator {
               case "IC": case "IC_BASKET": case "DC": case "IKS":
                 addBreakdownCredits("core", amt); break;
               case "HSS": addHssCredits(amt); break;
-              case "DE": addDeCredits(amt, enrollment.course.code); break;
+              case "DE": addDeCredits(amt); break;
               case "FE": addBreakdownCredits("freeElective", amt); break;
               case "MTP": addBreakdownCredits("mtp", amt); break;
               case "ISTP": addBreakdownCredits("istp", amt); break;
@@ -742,7 +710,7 @@ export class CreditCalculator {
             addHssCredits(credits);
             return;
           case "DE":
-            addDeCredits(credits, enrollment.course.code);
+            addDeCredits(credits);
             return;
           case "FE":
             addBreakdownCredits("freeElective", credits);
@@ -807,16 +775,16 @@ export class CreditCalculator {
 
       // Branch-specific course patterns
       if (branch === "CSE" && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) {
-        addDeCredits(credits, enrollment.course.code);
+        addDeCredits(credits);
         return;
       }
       if (isDataScienceBranch(branch) && (normalizedCode.startsWith("DS") || normalizedCode.startsWith("CS"))) {
-        addDeCredits(credits, enrollment.course.code);
+        addDeCredits(credits);
         return;
       }
       // Civil: any CE-xxx course not already matched as DC counts as a Discipline Elective.
       if (branch === "CE" && normalizedCode.startsWith("CE")) {
-        addDeCredits(credits, enrollment.course.code);
+        addDeCredits(credits);
         return;
       }
 
@@ -834,7 +802,7 @@ export class CreditCalculator {
           addBreakdownCredits("core", credits);
           break;
         case CourseType.DE:
-          addDeCredits(credits, enrollment.course.code);
+          addDeCredits(credits);
           break;
         case CourseType.PE:
           addBreakdownCredits("pe", credits);

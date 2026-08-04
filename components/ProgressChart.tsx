@@ -13,7 +13,6 @@ import {
   minCredits,
   subtractCredits,
 } from "@/lib/utils";
-import { buildNonMgmtMinorCountedCourseCodeSet, useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { getMtpComponent, MTP_COMPONENT_CREDITS } from "@/lib/mtpConfig";
 
@@ -162,31 +161,6 @@ export function ProgressChart({
   doingMTP2,
   disableMinorPlanner,
 }: ProgressChartProps) {
-  const minorPlanner = useMinorPlannerSelection();
-  const nonMgmtMinorCourseCodes = useMemo(() => {
-    if (disableMinorPlanner || !minorPlanner.enabled) return new Set<string>();
-    const eligible = buildNonMgmtMinorCountedCourseCodeSet(minorPlanner.codes);
-    if (!minorPlanner.countedCourseCodesConfigured) return eligible;
-
-    const selected = new Set(
-      (minorPlanner.countedCourseCodes ?? [])
-        .map((c) => formatCourseCode(String(c ?? "")))
-        .filter((c) => Boolean(c))
-    );
-
-    const out = new Set<string>();
-    selected.forEach((code) => {
-      if (eligible.has(code)) out.add(code);
-    });
-    return out;
-  }, [
-    disableMinorPlanner,
-    minorPlanner.enabled,
-    minorPlanner.codes,
-    minorPlanner.countedCourseCodes,
-    minorPlanner.countedCourseCodesConfigured,
-  ]);
-
   const includeCurrentSemesterCredits = useSyncExternalStore(
     (callback) => {
       if (typeof window === "undefined") return () => {};
@@ -273,13 +247,6 @@ export function ProgressChart({
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course?.code ?? "")) return "FE";
 
-    const applyMinorDeOverride = (category: keyof typeof categoryCredits): keyof typeof categoryCredits => {
-      if (category !== "DE") return category;
-      const courseCode = formatCourseCode(enrollment.course?.code ?? "");
-      if (!courseCode) return category;
-      return nonMgmtMinorCourseCodes.has(courseCode) ? "FE" : category;
-    };
-
     const code = enrollment.course?.code?.toUpperCase() || "";
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     const isICB1 = ICB1_CODES.has(normalizedCode);
@@ -340,7 +307,7 @@ export function ProgressChart({
         const mapping = direct || ge || common;
 
         if (mapping?.courseCategory === "DC") return "DC";
-        if (mapping?.courseCategory === "DE") return applyMinorDeOverride("DE");
+        if (mapping?.courseCategory === "DE") return "DE";
       }
 
       // Additional IC basket courses → FE
@@ -373,7 +340,7 @@ export function ProgressChart({
       }
 
       if (mapping && mapping.courseCategory in categoryCredits) {
-        return applyMinorDeOverride(mapping.courseCategory as keyof typeof categoryCredits);
+        return mapping.courseCategory as keyof typeof categoryCredits;
       }
 
       // Mappings exist but none matched this student's branch → FE
@@ -388,13 +355,13 @@ export function ProgressChart({
     if (specialDpCategory) return specialDpCategory;
 
     // No branchMappings at all — fall back to courseType
-    if (enrollment.courseType === "DE") return applyMinorDeOverride("DE");
+    if (enrollment.courseType === "DE") return "DE";
     if (enrollment.courseType === "FREE_ELECTIVE" || enrollment.courseType === "PE") return "FE";
     if (enrollment.courseType === "CORE") return "DC";
 
     // Branch-specific course patterns (only if no explicit courseType)
-    if (userBranch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE");
-    if (isDataScienceBranch(userBranch) && (code.startsWith("DS") || code.startsWith("CS"))) return applyMinorDeOverride("DE");
+    if (userBranch === "CSE" && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
+    if (isDataScienceBranch(userBranch) && (code.startsWith("DS") || code.startsWith("CS"))) return "DE";
 
     return "FE";
   };
