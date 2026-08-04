@@ -645,7 +645,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
 
   const openEdit = async (entry: TimetableEntry) => {
     if (entry.isOfficial && entry.canReportCorrection === false) {
-      showToast("info", "This official class is visible from pre-registration, but it is not linked to the course catalog yet.");
+      showToast("info", "This official class is visible from course registration, but it is not linked to the course catalog yet.");
       return;
     }
     if (entry.isOfficial) {
@@ -869,9 +869,9 @@ export function TimetableView({ userId }: TimetableViewProps) {
                   <AlertCircle className="w-6 h-6 text-warning" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h2 id="plan-warning-title" className="text-lg font-semibold text-foreground">Please modify your pre-registration</h2>
+                  <h2 id="plan-warning-title" className="text-lg font-semibold text-foreground">Please modify your course registration</h2>
                   <p className="mt-1 text-sm leading-6 text-foreground-secondary">
-                    You have selected courses with clashing timings or a plan exceeding the 30-credit limit. Modify your pre-registration, save it, then come back to see the corrected timetable.
+                    You have selected courses with clashing timings or a plan exceeding the 30-credit limit. Modify your course registration, save it, then come back to see the corrected timetable.
                   </p>
                 </div>
                 <button type="button" onClick={() => setPlanWarningDismissed(true)} className="dp-icon-btn shrink-0" aria-label="Close">
@@ -892,7 +892,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
 
               <div className="flex flex-col-reverse sm:flex-row gap-2">
                 <button type="button" onClick={() => setPlanWarningDismissed(true)} className="dp-btn dp-btn-outline sm:flex-1">View timetable anyway</button>
-                <a href="/dashboard/pre-registration" className="dp-btn dp-btn-primary sm:flex-1 text-center">Modify pre-registration</a>
+                <a href="/dashboard/pre-registration" className="dp-btn dp-btn-primary sm:flex-1 text-center">Modify course registration</a>
               </div>
             </div>
           </div>

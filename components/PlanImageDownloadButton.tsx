@@ -174,7 +174,7 @@ export async function createPlanImageBlob({
 
   context.fillStyle = theme.foreground;
   context.font = "700 48px Inter, Arial, sans-serif";
-  context.fillText(`Semester ${semester} Pre-Registration Plan`, MARGIN, 198);
+  context.fillText(`Semester ${semester} Course Registration`, MARGIN, 198);
   context.fillStyle = theme.foregroundSecondary;
   context.font = "500 24px Inter, Arial, sans-serif";
   const studentDetail = [studentName, branch].filter(Boolean).join("  |  ");

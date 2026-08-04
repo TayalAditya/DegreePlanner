@@ -168,7 +168,7 @@ export default async function DashboardPage() {
         )}
       </header>
 
-      {/* Pre-Registration Banner */}
+      {/* Course Registration Banner */}
       {isPreReg && upcomingSemester && (
         <div className="border border-success/30 bg-success/5">
           <div className="flex flex-col items-start gap-4 p-4 sm:flex-row sm:items-center">
@@ -177,7 +177,7 @@ export default async function DashboardPage() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-success">
-                Pre-Registration Open — Semester {upcomingSemester}
+                Course Registration Open — Semester {upcomingSemester}
               </p>
               <p className="mt-0.5 text-sm text-foreground-secondary">
                 Your Semester {upcomingSemester - 1} courses have been marked complete. You can now
@@ -188,7 +188,7 @@ export default async function DashboardPage() {
               href="/dashboard/pre-registration"
               className="flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg bg-success text-white text-sm font-medium hover:bg-success/90 transition-colors"
             >
-              Plan Courses
+              Register Courses
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>

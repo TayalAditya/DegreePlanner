@@ -1263,7 +1263,7 @@ export default function PreRegistrationPage() {
       });
       if (!res.ok) throw new Error();
       setSaved(true);
-      showToast("success", "Plan saved — this is for your reference only, not the official registration");
+      showToast("success", "Course registration saved — submit or confirm it on Samarth when required");
     } catch {
       showToast("error", "Could not save plan");
     } finally {
@@ -1366,7 +1366,7 @@ export default function PreRegistrationPage() {
       const ok = await confirm({
         title: "Report to Academic Secretary?",
         message:
-          "This tells the Academic Secretary that your pre-registration is NOT showing as submitted on the Samarth portal. Only do this if you've actually checked Samarth and your submission is missing.",
+          "This tells the Academic Secretary that your course registration is NOT showing as submitted on the Samarth portal. Only do this if you've actually checked Samarth and your submission is missing.",
         confirmText: "Yes, report it",
         cancelText: "Cancel",
       });
@@ -1433,7 +1433,7 @@ export default function PreRegistrationPage() {
       <div className="max-w-2xl mx-auto space-y-6 pb-16">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">
-            Semester {data?.offeringSemester ?? "—"} Pre Registration
+            Semester {data?.offeringSemester ?? "—"} Course Registration
           </h1>
           <p className="mt-1 text-sm text-foreground-secondary">
             {data?.term} {data?.offeringYear} · Browse and plan your courses for the upcoming semester
@@ -1494,7 +1494,7 @@ export default function PreRegistrationPage() {
               <div>
                 <h2 className="text-base font-semibold text-foreground">Your course history is incomplete</h2>
                 <p className="text-sm text-foreground-secondary mt-1">
-                  You won&apos;t be able to see your pre-registration correctly without adding your past courses —
+                  You won&apos;t be able to see your course registration correctly without adding your past courses —
                   compulsory courses, credit limits, and what&apos;s already done won&apos;t show up right.
                 </p>
               </div>
@@ -1531,7 +1531,7 @@ export default function PreRegistrationPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-foreground">
-          Semester {data.offeringSemester} Pre Registration
+          Semester {data.offeringSemester} Course Registration
         </h1>
         <p className="mt-1 text-sm text-foreground-secondary">
           {data.term} {data.offeringYear} · Browse and plan your courses for the upcoming semester
@@ -1684,9 +1684,8 @@ export default function PreRegistrationPage() {
       <div className="flex items-start gap-3 p-4 rounded-xl border border-info/25 bg-info/5">
         <Info className="w-4 h-4 text-info flex-shrink-0 mt-0.5" />
         <p className="text-sm text-foreground-secondary">
-          <span className="font-medium text-foreground">This is not the official pre-registration.</span>{" "}
-          Degree Planner lets you browse all eligible courses by category and plan your semester ahead of time.
-          Actual pre-registration on the institute portal will begin in late June.
+          <span className="font-medium text-foreground">This is your course registration plan.</span>{" "}
+          Degree Planner saves eligible current-semester courses by category. Submit or confirm it on the institute portal when required.
         </p>
       </div>
 
@@ -1699,7 +1698,7 @@ export default function PreRegistrationPage() {
             <FileWarning className={`w-5 h-5 flex-shrink-0 mt-0.5 ${notSubmitted ? "text-warning" : "text-foreground-secondary"}`} />
             <div className="min-w-0">
               <p className="text-sm font-medium text-foreground">
-                {notSubmitted ? "Reported: your pre-registration is not submitted on Samarth" : "Pre-registration not showing as submitted on Samarth?"}
+                {notSubmitted ? "Reported: your course registration is not submitted on Samarth" : "Course registration not showing as submitted on Samarth?"}
               </p>
               <p className="text-xs text-foreground-secondary mt-0.5">
                 On the{" "}
@@ -2125,7 +2124,7 @@ export default function PreRegistrationPage() {
               <span className="font-semibold text-foreground">{selectedCount}</span> course{selectedCount !== 1 ? "s" : ""} ·{" "}
               <span className={overLimit ? "text-error font-semibold" : ""}>{formatCredits(totalCredits)} cr</span>
             </p>
-            <p className="text-xs text-foreground-secondary">Planning only · not official registration</p>
+            <p className="text-xs text-foreground-secondary">Saved course registration · confirm on Samarth when required</p>
           </div>
           <div className={`grid gap-2 sm:flex sm:items-center ${saved ? "grid-cols-3" : "grid-cols-1"}`}>
             {saved && (

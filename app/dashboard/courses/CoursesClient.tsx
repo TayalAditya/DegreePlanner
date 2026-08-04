@@ -777,7 +777,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     }
     const semNum = parseInt(semester);
     if (preRegLockedSemester !== null && semNum >= preRegLockedSemester) {
-      showToast("error", `Sem ${semNum} is locked during pre-registration. You can only add courses up to Sem ${preRegLockedSemester - 1}.`);
+      showToast("error", `Sem ${semNum} is locked during course registration. You can only add courses up to Sem ${preRegLockedSemester - 1}.`);
       return;
     }
 
