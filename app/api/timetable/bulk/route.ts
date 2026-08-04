@@ -89,6 +89,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (courseId) {
+      const isAdmin = session.user.role === "ADMIN";
       const enrollment = await prisma.courseEnrollment.findFirst({
         where: allTaDuty
           ? {
@@ -127,7 +128,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      if (!enrollment && !isPlanned) {
+      if (!isAdmin && !enrollment && !isPlanned) {
         return NextResponse.json(
           {
             error: allTaDuty

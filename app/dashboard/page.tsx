@@ -96,14 +96,11 @@ export default async function DashboardPage() {
     }
   }
   
-  const enrollmentId = (session?.user?.enrollmentId || "").toUpperCase();
-  // B23243 (admin) sees the pre-registration banner as a permanent preview
-  // so they can verify how it looks before it goes live in mid-June.
-  const isAdminPreview = enrollmentId === "B23243";
-  const isPreReg = isAdminPreview || academicState?.phase === "PRE_REGISTRATION";
-  const upcomingSemester = isAdminPreview && academicState?.phase !== "PRE_REGISTRATION"
-    ? (academicState?.currentSemester ?? 6) + 1
-    : (academicState?.upcomingSemester ?? null);
+  // Pre-registration follows the same academic state as registration. Do not
+  // show a staff-only preview for a future semester: it makes a B23 student in
+  // Fall 2026 appear to have jumped from Sem 7 to Sem 8.
+  const isPreReg = academicState?.phase === "PRE_REGISTRATION";
+  const upcomingSemester = academicState?.upcomingSemester ?? null;
 
   const quickActions = [
     {

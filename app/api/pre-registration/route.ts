@@ -217,12 +217,8 @@ export async function GET() {
   }
   const icBasketFulfilled = completedIcBasketCredits >= IC_BASKET_REQ;
 
-  const isAdmin = session.user.role === "ADMIN";
-
   const result = offerings
     .filter((o) => {
-      // Admins see all offerings regardless of branch or semester restrictions
-      if (isAdmin) return true;
       if (!o.slots && !o.instructor) return false;
       // B24/B25 CE/BE/EP/BSCS: IC202P (Design Practicum) is optional FE — always show
       // regardless of the offering's branch list so students can register if they choose.

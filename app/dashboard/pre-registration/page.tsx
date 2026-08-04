@@ -813,6 +813,11 @@ export default function PreRegistrationPage() {
               .map((course: InternshipCourse) => course.id)
           );
           const restoredSlots = new Set<string>();
+          const compulsorySlots = new Set(
+            d.offerings
+              .filter((offering: Offering) => offering.isCompulsory)
+              .flatMap((offering: Offering) => fixedSlots(offering.slots))
+          );
           const restoredIds = new Set<string>();
           const restoredExtra = new Set<string>();
           const excludedSelections: string[] = [];
@@ -837,6 +842,10 @@ export default function PreRegistrationPage() {
               continue;
             }
             if (o.isCompulsory) continue;
+            if (parseSlots(o.slots).some((slot) => compulsorySlots.has(slot))) {
+              excludedSelections.push(`${o.courseCode} clashes with a compulsory course`);
+              continue;
+            }
             const oSlots = parseSlots(o.slots);
             if (oSlots.some((s) => restoredSlots.has(s))) continue;
             oSlots.forEach((s) => restoredSlots.add(s));
@@ -1451,8 +1460,6 @@ export default function PreRegistrationPage() {
   const de = data.offerings.filter((o) => !o.isCompulsory && o.resolvedCategory === "DE" && !clashMap.has(o.id));
   const hss = data.offerings.filter((o) => !o.isCompulsory && ["HSS", "IKS"].includes(o.resolvedCategory) && !clashMap.has(o.id));
   const fe = data.offerings.filter((o) => !o.isCompulsory && o.resolvedCategory === "FE" && !clashMap.has(o.id));
-  const coreClash = data.offerings.filter((o) => !o.isCompulsory && clashMap.has(o.id));
-
   // Group FE by school
   const feBySchool = fe.reduce<Record<string, Offering[]>>((acc, o) => {
     const key = o.school ?? "Other";
@@ -1582,7 +1589,9 @@ export default function PreRegistrationPage() {
           <div className="divide-y divide-border">
             {minorData.groups.map((group) => {
               const completedOffered = group.courses.filter((c) => c.offering && c.isCompleted);
-              const availableOffered = group.courses.filter((c) => c.offering && !c.isCompleted);
+              const availableOffered = group.courses.filter(
+                (course) => course.offering && !course.isCompleted && !clashMap.has(course.offering.id)
+              );
               const notOffered = group.courses.filter((c) => !c.offering);
               return (
                 <div key={group.id} className="px-4 py-3 space-y-2">
@@ -1935,25 +1944,6 @@ export default function PreRegistrationPage() {
             ))}
           </div>
         </div>
-      )}
-
-      {/* Core Clash */}
-      {coreClash.length > 0 && (
-        <Section title="Core Clash — Cannot Register" count={coreClash.length} error>
-          <div className="space-y-2 opacity-60">
-            {coreClash.map((o) => (
-              <CourseCard
-                key={o.id}
-                offering={o}
-                checked={false}
-                disabled={true}
-                onToggle={() => {}}
-                clashWith={clashMap.get(o.id)}
-                studentInfo={data.studentInfo}
-              />
-            ))}
-          </div>
-        </Section>
       )}
 
       {/* Semester-Long Internship */}
