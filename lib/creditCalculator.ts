@@ -290,6 +290,32 @@ export class CreditCalculator {
     inProgress.de = subtractCredits(inProgress.de, inProgressDeOverflow);
     inProgress.freeElective = addCredits(inProgress.freeElective, inProgressDeOverflow);
 
+    // A degree requirement is a ceiling as well as a target. For example, a
+    // B.Tech student with a 22-credit FE requirement may take more electives,
+    // but only 22 may contribute to degree progress. Keep the extra course in
+    // transcript/history; exclude only its excess credits from this programme's
+    // counted totals. Apply completed credits first, then let the current term
+    // use only the remaining room in each basket.
+    const countedKeys: Array<keyof Omit<CreditBreakdown, "total">> = [
+      "core",
+      "de",
+      "pe",
+      "freeElective",
+      "mtp",
+      "istp",
+    ];
+    for (const key of countedKeys) {
+      const cap = Math.max(0, Number(required[key] ?? 0));
+      completed[key] = minCredits(cap, completed[key]);
+      const remainingCapacity = Math.max(0, subtractCredits(cap, completed[key]));
+      inProgress[key] = minCredits(remainingCapacity, inProgress[key]);
+    }
+
+    const degreeCountedTotal = (breakdown: CreditBreakdown) =>
+      countedKeys.reduce((sum, key) => addCredits(sum, breakdown[key]), 0);
+    completed.total = degreeCountedTotal(completed);
+    inProgress.total = degreeCountedTotal(inProgress);
+
     const remaining: CreditBreakdown = {
       core: Math.max(0, subtractCredits(required.core, completed.core)),
       de: Math.max(0, subtractCredits(required.de, completed.de)),

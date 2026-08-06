@@ -602,13 +602,6 @@ export default function ProgressPage() {
 
     sortedInProgress.forEach((e) => accumulateSplitAware(creditsInProgressByCategory, e, icBasketUsed, hssUsed));
 
-    const totalCreditsEarned = subtractCredits(
-      sumCredits(completedEnrollments.map((e) => e.course.credits)),
-      creditsByCategory.NOT_IN_DEGREE
-    );
-
-    const totalCreditsInProgress = sumCredits(inProgressEnrollments.map((e) => e.course.credits));
-
     const icCredits = programCredits.icCredits ?? 60;
     const icBasketRequired = 6;
     const iksRequired = 0; // IKS merged into HSS+IKS combined basket
@@ -736,6 +729,21 @@ export default function ProgressPage() {
       creditsInProgressByCategory.DE = deStillNeeded;
       creditsInProgressByCategory.FE = addCredits(creditsInProgressByCategory.FE, overflow);
     }
+
+    // Free Electives are capped at the programme requirement. Courses beyond
+    // that cap remain visible in the transcript, but do not inflate the degree
+    // total, percentage, or remaining-credit calculation.
+    const feRequired = Math.max(0, Number(creditsRequiredByCategory.FE ?? 0));
+    creditsByCategory.FE = minCredits(feRequired, creditsByCategory.FE);
+    const feStillNeeded = Math.max(0, subtractCredits(feRequired, creditsByCategory.FE));
+    creditsInProgressByCategory.FE = minCredits(feStillNeeded, creditsInProgressByCategory.FE);
+
+    const countedCategoryTotal = (categories: Record<string, number>) =>
+      Object.entries(categories)
+        .filter(([category]) => category !== "NOT_IN_DEGREE")
+        .reduce((sum, [, credits]) => addCredits(sum, Number(credits || 0)), 0);
+    const totalCreditsEarned = countedCategoryTotal(creditsByCategory);
+    const totalCreditsInProgress = countedCategoryTotal(creditsInProgressByCategory);
 
     return {
       totalCreditsEarned,

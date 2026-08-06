@@ -478,6 +478,12 @@ export function ProgressChart({
       categoryCredits.DE = subtractCredits(categoryCredits.DE, overflow);
       categoryCredits.FE = addCredits(categoryCredits.FE || 0, overflow);
     }
+
+    // The pie/labels show credits counted toward this programme, not every
+    // course the student has taken. Extra FEs stay on the transcript but must
+    // not make a 22-credit FE basket display as 29 credits or inflate progress.
+    const requiredFE = Math.max(0, Number(progress?.required?.freeElective ?? 0));
+    categoryCredits.FE = minCredits(requiredFE, categoryCredits.FE);
   }
 
   const DISPLAY_NAMES: Record<string, string> = { HSS: "HSS+IKS", IKS: "HSS+IKS", IC_BASKET: "IC Basket", NOT_IN_DEGREE: "Not in Degree" };
