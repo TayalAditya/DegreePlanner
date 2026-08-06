@@ -1,6 +1,6 @@
 {
   "version": "2026-2027-odd",
-  "generatedAt": "2026-08-06T21:22:53.227Z",
+  "generatedAt": "2026-08-06T21:39:39.848Z",
   "sourceWorkbook": "docs/CL 2026-27 Odd/Final Time Table Aug-Nov 2026.xlsx",
   "venues": [
     "A1-3",
@@ -48,6 +48,7 @@
     "A5-2",
     "A5-3",
     "A5-4",
+    "Auditorium",
     "CL-1",
     "CL-2",
     "CL-3",
@@ -2525,7 +2526,7 @@
         "name": "Machine Learning",
         "credit": 3,
         "slot": "D",
-        "classroom": "A13-3A",
+        "classroom": "Auditorium",
         "campus": "North Campus",
         "kind": "NON_IC"
       },

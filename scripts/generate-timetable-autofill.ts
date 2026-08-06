@@ -54,6 +54,11 @@ const PUBLISHED_PC_LAB_OVERRIDES: PcLabRow[] = [
   },
 ];
 
+// Confirmed venue corrections published after the workbook export.
+const PUBLISHED_CLASSROOM_OVERRIDES: Record<string, string> = {
+  "IC-272": "Auditorium",
+};
+
 function clean(value: unknown): string {
   return String(value ?? "").replace(/\s+/g, " ").trim();
 }
@@ -337,6 +342,13 @@ function main() {
   for (const override of PUBLISHED_PC_LAB_OVERRIDES) {
     pcLab[override.code] = override;
     if (override.venue) addVenue(override.venue);
+  }
+
+  for (const [code, classroom] of Object.entries(PUBLISHED_CLASSROOM_OVERRIDES)) {
+    const course = nonIc[code] ?? ic[code];
+    if (!course) throw new Error(`Missing timetable course for published venue correction: ${code}`);
+    course.classroom = classroom;
+    addVenue(classroom);
   }
 
   const output = {
