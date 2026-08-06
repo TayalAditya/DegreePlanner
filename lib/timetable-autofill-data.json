@@ -1,6 +1,6 @@
 {
   "version": "2026-2027-odd",
-  "generatedAt": "2026-07-31T12:13:37.940Z",
+  "generatedAt": "2026-08-06T21:22:53.227Z",
   "sourceWorkbook": "docs/CL 2026-27 Odd/Final Time Table Aug-Nov 2026.xlsx",
   "venues": [
     "A1-3",
@@ -43,6 +43,7 @@
     "A18-1",
     "A18-1 + A18-2 + A17-1A + A17-1B",
     "A18-2",
+    "A5 PC Lab-1",
     "A5-1",
     "A5-2",
     "A5-3",
@@ -3105,6 +3106,16 @@
           "time": "02:00-05:00 PM"
         }
       ]
+    },
+    "ME-620": {
+      "kind": "NON_IC",
+      "code": "ME-620",
+      "name": "Modelling and Simulations",
+      "instructor": "Dr. Mohammad Talha",
+      "slot": "PC Lab",
+      "day": "Wednesday",
+      "venue": "A5 PC Lab-1",
+      "time": "02:00-05:00 PM"
     }
   }
 }

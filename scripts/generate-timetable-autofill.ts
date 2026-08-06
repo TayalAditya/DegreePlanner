@@ -38,6 +38,22 @@ type PcLabRow = {
 
 const SOURCE = path.join("docs", "CL 2026-27 Odd", "Final Time Table Aug-Nov 2026.xlsx");
 
+// These PC-lab meetings were published separately from the workbook's Lab Slot
+// table. Keep them as explicit source overrides so regenerating the official
+// timetable never drops a confirmed meeting.
+const PUBLISHED_PC_LAB_OVERRIDES: PcLabRow[] = [
+  {
+    kind: "NON_IC",
+    code: "ME-620",
+    name: "Modelling and Simulations",
+    instructor: "Dr. Mohammad Talha",
+    slot: "PC Lab",
+    day: "Wednesday",
+    venue: "A5 PC Lab-1",
+    time: "02:00-05:00 PM",
+  },
+];
+
 function clean(value: unknown): string {
   return String(value ?? "").replace(/\s+/g, " ").trim();
 }
@@ -316,6 +332,11 @@ function main() {
       time,
       allocations,
     };
+  }
+
+  for (const override of PUBLISHED_PC_LAB_OVERRIDES) {
+    pcLab[override.code] = override;
+    if (override.venue) addVenue(override.venue);
   }
 
   const output = {
