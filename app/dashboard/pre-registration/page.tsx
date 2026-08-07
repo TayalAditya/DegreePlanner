@@ -1507,6 +1507,12 @@ export default function PreRegistrationPage() {
   const de = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "DE" && !clashMap.has(o.id));
   const hss = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "HSS" && !clashMap.has(o.id));
   const fe = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "FE" && !clashMap.has(o.id));
+  // Once the HSS + IKS basket is complete, its current offerings deliberately
+  // move to FE. Keep that transition visible: otherwise the missing HSS
+  // section looks like the offerings were not uploaded at all.
+  const hssShownAsFe = fe.filter((o) => o.resolvedCategory === "HSS" || o.resolvedCategory === "IKS");
+  const hssRequirement = data.programRequirements?.HSS ?? 0;
+  const hssCompleted = data.completedBreakdown?.HSS ?? 0;
   // Group FE by school
   const feBySchool = fe.reduce<Record<string, Offering[]>>((acc, o) => {
     const key = o.school ?? "Other";
@@ -1958,6 +1964,21 @@ export default function PreRegistrationPage() {
             />
           ))}
         </Section>
+      )}
+
+      {/* HSS + IKS courses are still offered; completed-basket choices are FE. */}
+      {hss.length === 0 && hssShownAsFe.length > 0 && hssRequirement > 0 && hssCompleted >= hssRequirement && (
+        <div className="flex items-start gap-3 p-4 rounded-xl border border-success/25 bg-success/5">
+          <CheckCircle className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              HSS + IKS complete · {formatCredits(hssCompleted)} / {formatCredits(hssRequirement)} cr
+            </p>
+            <p className="mt-0.5 text-xs text-foreground-secondary">
+              {hssShownAsFe.length} HSS + IKS course{hssShownAsFe.length === 1 ? " is" : "s are"} available under Free Electives because this basket is already complete. Additional credits count as FE, subject to your FE limit.
+            </p>
+          </div>
+        </div>
       )}
 
       {/* FE by school */}
