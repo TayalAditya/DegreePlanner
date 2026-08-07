@@ -75,6 +75,12 @@ export async function GET(req: NextRequest) {
         .trim()
         .toUpperCase();
 
+      // IK special offerings use a numeric suffix to distinguish different
+      // one-credit topics under the same base course number. Do not merge
+      // IK-591_7 into the regular IK-591 catalog entry.
+      const ikSpecialOffering = text.match(/^IK\s*[- ]?\s*(\d{3})\s*_\s*(\d{1,2})$/);
+      if (ikSpecialOffering) return `IK${ikSpecialOffering[1]}_${ikSpecialOffering[2]}`;
+
       // Standard course codes: "IC-102P", "IC 102P", "IC102P"
       // Also allow simple section suffix: "BE-203_1" -> "BE203"
       const standard = text.match(
