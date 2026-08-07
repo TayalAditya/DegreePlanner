@@ -1599,16 +1599,22 @@ export default function PreRegistrationPage() {
     ?? (offering.resolvedCategory === "IKS" ? "HSS" : offering.resolvedCategory);
   const displayCategoryReason = (offering: Offering) => effectiveOfferingCategories.get(offering.id)?.reason;
   const compulsory = data.offerings.filter((o) => o.isCompulsory);
-  const de = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "DE" && !clashMap.has(o.id));
+  // Sections use resolvedCategory so DE/HSS/IKS courses always appear in their
+  // own section even when the basket is already full (effectiveCategory → FE).
+  const de = data.offerings.filter((o) => !o.isCompulsory && o.resolvedCategory === "DE" && !clashMap.has(o.id));
   const isShssOffering = (offering: Offering) =>
     offering.school?.split(",").some((school) => school.trim().toUpperCase() === "SHSS") ?? false;
   const hss = data.offerings.filter(
-    (o) => !o.isCompulsory && o.resolvedCategory === "HSS" && isShssOffering(o) && displayCategory(o) === "HSS" && !clashMap.has(o.id)
+    (o) => !o.isCompulsory && o.resolvedCategory === "HSS" && isShssOffering(o) && !clashMap.has(o.id)
   );
   const iks = data.offerings.filter(
-    (o) => !o.isCompulsory && o.resolvedCategory === "IKS" && displayCategory(o) === "HSS" && !clashMap.has(o.id)
+    (o) => !o.isCompulsory && o.resolvedCategory === "IKS" && !clashMap.has(o.id)
   );
-  const fe = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "FE" && !clashMap.has(o.id));
+  // FE section: only courses that are natively FE (not DE/HSS/IKS overflow).
+  const fe = data.offerings.filter(
+    (o) => !o.isCompulsory && displayCategory(o) === "FE" &&
+      !["DE","HSS","IKS"].includes(o.resolvedCategory) && !clashMap.has(o.id)
+  );
   const notInDegree = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "NOT_IN_DEGREE" && !clashMap.has(o.id));
   // Once the HSS + IKS basket is complete, its current offerings deliberately
   // move to FE. Keep that transition visible: otherwise the missing HSS
