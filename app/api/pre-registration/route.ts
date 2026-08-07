@@ -310,9 +310,11 @@ export async function GET() {
       // Compulsory if:
       //  a) no semester restriction OR same as student's current semester
       //  b) OR different semester but student hasn't completed it yet (backlog DC/IC)
-      const isIkRequiredCourse = normalizedCodeEarly === "IC181" || normalizedCodeEarly === "IC182";
+      // Only IC-181 is the required IKS course. IC-182 is a B24+ equivalent
+      // elective — it satisfies the requirement via the iksBlocked mechanism
+      // but must not itself appear as compulsory (students choose one or the other).
       const isCompulsoryCategory = ["IC", "IC_BASKET", "DC"].includes(resolvedCategory) ||
-        (resolvedCategory === "IKS" && isIkRequiredCourse);
+        (resolvedCategory === "IKS" && normalizedCodeEarly === "IC181");
       // Prefer branch-specific semester from branchMapping over the offering-level compulsorySem
       const branchMappingSem = o.course?.branchMappings
         ? (() => {
