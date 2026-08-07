@@ -459,7 +459,10 @@ export async function GET() {
         IKS:  0, // merged into HSS
         NOT_IN_DEGREE: 0,
       };
-    } catch { /* keep null */ }
+    } catch (err) {
+      console.error("[pre-registration] failed to compute program progress:", err);
+      /* keep null — completedBreakdown and programRequirements stay empty */
+    }
   }
 
   // Detect previous semesters with suspiciously few credits (likely not fully imported).

@@ -882,7 +882,10 @@ export default function PreRegistrationPage() {
               continue;
             }
             const oSlots = parseSlots(o.slots);
-            if (oSlots.some((s) => restoredSlots.has(s))) continue;
+            if (oSlots.some((s) => restoredSlots.has(s))) {
+              excludedSelections.push(`${o.courseCode} clashes with another saved course`);
+              continue;
+            }
             oSlots.forEach((s) => restoredSlots.add(s));
             restoredIds.add(id);
           }

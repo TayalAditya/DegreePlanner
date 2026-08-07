@@ -41,31 +41,62 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
-  const types = registrationTypes ?? {};
+  let canonicalIds = Array.from(new Set(selectedIds));
+  const canonicalTypes = { ...(registrationTypes ?? {}) };
+
+  // B25 MEVLSI Sem-3 registers recoded VL-201, not EE-311. Canonicalize
+  // stale tabs/direct requests server-side so a saved plan can never contain
+  // both IDs and trigger a false timetable clash.
+  if (semester === 3 && year === 2026) {
+    const profile = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { branch: true, batch: true },
+    });
+    const rawBatch = Number(profile?.batch);
+    const batchYear = rawBatch > 0 && rawBatch < 100 ? 2000 + rawBatch : rawBatch;
+    const branch = String(profile?.branch ?? "").trim().toUpperCase();
+    if (["MEVLSI", "VL", "VLSI"].includes(branch) && batchYear === 2025) {
+      const pair = await prisma.courseOffering.findMany({
+        where: { offeringYear: 2026, courseCode: { in: ["EE-311", "VL-201"] } },
+        select: { id: true, courseCode: true },
+      });
+      const ee311Id = pair.find((item) => item.courseCode === "EE-311")?.id;
+      const vl201Id = pair.find((item) => item.courseCode === "VL-201")?.id;
+      if (ee311Id && vl201Id && canonicalIds.includes(ee311Id)) {
+        canonicalIds = Array.from(new Set(canonicalIds.map((id) => id === ee311Id ? vl201Id : id)));
+        if (canonicalTypes[ee311Id] && !canonicalTypes[vl201Id]) {
+          canonicalTypes[vl201Id] = canonicalTypes[ee311Id];
+        }
+        delete canonicalTypes[ee311Id];
+      }
+    }
+  }
 
   // A 399P onsite internship is an all-semester commitment. Validate plans on
   // the server too so a stale tab or direct API request cannot bypass the UI.
-  const uniqueIds = Array.from(new Set(selectedIds));
   const [offeringMatches, courseMatches] = await Promise.all([
     prisma.courseOffering.findMany({
-      where: { id: { in: uniqueIds } },
+      where: { id: { in: canonicalIds } },
       select: { id: true, courseCode: true, credits: true },
     }),
     prisma.course.findMany({
-      where: { id: { in: uniqueIds } },
+      where: { id: { in: canonicalIds } },
       select: { id: true, code: true, credits: true },
     }),
   ]);
   const itemsById = new Map<string, { code: string; credits: number }>();
   offeringMatches.forEach((item) => itemsById.set(item.id, { code: item.courseCode, credits: item.credits }));
   courseMatches.forEach((item) => itemsById.set(item.id, { code: item.code, credits: item.credits }));
-  const selected399P = uniqueIds.filter((id) =>
-    /399P$/i.test(String(itemsById.get(id)?.code ?? "").replace(/[^A-Z0-9]/g, ""))
-  );
+  const selected399P = canonicalIds.filter((id) => {
+    const code = String(itemsById.get(id)?.code ?? "").replace(/[^A-Z0-9]/g, "");
+    // Also catch IDs not found in DB — treat unknown IDs as non-399P (they won't
+    // pass the credits === 9 check anyway, so no bypass is possible).
+    return /399P$/i.test(code);
+  });
 
   if (selected399P.length > 0) {
     const onsite = itemsById.get(selected399P[0]);
-    if (uniqueIds.length !== 1) {
+    if (canonicalIds.length !== 1) {
       return NextResponse.json(
         { error: "399P is a full-semester onsite internship and cannot be planned with any other course." },
         { status: 400 }
@@ -94,8 +125,8 @@ export async function POST(req: NextRequest) {
 
   const plan = await prisma.preRegistrationPlan.upsert({
     where: { userId_offeringSemester_offeringYear: { userId: session.user.id, offeringSemester: semester, offeringYear: year } },
-    create: { userId: session.user.id, offeringSemester: semester, offeringYear: year, selectedIds, registrationTypes: types },
-    update: { selectedIds, registrationTypes: types },
+    create: { userId: session.user.id, offeringSemester: semester, offeringYear: year, selectedIds: canonicalIds, registrationTypes: canonicalTypes },
+    update: { selectedIds: canonicalIds, registrationTypes: canonicalTypes },
     select: { updatedAt: true },
   });
 
