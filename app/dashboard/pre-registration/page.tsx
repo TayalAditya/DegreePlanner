@@ -1600,7 +1600,14 @@ export default function PreRegistrationPage() {
   const displayCategoryReason = (offering: Offering) => effectiveOfferingCategories.get(offering.id)?.reason;
   const compulsory = data.offerings.filter((o) => o.isCompulsory);
   const de = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "DE" && !clashMap.has(o.id));
-  const hss = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "HSS" && !clashMap.has(o.id));
+  const isShssOffering = (offering: Offering) =>
+    offering.school?.split(",").some((school) => school.trim().toUpperCase() === "SHSS") ?? false;
+  const hss = data.offerings.filter(
+    (o) => !o.isCompulsory && o.resolvedCategory === "HSS" && isShssOffering(o) && displayCategory(o) === "HSS" && !clashMap.has(o.id)
+  );
+  const iks = data.offerings.filter(
+    (o) => !o.isCompulsory && o.resolvedCategory === "IKS" && displayCategory(o) === "HSS" && !clashMap.has(o.id)
+  );
   const fe = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "FE" && !clashMap.has(o.id));
   const notInDegree = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "NOT_IN_DEGREE" && !clashMap.has(o.id));
   // Once the HSS + IKS basket is complete, its current offerings deliberately
@@ -2049,6 +2056,32 @@ export default function PreRegistrationPage() {
       {hss.length > 0 && (
         <Section title="Humanities & Social Sciences" count={hss.length}>
           {hss.map((o) => (
+            <CourseCard
+              key={o.id}
+              offering={o}
+              checked={selected.has(o.id)}
+              disabled={false}
+              onToggle={() => handleToggle(o)}
+              minorGroupLabel={minorOfferingLabels.get(o.id)}
+              displayCategory={displayCategory(o)}
+              categoryReason={displayCategoryReason(o)}
+              studentInfo={data.studentInfo}
+              samarthReported={samarthReported.has(o.id)}
+              onToggleSamarth={handleToggleSamarth}
+              sootrankReported={sootrankReported.has(o.id)}
+              onToggleSootrank={handleToggleSootrank}
+              regType={regTypes.get(o.id) ?? "REGULAR"}
+              pfBudgetRemaining={pfBudgetRemaining}
+              onRegTypeChange={handleRegTypeChange}
+            />
+          ))}
+        </Section>
+      )}
+
+      {/* IKS has the same combined credit basket as HSS, but is not an SHSS offering. */}
+      {iks.length > 0 && (
+        <Section title="Indian Knowledge Systems" count={iks.length}>
+          {iks.map((o) => (
             <CourseCard
               key={o.id}
               offering={o}

@@ -273,13 +273,18 @@ export async function GET() {
         resolvedCategory = "FE";
       }
 
-      // HS-xxx, IK-xxx, IC-181/IC-182 always go to HSS+IKS basket regardless of branchMappings.
+      // HSS and IKS share one credit basket, but retain their own catalogue
+      // sections: only SHSS courses should appear under HSS, while IKS
+      // offerings (including GE-502/GE-523 mappings) appear separately.
       const courseCodeRaw = o.courseCode.toUpperCase();
-      if (courseCodeRaw.startsWith("HS-") || courseCodeRaw.startsWith("HS") ||
-          /^IK\d/.test(normalizedCodeEarly) ||
-          normalizedCodeEarly === "IC181" ||
-          (normalizedCodeEarly === "IC182" && batch != null && batch >= 2024)) {
+      const isHssCourse = courseCodeRaw.startsWith("HS-") || courseCodeRaw.startsWith("HS");
+      const isIksCourse = /^IK\d/.test(normalizedCodeEarly) ||
+        normalizedCodeEarly === "IC181" ||
+        (normalizedCodeEarly === "IC182" && batch != null && batch >= 2024);
+      if (isHssCourse) {
         resolvedCategory = "HSS";
+      } else if (isIksCourse) {
+        resolvedCategory = "IKS";
       }
 
       // Check if already completed — must be declared before isCompulsory
