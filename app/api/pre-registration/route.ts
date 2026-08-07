@@ -22,6 +22,14 @@ function getCreditLimit(offeringSemester: number, batchYear: number): number {
   return CREDIT_LIMIT[offeringSemester] ?? DEFAULT_CREDIT_LIMIT;
 }
 
+function isHssIksCourse(code: string, batch: number | null | undefined): boolean {
+  const normalized = code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return normalized.startsWith("HS") ||
+    /^IK\d/.test(normalized) ||
+    normalized === "IC181" ||
+    (normalized === "IC182" && batch != null && batch >= 2024);
+}
+
 function pickCategory(
   branchMappings: Array<{ courseCategory: string; branch: string; batch: string }> | undefined,
   branch: string,
@@ -343,6 +351,17 @@ export async function GET() {
       };
     });
 
+  // Preserve the raw combined HSS+IKS usage as well as the basket breakdown.
+  // The client needs this to identify the exact course (or portion of a course)
+  // that crosses the 20-credit degree cap while planning a new semester.
+  const hssIksCreditsCompleted = completed
+    .filter((enrollment) =>
+      enrollment.grade !== "F" &&
+      !enrollment.isPassFail &&
+      isHssIksCourse(enrollment.course.code, batch)
+    )
+    .reduce((sum, enrollment) => sum + enrollment.course.credits, 0);
+
   let completedBreakdown: Record<string, number> = {};
   let programRequirements: Record<string, number> | null = null;
 
@@ -353,12 +372,17 @@ export async function GET() {
       const adjustedDeCredits = Number(progress?.required?.de ?? req.deCredits);
       const adjustedFeCredits = Number(progress?.required?.freeElective ?? req.feCredits);
 
-      const tally: Record<string, number> = { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, HSS: 0, IKS: 0, FE: 0, MTP: 0, ISTP: 0 };
+      const tally: Record<string, number> = { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, HSS: 0, IKS: 0, FE: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0 };
       const add = (cat: string, cr: number) => { tally[cat] = (tally[cat] ?? 0) + cr; };
 
       for (const e of completed) {
         if (e.grade === "F") continue;
         const cr = e.course.credits;
+        // P/F always uses the FE basket; it must not consume the HSS+IKS cap.
+        if (e.isPassFail) {
+          add("FE", cr);
+          continue;
+        }
         const code = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
         const mapping = (e.course.branchMappings as Array<{ courseCategory: string; branch: string; batch: string; splitCategory: string | null; splitAmount: number | null }>)
           .find(m => pickCategory([m], normalizedBranch, batch) !== undefined &&
@@ -366,8 +390,7 @@ export async function GET() {
           (() => { const c = pickCategory(e.course.branchMappings as any, normalizedBranch, batch); return c ? { courseCategory: c, splitCategory: null, splitAmount: null } : null; })();
 
         // IK-xxx, IC-181, IC-182 → HSS+IKS combined basket
-        const isHssIks = /^IK\d/.test(code) || code === "IC181" ||
-          (code === "IC182" && batch != null && batch >= 2024);
+        const isHssIks = isHssIksCourse(code, batch);
         let cat = isHssIks ? "HSS" :
           (mapping?.courseCategory ??
             (code.startsWith("HS") ? "HSS" : code.startsWith("IC") ? "IC" : "FE"));
@@ -398,9 +421,13 @@ export async function GET() {
       const HSS_IKS_REQ = (req.icCredits ?? 60) <= 52 ? 12 : 15;
 
       // HSS overflow → FE (credits beyond HSS requirement count as FE)
-      const hssOverflow = Math.max(0, (tally.HSS ?? 0) - HSS_IKS_REQ);
-      tally.HSS = Math.min(tally.HSS ?? 0, HSS_IKS_REQ);
-      tally.FE = (tally.FE ?? 0) + hssOverflow;
+      const HSS_IKS_DEGREE_CAP = 20;
+      const hssRaw = tally.HSS ?? 0;
+      const hssFeCredits = Math.max(0, Math.min(HSS_IKS_DEGREE_CAP, hssRaw) - HSS_IKS_REQ);
+      const hssNotInDegree = Math.max(0, hssRaw - HSS_IKS_DEGREE_CAP);
+      tally.HSS = Math.min(hssRaw, HSS_IKS_REQ);
+      tally.FE = (tally.FE ?? 0) + hssFeCredits;
+      tally.NOT_IN_DEGREE = hssNotInDegree;
 
       completedBreakdown = tally;
       const batchAdj = getBatchAdjustedCredits(normalizedBranch, batchYear, { dcCredits: req.dcCredits, deCredits: req.deCredits });
@@ -414,6 +441,7 @@ export async function GET() {
         ISTP: progress.required.istp,
         HSS:  HSS_IKS_REQ,
         IKS:  0, // merged into HSS
+        NOT_IN_DEGREE: 0,
       };
     } catch { /* keep null */ }
   }
@@ -453,6 +481,7 @@ export async function GET() {
     registrationOpensAt,
     offerings: result,
     completedBreakdown,
+    hssIksCreditsCompleted,
     programRequirements,
     incompleteSemesters,
     completedCourseCodes: completed

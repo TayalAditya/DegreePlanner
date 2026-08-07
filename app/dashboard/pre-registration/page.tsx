@@ -41,6 +41,7 @@ interface ApiResponse {
   registrationOpensAt: string | null;
   offerings: Offering[];
   completedBreakdown: Record<string, number>;
+  hssIksCreditsCompleted?: number;
   programRequirements: Record<string, number> | null;
   incompleteSemesters: number[];
   completedCourseCodes?: string[];
@@ -69,12 +70,21 @@ interface PlannedCourse {
   slots: string | null;
   category: string;
   categoryReason?: string;
+  degreeCredits?: number;
+  notInDegreeCredits?: number;
   registrationType: RegType;
 }
+
+type EffectiveOfferingCategory = {
+  category: string;
+  reason?: string;
+  allocations?: Array<{ category: string; credits: number }>;
+};
 
 const CATEGORY_LABEL: Record<string, string> = {
   IC: "IC", IC_BASKET: "IC", DC: "DC", DE: "DE",
   HSS: "HSS+IKS", IKS: "HSS+IKS", FE: "FE", MTP: "MTP", ISTP: "ISTP", AUDIT: "Audit",
+  NOT_IN_DEGREE: "Not in degree",
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
@@ -88,13 +98,17 @@ const CATEGORY_COLOR: Record<string, string> = {
   MTP: "bg-error/10 text-error border-error/20",
   ISTP: "bg-accent/10 text-accent border-accent/20",
   AUDIT: "bg-warning/10 text-warning border-warning/20",
+  NOT_IN_DEGREE: "bg-foreground-secondary/10 text-foreground-secondary border-foreground-secondary/20",
 };
 
 const CATEGORY_BAR_COLOR: Record<string, string> = {
   DC: "bg-primary", IC: "bg-info", IC_BASKET: "bg-info",
   DE: "bg-secondary", HSS: "bg-warning", IKS: "bg-warning",
   FE: "bg-success", MTP: "bg-error", ISTP: "bg-accent", AUDIT: "bg-warning",
+  NOT_IN_DEGREE: "bg-foreground-secondary",
 };
+
+const HSS_IKS_DEGREE_CAP = 20;
 
 // These minors use the HSS+IKS basket naturally. Their courses become FE only
 // after that basket is already fulfilled; other minor-counting courses are FE.
@@ -443,8 +457,14 @@ function CourseCard({
         )}
 
         {categoryReason && !isCompleted && regType !== "PASS_FAIL" && regType !== "AUDIT" && (
-          <p className="mt-1 flex items-center gap-1 text-xs text-success">
-            <Info className="w-3 h-3" />
+          <p className={`mt-1 flex items-center gap-1 text-xs ${
+            effectiveCategory === "NOT_IN_DEGREE" || categoryReason.includes("not counted")
+              ? "text-warning"
+              : "text-success"
+          }`}>
+            {effectiveCategory === "NOT_IN_DEGREE" || categoryReason.includes("not counted")
+              ? <AlertTriangle className="w-3 h-3" />
+              : <Info className="w-3 h-3" />}
             {categoryReason}
           </p>
         )}
@@ -653,13 +673,13 @@ function ProgressPanel({ programRequirements, completedBreakdown, categoryBreakd
       <div className="rounded-xl border border-border bg-surface p-4">
         <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide mb-3">Remaining</p>
         <div className="space-y-2">
-          {(["IC","IC_BASKET","DC","DE","HSS","FE","MTP","ISTP"] as const).map((key) => {
+          {(["IC","IC_BASKET","DC","DE","HSS","FE","MTP","ISTP","NOT_IN_DEGREE"] as const).map((key) => {
             const req  = programRequirements[key] ?? 0;
             const done = completedBreakdown[key] ?? 0;
             if (!req && !done) return null;
             const rem  = req > 0 ? Math.max(0, req - done) : null;
             const color = CATEGORY_COLOR[key] ?? "";
-            const label = key === "IC_BASKET" ? "ICB" : key;
+            const label = key === "IC_BASKET" ? "ICB" : CATEGORY_LABEL[key] ?? key;
             return (
               <div key={key} className="flex items-center justify-between gap-2">
                 <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${color}`}>{label}</span>
@@ -686,11 +706,11 @@ function ProgressPanel({ programRequirements, completedBreakdown, categoryBreakd
             {categoryBreakdown.map(({ cat, credits, count }) => (
               <div key={cat} className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${CATEGORY_COLOR[cat] ?? ""}`}>{cat}</span>
+                  <span className={`text-xs font-semibold px-1.5 py-0.5 rounded border flex-shrink-0 ${CATEGORY_COLOR[cat] ?? ""}`}>{CATEGORY_LABEL[cat] ?? cat}</span>
                   <span className="text-xs text-foreground-secondary">{count} course{count !== 1 ? "s" : ""}</span>
                 </div>
-                <span className={`text-xs font-semibold flex-shrink-0 ${cat === "AUDIT" ? "text-warning" : "text-foreground"}`}>
-                  {cat === "AUDIT" ? `${formatCredits(credits)} cr excluded` : `+${formatCredits(credits)} cr`}
+                <span className={`text-xs font-semibold flex-shrink-0 ${cat === "AUDIT" || cat === "NOT_IN_DEGREE" ? "text-warning" : "text-foreground"}`}>
+                  {cat === "AUDIT" || cat === "NOT_IN_DEGREE" ? `${formatCredits(credits)} cr excluded` : `+${formatCredits(credits)} cr`}
                 </span>
               </div>
             ))}
@@ -1067,11 +1087,12 @@ export default function PreRegistrationPage() {
   // merely the catalogue category. This keeps a minor/fulfilled-basket choice
   // from looking like it still consumes DE or HSS+IKS credits.
   const effectiveOfferingCategories = useMemo(() => {
-    const map = new Map<string, { category: string; reason?: string }>();
+    const map = new Map<string, EffectiveOfferingCategory>();
     if (!data) return map;
 
     const requirements = data.programRequirements;
     const completed = data.completedBreakdown;
+    const hssCoreCap = requirements?.HSS ?? 15;
     const minorCountsAsFE = Boolean(
       minorData && !HSS_NATIVE_MINOR_CODES.has(minorData.minor.code),
     );
@@ -1085,8 +1106,70 @@ export default function PreRegistrationPage() {
       }
     }
 
+    const isRegularHssIks = (offering: Offering) =>
+      offering.completedInSemester === null &&
+      (offering.resolvedCategory === "HSS" || offering.resolvedCategory === "IKS") &&
+      (regTypes.get(offering.id) ?? "REGULAR") === "REGULAR";
+    const allocateHssIks = (offering: Offering, before: number): EffectiveOfferingCategory => {
+      const after = before + offering.credits;
+      const hssCredits = Math.max(0, Math.min(hssCoreCap, after) - Math.min(hssCoreCap, before));
+      const feCredits = Math.max(0, Math.min(HSS_IKS_DEGREE_CAP, after) - Math.max(hssCoreCap, before));
+      const notInDegreeCredits = Math.max(0, offering.credits - hssCredits - feCredits);
+      const allocations = [
+        ...(hssCredits > 0 ? [{ category: "HSS", credits: hssCredits }] : []),
+        ...(feCredits > 0 ? [{ category: "FE", credits: feCredits }] : []),
+        ...(notInDegreeCredits > 0 ? [{ category: "NOT_IN_DEGREE", credits: notInDegreeCredits }] : []),
+      ];
+      const degreeCredits = hssCredits + feCredits;
+      const category = degreeCredits === 0
+        ? "NOT_IN_DEGREE"
+        : hssCredits > 0 && feCredits === 0
+          ? "HSS"
+          : "FE";
+      let reason: string | undefined;
+      if (notInDegreeCredits > 0) {
+        reason = degreeCredits > 0
+          ? `${formatCredits(degreeCredits)} cr counts toward your degree; ${formatCredits(notInDegreeCredits)} cr is not counted because HSS + IKS is capped at ${HSS_IKS_DEGREE_CAP} cr.`
+          : `Not counted toward your degree because HSS + IKS is capped at ${HSS_IKS_DEGREE_CAP} cr.`;
+      } else if (feCredits > 0 && hssCredits === 0) {
+        reason = "Counts as FE because your HSS + IKS requirement is already complete.";
+      } else if (feCredits > 0) {
+        reason = `${formatCredits(hssCredits)} cr counts as HSS + IKS and ${formatCredits(feCredits)} cr as FE.`;
+      }
+      return { category, reason, allocations };
+    };
+
+    // Use completed HSS+IKS credits plus the currently selected regular courses.
+    // A course that crosses 20 credits is split exactly rather than making the
+    // whole course look like it counts (or does not count).
+    let hssIksUsed = data.hssIksCreditsCompleted ?? (completed.HSS ?? 0);
+    const selectedById = new Map(data.offerings.map((offering) => [offering.id, offering]));
+    const selectedHssIks = [
+      ...data.offerings.filter((offering) => offering.isCompulsory && isRegularHssIks(offering)),
+      ...Array.from(selected)
+        .map((id) => selectedById.get(id))
+        .filter((offering): offering is Offering => Boolean(offering) && !offering!.isCompulsory && isRegularHssIks(offering!)),
+    ];
+    for (const offering of selectedHssIks) {
+      map.set(offering.id, allocateHssIks(offering, hssIksUsed));
+      hssIksUsed += offering.credits;
+    }
+
     for (const offering of data.offerings) {
       const baseCategory = offering.resolvedCategory === "IKS" ? "HSS" : offering.resolvedCategory;
+      if (baseCategory === "HSS") {
+        // Selected regular courses were allocated above. Every other HSS/IKS
+        // course is a preview of what it would do if selected next.
+        if (!map.has(offering.id)) {
+          map.set(
+            offering.id,
+            isRegularHssIks(offering)
+              ? allocateHssIks(offering, hssIksUsed)
+              : { category: "HSS" },
+          );
+        }
+        continue;
+      }
       const minorGroup = minorGroupByOfferingId.get(offering.id);
       if (minorGroup && minorData) {
         map.set(offering.id, {
@@ -1111,7 +1194,7 @@ export default function PreRegistrationPage() {
       map.set(offering.id, { category: baseCategory });
     }
     return map;
-  }, [data, minorData]);
+  }, [data, minorData, selected, regTypes]);
 
   // Category-wise breakdown of selected + compulsory courses
   const categoryBreakdown = useMemo(() => {
@@ -1137,7 +1220,12 @@ export default function PreRegistrationPage() {
       const cat = registrationType === "PASS_FAIL"
         ? "FE"
         : effective?.category ?? (o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory);
-      add(cat, o.credits);
+      const allocations = registrationType === "REGULAR" ? effective?.allocations : undefined;
+      if (allocations && allocations.length > 0) {
+        for (const allocation of allocations) add(allocation.category, allocation.credits);
+      } else {
+        add(cat, o.credits);
+      }
     }
     // Add internship / MTP-1 selections
     const extraCourses: { id: string; credits: number; category: string }[] = [
@@ -1148,7 +1236,7 @@ export default function PreRegistrationPage() {
     for (const c of extraCourses) {
       if (selectedExtra.has(c.id)) add(c.category, c.credits);
     }
-    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP", "AUDIT"]; // IKS merged into HSS
+    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP", "NOT_IN_DEGREE", "AUDIT"]; // IKS merged into HSS
     return ORDER.filter((cat) => map.has(cat)).map((cat) => ({ cat, ...map.get(cat)! }));
   }, [data, selected, selectedExtra, internshipCourses, mtp1Course, regTypes, effectiveOfferingCategories]);
 
@@ -1166,6 +1254,11 @@ export default function PreRegistrationPage() {
         : registrationType === "AUDIT"
           ? "AUDIT"
           : effective?.category ?? (offering.resolvedCategory === "IKS" ? "HSS" : offering.resolvedCategory);
+      const notInDegreeCredits = registrationType === "REGULAR"
+        ? (effective?.allocations ?? [])
+            .filter((allocation) => allocation.category === "NOT_IN_DEGREE")
+            .reduce((sum, allocation) => sum + allocation.credits, 0)
+        : 0;
       rows.push({
         id: offering.id,
         code: offering.courseCode,
@@ -1175,6 +1268,8 @@ export default function PreRegistrationPage() {
         slots: offering.slots,
         category,
         categoryReason: registrationType === "REGULAR" ? effective?.reason : undefined,
+        degreeCredits: registrationType === "AUDIT" ? 0 : offering.credits - notInDegreeCredits,
+        notInDegreeCredits,
         registrationType,
       });
     }
@@ -1507,10 +1602,12 @@ export default function PreRegistrationPage() {
   const de = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "DE" && !clashMap.has(o.id));
   const hss = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "HSS" && !clashMap.has(o.id));
   const fe = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "FE" && !clashMap.has(o.id));
+  const notInDegree = data.offerings.filter((o) => !o.isCompulsory && displayCategory(o) === "NOT_IN_DEGREE" && !clashMap.has(o.id));
   // Once the HSS + IKS basket is complete, its current offerings deliberately
   // move to FE. Keep that transition visible: otherwise the missing HSS
   // section looks like the offerings were not uploaded at all.
   const hssShownAsFe = fe.filter((o) => o.resolvedCategory === "HSS" || o.resolvedCategory === "IKS");
+  const hssNotInDegree = notInDegree.filter((o) => o.resolvedCategory === "HSS" || o.resolvedCategory === "IKS");
   const hssRequirement = data.programRequirements?.HSS ?? 0;
   const hssCompleted = data.completedBreakdown?.HSS ?? 0;
   // Group FE by school
@@ -1526,6 +1623,14 @@ export default function PreRegistrationPage() {
   const overLimit = totalCredits > creditLimit;
   const registrationLocked = !!data.registrationOpensAt;
   const selectedCount = selected.size + selectedExtra.size + compulsory.filter((o) => !o.completedInSemester).length;
+  const plannedDegreeCredits = plannedCourses.reduce(
+    (sum, course) => sum + (course.degreeCredits ?? (course.registrationType === "AUDIT" ? 0 : course.credits)),
+    0,
+  );
+  const plannedNotInDegreeCredits = plannedCourses.reduce(
+    (sum, course) => sum + (course.notInDegreeCredits ?? 0),
+    0,
+  );
 
   // P/F budget: historical + internship selections + reg-type P/F selections
   const pfUsedTotal = (data.studentInfo?.pfCreditsUsed ?? 0) + pfCreditsFromSelection + pfCreditsFromRegTypes;
@@ -1967,7 +2072,7 @@ export default function PreRegistrationPage() {
       )}
 
       {/* HSS + IKS courses are still offered; completed-basket choices are FE. */}
-      {hss.length === 0 && hssShownAsFe.length > 0 && hssRequirement > 0 && hssCompleted >= hssRequirement && (
+      {hss.length === 0 && (hssShownAsFe.length > 0 || hssNotInDegree.length > 0) && hssRequirement > 0 && hssCompleted >= hssRequirement && (
         <div className="flex items-start gap-3 p-4 rounded-xl border border-success/25 bg-success/5">
           <CheckCircle className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
           <div>
@@ -1975,10 +2080,38 @@ export default function PreRegistrationPage() {
               HSS + IKS complete · {formatCredits(hssCompleted)} / {formatCredits(hssRequirement)} cr
             </p>
             <p className="mt-0.5 text-xs text-foreground-secondary">
-              {hssShownAsFe.length} HSS + IKS course{hssShownAsFe.length === 1 ? " is" : "s are"} available under Free Electives because this basket is already complete. Additional credits count as FE, subject to your FE limit.
+              {hssShownAsFe.length > 0 && <>{hssShownAsFe.length} HSS + IKS course{hssShownAsFe.length === 1 ? " is" : "s are"} available under Free Electives because this basket is already complete.</>}
+              {hssShownAsFe.length > 0 && hssNotInDegree.length > 0 && " "}
+              {hssNotInDegree.length > 0 && <>{hssNotInDegree.length} course{hssNotInDegree.length === 1 ? " is" : "s are"} not counted because HSS + IKS is capped at {HSS_IKS_DEGREE_CAP} cr.</>}
             </p>
           </div>
         </div>
+      )}
+
+      {/* HSS + IKS beyond 20 credits remains registerable but does not add degree credits. */}
+      {notInDegree.length > 0 && (
+        <Section title="Not counted toward degree" count={notInDegree.length} error>
+          {notInDegree.map((o) => (
+            <CourseCard
+              key={o.id}
+              offering={o}
+              checked={selected.has(o.id)}
+              disabled={false}
+              onToggle={() => handleToggle(o)}
+              minorGroupLabel={minorOfferingLabels.get(o.id)}
+              displayCategory={displayCategory(o)}
+              categoryReason={displayCategoryReason(o)}
+              studentInfo={data.studentInfo}
+              samarthReported={samarthReported.has(o.id)}
+              onToggleSamarth={handleToggleSamarth}
+              sootrankReported={sootrankReported.has(o.id)}
+              onToggleSootrank={handleToggleSootrank}
+              regType={regTypes.get(o.id) ?? "REGULAR"}
+              pfBudgetRemaining={pfBudgetRemaining}
+              onRegTypeChange={handleRegTypeChange}
+            />
+          ))}
+        </Section>
       )}
 
       {/* FE by school */}
@@ -2035,8 +2168,8 @@ export default function PreRegistrationPage() {
             {categoryBreakdown.map(({ cat, credits, count }) => {
               const color = CATEGORY_COLOR[cat] ?? "bg-surface-secondary text-foreground-secondary border-border";
               const label = CATEGORY_LABEL[cat] ?? cat;
-              const isAudit = cat === "AUDIT";
-              const pct = isAudit || totalCredits === 0 ? 0 : Math.min(100, (credits / totalCredits) * 100);
+              const isExcluded = cat === "AUDIT" || cat === "NOT_IN_DEGREE";
+              const pct = isExcluded || totalCredits === 0 ? 0 : Math.min(100, (credits / totalCredits) * 100);
               return (
                 <div key={cat} className="flex items-center gap-3">
                   <span className={`flex-shrink-0 w-16 text-center px-1.5 py-0.5 text-xs font-semibold rounded border ${color}`}>
@@ -2049,7 +2182,7 @@ export default function PreRegistrationPage() {
                     />
                   </div>
                   <span className="flex-shrink-0 text-sm font-medium text-foreground w-16 text-right">
-                    {isAudit ? `${formatCredits(credits)} cr audit` : `+${formatCredits(credits)} cr`}
+                    {cat === "AUDIT" ? `${formatCredits(credits)} cr audit` : isExcluded ? `${formatCredits(credits)} cr excluded` : `+${formatCredits(credits)} cr`}
                   </span>
                   <span className="flex-shrink-0 text-xs text-foreground-secondary w-16">
                     {count} course{count !== 1 ? "s" : ""}
@@ -2127,7 +2260,7 @@ export default function PreRegistrationPage() {
               <div>
                 <h2 className="text-lg font-semibold text-foreground">Semester {data.offeringSemester} Course Plan</h2>
                 <p className="mt-1 text-sm text-foreground-secondary">
-                  {formatCredits(plannedCourses.filter((course) => course.registrationType !== "AUDIT").reduce((sum, course) => sum + course.credits, 0))} degree credits
+                  {formatCredits(plannedDegreeCredits)} degree credits
                   {plannedCourses.some((course) => course.registrationType === "AUDIT") && (
                     <> · {formatCredits(plannedCourses.filter((course) => course.registrationType === "AUDIT").reduce((sum, course) => sum + course.credits, 0))} audit credits excluded</>
                   )}
