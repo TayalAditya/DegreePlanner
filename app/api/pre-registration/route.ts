@@ -228,16 +228,23 @@ export async function GET() {
   const result = offerings
     .filter((o) => {
       if (!o.slots && !o.instructor) return false;
+      const normalizedOfferingCode = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const isB25MevlsiSem3 =
+        normalizedBranch === "MEVLSI" && batchYear === 2025 && offeringSemester === 3;
+      // For B25 MEVLSI, EE-311 was recoded as VL-201. Exposing both equivalent
+      // slot-E rows creates a duplicate compulsory course and a false clash.
+      if (isB25MevlsiSem3 && normalizedOfferingCode === "EE311") return false;
+      if (isB25MevlsiSem3 && normalizedOfferingCode === "VL201") return true;
+
       // B24/B25 CE/BE/EP/BSCS: IC202P (Design Practicum) is optional FE — always show
       // regardless of the offering's branch list so students can register if they choose.
       const dpOptionalBranches = new Set(["CE", "BE", "EP", "BSCS"]);
       const isOptionalDpForBranch =
-        o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "") === "IC202P" &&
+        normalizedOfferingCode === "IC202P" &&
         dpOptionalBranches.has(normalizedBranch) &&
         batch != null && batch >= 2024;
       if (isOptionalDpForBranch) return true;
-      // Filter by branch eligibility — also match parent branches
-      // (e.g. GE-ROBO student matches offerings listed for "GE")
+      // Filter by branch eligibility — also match parent branches.
       const branchCandidates = getBranchCandidates(normalizedBranch);
       const eligible =
         o.branches.includes("ALL") ||
@@ -303,7 +310,9 @@ export async function GET() {
       // Compulsory if:
       //  a) no semester restriction OR same as student's current semester
       //  b) OR different semester but student hasn't completed it yet (backlog DC/IC)
-      const isCompulsoryCategory = ["IC", "IC_BASKET", "DC", "IKS"].includes(resolvedCategory);
+      const isIkRequiredCourse = normalizedCodeEarly === "IC181" || normalizedCodeEarly === "IC182";
+      const isCompulsoryCategory = ["IC", "IC_BASKET", "DC"].includes(resolvedCategory) ||
+        (resolvedCategory === "IKS" && isIkRequiredCourse);
       // Prefer branch-specific semester from branchMapping over the offering-level compulsorySem
       const branchMappingSem = o.course?.branchMappings
         ? (() => {
