@@ -2338,11 +2338,13 @@ export default function PreRegistrationPage() {
                     <th className="px-5 py-3 font-semibold">Faculty</th>
                     <th className="px-5 py-3 font-semibold">Slot</th>
                     <th className="px-5 py-3 font-semibold">Type</th>
+                    <th className="px-5 py-3 font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {plannedCourses.map((course) => {
                     const isAudit = course.registrationType === "AUDIT";
+                    const isCompulsory = data?.offerings.find((o) => o.id === course.id)?.isCompulsory ?? false;
                     const type = course.registrationType === "PASS_FAIL"
                       ? "P/F → FE"
                       : isAudit
@@ -2355,9 +2357,46 @@ export default function PreRegistrationPage() {
                         <td className="px-5 py-3 text-right font-medium text-foreground">{formatCredits(course.credits)}</td>
                         <td className="px-5 py-3 text-foreground-secondary">{course.instructor ?? "—"}</td>
                         <td className="px-5 py-3 font-mono text-xs text-foreground-secondary">{course.slots ?? "—"}</td>
-                        <td className={`px-5 py-3 text-xs font-semibold ${isAudit ? "text-warning" : course.registrationType === "PASS_FAIL" ? "text-success" : "text-foreground-secondary"}`}>
-                          <span className="block">{type}</span>
+                        <td className={`px-5 py-3 text-xs ${isAudit ? "text-warning" : course.registrationType === "PASS_FAIL" ? "text-success" : "text-foreground-secondary"}`}>
+                          {isCompulsory ? (
+                            <span className="font-semibold">{type}</span>
+                          ) : (
+                            <select
+                              value={course.registrationType}
+                              onChange={(e) => {
+                                const newType = e.target.value as RegType;
+                                handleRegTypeChange(course.id, newType);
+                              }}
+                              className="w-full rounded border border-border bg-surface px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                            >
+                              <option value="REGULAR">Regular · {CATEGORY_LABEL[course.category] ?? course.category}</option>
+                              <option value="PASS_FAIL">P/F → FE</option>
+                              <option value="AUDIT">Audit · not in degree</option>
+                            </select>
+                          )}
                           {course.categoryReason && <span className="mt-1 block font-normal text-success">{course.categoryReason}</span>}
+                        </td>
+                        <td className="px-5 py-3">
+                          {!isCompulsory && (
+                            <button
+                              onClick={() => {
+                                if (selectedExtra.has(course.id)) {
+                                  const newExtra = new Set(selectedExtra);
+                                  newExtra.delete(course.id);
+                                  setSelectedExtra(newExtra);
+                                } else {
+                                  const newSelected = new Set(selected);
+                                  newSelected.delete(course.id);
+                                  setSelected(newSelected);
+                                }
+                                showToast("success", `${formatCourseCode(course.code)} removed from plan`);
+                              }}
+                              className="rounded border border-border bg-surface px-3 py-1 text-xs font-medium text-foreground-secondary hover:bg-error/10 hover:text-error hover:border-error transition-colors"
+                            >
+                              Remove
+                            </button>
+                          )}
+                          {isCompulsory && <span className="text-xs text-foreground-secondary">Compulsory</span>}
                         </td>
                       </tr>
                     );
