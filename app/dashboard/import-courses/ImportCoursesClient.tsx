@@ -274,14 +274,16 @@ export default function ImportCoursesPage({
     typeMap.set("IK593", "FE");
 
     // Fall back to the static default curriculum for anything missing.
-    getAllDefaultCourses(effectiveBranch, 8, userBatch).forEach((c) => {
-      const norm = normalizeCourseCode(c.code);
-      if (!typeMap.has(norm)) typeMap.set(norm, c.category);
-      if (c.category === "DC") {
-        const pf = /^([A-Z]+)/.exec(norm)?.[1];
-        if (pf) prefixes.add(pf);
-      }
-    });
+    getAllDefaultCourses(effectiveBranch, 8, userBatch)
+      .filter((c) => !c.unpublished)
+      .forEach((c) => {
+        const norm = normalizeCourseCode(c.code);
+        if (!typeMap.has(norm)) typeMap.set(norm, c.category);
+        if (c.category === "DC") {
+          const pf = /^([A-Z]+)/.exec(norm)?.[1];
+          if (pf) prefixes.add(pf);
+        }
+      });
     return { courseTypeMap: typeMap, dcPrefixes: prefixes };
   }, [effectiveBranch, dbCourseTypeMap, userBatch]);
 
@@ -408,7 +410,8 @@ export default function ImportCoursesPage({
 
   const loadDefaultCourses = () => {
     const effectiveBranch = (branch === "GE" || branch.startsWith("GE-")) ? geSubBranch : branch;
-    const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester, userBatch);
+    const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester, userBatch)
+      .filter((course) => !course.unpublished);
     const normalizeCatalog = (code: string) => normalizeCourseCode(code);
     const resolvedCourses = defaultCourses.map((course) => {
       const match = catalogIndex[normalizeCatalog(course.code)];

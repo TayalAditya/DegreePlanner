@@ -13,6 +13,8 @@ export interface DefaultCourse {
   semester: number;
   /** If true, shown unchecked by default in import-courses (student must opt in) */
   optional?: boolean;
+  /** Shown in progress but not offered for registration until a catalogue code exists. */
+  unpublished?: boolean;
   /** Short label shown as a badge in import-courses UI (e.g. "Jan–May 2024") */
   tag?: string;
 }
@@ -721,20 +723,29 @@ const agSem3: DefaultCourse[] = [
   ...icSem3,
   { code: "CE310", name: "Strength of Materials and Structures", credits: 3, category: "DC", semester: 3 },
   { code: "CE310P", name: "Strength of Materials and Structures Lab", credits: 1, category: "DC", semester: 3 },
+  { code: "AG-UNPUBLISHED-01", name: "Crop Production Technology", credits: 3, category: "DC", semester: 3, unpublished: true },
+  { code: "AG-UNPUBLISHED-02", name: "Soil Science and Mechanics", credits: 4, category: "DC", semester: 3, unpublished: true },
+  { code: "AG-UNPUBLISHED-03", name: "Farm Machinery and Equipment", credits: 3, category: "DC", semester: 3, unpublished: true },
 ];
 const agSem4: DefaultCourse[] = [
   { code: "CE201", name: "Surveying: Traditional and Digital", credits: 4, category: "DC", semester: 4 },
   { code: "CE251", name: "Hydraulics Engineering", credits: 3, category: "DC", semester: 4 },
   { code: "CE304P", name: "Hydraulics Engineering Lab", credits: 1, category: "DC", semester: 4 },
   { code: "EE302", name: "Control Systems", credits: 4, category: "DC", semester: 4 },
+  { code: "AG-UNPUBLISHED-04", name: "Theory and Design of Machine Elements", credits: 4, category: "DC", semester: 4, unpublished: true },
 ];
 const agSem5: DefaultCourse[] = [
   { code: "CE303", name: "Water Resources Engineering", credits: 3, category: "DC", semester: 5 },
   { code: "CE353P", name: "Civil Engineering Drawing", credits: 1, category: "DC", semester: 5 },
   { code: "CE451", name: "Irrigation Engineering and Hydraulic Structures", credits: 3, category: "DC", semester: 5 },
   { code: "CS541P", name: "IoT Systems and Clouds", credits: 3, category: "DC", semester: 5 },
+  { code: "AG-UNPUBLISHED-05", name: "Food Science and Technology and Lab", credits: 4, category: "DC", semester: 5, unpublished: true },
+  { code: "AG-UNPUBLISHED-06", name: "Self-Sufficient Farming (Natural Farming)", credits: 2, category: "DC", semester: 5, unpublished: true },
 ];
-const agSem6: DefaultCourse[] = [...istpSem6];
+const agSem6: DefaultCourse[] = [
+  { code: "AG-UNPUBLISHED-07", name: "Post-Harvest Engineering", credits: 3, category: "DC", semester: 6, unpublished: true },
+  ...istpSem6,
+];
 const agSem7: DefaultCourse[] = [...mtpSem7];
 const agSem8: DefaultCourse[] = [
   { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 8 },

@@ -15,6 +15,7 @@ import {
 } from "@/lib/utils";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { getMtpComponent, MTP_COMPONENT_CREDITS } from "@/lib/mtpConfig";
+import { IC_BASKET_COMPULSIONS } from "@/lib/icBasketConfig";
 
 interface ProgressChartProps {
   progress: any;
@@ -58,23 +59,6 @@ const ICB2_CODES = new Set([
   "IC241",
   "IC253",
 ]);
-
-const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
-  BIO: { ic1: "IC136", ic2: "IC240" },
-  CE:  { ic1: "IC230", ic2: "IC240" },
-  CS:  { ic2: "IC253" },
-  CSE: { ic2: "IC253" },
-  DSE: { ic2: "IC253" },
-  EP:  { ic1: "IC230", ic2: "IC121" },
-  ME:  { ic2: "IC240" },
-  CH:  { ic1: "IC131", ic2: "IC121" },
-  MNC: { ic1: "IC136", ic2: "IC253" },
-  MS:  { ic1: "IC131", ic2: "IC241" },
-  MSE: { ic1: "IC131", ic2: "IC241" },
-  GE:  { ic1: "IC230", ic2: "IC240" },
-  EE:  {},
-  VLSI: {},
-};
 
 interface DEBasket { name: string; courses: { code: string; name: string; credits: number }[]; }
 
@@ -929,11 +913,11 @@ export function ProgressChart({
 
   return (
     <div className="bg-surface rounded-xl shadow-sm border border-border p-4 sm:p-6">
-      <div className="flex min-w-0 flex-col gap-3 mb-4 sm:mb-6 sm:flex-row sm:items-start sm:justify-between">
-        <h3 className="min-w-0 text-lg font-semibold text-foreground sm:pr-4">
+      <div className="mb-4 flex min-w-0 flex-col gap-3 sm:mb-6 lg:flex-row lg:items-start lg:justify-between">
+        <h3 className="min-w-0 break-words text-lg font-semibold text-foreground lg:pr-4">
           {progress.programName} Progress
         </h3>
-        <div className="flex w-full flex-wrap items-center justify-between gap-3 sm:w-auto sm:flex-nowrap sm:justify-end sm:gap-4">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 lg:w-auto lg:flex-nowrap lg:justify-end lg:gap-4">
           <span className="flex-none text-2xl font-bold text-primary">{totals.percentage}%</span>
           <div className="flex min-w-0 flex-none items-center gap-2">
             <button
@@ -1187,9 +1171,14 @@ function CourseList({
               <tr key={`${norm}|${c.semester}`} className="border-b border-border/60 last:border-0">
                 <td className="py-2 pr-4 text-foreground whitespace-nowrap">{c.semester}</td>
                 <td className="py-2 pr-4 font-semibold text-foreground whitespace-nowrap">
-                  {formatCourseCode(c.code)}
+                  {c.unpublished ? "\u2014" : formatCourseCode(c.code)}
                 </td>
-                <td className="py-2 pr-4 text-foreground-secondary">{c.name}</td>
+                <td className="py-2 pr-4 text-foreground-secondary">
+                  <p>{c.name}</p>
+                  {c.unpublished && (
+                    <p className="mt-0.5 text-xs italic text-foreground-secondary">Catalogue code not notified yet</p>
+                  )}
+                </td>
                 <td className="py-2 pr-4 text-right text-foreground whitespace-nowrap">{formatCredits(c.credits)}</td>
                 <td className="py-2 whitespace-nowrap">{badge(status)}</td>
               </tr>
