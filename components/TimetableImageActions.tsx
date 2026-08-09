@@ -28,7 +28,7 @@ interface TimetableImageActionsProps {
   entries: TimetableImageEntry[];
 }
 
-const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
 const CANVAS_WIDTH = 1440;
 const MARGIN = 72;
 const MAX_ENTRIES_PER_IMAGE = 80;

@@ -35,7 +35,11 @@ interface TimetableViewProps {
   userId: string;
 }
 
-const DAYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+type DayOfWeek = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY";
+
+// Saturday remains valid for stored/admin timetable data, but is intentionally
+// excluded from the student-facing weekly calendar and its day picker.
+const DAYS: DayOfWeek[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY"];
 const WEEK_DAYS = DAYS;
 
 const pad2 = (n: number) => String(n).padStart(2, "0");
@@ -68,7 +72,6 @@ const DEFAULT_END_TIME = START_TIMES.includes("10:00") && END_TIMES.includes("10
   return (eh * 60 + em) - (sh * 60 + sm) === 50;
 }) || END_TIMES[0]);
 
-type DayOfWeek = (typeof DAYS)[number];
 type Term = "FALL" | "SPRING" | "SUMMER";
 type ClassType = "LECTURE" | "LAB" | "TUTORIAL" | "SEMINAR" | "WORKSHOP" | "TA_DUTY";
 type TimetableKind = "NON_IC" | "IC";
@@ -1648,8 +1651,8 @@ function WeekView({
           <p className="text-sm font-semibold text-foreground">Weekly schedule</p>
           <p className="mt-0.5 text-xs text-foreground-secondary">
             {isPublishedSchedule
-              ? "All published sessions, including Saturday labs"
-              : "Your enrolled and course-registration sessions, including Saturday labs"}
+              ? "All published sessions for your selected courses"
+              : "Your enrolled and course-registration sessions"}
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs font-medium text-foreground-secondary">
@@ -1740,7 +1743,7 @@ function WeekView({
                         type="button"
                         onClick={() => onEdit(entry)}
                         className={`relative h-full w-full overflow-hidden rounded-xl border ${color.border} ${color.bg} ${color.hover} px-2.5 py-2 text-left shadow-sm transition duration-150 hover:-translate-y-px hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60`}
-                        title={`${entry.course?.code || "Class"} - ${entry.startTime} to ${entry.endTime}`}
+                        title={`${entry.course?.code || "Class"} - ${entry.startTime} to ${entry.endTime}${entry.venue ? ` - ${entry.venue}` : ""}`}
                       >
                         <span className={`absolute inset-y-0 left-0 w-1 ${color.accent}`} />
                         <div className="flex min-w-0 items-start justify-between gap-1 pl-1">
@@ -1751,7 +1754,7 @@ function WeekView({
                           {entry.startTime} - {entry.endTime} · {formatWeekDuration(duration)}
                         </p>
                         {isLong && <p className={`mt-1 line-clamp-2 pl-1 text-[11px] leading-4 ${color.text} opacity-90`}>{entry.course?.name || "Scheduled class"}</p>}
-                        {isLong && entry.venue && <p className={`mt-1 flex items-center gap-1 truncate pl-1 text-[10px] ${color.text} opacity-75`}><MapPin className="h-3 w-3 shrink-0" />{entry.venue}</p>}
+                        {entry.venue && <p className={`mt-0.5 flex items-center gap-1 truncate pl-1 text-[10px] ${color.text} opacity-75`}><MapPin className="h-3 w-3 shrink-0" />{entry.venue}</p>}
                       </button>
                       {entry.googleEventId && (
                         <button
