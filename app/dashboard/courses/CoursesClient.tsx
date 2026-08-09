@@ -22,6 +22,7 @@ import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
 import { getSpecialDpCategory, getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { addCredits, formatCourseCode, formatCredits, subtractCredits, sumCredits } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
+import { MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface Course {
@@ -65,6 +66,13 @@ interface User {
   totalPassFailCredits?: number;
   batch?: number | null;
   enrollmentId?: string | null;
+  doingMTP?: boolean;
+  doingMTP2?: boolean;
+}
+
+interface ProjectRequirements {
+  de: number;
+  mtp: number;
 }
 
 type RegistrationType = "REGULAR" | "PASS_FAIL" | "AUDIT";
@@ -166,9 +174,10 @@ interface CoursesClientProps {
   initialEnrollments?: Enrollment[];
   initialUser?: User | null;
   initialCatalogCount?: number;
+  initialProgramId?: string | null;
 }
 
-export default function CoursesPage({ initialEnrollments, initialUser, initialCatalogCount }: CoursesClientProps = {}) {
+export default function CoursesPage({ initialEnrollments, initialUser, initialCatalogCount, initialProgramId }: CoursesClientProps = {}) {
   // Whether the server pre-seeded first-paint data. When true we skip the
   // initial /api/enrollments + /api/user/settings fetch (mutations still refetch).
   const hasInitialData = Array.isArray(initialEnrollments);
@@ -177,6 +186,8 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   const [tab, setTab] = useState<"my-courses" | "catalog">("my-courses");
   const [enrollments, setEnrollments] = useState<Enrollment[]>(initialEnrollments ?? []);
   const [user, setUser] = useState<User | null>(initialUser ?? null);
+  const [programId, setProgramId] = useState<string | null>(initialProgramId ?? null);
+  const [projectRequirements, setProjectRequirements] = useState<ProjectRequirements | null>(null);
   const [dbCourseCategoryMap, setDbCourseCategoryMap] = useState<Map<string, string>>(new Map());
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(!hasInitialData);
@@ -370,6 +381,65 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       prev[dept] ? prev : { ...prev, [dept]: DEPARTMENT_PAGE_SIZE }
     );
   }, []);
+
+  const hasSkippedMtp = user?.doingMTP === false || user?.doingMTP2 === false;
+  const reallocatedMtpCredits = projectRequirements
+    ? Math.max(0, MTP_TOTAL_CREDITS - projectRequirements.mtp)
+    : 0;
+
+  // Normally the primary programme comes from the server wrapper. This keeps
+  // the requirement card reliable if that optional prefetch ever falls back to
+  // the client-side settings request.
+  useEffect(() => {
+    if (programId || !hasSkippedMtp) return;
+
+    const controller = new AbortController();
+    fetch("/api/programs", { cache: "no-store", signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : []))
+      .then((programs) => {
+        const primary = programs.find((program: { isPrimary?: boolean }) => program.isPrimary) ?? programs[0];
+        if (primary?.programId) setProgramId(primary.programId);
+      })
+      .catch((error: unknown) => {
+        if ((error as { name?: string })?.name !== "AbortError") {
+          console.warn("Failed to load the primary program:", error);
+        }
+      });
+
+    return () => controller.abort();
+  }, [hasSkippedMtp, programId]);
+
+  // The credit calculator is the single source of truth for project choices:
+  // an unfinished skipped MTP component moves its 4 credits to DE. The course
+  // page previously showed only earned credits, so that revised requirement was
+  // invisible here even though it was already applied by the server.
+  useEffect(() => {
+    if (!programId || !hasSkippedMtp) {
+      setProjectRequirements(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    fetch(`/api/progress?programId=${encodeURIComponent(programId)}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!data?.progress?.required) return;
+        setProjectRequirements({
+          de: data.progress.required.de,
+          mtp: data.progress.required.mtp,
+        });
+      })
+      .catch((error: unknown) => {
+        if ((error as { name?: string })?.name !== "AbortError") {
+          console.warn("Failed to load updated MTP requirements:", error);
+        }
+      });
+
+    return () => controller.abort();
+  }, [hasSkippedMtp, programId]);
 
   const expandAllDepartments = useCallback(() => {
     const all = departmentGroups.map((g) => g.dept);
@@ -965,6 +1035,26 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
           delay={0.1}
         />
       </div>
+
+      {hasSkippedMtp && projectRequirements && (
+        <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
+          <div className="flex gap-3">
+            <Award className="mt-0.5 h-5 w-5 shrink-0 text-orange-600 dark:text-orange-400" />
+            <div>
+              <h3 className="font-semibold text-foreground">MTP preference applied to your requirements</h3>
+              <p className="mt-1 text-sm text-foreground-secondary">
+                {reallocatedMtpCredits > 0
+                  ? `${formatCredits(reallocatedMtpCredits)} from unfinished skipped MTP components is now included in DE.`
+                  : "Completed MTP credit stays under MTP, so no completed project credit is moved to DE."}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex shrink-0 gap-4 text-sm sm:mt-0">
+            <span><strong className="text-foreground">DE:</strong> {formatCredits(projectRequirements.de)} required</span>
+            <span><strong className="text-foreground">MTP:</strong> {formatCredits(projectRequirements.mtp)} required</span>
+          </div>
+        </div>
+      )}
 
       {/* Category Breakdown */}
           {enrollments.length > 0 && (

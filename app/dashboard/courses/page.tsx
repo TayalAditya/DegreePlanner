@@ -15,7 +15,10 @@ export default async function CoursesPage() {
     totalPassFailCredits?: number;
     batch?: number | null;
     enrollmentId?: string | null;
+    doingMTP?: boolean;
+    doingMTP2?: boolean;
   } | null = null;
+  let initialProgramId: string | null = null;
   // Cheap count so the "Course Catalog (N)" tab shows a real number on first
   // paint instead of "(0)" (the catalog list itself is lazy-loaded on tab open).
   // This is the pre-dedup count — off by at most a handful of section-splits —
@@ -33,6 +36,14 @@ export default async function CoursesPage() {
             batch: true,
             enrollmentId: true,
             totalPassFailCredits: true,
+            doingMTP: true,
+            doingMTP2: true,
+            programs: {
+              where: { status: "ACTIVE" },
+              orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+              take: 1,
+              select: { programId: true },
+            },
           },
         }),
         prisma.course.count({ where: { isActive: true } }),
@@ -46,7 +57,10 @@ export default async function CoursesPage() {
           batch: userRecord.batch ?? null,
           enrollmentId: userRecord.enrollmentId ?? null,
           totalPassFailCredits: userRecord.totalPassFailCredits ?? 0,
+          doingMTP: userRecord.doingMTP,
+          doingMTP2: userRecord.doingMTP2,
         };
+        initialProgramId = userRecord.programs[0]?.programId ?? null;
       }
     } catch {
       // Fall back to client-side fetch if the server prefetch fails.
@@ -60,6 +74,7 @@ export default async function CoursesPage() {
       initialEnrollments={initialEnrollments as any}
       initialUser={initialUser}
       initialCatalogCount={initialCatalogCount}
+      initialProgramId={initialProgramId}
     />
   );
 }

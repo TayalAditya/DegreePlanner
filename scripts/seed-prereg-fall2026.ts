@@ -19,6 +19,36 @@ const IC_SEM_OVERRIDES: Record<string, number> = {
   "IC-121":  2,
 };
 
+// IC-240 and IC-241 are published in the Fall 2026 IC timetable for all
+// non-first-year UG students. They remain IC Basket courses until a student
+// fulfils that basket; the pre-registration API then reclassifies them as FE.
+// Keep this separate from the malformed workbook branch notes so a future seed
+// cannot make the offerings disappear for otherwise eligible branches.
+const IC_FALL_2026_NON_FIRST_YEAR_OVERRIDES: Record<string, {
+  branches: string[];
+  eligibleSems: number[];
+  courseName?: string;
+}> = {
+  "IC-240": { branches: ["ALL"], eligibleSems: ALL_ACTIVE_SEMS },
+  "IC-241": {
+    branches: ["ALL"],
+    eligibleSems: ALL_ACTIVE_SEMS,
+    courseName: "Materials Science for Engineers",
+  },
+};
+
+function offeringBranches(p: { code: string; allBranches: string[] }): string[] {
+  return IC_FALL_2026_NON_FIRST_YEAR_OVERRIDES[p.code]?.branches ?? p.allBranches;
+}
+
+function offeringEligibleSems(p: { code: string; compulsorySem: number | null }): number[] {
+  return IC_FALL_2026_NON_FIRST_YEAR_OVERRIDES[p.code]?.eligibleSems ?? computeEligibleSems(p.compulsorySem);
+}
+
+function offeringName(p: { code: string; name: string }): string {
+  return IC_FALL_2026_NON_FIRST_YEAR_OVERRIDES[p.code]?.courseName ?? p.name;
+}
+
 // Eligible sems = odd active sems >= compulsorySem
 // Even-sem courses (sem 2, 4 etc.) get empty → isActive=false effectively
 // e.g. compulsorySem=5 → [5,7]; compulsorySem=7 → [7]; null/1 → [3,5,7]; 2/4 → []
@@ -234,15 +264,15 @@ async function main() {
         id: randomUUID(),
         courseCode: p.code,
         courseId: courseByCode.get(p.code) ?? null,
-        courseName: p.name,
+        courseName: offeringName(p),
         instructor: p.instructor,
         instructorEmail: p.instructorEmail,
         school: p.school,
         slots: p.slot,
         ltpc: p.ltpc,
         credits: p.credits,
-        branches: p.allBranches,
-        eligibleSems: computeEligibleSems(p.compulsorySem),
+        branches: offeringBranches(p),
+        eligibleSems: offeringEligibleSems(p),
         compulsorySem: p.compulsorySem,
         offeringSemester: OFFERING_SEMESTER,
         offeringYear: OFFERING_YEAR,
@@ -260,19 +290,19 @@ async function main() {
     const now = new Date().toISOString();
     for (const p of batch) {
       const cid = courseByCode.get(p.code);
-      const branches = JSON.stringify(p.allBranches).replace(/'/g, "''");
-      const eligSems = `ARRAY[${computeEligibleSems(p.compulsorySem).join(",")}]::int[]`;
+      const branches = offeringBranches(p);
+      const eligSems = `ARRAY[${offeringEligibleSems(p).join(",")}]::int[]`;
       await prisma.$executeRawUnsafe(`
         UPDATE "CourseOffering" SET
           "courseId"=${cid ? `'${cid}'` : "NULL"},
-          "courseName"='${p.name.replace(/'/g,"''")}',
+          "courseName"='${offeringName(p).replace(/'/g,"''")}',
           "instructor"=${p.instructor ? `'${p.instructor.replace(/'/g,"''")}'` : "NULL"},
           "instructorEmail"=${p.instructorEmail ? `'${p.instructorEmail}'` : "NULL"},
           "school"=${p.school ? `'${p.school}'` : "NULL"},
           "slots"=${p.slot ? `'${p.slot}'` : "NULL"},
           "ltpc"=${p.ltpc ? `'${p.ltpc}'` : "NULL"},
           "credits"=${p.credits},
-          "branches"=ARRAY[${p.allBranches.map(b=>`'${b}'`).join(",")}]::text[],
+          "branches"=ARRAY[${branches.map(b=>`'${b}'`).join(",")}]::text[],
           "eligibleSems"=${eligSems},
           "compulsorySem"=${p.compulsorySem ?? "NULL"},
           "isActive"=true,
