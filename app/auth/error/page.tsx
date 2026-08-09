@@ -32,7 +32,7 @@ function AuthErrorContent() {
     },
     user_not_approved: {
       title: "Access Restricted",
-      description: "This app is only for IIT Mandi students with supported institute accounts (B22/B23/B24/B25 supported).",
+      description: "This app is only for IIT Mandi students with supported institute accounts (B22–B26 supported).",
     },
     branch_not_allowed: {
       title: "Branch Not Supported",

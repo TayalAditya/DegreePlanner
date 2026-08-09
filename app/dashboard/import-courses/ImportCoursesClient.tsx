@@ -60,6 +60,7 @@ interface ImportCoursesClientProps {
   initialDoingMTP2?: boolean;
   initialManualCourseImportOnly?: boolean;
   initialBatch24Icb1Course?: string | null;
+  initialBatch26SelectedCourseCodes?: string[];
   initialImportedKeys?: string[];
   initialPassFailCredits?: number;
   initialPassFailCreditsBySemester?: Record<number, number>;
@@ -194,6 +195,7 @@ export default function ImportCoursesPage({
   initialDoingMTP2,
   initialManualCourseImportOnly = false,
   initialBatch24Icb1Course,
+  initialBatch26SelectedCourseCodes = [],
   initialImportedKeys,
   initialPassFailCredits = 0,
   initialPassFailCreditsBySemester = {},
@@ -212,6 +214,10 @@ export default function ImportCoursesPage({
   );
   const [userBatch, setUserBatch] = useState<number | null>(initialBatch ?? null);
   const [batch24Icb1Course, setBatch24Icb1Course] = useState<string | null>(initialBatch24Icb1Course ?? null);
+  const batch26SelectedCourseKey = initialBatch26SelectedCourseCodes
+    .map((code) => normalizeCourseCode(code))
+    .sort()
+    .join(",");
   const [currentSemester, setCurrentSemester] = useState(initialCurrentSemester ?? 6);
   const [doingMTP, setDoingMTP] = useState(initialDoingMTP ?? true);
   const [doingMTP2, setDoingMTP2] = useState(initialDoingMTP2 ?? true);
@@ -256,10 +262,10 @@ export default function ImportCoursesPage({
 
     // Hard overrides (DB mappings can be stale):
     // - IC181 is IKS for all batches
-    // - IC182 is IKS for Batch 2024/2025
+    // - IC182 is IKS for Batch 2024 onward
     // - IK593 (Kulhad Economy) is a Free Elective for everyone
     typeMap.set("IC181", "IKS");
-    if (userBatch === 2024 || userBatch === 2025) {
+    if (userBatch != null && userBatch >= 2024) {
       typeMap.set("IC182", "IKS");
     } else {
       // Prevent stale DB mappings from classifying IC182 as IKS for other batches.
@@ -317,7 +323,7 @@ export default function ImportCoursesPage({
       return;
     }
     loadDefaultCourses();
-  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingMTP2, userBatch, batch24Icb1Course, manualCourseImportOnly]);
+  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingMTP2, userBatch, batch24Icb1Course, batch26SelectedCourseKey, manualCourseImportOnly]);
 
   useEffect(() => {
     setCustomSemester(currentSemester);
@@ -416,6 +422,10 @@ export default function ImportCoursesPage({
 
     const isBatch24 = userBatch === 2024;
     const isBatch25 = userBatch === 2025;
+    const isBatch26 = userBatch === 2026;
+    const batch26SelectedCourseKeys = new Set(
+      initialBatch26SelectedCourseCodes.map((code) => normalizeCourseCode(code))
+    );
     const isB24EligibleBranch = isBatch24 && ["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE"].includes(effectiveBranch);
     const isB24CE = isBatch24 && effectiveBranch === "CE";
     // B24 GE sub-branches share the same Sem 1-2 IC pattern as CE (IC230/IC240 forced, IC182 IKS in Sem 2)
@@ -436,11 +446,13 @@ export default function ImportCoursesPage({
     // ICB basket + mixed-sem courses start unchecked — user must pick manually.
     // B24 CE: IC140 is compulsory in Sem 2 (not a mixed-group choice), so don't include it here.
     // B24 GE: IC140 is compulsory in Sem 1, IC102P compulsory in Sem 2 — also exclude from manual.
-    const MANUAL_PICK_CODES = isBatch24
-      ? (isB24CE || isB24GE ? ["IC181", "IC182"] : ["IC140", "IC181", "IC182"])
-      : isBatch25
-        ? ["IC181", "IC182"]
-        : ["IC140", "IC102P", "IC181"];
+    const MANUAL_PICK_CODES = isBatch26
+      ? []
+      : isBatch24
+        ? (isB24CE || isB24GE ? ["IC181", "IC182"] : ["IC140", "IC181", "IC182"])
+        : isBatch25
+          ? ["IC181", "IC182"]
+          : ["IC140", "IC102P", "IC181"];
     // ISTP/MTP courses
     const ISTP_CODES = ["DP 301P", "DP301P"];
 
@@ -470,6 +482,10 @@ export default function ImportCoursesPage({
           course.category === "ICB" &&
           course.semester === 1 &&
           normalize(course.code) === normalize(icb1Assigned);
+        const isAssignedB26Choice =
+          isBatch26 &&
+          course.semester === 1 &&
+          batch26SelectedCourseKeys.has(normalize(course.code));
         // B24 CE/GE: IC230 (ICB1) and IC240 (ICB2) are forced single options — auto-select both,
         // regardless of PDF parsing (which fails for impersonation IDs like "B24ACADSEC").
         const isForcedIcb1B24CEOrGE =
@@ -490,6 +506,7 @@ export default function ImportCoursesPage({
         return {
           ...course,
           selected:
+            isAssignedB26Choice ||
             isAssignedIcb1 ||
             isForcedIcb1B24CEOrGE ||
             isForcedIcb2B24CEOrGE ||
@@ -1511,7 +1528,9 @@ export default function ImportCoursesPage({
             Uncheck any courses you haven&apos;t taken. You can add grades optionally. Additional courses can be added later from &quot;My Courses&quot; page.
           </p>
           <p className="text-foreground-secondary mt-2">
-            {userBatch === 2024
+            {userBatch === 2026
+              ? "Batch 2026: Semester 1 IKS/HSS and IC Basket choices are prefilled from the supplied UG26 preference form. Review them before importing; later-semester unnotified courses are not assumed."
+              : userBatch === 2024
               ? "Batch 2024: IC102P is compulsory in Semester 2. Choose IC140/IC181 in Semester 1 and IC140/IC182 in Semester 2 — selecting one will auto-pick the paired option. IC Basket courses allow only one selection per semester."
               : userBatch === 2025
                 ? "Batch 2025: IC181 and IC182 are alternative IKS choices in Semester 1, so selecting one deselects the other. IC140 and IC102P are both part of Semester 2. IC Basket courses allow only one selection per semester."

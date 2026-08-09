@@ -17,6 +17,7 @@ export default async function ImportCoursesPage() {
   let initialDoingMTP2 = true;
   let initialManualCourseImportOnly = false;
   let initialBatch24Icb1Course: string | null = null;
+  let initialBatch26SelectedCourseCodes: string[] = [];
   let initialImportedKeys: string[] = [];
   let initialPassFailCredits = 0;
   let initialPassFailCreditsBySemester: Record<number, number> = {};
@@ -68,6 +69,14 @@ export default async function ImportCoursesPage() {
             initialBatch24Icb1Course = normalizeCourseCode(icb1);
           }
         }
+
+        if (batchYear === 2026 && userRecord.enrollmentId) {
+          const approvedUser = await prisma.approvedUser.findUnique({
+            where: { enrollmentId: userRecord.enrollmentId },
+            select: { coursePreferenceCodes: true },
+          });
+          initialBatch26SelectedCourseCodes = approvedUser?.coursePreferenceCodes ?? [];
+        }
       }
 
       initialImportedKeys = enrollments
@@ -99,6 +108,7 @@ export default async function ImportCoursesPage() {
       initialDoingMTP2={initialDoingMTP2}
       initialManualCourseImportOnly={initialManualCourseImportOnly}
       initialBatch24Icb1Course={initialBatch24Icb1Course}
+      initialBatch26SelectedCourseCodes={initialBatch26SelectedCourseCodes}
       initialImportedKeys={initialImportedKeys}
       initialPassFailCredits={initialPassFailCredits}
       initialPassFailCreditsBySemester={initialPassFailCreditsBySemester}

@@ -283,6 +283,7 @@ model ApprovedUser {
   branch          String?
   batch           Int?
   allowedPrograms String[]
+  coursePreferenceCodes String[] @default([])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

@@ -126,13 +126,15 @@ export function resolveBaseCategory(
   const rawCode = course.code || "";
   const code = rawCode.toUpperCase();
   const nc = normalize(rawCode);
-  const isBatch24Or25 = batchYear === 2024 || batchYear === 2025;
+  // IC182 joined the IKS/HSS basket with B24 and remains there for later
+  // intakes, including B26.
+  const usesIc182AsIks = batchYear != null && batchYear >= 2024;
   const isIkCourse = /^IK\d/.test(nc);
 
   // --- Step 1: institute hard prefix rules (override the table by design) ---
   if (nc === "IK593") return "FE";              // Kulhad Economy — Free Elective for everyone
   if (nc === "IC181") return "HSS";             // IKS → HSS+IKS basket
-  if (nc === "IC182") return isBatch24Or25 ? "HSS" : "IC";
+  if (nc === "IC182") return usesIc182AsIks ? "HSS" : "IC";
   if (code.startsWith("HS") || isIkCourse) return "HSS";
 
   const isICB1 = ICB1_CODES.has(nc);

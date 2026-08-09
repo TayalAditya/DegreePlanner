@@ -6,7 +6,7 @@ import type { Adapter } from "next-auth/adapters";
 import { getDepartmentForBranch, getProgramLookupBranchCode, inferBranchFromProgram } from "@/lib/branchInfo";
 import { DOCS_ADMIN_ENROLLMENT_ID, isAcadSec as isAcadSecEmail } from "@/lib/permissions";
 
-const SUPPORTED_BATCHES = new Set([2022, 2023, 2024, 2025]);
+const SUPPORTED_BATCHES = new Set([2022, 2023, 2024, 2025, 2026]);
 const B22_ALLOWED_BRANCHES = new Set(["CSE"]);
 // Explicitly approved legacy-profile exceptions. Their batch-22 enrollment ID
 // is retained, while their academic plan is mapped to the assigned branch.
@@ -315,7 +315,7 @@ export const authOptions: NextAuthOptions = {
         const [rawPrefix, rawDomain] = user.email.split("@");
         const emailPrefix = (rawPrefix || "").toUpperCase();
         const emailDomain = (rawDomain || "").toLowerCase();
-        const matches = emailPrefix.match(/^B(22|23|24|25)\d+$/i);
+        const matches = emailPrefix.match(/^B(22|23|24|25|26)\d+$/i);
         const canUseEnrollmentFallback =
           Boolean(matches) && ENROLLMENT_FALLBACK_ALLOWED_DOMAINS.has(emailDomain);
 

@@ -280,12 +280,12 @@ export default function ProgressPage() {
       if (match) return 2000 + Number.parseInt(match[1], 10);
       return null;
     })();
-    const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
+    const usesIc182AsIks = inferredBatch != null && inferredBatch >= 2024;
 
     // IKS courses (IC-181, IC-182, IK-xxx) → HSS+IKS basket WITHOUT consuming HS cap space.
     // HS cap (0-15 core, 15-20 FE, 20+ ignored) applies only to HS-xxx; IKS always count fully.
     if (normalizedCode === "IK593") return "HSS";
-    if (normalizedCode === "IC181" || (normalizedCode === "IC182" && isBatch24Or25)) return "HSS";
+    if (normalizedCode === "IC181" || (normalizedCode === "IC182" && usesIc182AsIks)) return "HSS";
     if (normalizedCode === "IC182") return "IC"; // B23 IC182 stays IC
 
     // Hard rule: CSE/DSE/DSAI → all CS-xxx and DS-xxx are DE, regardless of how they
@@ -568,7 +568,7 @@ export default function ProgressPage() {
       // IKS courses go through same HSS+IKS basket: 0–coreCap → HSS, coreCap–20 → FE, >20 → Not in Degree
       const eCode = normalizeCode(e.course.code);
       const isIksType = eCode === "IC181" || eCode === "IK593" || /^IK\d/.test(eCode) ||
-        (eCode === "IC182" && (inferredBatch === 2024 || inferredBatch === 2025));
+        (eCode === "IC182" && inferredBatch != null && inferredBatch >= 2024);
       if (isIksType) {
         const before = hssU?.credits ?? 0;
         if (hssU) hssU.credits = Math.min(HSS_FE_CAP, addCredits(before, e.course.credits));
@@ -827,7 +827,7 @@ export default function ProgressPage() {
       // IKS courses always count fully in HSS — no cap split for display
       const eCode2 = normalizeCode(e.course.code);
       const isIksDisplay = eCode2 === "IC181" || eCode2 === "IK593" || /^IK\d/.test(eCode2) ||
-        (eCode2 === "IC182" && (inferredBatch === 2024 || inferredBatch === 2025));
+        (eCode2 === "IC182" && inferredBatch != null && inferredBatch >= 2024);
       const hssBefore = hssUsedForDisplay.credits;
       if (isIksDisplay) {
         hssUsedForDisplay.credits = Math.min(progress?.creditsRequiredByCategory?.HSS ?? HSS_FE_CAP, hssBefore + (e.course.credits || 0));
@@ -1150,8 +1150,8 @@ export default function ProgressPage() {
           // CORE: differentiate by code prefix
           if (code.startsWith("HS")) return "HSS";
           if (code === "IC181" || code === "IK593" || /^IK\d/.test(code)) return "HSS";
-          const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
-          if (code === "IC182" && isBatch24Or25) return "HSS";
+          const usesIc182AsIks = inferredBatch != null && inferredBatch >= 2024;
+          if (code === "IC182" && usesIc182AsIks) return "HSS";
           if (code.startsWith("IC")) {
             // Check IC basket
             const { ICB1_CODES: b1, ICB2_CODES: b2 } = { ICB1_CODES, ICB2_CODES };

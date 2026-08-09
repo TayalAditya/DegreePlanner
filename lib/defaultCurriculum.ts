@@ -686,7 +686,118 @@ const hssOptionalSem2: DefaultCourse[] = [
 ];
 
 // ─── Export ───────────────────────────────────────────────────────────────────
+// B26 has a common first-year IC sequence. The UG26 preference form records
+// individual IKS/HSS and basket choices, so those rows remain optional until
+// the supplied selection is applied on Import Courses.
+const b26Sem1Core: DefaultCourse[] = [
+  { code: "IC112", name: "Calculus", credits: 2, category: "IC", semester: 1 },
+  { code: "IC114", name: "Linear Algebra", credits: 2, category: "IC", semester: 1 },
+  { code: "IC140", name: "Engineering Graphics for Design", credits: 4, category: "IC", semester: 1 },
+  { code: "IC152", name: "Computing and Data Science", credits: 4, category: "IC", semester: 1 },
+];
+const b26Sem1Choices: DefaultCourse[] = [
+  { code: "IC181", name: "Indian Knowledge Systems", credits: 3, category: "IKS", semester: 1, optional: true },
+  { code: "IC182", name: "History of Science and Technology", credits: 3, category: "IKS", semester: 1, optional: true },
+  { code: "HS108", name: "Basic English for Engineers", credits: 3, category: "HSS", semester: 1, optional: true },
+  { code: "HS112", name: "Japanese Language I", credits: 3, category: "HSS", semester: 1, optional: true },
+  { code: "HS342", name: "German I", credits: 3, category: "HSS", semester: 1, optional: true },
+  { code: "IK101", name: "Sanskrit Language - Level 1", credits: 3, category: "IKS", semester: 1, optional: true },
+];
+const b26Sem2Core: DefaultCourse[] = [
+  { code: "IC102P", name: "Foundations of Design Practicum", credits: 4, category: "IC", semester: 2 },
+  { code: "IC113", name: "Complex Variables and Vector Calculus", credits: 2, category: "IC", semester: 2 },
+  { code: "IC115", name: "ODE and Integral Transforms", credits: 2, category: "IC", semester: 2 },
+  { code: "IC161", name: "Applied Electronics", credits: 3, category: "IC", semester: 2 },
+  { code: "IC161P", name: "Applied Electronics Lab", credits: 2, category: "IC", semester: 2 },
+  { code: "IC222P", name: "Physics Practicum", credits: 2, category: "IC", semester: 2 },
+  { code: "IC252", name: "Probability and Statistics", credits: 4, category: "IC", semester: 2 },
+];
+
+// The three programmes below began with B26. Rows whose official catalogue
+// code is still a dash in the published curriculum are intentionally absent.
+const agSem1: DefaultCourse[] = [...b26Sem1Core, ICB1_IC230, ...b26Sem1Choices];
+const agSem2: DefaultCourse[] = [...b26Sem2Core, ICB2_IC240];
+const agSem3: DefaultCourse[] = [
+  ...icSem3,
+  { code: "CE310", name: "Strength of Materials and Structures", credits: 3, category: "DC", semester: 3 },
+  { code: "CE310P", name: "Strength of Materials and Structures Lab", credits: 1, category: "DC", semester: 3 },
+];
+const agSem4: DefaultCourse[] = [
+  { code: "CE201", name: "Surveying: Traditional and Digital", credits: 4, category: "DC", semester: 4 },
+  { code: "CE251", name: "Hydraulics Engineering", credits: 3, category: "DC", semester: 4 },
+  { code: "CE304P", name: "Hydraulics Engineering Lab", credits: 1, category: "DC", semester: 4 },
+  { code: "EE302", name: "Control Systems", credits: 4, category: "DC", semester: 4 },
+];
+const agSem5: DefaultCourse[] = [
+  { code: "CE303", name: "Water Resources Engineering", credits: 3, category: "DC", semester: 5 },
+  { code: "CE353P", name: "Civil Engineering Drawing", credits: 1, category: "DC", semester: 5 },
+  { code: "CE451", name: "Irrigation Engineering and Hydraulic Structures", credits: 3, category: "DC", semester: 5 },
+  { code: "CS541P", name: "IoT Systems and Clouds", credits: 3, category: "DC", semester: 5 },
+];
+const agSem6: DefaultCourse[] = [...istpSem6];
+const agSem7: DefaultCourse[] = [...mtpSem7];
+const agSem8: DefaultCourse[] = [
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
+
+const cheSem1: DefaultCourse[] = [
+  ...b26Sem1Core,
+  ...b26Sem1Choices,
+  { code: "CED201", name: "Introduction to Chemical Engineering", credits: 3, category: "DC", semester: 1 },
+];
+const cheSem2: DefaultCourse[] = [...b26Sem2Core, ICB1_IC131];
+const cheSem3: DefaultCourse[] = [...icSem3];
+const cheSem7: DefaultCourse[] = [...mtpSem7];
+const cheSem8: DefaultCourse[] = [
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
+
+const qsSem1: DefaultCourse[] = [...b26Sem1Core, ICB1_IC230, ...b26Sem1Choices];
+const qsSem2: DefaultCourse[] = [...b26Sem2Core, ICB2_IC121];
+const qsSem3: DefaultCourse[] = [
+  { code: "IC272", name: "Machine Learning", credits: 3, category: "IC", semester: 3 },
+  { code: "QS302", name: "Foundations of Quantum Technology", credits: 3, category: "DC", semester: 3 },
+  { code: "EP301", name: "Engineering Mathematics - 2", credits: 4, category: "DC", semester: 3 },
+  { code: "EP321", name: "Foundations of Electrodynamics", credits: 3, category: "DC", semester: 3 },
+];
+const qsSem4: DefaultCourse[] = [
+  { code: "IC201P", name: "Design Practicum", credits: 3, category: "IC", semester: 4 },
+  { code: "PH302", name: "Statistical Thermodynamics", credits: 3, category: "DC", semester: 4 },
+  { code: "PH501", name: "Solid State Physics", credits: 3, category: "DC", semester: 4 },
+  { code: "QS407", name: "Introduction to Quantum Sensing", credits: 3, category: "DC", semester: 4 },
+];
+const qsSem5: DefaultCourse[] = [
+  { code: "CS212", name: "Design and Analysis of Algorithms", credits: 4, category: "DC", semester: 5 },
+  { code: "CS305", name: "Artificial Intelligence", credits: 3, category: "DC", semester: 5 },
+  { code: "QS304P", name: "Basic Laboratory Course in Quantum Technologies", credits: 3, category: "DC", semester: 5 },
+];
+const qsSem6: DefaultCourse[] = [
+  { code: "PH502", name: "Photonics", credits: 3, category: "DC", semester: 6 },
+  { code: "QS501P", name: "Experiments in Quantum Optics", credits: 3, category: "DC", semester: 6 },
+  { code: "QS509", name: "Engineering Foundations of Quantum Technologies", credits: 3, category: "DC", semester: 6 },
+  ...istpSem6,
+];
+const qsSem7: DefaultCourse[] = [...mtpSem7];
+const qsSem8: DefaultCourse[] = [
+  { code: "IC010", name: "Internship", credits: 2, category: "IC", semester: 8 },
+  ...mtpSem8,
+];
+
 export const DEFAULT_CURRICULUM: Record<string, DefaultCourse[]> = {
+  // B26-only Agricultural Engineering with Data Analytics
+  AG_1: agSem1, AG_2: agSem2, AG_3: agSem3, AG_4: agSem4,
+  AG_5: agSem5, AG_6: agSem6, AG_7: agSem7, AG_8: agSem8,
+
+  // B26-only Chemical Engineering
+  CHE_1: cheSem1, CHE_2: cheSem2, CHE_3: cheSem3,
+  CHE_4: [], CHE_5: [], CHE_6: [], CHE_7: cheSem7, CHE_8: cheSem8,
+
+  // B26-only Quantum Science and Engineering
+  QS_1: qsSem1, QS_2: qsSem2, QS_3: qsSem3, QS_4: qsSem4,
+  QS_5: qsSem5, QS_6: qsSem6, QS_7: qsSem7, QS_8: qsSem8,
+
   // CSE
   CSE_1: cseSem1, CSE_2: cseSem2, CSE_3: cseSem3,
   CSE_4: cseSem4, CSE_5: cseSem5, CSE_6: cseSem6,
@@ -1575,6 +1686,35 @@ const applyBatchOverrides = (
         return courses;
       }
 
+      default:
+        return courses;
+    }
+  }
+
+  if (batch === 2026) {
+    switch (semester) {
+      case 1: {
+        // B26: IC114 is in Sem-1; IC113 and IC102P are not. Keep the
+        // branch's published ICB/DC rows, then layer the common choice set.
+        const retained = courses.filter((course) =>
+          course.category === "ICB" || course.category === "DC"
+        );
+        return [...b26Sem1Core, ...retained, ...b26Sem1Choices].reduce(
+          (updated, course) => addCourseIfMissing(updated, course),
+          [] as DefaultCourse[]
+        );
+      }
+      case 2: {
+        // B26: IC113 and IC102P are in Sem-2; IC114, IC140, and the
+        // first-semester IKS/HSS choices are not. Preserve ICB/DC rows.
+        const retained = courses.filter((course) =>
+          course.category === "ICB" || course.category === "DC"
+        );
+        return [...b26Sem2Core, ...retained].reduce(
+          (updated, course) => addCourseIfMissing(updated, course),
+          [] as DefaultCourse[]
+        );
+      }
       default:
         return courses;
     }

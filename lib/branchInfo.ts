@@ -30,13 +30,16 @@ export function getProgramLookupBranchCode(branch?: string | null, batch?: numbe
   // DSAI students are attached to the DSE degree-program record (no separate
   // DSAI Program row is seeded — the program of study is identical). Keep this
   // alias even though curriculum resolution is now DSAI-native.
-  if (normalized === "DSAI") return "DSE";
+  if (normalized === "DSAI") return batch === 2026 ? "DSAI_B26" : "DSE";
   // GE specialisations (GE-ROBO/GE-MECH/GE-COMM/GE-FIN) all attach to the single
   // "GE" degree-program record; the specialisation lives in User.branch.
   if (normalized.startsWith("GE-")) return "GE";
   // Batch-2024/2025 branches have dedicated program rows with updated IC/DC/DE/FE credits.
   if (batch === 2024 && B24_PROGRAM_BRANCHES.has(normalized)) return `${normalized}_B24`;
   if (batch === 2025 && (normalized === "CE" || normalized === "BE" || normalized === "EP")) return `${normalized}_B25`;
+  // B26 has revised degree-credit distributions for these two established
+  // programmes; the remaining established branches retain their base rows.
+  if (batch === 2026 && normalized === "CSE") return "CSE_B26";
   // Chemical Engineering is introduced only for the 2026 intake.  It has no
   // generic programme row, so older/future batches cannot silently inherit it.
   if (batch === 2026 && normalized === "CHE") return "CHE_B26";

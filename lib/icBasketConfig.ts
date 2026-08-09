@@ -21,6 +21,12 @@ export const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string 
   MS:  { ic1: "IC131", ic2: "IC241" },
   MSE: { ic1: "IC131", ic2: "IC241" },
   GE:  { ic1: "IC230", ic2: "IC240" },
+  AG:  { ic1: "IC230", ic2: "IC240" },
+  QS:  { ic1: "IC230", ic2: "IC121" },
+  // Chemical Engineering's second basket is an unnotified "IC-XXX"
+  // Material and Energy Balance course, so only its known IC-131 choice is
+  // represented here.
+  CHE: { ic1: "IC131" },
   EE:  {},
   VLSI: {},
 };

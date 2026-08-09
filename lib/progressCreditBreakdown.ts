@@ -182,12 +182,12 @@ export function computeEnrollmentCreditBreakdown({
 
     if (enrollment.isPassFail || enrollment.isInternship || /39[69]P$/i.test(courseCode)) return "FE";
 
-    const isBatch24Or25 = userBatch === 2024 || userBatch === 2025;
+    const usesIc182AsIks = userBatch != null && userBatch >= 2024;
     // IKS courses share the HSS+IKS basket. The credit splitter below moves
     // only any excess beyond the basket cap into FE.
     if (normalizedCode === "IK593") return "HSS";
     if (normalizedCode === "IC181") return "HSS";
-    if (normalizedCode === "IC182") return isBatch24Or25 ? "IKS" : "IC";
+    if (normalizedCode === "IC182") return usesIc182AsIks ? "IKS" : "IC";
 
     if ((isICB1 || isICB2) && rawBranch) {
       const branchCompulsion = IC_BASKET_COMPULSIONS[checkBranch] || {};

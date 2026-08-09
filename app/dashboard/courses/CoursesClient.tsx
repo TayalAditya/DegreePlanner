@@ -515,11 +515,11 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       if (match) return 2000 + parseInt(match[1], 10);
       return null;
     })();
-    const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
+    const usesIc182AsIks = inferredBatch != null && inferredBatch >= 2024;
 
     if (normalizedCode === "IK593") return "HSS"; // IK-xxx → HSS+IKS basket
     if (normalizedCode === "IC181") return "HSS"; // IC-181 → HSS+IKS basket
-    if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC"; // IC-182 B24/B25 → HSS+IKS
+    if (normalizedCode === "IC182") return usesIc182AsIks ? "HSS" : "IC"; // IC-182 B24 onward → HSS+IKS
     // HS-xxx and IK-xxx always go to HSS+IKS regardless of branchMappings —
     // consistent with server-side creditCalculator hard rule.
     if (code.startsWith("HS-") || code.startsWith("HS") || isIkCourse) return "HSS";
