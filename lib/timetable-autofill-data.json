@@ -1,6 +1,6 @@
 {
   "version": "2026-2027-odd",
-  "generatedAt": "2026-08-06T21:39:39.848Z",
+  "generatedAt": "2026-08-09T13:44:58.001Z",
   "sourceWorkbook": "docs/CL 2026-27 Odd/Final Time Table Aug-Nov 2026.xlsx",
   "venues": [
     "A1-3",
@@ -2756,7 +2756,7 @@
         "name": "Applied Chemistry for Engineers",
         "credit": 3,
         "slot": "A",
-        "classroom": "A17-2E",
+        "classroom": "A11-1A",
         "campus": "North Campus",
         "kind": "IC"
       },
@@ -2765,7 +2765,7 @@
         "name": "Understanding Biotechnology and its Applications",
         "credit": 3,
         "slot": "A",
-        "classroom": "A17-2D",
+        "classroom": "A18-1",
         "campus": "North Campus",
         "kind": "IC"
       },
@@ -2774,7 +2774,7 @@
         "name": "Environmental Science",
         "credit": 3,
         "slot": "A",
-        "classroom": "A17-2A",
+        "classroom": "A18-2",
         "campus": "North Campus",
         "kind": "IC"
       },
@@ -2836,26 +2836,14 @@
         "slot": "F",
         "classroom": "A18-1",
         "campus": "North Campus",
-        "kind": "IC",
-        "variants": [
-          {
-            "label": "Batch 1",
-            "slot": "F",
-            "classroom": "A18-1"
-          },
-          {
-            "label": "Batch 2",
-            "slot": "F",
-            "classroom": "A18-2"
-          }
-        ]
+        "kind": "IC"
       },
       "IC-182": {
         "code": "IC-182",
         "name": "History of Science and Technology",
         "credit": 3,
         "slot": "F",
-        "classroom": "A11-1A",
+        "classroom": "A18-2",
         "campus": "North Campus",
         "kind": "IC"
       },

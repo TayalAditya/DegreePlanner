@@ -54,10 +54,21 @@ const PUBLISHED_PC_LAB_OVERRIDES: PcLabRow[] = [
   },
 ];
 
-// Confirmed venue corrections published after the workbook export.
+// Confirmed venue corrections published after the workbook export. The
+// first-year IC timetable is a separate published schedule; its rooms take
+// precedence for B26's common first-year courses.
 const PUBLISHED_CLASSROOM_OVERRIDES: Record<string, string> = {
+  "IC-131": "A11-1A",
+  "IC-136": "A18-1",
+  "IC-230": "A18-2",
+  "IC-181": "A18-1",
+  "IC-182": "A18-2",
   "IC-272": "Auditorium",
 };
+
+// The first-year schedule publishes IC-181 in a single room for every branch;
+// it is not split into the Batch-1/Batch-2 lecture groups.
+const PUBLISHED_IC_NO_VARIANT_OVERRIDES = new Set(["IC-181"]);
 
 function clean(value: unknown): string {
   return String(value ?? "").replace(/\s+/g, " ").trim();
@@ -349,6 +360,11 @@ function main() {
     if (!course) throw new Error(`Missing timetable course for published venue correction: ${code}`);
     course.classroom = classroom;
     addVenue(classroom);
+  }
+  for (const code of PUBLISHED_IC_NO_VARIANT_OVERRIDES) {
+    const course = ic[code];
+    if (!course) throw new Error(`Missing timetable course for published variant correction: ${code}`);
+    delete course.variants;
   }
 
   const output = {
