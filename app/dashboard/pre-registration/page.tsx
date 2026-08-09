@@ -657,7 +657,7 @@ function MtpSection({ course, selected, onToggle, samarthReported, onToggleSamar
 }) {
   return (
     <Section title="Major Technical Project - I (MTP)" count={1} headerBg="bg-error/5">
-      <p className="text-xs text-foreground-secondary mb-2">4 credits · DC · Semester 7 onwards</p>
+      <p className="text-xs text-foreground-secondary mb-2">4 credits · MTP requirement · Semester 7 onwards · Separate from completed DC</p>
       <CourseCard offering={toOffering(course, "MTP")} checked={selected.has(course.id)} disabled={false} onToggle={() => onToggle(course.id)} samarthReported={samarthReported?.has(course.id)} onToggleSamarth={onToggleSamarth} sootrankReported={sootrankReported?.has(course.id)} onToggleSootrank={onToggleSootrank} />
     </Section>
   );
@@ -690,7 +690,7 @@ function ProgressPanel({ programRequirements, completedBreakdown, categoryBreakd
                   }
                   {rem !== null && (
                     <span className={`font-semibold ${rem > 0 ? "text-error" : "text-success"}`}>
-                      {rem > 0 ? `−${formatCredits(rem)}` : "✓"}
+                      {rem > 0 ? `${formatCredits(rem)} remaining` : "Complete"}
                     </span>
                   )}
                 </div>
