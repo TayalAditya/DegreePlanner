@@ -21,6 +21,11 @@ const tumCseDisciplineElectives = [
     credits: 4,
   },
   { code: "MGT001299", name: "Introduction to Deep Reinforcement Learning", credits: 4 },
+  {
+    code: "SOT53502",
+    name: "Project Week: Hackathon - Hacking TUM for Diversity!",
+    credits: 2,
+  },
 ];
 
 async function main() {
