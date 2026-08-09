@@ -670,7 +670,10 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
         }
       });
 
-    const deCap = branchConfig?.deCredits ?? 28;
+    // A skipped, unfinished MTP component transfers its 4 credits to DE.
+    // Use the calculator's adjusted requirement here rather than the static
+    // branch cap, otherwise completed DE credits are incorrectly spilled to FE.
+    const deCap = projectRequirements?.de ?? branchConfig?.deCredits ?? 28;
     if (credits.DE > deCap) {
       const overflow = subtractCredits(credits.DE, deCap);
       credits.DE = deCap;
@@ -679,7 +682,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
 
     return { creditsByCategory: credits, completedIcBasketUsed: icBasketUsed };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enrollments, user?.branch]);
+  }, [enrollments, projectRequirements?.de, user?.branch, user?.batch, user?.enrollmentId]);
 
   // Calculate HSS+IKS credits already completed (for cap check).
   // Includes HS-xxx, IC-181, IC-182 (B24+), and IK-xxx — matching creditCalculator's addHssCredits logic.
@@ -705,7 +708,9 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   const enrollmentSplits = useMemo(() => {
     const splits = new Map<string, { category: string; splitCategory: string; splitCredits: number }>();
     const branchConfig = getAllBranches().find((b) => b.code === user?.branch);
-    const deCap = branchConfig?.deCredits ?? 28;
+    // Keep row-level split labels in sync with the adjusted DE cap shown in
+    // the summary above (for example, 32 when one 4-credit MTP is skipped).
+    const deCap = projectRequirements?.de ?? branchConfig?.deCredits ?? 28;
     let deUsed = 0;
     const icBasketUsed = { ic1: false, ic2: false };
 
@@ -748,7 +753,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       });
     return splits;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enrollments, user?.branch]);
+  }, [enrollments, projectRequirements?.de, user?.branch, user?.batch, user?.enrollmentId]);
 
   // Precompute each enrollment's display category once per render pass instead of
   // re-invoking the heavy getCourseCategory branching inside every card's render.
