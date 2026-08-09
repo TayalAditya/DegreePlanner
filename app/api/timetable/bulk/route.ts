@@ -7,6 +7,7 @@ import { getCurrentTimetableContext } from "@/lib/timetable";
 import { isApproveableSlot } from "@/lib/timetableSlots";
 import officialTimetableData from "@/lib/timetable-autofill-data.json";
 import { buildOfficialCourseMeetings, type OfficialTimetableData } from "@/lib/officialTimetable";
+import { resolveBatch26TimetableCourseCode } from "@/lib/batch26Preferences";
 
 type BulkEntryInput = {
   dayOfWeek: DayOfWeek;
@@ -155,18 +156,29 @@ export async function POST(req: NextRequest) {
           }),
           prisma.user.findUnique({
             where: { id: session.user.id },
-            select: { branch: true },
+            select: { branch: true, batch: true, enrollmentId: true },
           }),
         ]);
         const scheduleCode = offering?.courseCode ?? course?.code;
+        const batch26Preferences = profile?.batch === 2026 && profile.enrollmentId
+          ? await prisma.approvedUser.findUnique({
+              where: { enrollmentId: profile.enrollmentId },
+              select: { coursePreferenceCodes: true },
+            })
+          : null;
         const officialMeetings = scheduleCode
           ? buildOfficialCourseMeetings(
               officialTimetableData as unknown as OfficialTimetableData,
-              scheduleCode,
+              resolveBatch26TimetableCourseCode(
+                scheduleCode,
+                profile?.batch,
+                batch26Preferences?.coursePreferenceCodes,
+              ),
               {
                 credits: offering?.credits ?? course?.credits,
                 ltpc: offering?.ltpc ?? course?.ltpc,
                 branch: profile?.branch,
+                batch: profile?.batch,
                 fallbackSlot: offering?.slots,
                 fallbackKind: scheduleCode.toUpperCase().startsWith("IC-") ? "IC" : "NON_IC",
               },

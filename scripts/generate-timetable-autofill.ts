@@ -66,6 +66,30 @@ const PUBLISHED_CLASSROOM_OVERRIDES: Record<string, string> = {
   "IC-272": "Auditorium",
 };
 
+// HS-108 is offered to B26 in two individually allocated English sections.
+// They are not in the general workbook's IC table, so keep the first-year
+// schedule's section codes and classrooms as explicit published overrides.
+const PUBLISHED_IC_COURSE_OVERRIDES: Record<string, CourseDefault> = {
+  "HS-108-1": {
+    code: "HS-108-1",
+    name: "Basic English for Engineers - Section 1",
+    credit: 3,
+    slot: "G",
+    classroom: "A11-1A",
+    campus: "North Campus",
+    kind: "IC",
+  },
+  "HS-108-2": {
+    code: "HS-108-2",
+    name: "Basic English for Engineers - Section 2",
+    credit: 3,
+    slot: "G",
+    classroom: "A18-1",
+    campus: "North Campus",
+    kind: "IC",
+  },
+};
+
 // The first-year schedule publishes IC-181 in a single room for every branch;
 // it is not split into the Batch-1/Batch-2 lecture groups.
 const PUBLISHED_IC_NO_VARIANT_OVERRIDES = new Set(["IC-181"]);
@@ -360,6 +384,10 @@ function main() {
     if (!course) throw new Error(`Missing timetable course for published venue correction: ${code}`);
     course.classroom = classroom;
     addVenue(classroom);
+  }
+  for (const [code, course] of Object.entries(PUBLISHED_IC_COURSE_OVERRIDES)) {
+    ic[code] = course;
+    if (course.classroom) addVenue(course.classroom);
   }
   for (const code of PUBLISHED_IC_NO_VARIANT_OVERRIDES) {
     const course = ic[code];

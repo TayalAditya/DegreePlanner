@@ -25,6 +25,7 @@ import { parseTranscriptText, normalizeCourseCode, DetectedCourse } from "@/lib/
 import { courseIdentityKey } from "@/lib/courseIdentity";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
+import { IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 
 type RegistrationType = "REGULAR" | "PASS_FAIL" | "AUDIT";
 
@@ -32,6 +33,15 @@ interface SelectedCourse extends DefaultCourse {
   selected: boolean;
   grade?: string;
   registrationType?: RegistrationType;
+}
+
+type B26ChoiceGroup = "ICB" | "HSS" | "IKS";
+
+function getB26ChoiceGroup(course: Pick<DefaultCourse, "code" | "category">): B26ChoiceGroup | null {
+  const code = normalizeCourseCode(course.code);
+  if (course.category === "ICB") return "ICB";
+  if (course.category === "HSS") return "HSS";
+  return course.category === "IKS" && (code === "IC181" || code === "IC182") ? "IKS" : null;
 }
 
 interface EnrollmentSummary {
@@ -429,6 +439,19 @@ export default function ImportCoursesPage({
     const batch26SelectedCourseKeys = new Set(
       initialBatch26SelectedCourseCodes.map((code) => normalizeCourseCode(code))
     );
+    const batch26CompulsoryIcbCodes = new Set(
+      isBatch26
+        ? Object.values(IC_BASKET_COMPULSIONS[normalizeBranchForIcBasket(effectiveBranch)] ?? {})
+            .filter((code): code is string => Boolean(code))
+            .map((code) => normalizeCourseCode(code))
+        : []
+    );
+    const hasDisplayedB26CompulsoryIcb = resolvedCourses.some(
+      (course) =>
+        course.category === "ICB" &&
+        batch26CompulsoryIcbCodes.has(normalizeCourseCode(course.code))
+    );
+    const selectedB26ChoiceGroups = new Set<B26ChoiceGroup>();
     const isB24EligibleBranch = isBatch24 && ["CSE", "DSE", "EE", "MEVLSI", "MSE", "CE"].includes(effectiveBranch);
     const isB24CE = isBatch24 && effectiveBranch === "CE";
     // B24 GE sub-branches share the same Sem 1-2 IC pattern as CE (IC230/IC240 forced, IC182 IKS in Sem 2)
@@ -489,6 +512,19 @@ export default function ImportCoursesPage({
           isBatch26 &&
           course.semester === 1 &&
           batch26SelectedCourseKeys.has(normalize(course.code));
+        const isForcedB26Icb =
+          isBatch26 &&
+          course.category === "ICB" &&
+          batch26CompulsoryIcbCodes.has(normalize(course.code));
+        const b26ChoiceGroup = isBatch26 ? getB26ChoiceGroup(course) : null;
+        const isB26PreferenceChoice =
+          isAssignedB26Choice &&
+          !(b26ChoiceGroup === "ICB" && hasDisplayedB26CompulsoryIcb) &&
+          (!b26ChoiceGroup || !selectedB26ChoiceGroups.has(b26ChoiceGroup));
+        const isB26ChoiceSelected = isForcedB26Icb || isB26PreferenceChoice;
+        if (isB26ChoiceSelected && b26ChoiceGroup) {
+          selectedB26ChoiceGroups.add(b26ChoiceGroup);
+        }
         // B24 CE/GE: IC230 (ICB1) and IC240 (ICB2) are forced single options — auto-select both,
         // regardless of PDF parsing (which fails for impersonation IDs like "B24ACADSEC").
         const isForcedIcb1B24CEOrGE =
@@ -509,7 +545,7 @@ export default function ImportCoursesPage({
         return {
           ...course,
           selected:
-            isAssignedB26Choice ||
+            isB26ChoiceSelected ||
             isAssignedIcb1 ||
             isForcedIcb1B24CEOrGE ||
             isForcedIcb2B24CEOrGE ||
@@ -766,9 +802,10 @@ export default function ImportCoursesPage({
 
           const isBatch24 = userBatch === 2024;
           const isBatch25 = userBatch === 2025;
+          const isBatch26 = userBatch === 2026;
           const crossSemesterExclusive = isBatch24
             ? ["IC140"]
-            : isBatch25
+            : isBatch25 || isBatch26
               ? []
               : ["IC140", "IC102P", "IC181"];
 
@@ -782,7 +819,22 @@ export default function ImportCoursesPage({
             return { ...c, selected: false };
           }
 
-          if (isBatch24) {
+          // B26 Semester 1 has exactly one choice from each family: IC basket,
+          // HSS (including IK-101), and IKS (IC-181/IC-182).
+          const b26ChoiceGroup = isBatch26 ? getB26ChoiceGroup(currentClicked) : null;
+          if (
+            b26ChoiceGroup &&
+            c.semester === semester &&
+            getB26ChoiceGroup(c) === b26ChoiceGroup
+          ) {
+            return { ...c, selected: false };
+          }
+
+          if (isBatch26) {
+            // No cross-semester pairing: B26's first-year sequence is fixed by
+            // its published curriculum, and only the three choice families above
+            // are mutually exclusive.
+          } else if (isBatch24) {
             // Batch 2024: IC102P is compulsory in Sem-2.
             // Sem-1 choice: IC140 vs IC181. Sem-2 choice: IC140 vs IC182.
             // (IC140 in Sem-1) ↔ (IC182 in Sem-2), and (IC181 in Sem-1) ↔ (IC140 in Sem-2).
@@ -854,6 +906,17 @@ export default function ImportCoursesPage({
         );
 
         const selectedInSem = new Set<string>();
+        const preferredB26ChoiceByGroup = new Map<B26ChoiceGroup, string>();
+        if (userBatch === 2026) {
+          semCourses.forEach((course) => {
+            const group = getB26ChoiceGroup(course);
+            const key = courseIdentityKey(course.code);
+            if (course.selected && group && key && !preferredB26ChoiceByGroup.has(group)) {
+              preferredB26ChoiceByGroup.set(group, key);
+            }
+          });
+        }
+        const selectedB26ChoiceGroups = new Set<B26ChoiceGroup>();
 
         return prev.map((c) => {
           if (c.semester !== sem) return c;
@@ -866,11 +929,19 @@ export default function ImportCoursesPage({
             selectedInSem.add(key);
           }
 
+          const b26ChoiceGroup = userBatch === 2026 ? getB26ChoiceGroup(c) : null;
+          if (b26ChoiceGroup) {
+            const preferredKey = preferredB26ChoiceByGroup.get(b26ChoiceGroup);
+            if (selectedB26ChoiceGroups.has(b26ChoiceGroup)) return { ...c, selected: false };
+            if (preferredKey && key !== preferredKey) return { ...c, selected: false };
+            selectedB26ChoiceGroups.add(b26ChoiceGroup);
+          }
+
           return { ...c, selected: true };
         });
       });
     });
-  }, [showToast]);
+  }, [showToast, userBatch]);
 
   const updateGrade = useCallback((code: string, grade: string) => {
     startTransition(() => {
@@ -1532,7 +1603,7 @@ export default function ImportCoursesPage({
           </p>
           <p className="text-foreground-secondary mt-2">
             {userBatch === 2026
-              ? "Batch 2026: Semester 1 IKS/HSS and IC Basket choices are prefilled from the supplied UG26 preference form. Review them before importing; later-semester unnotified courses are not assumed."
+              ? "Batch 2026: Semester 1 has exactly one IC Basket choice, one HSS choice (including IK-101), and one IKS choice (IC-181 or IC-182). Published compulsory IC Basket courses are selected automatically."
               : userBatch === 2024
               ? "Batch 2024: IC102P is compulsory in Semester 2. Choose IC140/IC181 in Semester 1 and IC140/IC182 in Semester 2 — selecting one will auto-pick the paired option. IC Basket courses allow only one selection per semester."
               : userBatch === 2025

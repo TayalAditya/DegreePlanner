@@ -700,10 +700,11 @@ const b26Sem1Core: DefaultCourse[] = [
 const b26Sem1Choices: DefaultCourse[] = [
   { code: "IC181", name: "Indian Knowledge Systems", credits: 3, category: "IKS", semester: 1, optional: true },
   { code: "IC182", name: "History of Science and Technology", credits: 3, category: "IKS", semester: 1, optional: true },
-  { code: "HS108", name: "Basic English for Engineers", credits: 3, category: "HSS", semester: 1, optional: true },
+  { code: "HS-108_1", name: "Basic English for Engineers - Section 1", credits: 3, category: "HSS", semester: 1, optional: true },
+  { code: "HS-108_2", name: "Basic English for Engineers - Section 2", credits: 3, category: "HSS", semester: 1, optional: true },
   { code: "HS112", name: "Japanese Language I", credits: 3, category: "HSS", semester: 1, optional: true },
   { code: "HS342", name: "German I", credits: 3, category: "HSS", semester: 1, optional: true },
-  { code: "IK101", name: "Sanskrit Language - Level 1", credits: 3, category: "IKS", semester: 1, optional: true },
+  { code: "IK101", name: "Sanskrit Language - Level 1", credits: 3, category: "HSS", semester: 1, optional: true },
 ];
 const b26Sem2Core: DefaultCourse[] = [
   { code: "IC102P", name: "Foundations of Design Practicum", credits: 4, category: "IC", semester: 2 },

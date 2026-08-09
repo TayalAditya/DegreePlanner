@@ -316,6 +316,11 @@ export function formatCourseCode(code: string): string {
     .replace(/\u00a0/g, " ")
     .replace(/(\d{3}[A-Z]?)\s*\(\s*P\s*\)/gi, "$1P");
 
+  // Sectioned catalogue entries such as HS-108_1 are distinct timetable
+  // allocations of the same course. Preserve a readable section delimiter.
+  const sectioned = cleaned.match(/^([A-Z]{2,4})\s*-?\s*(\d{3})\s*[_-]\s*(\d{1,2})$/);
+  if (sectioned) return `${sectioned[1]}-${sectioned[2]}-${sectioned[3]}`;
+
   const normalized = cleaned.replace(/[\s-]/g, "");
   const standard = normalized.match(/^([A-Z]{2,4})(\d{3,4}[A-Z]?)$/);
 

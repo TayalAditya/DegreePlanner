@@ -12,6 +12,7 @@ import {
   withOfficialCorrectionMarker,
   type OfficialTimetableData,
 } from "@/lib/officialTimetable";
+import { resolveBatch26TimetableCourseCode } from "@/lib/batch26Preferences";
 
 export async function GET(request: NextRequest) {
   try {
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
         },
         select: { selectedIds: true, registrationTypes: true },
       }),
-      prisma.user.findUnique({ where: { id: session.user.id }, select: { branch: true, batch: true } }),
+      prisma.user.findUnique({ where: { id: session.user.id }, select: { branch: true, batch: true, enrollmentId: true } }),
       prisma.courseEquivalent.findMany({
         select: {
           courseId: true,
@@ -79,6 +80,13 @@ export async function GET(request: NextRequest) {
           })
         : Promise.resolve([]),
     ]);
+
+    const batch26Preferences = profile?.batch === 2026 && profile.enrollmentId
+      ? await prisma.approvedUser.findUnique({
+          where: { enrollmentId: profile.enrollmentId },
+          select: { coursePreferenceCodes: true },
+        })
+      : null;
 
     const selectedIds = savedPlan?.selectedIds ?? [];
     const [selectedOfferings, selectedDirectCourses] = selectedIds.length > 0
@@ -269,10 +277,16 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const officialEntries = courses.flatMap((course) => {
       if (coursesWithApprovedOverrides.has(course.id)) return [];
-      return buildOfficialCourseMeetings(officialData, scheduleCodeByCourseId.get(course.id) ?? course.code, {
+      const scheduleCode = resolveBatch26TimetableCourseCode(
+        scheduleCodeByCourseId.get(course.id) ?? course.code,
+        profile?.batch,
+        batch26Preferences?.coursePreferenceCodes,
+      );
+      return buildOfficialCourseMeetings(officialData, scheduleCode, {
         credits: course.credits,
         ltpc: course.ltpc,
         branch: profile?.branch,
+        batch: profile?.batch,
         fallbackSlot: offeringSlotByCourseId.get(course.id),
         fallbackKind: course.code.toUpperCase().startsWith("IC-") ? "IC" : "NON_IC",
       })
@@ -534,7 +548,7 @@ export async function POST(req: NextRequest) {
         }),
         prisma.user.findUnique({
           where: { id: session.user.id },
-          select: { branch: true },
+          select: { branch: true, batch: true, enrollmentId: true },
         }),
         prisma.preRegistrationPlan.findUnique({
           where: {
@@ -558,13 +572,24 @@ export async function POST(req: NextRequest) {
         : null;
       const scheduleCode = plannedOffering?.courseCode ?? course?.code;
       if (scheduleCode) {
+        const batch26Preferences = profile?.batch === 2026 && profile.enrollmentId
+          ? await prisma.approvedUser.findUnique({
+              where: { enrollmentId: profile.enrollmentId },
+              select: { coursePreferenceCodes: true },
+            })
+          : null;
         officialMeetings = buildOfficialCourseMeetings(
           officialTimetableData as unknown as OfficialTimetableData,
-          scheduleCode,
+          resolveBatch26TimetableCourseCode(
+            scheduleCode,
+            profile?.batch,
+            batch26Preferences?.coursePreferenceCodes,
+          ),
           {
             credits: plannedOffering?.credits ?? course?.credits,
             ltpc: plannedOffering?.ltpc ?? course?.ltpc,
             branch: profile?.branch,
+            batch: profile?.batch,
             fallbackSlot: plannedOffering?.slots,
             fallbackKind: scheduleCode.toUpperCase().startsWith("IC-") ? "IC" : "NON_IC",
           },

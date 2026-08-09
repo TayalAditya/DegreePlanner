@@ -1,6 +1,6 @@
 {
   "version": "2026-2027-odd",
-  "generatedAt": "2026-08-09T13:44:58.001Z",
+  "generatedAt": "2026-08-09T14:26:35.217Z",
   "sourceWorkbook": "docs/CL 2026-27 Odd/Final Time Table Aug-Nov 2026.xlsx",
   "venues": [
     "A1-3",
@@ -2880,6 +2880,24 @@
         "credit": 3,
         "slot": "G",
         "classroom": "A17-2A",
+        "campus": "North Campus",
+        "kind": "IC"
+      },
+      "HS-108-1": {
+        "code": "HS-108-1",
+        "name": "Basic English for Engineers - Section 1",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A11-1A",
+        "campus": "North Campus",
+        "kind": "IC"
+      },
+      "HS-108-2": {
+        "code": "HS-108-2",
+        "name": "Basic English for Engineers - Section 2",
+        "credit": 3,
+        "slot": "G",
+        "classroom": "A18-1",
         "campus": "North Campus",
         "kind": "IC"
       }

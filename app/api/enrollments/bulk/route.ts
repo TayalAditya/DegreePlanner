@@ -127,12 +127,18 @@ export async function POST(req: NextRequest) {
     const buildCodeCandidates = (code: string) => {
       const normalized = normalizeCourseCode(code);
       const hyphenated = toHyphenatedCode(code);
+      // B26 English sections are timetable allocations of the base HS-108
+      // catalogue course, so importing either section must resolve to HS-108.
+      const sectionBase = String(code).trim().toUpperCase().match(
+        /^([A-Z]{2,4})\s*-?\s*(\d{3})\s*[_-]\s*\d{1,2}$/,
+      );
+      const baseSectionCourse = sectionBase ? `${sectionBase[1]}-${sectionBase[2]}` : "";
       const mtpComponent = getMtpComponent(code);
       const genericMtpCode = mtpComponent === 1 ? "DP-498P" : mtpComponent === 2 ? "DP-499P" : "";
       const genericMtpSpacedCode = mtpComponent === 1 ? "DP 498P" : mtpComponent === 2 ? "DP 499P" : "";
       // Also try original case-insensitive
       const original = code.trim();
-      return Array.from(new Set([normalized, hyphenated, original, genericMtpCode, genericMtpSpacedCode].filter(Boolean)));
+      return Array.from(new Set([normalized, hyphenated, original, baseSectionCourse, genericMtpCode, genericMtpSpacedCode].filter(Boolean)));
     };
 
     const inferBatchYear = (

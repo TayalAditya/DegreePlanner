@@ -248,13 +248,20 @@ export function buildOfficialCourseMeetings(
     credits?: number;
     ltpc?: string | null;
     branch?: string | null;
+    batch?: number | null;
     fallbackSlot?: string | null;
     fallbackVenue?: string | null;
     fallbackKind?: TimetableKind;
   } = {},
 ): BuiltOfficialMeeting[] {
   const code = normalizeTimetableCourseCode(courseCode);
-  const rawDefault = data.defaults.nonIc[code] ?? data.defaults.ic[code];
+  const rawBatch = Number(options.batch);
+  const batchYear = rawBatch > 0 && rawBatch < 100 ? 2000 + rawBatch : rawBatch;
+  // HS-112 and HS-342 also appear in the upper-year Non-IC timetable. B26's
+  // first-year choices must resolve to the dedicated IC timetable instead.
+  const rawDefault = batchYear === 2026
+    ? data.defaults.ic[code] ?? data.defaults.nonIc[code]
+    : data.defaults.nonIc[code] ?? data.defaults.ic[code];
   const pcLab = data.pcLab[code];
   if (!rawDefault && !pcLab && !options.fallbackSlot) return [];
 
