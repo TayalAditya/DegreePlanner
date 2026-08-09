@@ -22,7 +22,6 @@ import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
 import { getSpecialDpCategory, getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { addCredits, formatCourseCode, formatCredits, subtractCredits, sumCredits } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
-import { MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
 import { useDebouncedValue } from "@/lib/useDebouncedValue";
 
 interface Course {
@@ -383,9 +382,6 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   }, []);
 
   const hasSkippedMtp = user?.doingMTP === false || user?.doingMTP2 === false;
-  const reallocatedMtpCredits = projectRequirements
-    ? Math.max(0, MTP_TOTAL_CREDITS - projectRequirements.mtp)
-    : 0;
 
   // Normally the primary programme comes from the server wrapper. This keeps
   // the requirement card reliable if that optional prefetch ever falls back to
@@ -409,10 +405,8 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     return () => controller.abort();
   }, [hasSkippedMtp, programId]);
 
-  // The credit calculator is the single source of truth for project choices:
-  // an unfinished skipped MTP component moves its 4 credits to DE. The course
-  // page previously showed only earned credits, so that revised requirement was
-  // invisible here even though it was already applied by the server.
+  // The credit calculator supplies the adjusted DE cap when an unfinished MTP
+  // component is skipped, so category allocation stays in sync with progress.
   useEffect(() => {
     if (!programId || !hasSkippedMtp) {
       setProjectRequirements(null);
@@ -1040,26 +1034,6 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
           delay={0.1}
         />
       </div>
-
-      {hasSkippedMtp && projectRequirements && (
-        <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 p-4 sm:flex sm:items-center sm:justify-between sm:gap-4">
-          <div className="flex gap-3">
-            <Award className="mt-0.5 h-5 w-5 shrink-0 text-orange-600 dark:text-orange-400" />
-            <div>
-              <h3 className="font-semibold text-foreground">MTP preference applied to your requirements</h3>
-              <p className="mt-1 text-sm text-foreground-secondary">
-                {reallocatedMtpCredits > 0
-                  ? `${formatCredits(reallocatedMtpCredits)} from unfinished skipped MTP components is now included in DE.`
-                  : "Completed MTP credit stays under MTP, so no completed project credit is moved to DE."}
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 flex shrink-0 gap-4 text-sm sm:mt-0">
-            <span><strong className="text-foreground">DE:</strong> {formatCredits(projectRequirements.de)} required</span>
-            <span><strong className="text-foreground">MTP:</strong> {formatCredits(projectRequirements.mtp)} required</span>
-          </div>
-        </div>
-      )}
 
       {/* Category Breakdown */}
           {enrollments.length > 0 && (
