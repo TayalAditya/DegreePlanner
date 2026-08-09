@@ -90,6 +90,14 @@ const PUBLISHED_IC_COURSE_OVERRIDES: Record<string, CourseDefault> = {
   },
 };
 
+// The same first-year timetable also supersedes the generic IC workbook's
+// language-room rows for B26.
+const PUBLISHED_IC_CLASSROOM_OVERRIDES: Record<string, string> = {
+  "HS-112": "A18-2",
+  "HS-342": "A11-1B",
+  "IK-101": "A17-2A",
+};
+
 // The first-year schedule publishes IC-181 in a single room for every branch;
 // it is not split into the Batch-1/Batch-2 lecture groups.
 const PUBLISHED_IC_NO_VARIANT_OVERRIDES = new Set(["IC-181"]);
@@ -388,6 +396,12 @@ function main() {
   for (const [code, course] of Object.entries(PUBLISHED_IC_COURSE_OVERRIDES)) {
     ic[code] = course;
     if (course.classroom) addVenue(course.classroom);
+  }
+  for (const [code, classroom] of Object.entries(PUBLISHED_IC_CLASSROOM_OVERRIDES)) {
+    const course = ic[code];
+    if (!course) throw new Error(`Missing IC timetable course for published venue correction: ${code}`);
+    course.classroom = classroom;
+    addVenue(classroom);
   }
   for (const code of PUBLISHED_IC_NO_VARIANT_OVERRIDES) {
     const course = ic[code];

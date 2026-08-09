@@ -1,6 +1,6 @@
 {
   "version": "2026-2027-odd",
-  "generatedAt": "2026-08-09T14:26:35.217Z",
+  "generatedAt": "2026-08-09T14:38:32.686Z",
   "sourceWorkbook": "docs/CL 2026-27 Odd/Final Time Table Aug-Nov 2026.xlsx",
   "venues": [
     "A1-3",
@@ -2870,7 +2870,7 @@
         "name": "HSS (Language)",
         "credit": 3,
         "slot": "G",
-        "classroom": "A17-1A",
+        "classroom": "A11-1B",
         "campus": "North Campus",
         "kind": "IC"
       },
