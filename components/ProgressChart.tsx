@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useSyncExternalStore } from "react";
 import { ChevronDown } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, Label, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { getAllDefaultCourses, type DefaultCourse } from "@/lib/defaultCurriculum";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
@@ -1082,6 +1082,37 @@ export function ProgressChart({
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
+              <Label
+                position="center"
+                content={({ viewBox }) => {
+                  const { cx, cy } = (viewBox ?? {}) as { cx?: number; cy?: number };
+                  if (typeof cx !== "number" || typeof cy !== "number") return null;
+
+                  return (
+                    <g aria-label={`${totals.percentage}% complete, ${formatCredits(totals.countedTotal)} of ${formatCredits(totals.requiredTotal)} credits`}>
+                      <text
+                        x={cx}
+                        y={cy - 4}
+                        textAnchor="middle"
+                        fill="var(--foreground)"
+                        fontSize={20}
+                        fontWeight={700}
+                      >
+                        {totals.percentage}%
+                      </text>
+                      <text
+                        x={cx}
+                        y={cy + 14}
+                        textAnchor="middle"
+                        fill="var(--foreground-secondary)"
+                        fontSize={12}
+                      >
+                        {formatCredits(totals.countedTotal)} / {formatCredits(totals.requiredTotal)}
+                      </text>
+                    </g>
+                  );
+                }}
+              />
             </Pie>
             <Tooltip formatter={(value, name) => [`${formatCredits(Number(value))} credits`, name]} />
             <Legend
@@ -1091,12 +1122,6 @@ export function ProgressChart({
             />
           </PieChart>
         </ResponsiveContainer>
-        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-xl font-bold text-foreground">{totals.percentage}%</span>
-          <span className="text-xs text-foreground-secondary">
-            {formatCredits(totals.countedTotal)} / {formatCredits(totals.requiredTotal)}
-          </span>
-        </div>
       </div>
     </div>
   );
