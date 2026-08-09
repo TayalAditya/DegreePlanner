@@ -119,7 +119,7 @@ const SCHOOL_META: Record<SchoolKey, { label: string; order: number; prefixes: s
   },
   SMSS: { label: "SMSS (MNC)", order: 20, prefixes: ["MC", "MA", "ST"] },
   SMME: { label: "SMME (GE, MSE, ME)", order: 30, prefixes: ["GE", "ME", "MS", "MT", "AR", "EN", "EM", "MI"] },
-  SPS: { label: "SPS (EP)", order: 40, prefixes: ["EP", "PH"] },
+  SPS: { label: "SPS / CQST / SQST (EP, QS, QT)", order: 40, prefixes: ["EP", "PH", "QS", "QT"] },
   SCENE: { label: "SCENE (CE)", order: 50, prefixes: ["CE"] },
   SCS: { label: "SCS (BS CS)", order: 60, prefixes: ["CY", "CH"] },
   SBS: { label: "SBS (BE)", order: 70, prefixes: ["BE", "BY", "BT", "BS"] },
