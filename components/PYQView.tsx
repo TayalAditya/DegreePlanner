@@ -16,6 +16,8 @@ import {
   Trash2,
   ShieldCheck,
   Loader2,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { formatCourseCode } from "@/lib/utils";
@@ -61,6 +63,13 @@ const EXAM_TYPES = [
 ];
 
 const EXAM_TYPE_MAP = Object.fromEntries(EXAM_TYPES.map((t) => [t.value, t]));
+const PREVIEW_ZOOM_MIN = 0.5;
+const PREVIEW_ZOOM_MAX = 2.5;
+const PREVIEW_ZOOM_STEP = 0.25;
+
+function clampPreviewZoom(value: number) {
+  return Math.min(PREVIEW_ZOOM_MAX, Math.max(PREVIEW_ZOOM_MIN, value));
+}
 
 export function PYQView({ isAdmin }: PYQViewProps) {
   const [papers, setPapers] = useState<PYQPaper[]>([]);
@@ -89,6 +98,18 @@ export function PYQView({ isAdmin }: PYQViewProps) {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewZoom, setPreviewZoom] = useState(1);
+
+  const openPreview = useCallback((paper: PYQPaper) => {
+    setPreviewZoom(1);
+    setPreview({ paper, page: 1, pageCount: null });
+  }, []);
+
+  const changePreviewZoom = useCallback((amount: number) => {
+    setPreviewZoom((current) => clampPreviewZoom(current + amount));
+  }, []);
+
+  const resetPreviewZoom = useCallback(() => setPreviewZoom(1), []);
 
   const secureExit = useCallback(() => {
     setPreviewImageUrl(null);
@@ -187,11 +208,43 @@ export function PYQView({ isAdmin }: PYQViewProps) {
 
       if (command && ["p", "s"].includes(key)) {
         event.preventDefault();
+        return;
+      }
+
+      // Keep browser zoom scoped to the protected document while this viewer
+      // is open. Browser-level zoom can otherwise resize the entire dashboard
+      // and interfere with the preview's protection checks.
+      if (command && ["+", "="].includes(key)) {
+        event.preventDefault();
+        changePreviewZoom(PREVIEW_ZOOM_STEP);
+        return;
+      }
+
+      if (command && ["-", "_"].includes(key)) {
+        event.preventDefault();
+        changePreviewZoom(-PREVIEW_ZOOM_STEP);
+        return;
+      }
+
+      if (command && key === "0") {
+        event.preventDefault();
+        resetPreviewZoom();
       }
     };
+
+    const zoomPreviewWithWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return;
+      event.preventDefault();
+      changePreviewZoom(event.deltaY < 0 ? PREVIEW_ZOOM_STEP : -PREVIEW_ZOOM_STEP);
+    };
+
     window.addEventListener("keydown", blockBrowserSaveAndPrint, true);
-    return () => window.removeEventListener("keydown", blockBrowserSaveAndPrint, true);
-  }, [preview, secureExit]);
+    window.addEventListener("wheel", zoomPreviewWithWheel, { capture: true, passive: false });
+    return () => {
+      window.removeEventListener("keydown", blockBrowserSaveAndPrint, true);
+      window.removeEventListener("wheel", zoomPreviewWithWheel, true);
+    };
+  }, [preview, secureExit, changePreviewZoom, resetPreviewZoom]);
 
   useEffect(() => {
     if (!preview) return;
@@ -445,7 +498,7 @@ export function PYQView({ isAdmin }: PYQViewProps) {
               papers={coursePapers}
               isAdmin={isAdmin}
               onChanged={loadData}
-              onPreview={(paper) => setPreview({ paper, page: 1, pageCount: null })}
+              onPreview={openPreview}
             />
           ))}
         </div>
@@ -504,16 +557,53 @@ export function PYQView({ isAdmin }: PYQViewProps) {
                   alt={`Question-paper page ${preview.page}`}
                   draggable={false}
                   onDragStart={(event) => event.preventDefault()}
-                  className="max-h-[68vh] w-auto max-w-full select-none rounded border border-border bg-white shadow-sm"
+                  className="w-auto max-w-none select-none rounded border border-border bg-white shadow-sm"
+                  style={{ height: `${68 * previewZoom}vh`, maxHeight: "none" }}
                 />
               )}
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-border p-3 sm:p-4">
-              <p className="text-xs text-foreground-secondary">
-                Page {preview.page}{preview.pageCount ? ` of ${preview.pageCount}` : ""}
-              </p>
+              <div>
+                <p className="text-xs text-foreground-secondary">
+                  Page {preview.page}{preview.pageCount ? ` of ${preview.pageCount}` : ""}
+                </p>
+                <p className="mt-0.5 text-[11px] text-foreground-secondary">
+                  Zoom affects only this question paper.
+                </p>
+              </div>
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1" aria-label="Question paper zoom">
+                  <button
+                    type="button"
+                    onClick={() => changePreviewZoom(-PREVIEW_ZOOM_STEP)}
+                    disabled={previewZoom <= PREVIEW_ZOOM_MIN}
+                    className="rounded-lg border border-border p-2 text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Zoom out question paper"
+                    title="Zoom out question paper"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resetPreviewZoom}
+                    className="min-w-14 rounded-lg border border-border px-2 py-2 text-xs font-medium text-foreground transition-colors hover:bg-surface-hover"
+                    aria-label="Reset question paper zoom"
+                    title="Reset question paper zoom"
+                  >
+                    {Math.round(previewZoom * 100)}%
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => changePreviewZoom(PREVIEW_ZOOM_STEP)}
+                    disabled={previewZoom >= PREVIEW_ZOOM_MAX}
+                    className="rounded-lg border border-border p-2 text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Zoom in question paper"
+                    title="Zoom in question paper"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </button>
+                </div>
                 <button
                   type="button"
                   onClick={() => setPreview((current) => current && { ...current, page: current.page - 1 })}
