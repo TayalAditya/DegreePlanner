@@ -8,6 +8,7 @@ import { EnrollmentStatus } from "@prisma/client";
 import { creditCalculator } from "@/lib/creditCalculator";
 import { isAcadSec } from "@/lib/permissions";
 import { getBatchAdjustedCredits } from "@/lib/branches";
+import { pickBranchMapping } from "@/lib/courseCategory";
 
 const PRE_REG_OPEN = new Date("2026-08-15T00:00:00+05:30");
 
@@ -28,30 +29,6 @@ function isHssIksCourse(code: string, batch: number | null | undefined): boolean
     /^IK\d/.test(normalized) ||
     normalized === "IC181" ||
     (normalized === "IC182" && batch != null && batch >= 2024);
-}
-
-function pickCategory(
-  branchMappings: Array<{ courseCategory: string; branch: string; batch: string }> | undefined,
-  branch: string,
-  batch: number | null | undefined
-): string | undefined {
-  if (!branchMappings || branchMappings.length === 0) return undefined;
-  const candidates = getBranchCandidates(branch);
-  const order = new Map(candidates.map((b, i) => [normalizeBranchCode(b), i]));
-  const batchStr = batch ? String(batch) : "";
-
-  let best: { courseCategory: string } | undefined;
-  let bestScore = Infinity;
-
-  for (const m of branchMappings) {
-    const idx = order.get(normalizeBranchCode(m.branch));
-    if (idx === undefined) continue;
-    // Prefer batch-specific mapping over all-batches
-    const batchPenalty = m.batch && m.batch !== "" ? (m.batch === batchStr ? 0 : 1000) : 0.5;
-    const score = idx + batchPenalty;
-    if (score < bestScore) { best = m; bestScore = score; }
-  }
-  return best?.courseCategory;
 }
 
 export async function GET() {
@@ -203,24 +180,13 @@ export async function GET() {
   const ic182Done = completedByCourseCode.has("IC182");
 
   // IC Basket: students need 6 cr total. Once fulfilled, further IC_BASKET offerings are optional FE.
-  // Use the same per-mapping .find() logic as the tally to avoid score-order issues.
+  // Use the canonical branch-and-batch resolver. A generic mapping can have a
+  // different category from the student's batch-specific curriculum mapping.
   const IC_BASKET_REQ = 6;
   let completedIcBasketCredits = 0;
   for (const e of completed) {
     if (e.grade === "F") continue;
-    const bm = e.course.branchMappings as Array<{ courseCategory: string; branch: string; batch: string }>;
-    const mapping =
-      bm.find(
-        (m) =>
-          pickCategory([m], normalizedBranch, batch) !== undefined &&
-          getBranchCandidates(normalizedBranch)
-            .map((b) => b.toUpperCase())
-            .includes(m.branch.toUpperCase())
-      ) ??
-      (() => {
-        const c = pickCategory(bm, normalizedBranch, batch);
-        return c ? { courseCategory: c } : null;
-      })();
+    const mapping = pickBranchMapping(e.course.branchMappings, normalizedBranch, batch);
     if (mapping?.courseCategory === "IC_BASKET") completedIcBasketCredits += e.course.credits;
   }
   const icBasketFulfilled = completedIcBasketCredits >= IC_BASKET_REQ;
@@ -257,7 +223,7 @@ export async function GET() {
     .map((o) => {
       // Resolve category
       const mappingCategory = o.course
-        ? pickCategory(o.course.branchMappings, normalizedBranch, batch)
+        ? pickBranchMapping(o.course.branchMappings, normalizedBranch, batch)?.courseCategory
         : undefined;
       const baseCat = mappingCategory ?? o.categoryOverride ?? "FE";
       // Once IC basket requirement is fulfilled (6 cr done), further IC_BASKET offerings become optional FE
@@ -316,23 +282,11 @@ export async function GET() {
       const isCompulsoryCategory = ["IC", "IC_BASKET", "DC"].includes(resolvedCategory) ||
         (resolvedCategory === "IKS" && normalizedCodeEarly === "IC181");
       // Prefer branch-specific semester from branchMapping over the offering-level compulsorySem
-      const branchMappingSem = o.course?.branchMappings
-        ? (() => {
-            const candidates = getBranchCandidates(normalizedBranch);
-            const order = new Map(candidates.map((b, i) => [normalizeBranchCode(b), i]));
-            const batchStr = batch ? String(batch) : "";
-            let best: { semester: number | null } | undefined;
-            let bestScore = Infinity;
-            for (const m of o.course!.branchMappings as Array<{ branch: string; batch: string; semester: number | null }>) {
-              const idx = order.get(normalizeBranchCode(m.branch));
-              if (idx === undefined) continue;
-              const batchPenalty = m.batch && m.batch !== "" ? (m.batch === batchStr ? 0 : 1000) : 0.5;
-              const score = idx + batchPenalty;
-              if (score < bestScore) { best = m; bestScore = score; }
-            }
-            return best?.semester ?? null;
-          })()
-        : null;
+      const branchMappingSem = (
+        pickBranchMapping(o.course?.branchMappings, normalizedBranch, batch) as
+          | { semester?: number | null }
+          | undefined
+      )?.semester ?? null;
       const effectiveCompulsorySem = branchMappingSem ?? o.compulsorySem;
       const semesterMatches = effectiveCompulsorySem == null || effectiveCompulsorySem === offeringSemester;
 
@@ -400,10 +354,7 @@ export async function GET() {
           continue;
         }
         const code = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
-        const mapping = (e.course.branchMappings as Array<{ courseCategory: string; branch: string; batch: string; splitCategory: string | null; splitAmount: number | null }>)
-          .find(m => pickCategory([m], normalizedBranch, batch) !== undefined &&
-            getBranchCandidates(normalizedBranch).map(b => b.toUpperCase()).includes(m.branch.toUpperCase())) ??
-          (() => { const c = pickCategory(e.course.branchMappings as any, normalizedBranch, batch); return c ? { courseCategory: c, splitCategory: null, splitAmount: null } : null; })();
+        const mapping = pickBranchMapping(e.course.branchMappings, normalizedBranch, batch);
 
         // IK-xxx, IC-181, IC-182 → HSS+IKS combined basket
         const isHssIks = isHssIksCourse(code, batch);
