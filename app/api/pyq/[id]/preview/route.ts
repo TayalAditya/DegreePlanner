@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+// PDF.js normally lazy-loads this fake worker. Keep it as a static server
+// dependency so Vercel traces it into the preview function bundle.
+import "pdfjs-dist/legacy/build/pdf.worker.mjs";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { isDocumentsAdmin } from "@/lib/permissions";

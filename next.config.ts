@@ -20,6 +20,7 @@ const nextConfig: NextConfig = {
   // Ensure runtime-loaded PDFs are bundled for Vercel/serverless functions.
   outputFileTracingIncludes: {
     "/api/auth/[...nextauth]": ["./docs/*.pdf"],
+    "/api/pyq/[id]/preview": ["./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs"],
   },
 };
 
