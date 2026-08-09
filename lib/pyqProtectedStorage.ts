@@ -24,7 +24,7 @@ function getPyqBlobToken(): string | null {
 
 type PyqBlobAuth =
   | { token: string }
-  | { storeId: string; oidcToken?: string };
+  | { storeId: string };
 
 function getPyqBlobAuth(): PyqBlobAuth | null {
   const token = getPyqBlobToken();
@@ -37,8 +37,7 @@ function getPyqBlobAuth(): PyqBlobAuth | null {
   // functions. Passing only the private store ID is intentional: checking
   // VERCEL_OIDC_TOKEN here prevents that automatic credential path from being
   // used when the token is supplied at runtime rather than as a plain env var.
-  const oidcToken = process.env.VERCEL_OIDC_TOKEN?.trim();
-  return oidcToken ? { oidcToken, storeId } : { storeId };
+  return { storeId };
 }
 
 export function isPrivatePyqBlobConfigured(): boolean {
