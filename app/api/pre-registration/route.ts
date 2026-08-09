@@ -4,11 +4,12 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { getBranchCandidates, normalizeBranchCode } from "@/lib/branchInfo";
-import { EnrollmentStatus } from "@prisma/client";
+import { EnrollmentStatus, ProgramStatus, ProgramType } from "@prisma/client";
 import { creditCalculator } from "@/lib/creditCalculator";
 import { isAcadSec } from "@/lib/permissions";
 import { getBatchAdjustedCredits } from "@/lib/branches";
 import { pickBranchMapping } from "@/lib/courseCategory";
+import { MINORS } from "@/lib/minors";
 
 const PRE_REG_OPEN = new Date("2026-08-15T00:00:00+05:30");
 
@@ -84,7 +85,7 @@ export async function GET() {
   const normalizedBranch = normalizeBranchCode(branch);
 
   // Fetch all data in parallel
-  const [offerings, completed, userProgram, savedPlan, equivalencies] = await Promise.all([
+  const [offerings, completed, userProgram, minorPrograms, savedPlan, equivalencies] = await Promise.all([
     prisma.courseOffering.findMany({
       where: { offeringYear, isActive: true },
       include: {
@@ -122,6 +123,17 @@ export async function GET() {
     prisma.userProgram.findFirst({
       where: { userId: session.user.id, isPrimary: true },
       select: { programId: true, program: { select: { icCredits: true, dcCredits: true, deCredits: true, feCredits: true, mtpIstpCredits: true } } },
+    }),
+    // Minors are secondary programs, so they must not be inferred from the
+    // primary-program query above. Their local alternative rules still need
+    // to affect eligibility in the registration catalogue.
+    prisma.userProgram.findMany({
+      where: {
+        userId: session.user.id,
+        programType: ProgramType.MINOR,
+        status: ProgramStatus.ACTIVE,
+      },
+      select: { program: { select: { code: true } } },
     }),
     prisma.preRegistrationPlan.findUnique({
       where: { userId_offeringSemester_offeringYear: { userId: session.user.id, offeringSemester, offeringYear } },
@@ -173,6 +185,34 @@ export async function GET() {
     markEquivalentCompleted(eq.equivalent.id, eq.equivalent.code, eq.courseId, eq.course.code);
     linkEquivalentIds(eq.courseId, eq.equivalent.id);
     linkEquivalentIds(eq.equivalent.id, eq.courseId);
+  }
+
+  // Check for completed minor alternative courses: if a student has completed one
+  // course from an alternativeCourseCodeSets group, mark all others as completed too.
+  // This prevents re-registering alternatives (e.g., HS-504 blocks HS-510 for Management minor).
+  for (const minorDef of minorPrograms
+    .map((minorProgram) => MINORS.find((minor) => minor.code === minorProgram.program.code))
+    .filter((minor): minor is (typeof MINORS)[number] => Boolean(minor))) {
+    for (const group of minorDef.groups) {
+      if (!group.alternativeCourseCodeSets) continue;
+      for (const altSet of group.alternativeCourseCodeSets) {
+        // If any course in this alternative set is completed, mark all others as completed
+        const completedInSet = altSet.find((code) =>
+          completedByCourseCode.has(code.toUpperCase().replace(/[^A-Z0-9]/g, ""))
+        );
+        if (completedInSet) {
+          const normalizedCompleted = completedInSet.toUpperCase().replace(/[^A-Z0-9]/g, "");
+          const completedSem = completedByCourseCode.get(normalizedCompleted);
+          for (const altCode of altSet) {
+            const normalized = altCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+            if (normalized !== normalizedCompleted && !completedByCourseCode.has(normalized)) {
+              completedByCourseCode.set(normalized, completedSem!);
+              completedViaByCourseCode.set(normalized, completedInSet);
+            }
+          }
+        }
+      }
+    }
   }
 
   // IC-181 & IC-182 are IKS basket — only one counts. If either is done, the other is not compulsory.

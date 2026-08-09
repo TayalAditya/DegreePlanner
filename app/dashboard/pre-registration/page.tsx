@@ -1049,10 +1049,21 @@ export default function PreRegistrationPage() {
       const courses = group.courseCodes.map((rawCode) => {
         const norm = formatCourseCode(rawCode);
         const offering = offeringByCode.get(norm);
-        const isCompleted =
+        const isDirectlyCompleted =
           completedCodeSet.has(rawCode.toUpperCase().replace(/[^A-Z0-9]/g, "")) ||
           (offering?.completedInSemester != null);
-        return { code: norm, offering, isCompleted };
+        // An OR alternative is already consumed when its paired course is
+        // complete. Keep this scoped to the selected minor: HS-510 can still
+        // be a normal HSS/FE course, but it must not look selectable as a
+        // Management-minor elective after HS-504 is done.
+        const completedVia = group.alternativeCourseCodeSets
+          ?.find((set) => set.some((candidate) => formatCourseCode(candidate) === norm))
+          ?.find((candidate) =>
+            formatCourseCode(candidate) !== norm &&
+            completedCodeSet.has(candidate.toUpperCase().replace(/[^A-Z0-9]/g, ""))
+          );
+        const isCompleted = isDirectlyCompleted || Boolean(completedVia);
+        return { code: norm, offering, isCompleted, completedVia: completedVia ? formatCourseCode(completedVia) : null };
       });
 
       const completedCount = group.countsTowardMinor
@@ -1079,7 +1090,10 @@ export default function PreRegistrationPage() {
     const map = new Map<string, string>();
     if (!minorData) return map;
     for (const group of minorData.groups) {
-      for (const { offering } of group.courses) {
+      for (const { offering, isCompleted, completedVia } of group.courses) {
+        // A course blocked by a completed alternative must not retain a
+        // misleading "Minor" badge in the normal catalogue sections.
+        if (isCompleted && completedVia) continue;
         if (offering) map.set(offering.id, group.countsTowardMinor ? group.title : "Prereq");
       }
     }
@@ -1300,6 +1314,19 @@ export default function PreRegistrationPage() {
 
   const handleToggle = (offering: Offering) => {
     if (offering.isCompulsory || offering.completedInSemester !== null) return;
+    const completedMinorAlternative = minorData?.groups
+      .flatMap((group) =>
+        group.courses
+          .filter((course) => course.offering?.id === offering.id && course.isCompleted && course.completedVia)
+          .map((course) => ({ group, course }))
+      )[0];
+    if (completedMinorAlternative) {
+      showToast(
+        "error",
+        `${offering.courseCode} cannot count toward ${minorData!.minor.name}: ${completedMinorAlternative.course.completedVia} already satisfies this alternative.`
+      );
+      return;
+    }
     if (hasSelected399P) {
       showToast("error", "Deselect 399P first. It cannot be planned with another course.");
       return;
@@ -1397,6 +1424,9 @@ export default function PreRegistrationPage() {
           year: data.offeringYear,
           // Include compulsory IC/DC courses so admin plans page shows the full picture
           selectedIds,
+          // The minor planner is client-selected, so include it when saving
+          // to let the server enforce minor-only alternative rules too.
+          minorCode: selectedMinorCode || null,
           registrationTypes: Object.fromEntries(
             Array.from(regTypes).filter(([id]) => selectedIdSet.has(id))
           ),
@@ -1815,16 +1845,23 @@ export default function PreRegistrationPage() {
                   )}
                   {completedOffered.length > 0 && (
                     <div className="space-y-2">
-                      {completedOffered.map(({ offering }) => (
+                      {completedOffered.map(({ offering, completedVia }) => {
+                        // This card represents a completed alternative in the
+                        // selected minor, not a fabricated transcript record.
+                        const displayOffering = completedVia && offering!.completedInSemester == null
+                          ? { ...offering!, completedInSemester: 0, completedVia }
+                          : offering!;
+                        return (
                         <CourseCard
-                          key={offering!.id}
-                          offering={offering!}
+                          key={displayOffering.id}
+                          offering={displayOffering}
                           checked={false}
                           disabled={true}
                           onToggle={() => {}}
                           studentInfo={data.studentInfo}
                         />
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                   {notOffered.length > 0 && (

@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { EnrollmentStatus } from "@prisma/client";
+import { MINORS } from "@/lib/minors";
+import { EnrollmentStatus, ProgramStatus, ProgramType } from "@prisma/client";
+
+const normalizeCourseCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -30,11 +33,12 @@ export async function POST(req: NextRequest) {
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body = await req.json();
-  const { semester, year, selectedIds, registrationTypes } = body as {
+  const { semester, year, selectedIds, registrationTypes, minorCode } = body as {
     semester: number;
     year: number;
     selectedIds: string[];
     registrationTypes?: Record<string, string>;
+    minorCode?: string | null;
   };
 
   if (!semester || !year || !Array.isArray(selectedIds)) {
@@ -74,7 +78,7 @@ export async function POST(req: NextRequest) {
 
   // A 399P onsite internship is an all-semester commitment. Validate plans on
   // the server too so a stale tab or direct API request cannot bypass the UI.
-  const [offeringMatches, courseMatches] = await Promise.all([
+  const [offeringMatches, courseMatches, activeMinorPrograms, completedCourses] = await Promise.all([
     prisma.courseOffering.findMany({
       where: { id: { in: canonicalIds } },
       select: { id: true, courseCode: true, credits: true },
@@ -83,10 +87,64 @@ export async function POST(req: NextRequest) {
       where: { id: { in: canonicalIds } },
       select: { id: true, code: true, credits: true },
     }),
+    prisma.userProgram.findMany({
+      where: {
+        userId: session.user.id,
+        programType: ProgramType.MINOR,
+        status: ProgramStatus.ACTIVE,
+      },
+      select: { program: { select: { code: true } } },
+    }),
+    prisma.courseEnrollment.findMany({
+      where: {
+        userId: session.user.id,
+        status: { in: [EnrollmentStatus.COMPLETED, EnrollmentStatus.IN_PROGRESS] },
+        grade: { not: "F" },
+      },
+      select: { course: { select: { code: true } } },
+    }),
   ]);
   const itemsById = new Map<string, { code: string; credits: number }>();
   offeringMatches.forEach((item) => itemsById.set(item.id, { code: item.courseCode, credits: item.credits }));
   courseMatches.forEach((item) => itemsById.set(item.id, { code: item.code, credits: item.credits }));
+
+  // A planner-selected minor is sent with the save request, while declared
+  // active minors are always enforced. This prevents a stale tab or direct
+  // API request from registering both sides of a minor-only OR pair.
+  const activeMinorCodes = new Set(activeMinorPrograms.map((item) => item.program.code));
+  const requestedMinorCode = typeof minorCode === "string" ? minorCode.trim() : "";
+  if (requestedMinorCode && MINORS.some((minor) => minor.code === requestedMinorCode)) {
+    activeMinorCodes.add(requestedMinorCode);
+  }
+  const completedCodes = new Set(completedCourses.map((item) => normalizeCourseCode(item.course.code)));
+  const selectedCodes = new Set(
+    canonicalIds
+      .map((id) => itemsById.get(id)?.code)
+      .filter((code): code is string => Boolean(code))
+      .map(normalizeCourseCode)
+  );
+  for (const minorCodeToValidate of activeMinorCodes) {
+    const minor = MINORS.find((item) => item.code === minorCodeToValidate);
+    if (!minor) continue;
+    for (const group of minor.groups) {
+      for (const alternatives of group.alternativeCourseCodeSets ?? []) {
+        const completedAlternative = alternatives.find((code) => completedCodes.has(normalizeCourseCode(code)));
+        const selectedAlternatives = alternatives.filter((code) => selectedCodes.has(normalizeCourseCode(code)));
+        const conflictsWithCompleted = completedAlternative && selectedAlternatives.some(
+          (code) => normalizeCourseCode(code) !== normalizeCourseCode(completedAlternative)
+        );
+        if (conflictsWithCompleted || selectedAlternatives.length > 1) {
+          return NextResponse.json(
+            {
+              error: `${alternatives.join(" and ")} are alternatives in ${minor.name}. Only one can count toward ${group.title}.`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+  }
+
   const selected399P = canonicalIds.filter((id) => {
     const code = String(itemsById.get(id)?.code ?? "").replace(/[^A-Z0-9]/g, "");
     // Also catch IDs not found in DB — treat unknown IDs as non-399P (they won't
