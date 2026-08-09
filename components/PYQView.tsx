@@ -14,7 +14,6 @@ import {
   Check,
   Ban,
   Trash2,
-  ShieldCheck,
   Loader2,
   ZoomIn,
   ZoomOut,
@@ -519,16 +518,9 @@ export function PYQView({ isAdmin }: PYQViewProps) {
           >
             <div className="flex items-start justify-between gap-4 border-b border-border p-4 sm:p-5">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-primary">
-                  <ShieldCheck className="h-4 w-4" />
-                  <span className="text-xs font-semibold">Protected viewer</span>
-                </div>
-                <h2 className="mt-1 truncate text-base font-bold text-foreground sm:text-lg">
+                <h2 className="truncate text-base font-bold text-foreground sm:text-lg">
                   {preview.paper.title ?? `${formatCourseCode(preview.paper.courseCode)} question paper`}
                 </h2>
-                <p className="mt-1 text-xs text-foreground-secondary">
-                  The original file cannot be downloaded or printed from this viewer.
-                </p>
               </div>
               <button
                 type="button"
@@ -540,15 +532,15 @@ export function PYQView({ isAdmin }: PYQViewProps) {
               </button>
             </div>
 
-            <div className="relative flex min-h-[52vh] max-h-[72vh] items-center justify-center overflow-auto bg-background-secondary p-3 sm:p-5">
+            <div className="relative flex min-h-[52vh] max-h-[72vh] items-start justify-center overflow-auto bg-background-secondary p-3 sm:p-5">
               {previewLoading && (
-                <div className="flex items-center gap-2 text-sm text-foreground-secondary">
+                <div className="self-center flex items-center gap-2 text-sm text-foreground-secondary">
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Loading protected preview...
                 </div>
               )}
               {previewError && (
-                <p className="max-w-md text-center text-sm text-error">{previewError}</p>
+                <p className="self-center max-w-md text-center text-sm text-error">{previewError}</p>
               )}
               {previewImageUrl && !previewError && (
                 // eslint-disable-next-line @next/next/no-img-element
