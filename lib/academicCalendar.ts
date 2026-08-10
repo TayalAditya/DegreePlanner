@@ -8,6 +8,10 @@ export type AcademicState = {
   currentSemester: number;
   phase: AcademicPhase;
   isInSession: boolean;
+  // True once a four-year batch has finished Sem 8. `currentSemester` remains
+  // clamped for display compatibility, but enrollment logic must not treat
+  // that old Sem 8 as an active term.
+  isPastProgram: boolean;
   // During PRE_REGISTRATION this is the upcoming Fall semester number.
   // During BREAK it is the just-completed Spring semester number.
   upcomingSemester?: number;
@@ -53,6 +57,7 @@ export const inferAcademicState = (batchYear: number, now: Date = new Date()): A
       currentSemester: clampSemester(yearsElapsed * 2),
       phase: "SPRING",
       isInSession: true,
+      isPastProgram: yearsElapsed * 2 > 8,
     };
   }
 
@@ -66,6 +71,7 @@ export const inferAcademicState = (batchYear: number, now: Date = new Date()): A
       currentSemester: upcomingFall,
       phase: "PRE_REGISTRATION",
       isInSession: true,
+      isPastProgram: yearsElapsed * 2 + 1 > 8,
       upcomingSemester: upcomingFall,
     };
   }
@@ -75,5 +81,6 @@ export const inferAcademicState = (batchYear: number, now: Date = new Date()): A
     currentSemester: clampSemester(yearsElapsed * 2 + 1),
     phase: "FALL",
     isInSession: true,
+    isPastProgram: yearsElapsed * 2 + 1 > 8,
   };
 };

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { EnrollmentStatus } from "@prisma/client";
+import { isCurrentOrFutureSemesterForUser } from "@/lib/enrollmentStatusSync";
 
 export async function GET(
   request: NextRequest,
@@ -59,11 +61,37 @@ export async function PATCH(
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
 
+    if (
+      status !== undefined &&
+      !Object.values(EnrollmentStatus).includes(status as EnrollmentStatus)
+    ) {
+      return NextResponse.json({ error: "Invalid enrollment status" }, { status: 400 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { batch: true, enrollmentId: true },
+    });
+    const isCurrentOrFutureSemester = isCurrentOrFutureSemesterForUser(
+      enrollment.semester,
+      { batch: user?.batch, enrollmentId: user?.enrollmentId }
+    );
+    const isAudit =
+      status === EnrollmentStatus.AUDIT ||
+      (status === undefined && enrollment.status === EnrollmentStatus.AUDIT);
+
     const updated = await prisma.courseEnrollment.update({
       where: { id },
       data: {
-        ...(grade !== undefined && { grade }),
-        ...(status !== undefined && { status }),
+        ...(isCurrentOrFutureSemester
+          ? {
+              grade: null,
+              status: isAudit ? EnrollmentStatus.AUDIT : EnrollmentStatus.IN_PROGRESS,
+            }
+          : {
+              ...(grade !== undefined && { grade: isAudit ? null : grade }),
+              ...(status !== undefined && { status }),
+            }),
         ...(courseType !== undefined && { courseType }),
       },
       include: {

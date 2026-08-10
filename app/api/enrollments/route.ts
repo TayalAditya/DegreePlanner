@@ -3,7 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { EnrollmentStatus, CourseType } from "@prisma/client";
-import { syncEnrollmentStatusesForUser } from "@/lib/enrollmentStatusSync";
+import {
+  isCurrentOrFutureSemesterForUser,
+  syncEnrollmentStatusesForUser,
+} from "@/lib/enrollmentStatusSync";
 import { loadDashboardEnrollments } from "@/lib/enrollmentsQuery";
 import { courseIdentityKey } from "@/lib/courseIdentity";
 import { getBranchCandidates, getProgramLookupBranchCode } from "@/lib/branchInfo";
@@ -360,13 +363,28 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create enrollment
-    const finalStatus: EnrollmentStatus =
+    // The active term is never a completed record. Do not trust a client-side
+    // status or grade for this: it would incorrectly add current courses to
+    // completed credits and unlock downstream requirements.
+    const isCurrentOrFutureSemester = isCurrentOrFutureSemesterForUser(
+      semesterNumber,
+      { batch: user.batch, enrollmentId: user.enrollmentId }
+    );
+    const requestedStatus: EnrollmentStatus =
       status && Object.values(EnrollmentStatus).includes(status)
         ? status
         : grade
           ? EnrollmentStatus.COMPLETED
           : EnrollmentStatus.IN_PROGRESS;
+    const finalStatus: EnrollmentStatus = isCurrentOrFutureSemester
+      ? requestedStatus === EnrollmentStatus.AUDIT
+        ? EnrollmentStatus.AUDIT
+        : EnrollmentStatus.IN_PROGRESS
+      : requestedStatus;
+    const finalGrade =
+      isCurrentOrFutureSemester || finalStatus === EnrollmentStatus.AUDIT
+        ? null
+        : grade || null;
 
     // If a user re-adds ISTP/MTP courses, auto-enable the corresponding preferences
     // so Programs checkboxes stay consistent.
@@ -395,7 +413,7 @@ export async function POST(request: NextRequest) {
           courseType: finalCourseType,
           programId: finalProgramId,
           status: finalStatus,
-          grade: grade || null,
+          grade: finalGrade,
           isPassFail: finalIsPassFail,
           passFailCredits: finalIsPassFail ? course.credits : 0,
           isInternship: finalIsInternship,

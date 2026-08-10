@@ -182,6 +182,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   const hasInitialData = Array.isArray(initialEnrollments);
 
   const [preRegLockedSemester, setPreRegLockedSemester] = useState<number | null>(null);
+  const [academicCurrentSemester, setAcademicCurrentSemester] = useState<number | null>(null);
   const [tab, setTab] = useState<"my-courses" | "catalog">("my-courses");
   const [enrollments, setEnrollments] = useState<Enrollment[]>(initialEnrollments ?? []);
   const [user, setUser] = useState<User | null>(initialUser ?? null);
@@ -230,7 +231,12 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     if (!hasInitialData) loadData();
     fetch("/api/academic-state")
       .then(r => r.json())
-      .then(d => { if (d.phase === "PRE_REGISTRATION" && d.upcomingSemester) setPreRegLockedSemester(d.upcomingSemester); })
+      .then(d => {
+        if (typeof d.currentSemester === "number" && !d.isPastProgram) {
+          setAcademicCurrentSemester(d.currentSemester);
+        }
+        if (d.phase === "PRE_REGISTRATION" && d.upcomingSemester) setPreRegLockedSemester(d.upcomingSemester);
+      })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -839,6 +845,16 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     return new Date().getFullYear() - 3;
   };
 
+  const selectedSemesterIsCurrentOrFuture =
+    academicCurrentSemester !== null &&
+    semester !== "" &&
+    Number.isInteger(Number(semester)) &&
+    Number(semester) >= academicCurrentSemester;
+
+  useEffect(() => {
+    if (selectedSemesterIsCurrentOrFuture && grade) setGrade("");
+  }, [selectedSemesterIsCurrentOrFuture, grade]);
+
   const submitEnrollment = async () => {
     if (!addingCourse || !semester) {
       showToast("error", "Please fill in all required fields");
@@ -897,10 +913,6 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       // category they would have used under regular grading.
       if (isPassFail) finalCourseType = "FREE_ELECTIVE";
 
-      const status = isAudit ? "AUDIT" : grade ? "COMPLETED" : semNum < 6 ? "COMPLETED" : "IN_PROGRESS";
-
-      console.log("Frontend: Adding course to semester", semNum, "with status", status);
-
       const response = await fetch("/api/enrollments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -910,8 +922,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
           year: courseYear,
           term,
           courseType: finalCourseType,
-          grade: isAudit ? undefined : (grade || undefined),
-          status,
+          grade: isAudit || selectedSemesterIsCurrentOrFuture ? undefined : (grade || undefined),
           isPassFail,
           isInternship: addingIsSemesterInternship,
           internshipType: addingIs399P ? "ONSITE" : addingIsSemesterInternship ? "REMOTE" : undefined,
@@ -1922,12 +1933,12 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                 {/* Grade Input */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Grade (Optional)
+                    Grade (Optional, past semesters only)
                   </label>
                   <select
                     value={grade}
                     onChange={(e) => setGrade(e.target.value)}
-                    disabled={registrationType === "AUDIT"}
+                    disabled={registrationType === "AUDIT" || selectedSemesterIsCurrentOrFuture}
                     className="w-full px-4 py-3 bg-background border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="">No grade yet</option>
@@ -1945,6 +1956,11 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                     <option value="P">P (Pass)</option>
                     <option value="NP">NP (Not Pass)</option>
                   </select>
+                  {selectedSemesterIsCurrentOrFuture && (
+                    <p className="text-xs text-foreground-secondary mt-1">
+                      Current-semester courses are added as In Progress. Grades are available after the semester ends.
+                    </p>
+                  )}
                 </div>
 
                 {/* Course Type */}

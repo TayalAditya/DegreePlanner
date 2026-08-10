@@ -22,6 +22,7 @@ export async function GET() {
       currentSemester: state.currentSemester,
       upcomingSemester: state.upcomingSemester ?? null,
       isInSession: state.isInSession,
+      isPastProgram: state.isPastProgram,
     },
     { headers: { "Cache-Control": "private, max-age=60, stale-while-revalidate=30" } }
   );

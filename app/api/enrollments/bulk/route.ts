@@ -7,6 +7,7 @@ import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { getMtpComponent, isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
 import { EnrollmentStatus } from "@prisma/client";
+import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import {
   PASS_FAIL_LIMITS,
   isOnsiteSemesterInternshipCourse,
@@ -91,8 +92,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // currentSemester from payload tells us which sems are "past" (→ COMPLETED)
-    const currentSemester: number = body.currentSemester ?? 99;
+    // Never accept a status boundary from the browser: it could incorrectly
+    // move the current term into completed credits.
+    const batchYear = inferBatchYear(user.batch, user.enrollmentId);
+    if (!batchYear) {
+      return NextResponse.json(
+        { error: "Your batch is required before courses can be imported." },
+        { status: 400 }
+      );
+    }
+    const academicState = inferAcademicState(batchYear);
+    const currentSemester = academicState.currentSemester;
 
     // Map curriculum category codes to CourseType enum values
     const categoryToCourseType: Record<
@@ -139,18 +149,6 @@ export async function POST(req: NextRequest) {
       // Also try original case-insensitive
       const original = code.trim();
       return Array.from(new Set([normalized, hyphenated, original, baseSectionCourse, genericMtpCode, genericMtpSpacedCode].filter(Boolean)));
-    };
-
-    const inferBatchYear = (
-      batch: number | null | undefined,
-      enrollmentId: string | null | undefined
-    ) => {
-      if (enrollmentId) {
-        const match = enrollmentId.match(/B(\d{2})/i);
-        if (match) return 2000 + parseInt(match[1], 10);
-      }
-      if (batch && batch > 2000) return batch;
-      return new Date().getFullYear() - 3;
     };
 
     let doingMTP1Pref = user.doingMTP ?? true;
@@ -283,12 +281,11 @@ export async function POST(req: NextRequest) {
         // Fall (odd) opens the academic year, Spring (even) is the next calendar year:
         //   Sem 1 = FALL batchYear, Sem 2 = SPRING batchYear+1, Sem 3 = FALL batchYear+1,
         //   Sem 4 = SPRING batchYear+2, ... → year = batchYear + floor(semester / 2).
-        const batchYear = inferBatchYear(user.batch, user.enrollmentId);
         const semYear = batchYear + Math.floor(semester / 2);
         const term = semester % 2 === 1 ? "FALL" : "SPRING";
 
-        // Past semesters are COMPLETED; current sem depends on whether grade given
-        const isPastSemester = semester < currentSemester;
+        // A current/future term stays WIP even if an old browser payload carries a grade.
+        const isPastSemester = academicState.isPastProgram || semester < currentSemester;
         const normalizedCode = normalizeCourseCode(course.code);
         const is399PCourse = isOnsiteSemesterInternshipCourse(course.code);
         const isInternshipCourse = isSemesterInternshipCourse(course.code);
@@ -296,11 +293,10 @@ export async function POST(req: NextRequest) {
         const isAudit = requestedAudit && !isInternshipCourse;
         const status = isAudit
           ? EnrollmentStatus.AUDIT
-          : grade
-            ? EnrollmentStatus.COMPLETED
-            : isPastSemester
+          : isPastSemester
               ? EnrollmentStatus.COMPLETED
               : EnrollmentStatus.IN_PROGRESS;
+        const normalizedGrade = isPastSemester && !isAudit ? grade || null : null;
         if (requestedPassFail && !isInternshipCourse && !passFailEligibleCategories.has(rawType)) {
           errors.push({
             courseCode,
@@ -364,7 +360,7 @@ export async function POST(req: NextRequest) {
             where: { id: existingInSameSemester.id },
             data: {
               courseType,
-              grade: isAudit ? null : grade || null,
+              grade: normalizedGrade,
               status,
               isPassFail,
               passFailCredits: nextPassFailCredits,
@@ -384,7 +380,7 @@ export async function POST(req: NextRequest) {
               year: semYear,
               term,
               courseType: courseType || "CORE",
-              grade: isAudit ? null : grade || null,
+              grade: normalizedGrade,
               status,
               isPassFail,
               passFailCredits: nextPassFailCredits,

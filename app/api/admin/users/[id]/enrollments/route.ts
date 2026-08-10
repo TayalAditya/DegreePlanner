@@ -146,7 +146,10 @@ export async function POST(
 
   const state = inferAcademicState(batchYear);
   const currentSem = state.currentSemester;
-  const autoStatus = semNum < currentSem ? EnrollmentStatus.COMPLETED : EnrollmentStatus.IN_PROGRESS;
+  const autoStatus =
+    state.isPastProgram || semNum < currentSem
+      ? EnrollmentStatus.COMPLETED
+      : EnrollmentStatus.IN_PROGRESS;
   const isPassFail = isInternshipCourse || registrationType === "PASS_FAIL";
   const isAudit = registrationType === "AUDIT" && !isInternshipCourse;
 

@@ -2,9 +2,29 @@ import { EnrollmentStatus } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 
-type UserSemesterMeta = {
+export type UserSemesterMeta = {
   batch?: number | null;
   enrollmentId?: string | null;
+};
+
+export const getCurrentSemesterForUser = (
+  meta: UserSemesterMeta,
+  now: Date = new Date()
+) => {
+  const batchYear = inferBatchYear(meta.batch, meta.enrollmentId);
+  if (!batchYear) return null;
+
+  const state = inferAcademicState(batchYear, now);
+  return state.isPastProgram ? null : state.currentSemester;
+};
+
+export const isCurrentOrFutureSemesterForUser = (
+  semester: number,
+  meta: UserSemesterMeta,
+  now: Date = new Date()
+) => {
+  const currentSemester = getCurrentSemesterForUser(meta, now);
+  return currentSemester !== null && semester >= currentSemester;
 };
 
 export const syncEnrollmentStatusesForUser = async (
@@ -30,7 +50,9 @@ export const syncEnrollmentStatusesForUser = async (
     };
   }
 
-  const currentSemester = state.currentSemester;
+  // A graduated batch has no active term. Use a boundary after Sem 8 so any
+  // stale enrollment is reconciled as historical, without reopening Sem 8.
+  const completionBoundary = state.isPastProgram ? 9 : state.currentSemester;
 
   // Read-first guard: on the common case nothing needs flipping, so avoid
   // opening a write transaction on every read. This is purely an optimization —
@@ -40,10 +62,7 @@ export const syncEnrollmentStatusesForUser = async (
     where: {
       userId,
       status: EnrollmentStatus.IN_PROGRESS,
-      OR: [
-        { grade: { not: null } },
-        { grade: null, semester: { lt: currentSemester } },
-      ],
+      semester: { lt: completionBoundary },
     },
   });
 
@@ -51,38 +70,26 @@ export const syncEnrollmentStatusesForUser = async (
     return {
       didSync: false as const,
       phase: state.phase,
-      currentSemester,
+      currentSemester: state.currentSemester,
       updatedCount: 0,
     };
   }
 
-  const [gradeMarkedCompleted, pastSemMarkedCompleted] = await prisma.$transaction([
-    prisma.courseEnrollment.updateMany({
-      where: {
-        userId,
-        status: EnrollmentStatus.IN_PROGRESS,
-        grade: { not: null },
-      },
-      data: { status: EnrollmentStatus.COMPLETED },
-    }),
-    prisma.courseEnrollment.updateMany({
-      where: {
-        userId,
-        status: EnrollmentStatus.IN_PROGRESS,
-        grade: null,
-        semester: { lt: currentSemester },
-      },
-      data: { status: EnrollmentStatus.COMPLETED },
-    }),
-  ]);
+  const pastSemMarkedCompleted = await prisma.courseEnrollment.updateMany({
+    where: {
+      userId,
+      status: EnrollmentStatus.IN_PROGRESS,
+      semester: { lt: completionBoundary },
+    },
+    data: { status: EnrollmentStatus.COMPLETED },
+  });
 
-  const updatedCount =
-    gradeMarkedCompleted.count + pastSemMarkedCompleted.count;
+  const updatedCount = pastSemMarkedCompleted.count;
 
   return {
     didSync: updatedCount > 0,
     phase: state.phase,
-    currentSemester,
+    currentSemester: state.currentSemester,
     updatedCount,
   };
 };
