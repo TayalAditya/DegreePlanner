@@ -241,6 +241,7 @@ export async function GET(request: NextRequest) {
 
     const visibilityClauses: Array<Record<string, unknown>> = [
       { classType: ClassType.TA_DUTY, createdById: session.user.id },
+      { classType: ClassType.PERSONAL, createdById: session.user.id },
     ];
     if (courseIds.length > 0) visibilityClauses.push({ courseId: { in: courseIds } });
 
@@ -249,7 +250,9 @@ export async function GET(request: NextRequest) {
         semester: context.semester,
         year: context.year,
         term: context.term,
-        ...(isPublishedSchedule ? {} : { OR: visibilityClauses, isApproved: true }),
+        ...(isPublishedSchedule
+          ? { NOT: { classType: ClassType.PERSONAL } }
+          : { OR: visibilityClauses, isApproved: true }),
       },
       include: {
         course: { select: { id: true, code: true, name: true, credits: true } },
@@ -263,7 +266,12 @@ export async function GET(request: NextRequest) {
     const approvedCorrectionKeys = new Set<string>();
     const coursesWithApprovedOverrides = new Set<string>();
     for (const entry of databaseEntries) {
-      if (!entry.courseId || entry.classType === ClassType.TA_DUTY || !entry.isApproved) continue;
+      if (
+        !entry.courseId ||
+        entry.classType === ClassType.TA_DUTY ||
+        entry.classType === ClassType.PERSONAL ||
+        !entry.isApproved
+      ) continue;
       const correction = parseOfficialCorrectionNotes(entry.notes);
       if (correction) {
         approvedCorrectionKeys.add(
@@ -417,6 +425,7 @@ export async function POST(req: NextRequest) {
       roomNumber,
       building,
       classType,
+      title,
       instructor,
       notes,
       requestApproval,
@@ -424,7 +433,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     // Validate required fields
-    // courseId is optional for TA duties
+    // courseId is optional for private TA duties and personal activities.
     if (!dayOfWeek || !startTime || !endTime) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -447,11 +456,20 @@ export async function POST(req: NextRequest) {
     const selectedClassType: ClassType =
       classType && Object.values(ClassType).includes(classType) ? classType : ClassType.LECTURE;
 
-    if (!courseId && selectedClassType !== ClassType.TA_DUTY) {
+    const isPrivateEntry =
+      selectedClassType === ClassType.TA_DUTY || selectedClassType === ClassType.PERSONAL;
+    const personalTitle = typeof title === "string" ? title.trim() : "";
+    if (!courseId && !isPrivateEntry) {
       return NextResponse.json(
-        { error: "courseId is required unless classType is TA_DUTY" },
+        { error: "courseId is required unless this is a TA duty or personal activity" },
         { status: 400 }
       );
+    }
+    if (selectedClassType === ClassType.PERSONAL && courseId) {
+      return NextResponse.json({ error: "Personal activities cannot be attached to a course" }, { status: 400 });
+    }
+    if (selectedClassType === ClassType.PERSONAL && (!personalTitle || personalTitle.length > 120)) {
+      return NextResponse.json({ error: "Personal activity title must be between 1 and 120 characters" }, { status: 400 });
     }
 
     // Check enrollment permissions when courseId is provided
@@ -522,7 +540,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Admins always approved; TA duties are personal (no approval needed).
+    // Admins always approved; TA duties and personal activities are private
+    // to their creator and do not require an approval workflow.
     // For regular entries: auto-approve only when the submitted slot+day+time
     // exactly matches the official timetable slot tables (A-H, L1-L5).
     // Free/unscheduled slots (FS, FS1, FS2, NS) and anything else → pending approval.
@@ -646,6 +665,7 @@ export async function POST(req: NextRequest) {
         roomNumber,
         building,
         classType: selectedClassType,
+        title: selectedClassType === ClassType.PERSONAL ? personalTitle : null,
         instructor,
         notes: storedNotes,
         createdById: session.user.id,

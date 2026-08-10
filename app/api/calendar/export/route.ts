@@ -19,6 +19,7 @@ interface TimetableEntry {
   endTime: string;
   venue?: string | null;
   classType: string;
+  title?: string | null;
   instructor?: string | null;
   notes?: string | null;
   googleEventId?: string | null;
@@ -145,8 +146,8 @@ export async function POST(request: NextRequest) {
 
     // Create events
     for (const entry of entries as TimetableEntry[]) {
-      const courseCode = entry.course?.code || "Unknown";
-      const courseName = entry.course?.name || "Class";
+      const courseCode = entry.course?.code || (entry.classType === "TA_DUTY" ? "TA" : "Personal");
+      const courseName = entry.course?.name || entry.title || (entry.classType === "TA_DUTY" ? "Teaching Assistant Duty" : "Personal activity");
       const [startHour, startMinute] = entry.startTime.split(":").map(Number);
       const [endHour, endMinute] = entry.endTime.split(":").map(Number);
 
@@ -169,7 +170,7 @@ export async function POST(request: NextRequest) {
         .join("\n");
 
       const event = {
-        summary: `${courseCode} - ${entry.classType}`,
+        summary: entry.classType === "PERSONAL" ? courseName : `${courseCode} - ${entry.classType}`,
         location: entry.venue || undefined,
         description,
         start: {
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
           timeZone: "Asia/Kolkata",
         },
         recurrence: [`RRULE:FREQ=WEEKLY;BYDAY=${dayCode};UNTIL=${untilDate}T235959Z`],
-        colorId: entry.classType === "TA_DUTY" ? "5" : undefined, // Banana color for TA duties
+        colorId: entry.classType === "TA_DUTY" ? "5" : entry.classType === "PERSONAL" ? "7" : undefined,
       };
 
       try {

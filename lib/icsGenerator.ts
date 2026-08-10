@@ -11,6 +11,7 @@ interface TimetableEntry {
   endTime: string;
   venue?: string | null;
   classType: string;
+  title?: string | null;
   instructor?: string | null;
   notes?: string | null;
   course?: {
@@ -80,8 +81,8 @@ export function generateICS(
   
   // Add events
   for (const entry of entries) {
-    const courseCode = entry.course?.code || "Unknown";
-    const courseName = entry.course?.name || "Class";
+    const courseCode = entry.course?.code || (entry.classType === "TA_DUTY" ? "TA" : "Personal");
+    const courseName = entry.course?.name || entry.title || (entry.classType === "TA_DUTY" ? "Teaching Assistant Duty" : "Personal activity");
     const [startHour, startMinute] = entry.startTime.split(":").map(Number);
     const [endHour, endMinute] = entry.endTime.split(":").map(Number);
     

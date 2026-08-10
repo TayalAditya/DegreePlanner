@@ -47,7 +47,7 @@ const minutesToTime = (minutes: number) => `${pad2(Math.floor(minutes / 60))}:${
 
 // Generate time options: :00, :20, :30, :50 for each hour from 8am to 8pm
 const TIME_OPTIONS: string[] = [];
-for (let hour = 8; hour <= 20; hour++) {
+for (let hour = 7; hour <= 20; hour++) {
   TIME_OPTIONS.push(`${pad2(hour)}:00`);
   if (hour < 20) {
     TIME_OPTIONS.push(`${pad2(hour)}:20`);
@@ -60,7 +60,7 @@ const END_TIMES = TIME_OPTIONS.slice(1);
 
 // Week view display times — 30-minute intervals (08:00, 08:30, 09:00 … 19:30)
 const WEEK_VIEW_TIMES: string[] = [];
-for (let hour = 8; hour < 20; hour++) {
+for (let hour = 7; hour < 20; hour++) {
   WEEK_VIEW_TIMES.push(`${pad2(hour)}:00`);
   WEEK_VIEW_TIMES.push(`${pad2(hour)}:30`);
 }
@@ -73,7 +73,7 @@ const DEFAULT_END_TIME = START_TIMES.includes("10:00") && END_TIMES.includes("10
 }) || END_TIMES[0]);
 
 type Term = "FALL" | "SPRING" | "SUMMER";
-type ClassType = "LECTURE" | "LAB" | "TUTORIAL" | "SEMINAR" | "WORKSHOP" | "TA_DUTY";
+type ClassType = "LECTURE" | "LAB" | "TUTORIAL" | "SEMINAR" | "WORKSHOP" | "TA_DUTY" | "PERSONAL";
 type TimetableKind = "NON_IC" | "IC";
 
 type MeetingDraft = {
@@ -109,6 +109,9 @@ function getCourseColor(courseCode: string, classType?: string): typeof COURSE_C
   // Special color for TA duties
   if (classType === "TA_DUTY") {
     return { bg: "bg-amber-500/10 dark:bg-amber-400/10", border: "border-amber-500/45 dark:border-amber-400/35", text: "text-amber-800 dark:text-amber-200", hover: "hover:bg-amber-500/15 dark:hover:bg-amber-400/15", accent: "bg-amber-500" };
+  }
+  if (classType === "PERSONAL") {
+    return { bg: "bg-cyan-500/10 dark:bg-cyan-400/10", border: "border-cyan-500/45 dark:border-cyan-400/35", text: "text-cyan-800 dark:text-cyan-200", hover: "hover:bg-cyan-500/15 dark:hover:bg-cyan-400/15", accent: "bg-cyan-500" };
   }
   const hash = courseCode.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
   return COURSE_COLORS[hash % COURSE_COLORS.length];
@@ -163,6 +166,7 @@ const CLASS_TYPE_LABEL: Record<ClassType, string> = {
   SEMINAR: "Seminar",
   WORKSHOP: "Workshop",
   TA_DUTY: "TA Duty",
+  PERSONAL: "Personal activity",
 };
 
 interface TimetableEntry {
@@ -178,6 +182,7 @@ interface TimetableEntry {
   roomNumber?: string | null;
   building?: string | null;
   classType: ClassType;
+  title?: string | null;
   instructor?: string | null;
   notes?: string | null;
   courseId?: string | null;
@@ -237,6 +242,7 @@ type TimetableEntryPayload = {
   slot?: string;
   venue?: string;
   classType?: ClassType;
+  title?: string;
   instructor?: string;
   notes?: string;
   requestApproval?: boolean;
@@ -262,6 +268,14 @@ type TimetableResponse = {
     clashes: Array<{ first: string; second: string }>;
   };
 };
+
+function entryDisplayTitle(entry: TimetableEntry) {
+  return entry.course?.name ?? entry.title ?? (entry.classType === "TA_DUTY" ? "Teaching Assistant Duty" : "Personal activity");
+}
+
+function entryDisplayCode(entry: TimetableEntry) {
+  return entry.course?.code ?? (entry.classType === "TA_DUTY" ? "TA" : "Personal");
+}
 
 type TimetableAutofillData = {
   version: string;
@@ -423,6 +437,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
   const [addingTaDuty, setAddingTaDuty] = useState(false);
+  const [addingPersonalActivity, setAddingPersonalActivity] = useState(false);
 
   const queryClient = useQueryClient();
   const { showToast } = useToast();
@@ -578,6 +593,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
       setModalOpen(false);
       setEditingEntry(null);
       setAddingTaDuty(false);
+      setAddingPersonalActivity(false);
     },
     onError: (error: any) => {
       showToast("error", error?.message || "Failed to delete class");
@@ -639,12 +655,21 @@ export function TimetableView({ userId }: TimetableViewProps) {
 
   const openAdd = () => {
     setAddingTaDuty(false);
+    setAddingPersonalActivity(false);
     setEditingEntry(null);
     setModalOpen(true);
   };
 
   const openAddTADuty = () => {
     setAddingTaDuty(true);
+    setAddingPersonalActivity(false);
+    setEditingEntry(null);
+    setModalOpen(true);
+  };
+
+  const openAddPersonalActivity = () => {
+    setAddingTaDuty(false);
+    setAddingPersonalActivity(true);
     setEditingEntry(null);
     setModalOpen(true);
   };
@@ -670,6 +695,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
       if (!ok) return;
     }
     setAddingTaDuty(false);
+    setAddingPersonalActivity(false);
     setEditingEntry(entry);
     setModalOpen(true);
   };
@@ -685,7 +711,9 @@ export function TimetableView({ userId }: TimetableViewProps) {
     }
     const ok = await confirm({
       title: "Delete class?",
-      message: `This will remove ${entry.course?.code || "this class"} from the shared timetable for everyone enrolled in this course.`,
+      message: entry.classType === "PERSONAL"
+        ? `This will remove ${entryDisplayTitle(entry)} from your personal timetable.`
+        : `This will remove ${entry.course?.code || "this class"} from the shared timetable for everyone enrolled in this course.`,
       confirmText: "Delete",
       variant: "danger",
     });
@@ -762,11 +790,14 @@ export function TimetableView({ userId }: TimetableViewProps) {
   [timetable?.entries, autofillData]);
   const canAddClass = courses.length > 0 && Boolean(context);
   const canAddTaDuty = Boolean(context);
+  const canAddPersonalActivity = Boolean(context);
 
   const modalCourses = useMemo(() => {
+    const isPersonalActivity = addingPersonalActivity || editingEntry?.classType === "PERSONAL";
     const isTaDuty = addingTaDuty || editingEntry?.classType === "TA_DUTY";
+    if (isPersonalActivity) return [];
     return isTaDuty ? completedCourses : courses;
-  }, [addingTaDuty, editingEntry?.classType, completedCourses, courses]);
+  }, [addingPersonalActivity, addingTaDuty, editingEntry?.classType, completedCourses, courses]);
 
   const scheduledCourseIds = useMemo(() => new Set(entries.map((e) => e.courseId)), [entries]);
 
@@ -1130,6 +1161,20 @@ export function TimetableView({ userId }: TimetableViewProps) {
               <Plus className="w-4 h-4" />
               Add TA Duty
             </button>
+            <button
+              onClick={() => {
+                if (!canAddPersonalActivity) {
+                  showToast("warning", "Current semester context not available");
+                  return;
+                }
+                openAddPersonalActivity();
+              }}
+              disabled={!canAddPersonalActivity}
+              className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] border-2 border-cyan-500/45 bg-cyan-500/5 text-cyan-700 dark:text-cyan-300 rounded-xl text-sm font-semibold hover:bg-cyan-500/10 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Add personal activity
+            </button>
           </div>
 
           {!isPublishedSchedule && (
@@ -1188,13 +1233,14 @@ export function TimetableView({ userId }: TimetableViewProps) {
               setModalOpen(false);
               setEditingEntry(null);
               setAddingTaDuty(false);
+              setAddingPersonalActivity(false);
             }}
             onSave={(payload) => saveEntryMutation.mutate({ id: editingEntry?.id, payload })}
             onSaveBulk={(payload) => bulkCreateMutation.mutate(payload)}
             onDeleteEntry={handleDelete}
             deleting={deleteEntryMutation.isPending}
             isAdmin={isAdmin}
-            defaultClassType={addingTaDuty ? "TA_DUTY" : undefined}
+            defaultClassType={addingTaDuty ? "TA_DUTY" : addingPersonalActivity ? "PERSONAL" : undefined}
           />
         )}
         {autofillPickerOpen && (
@@ -1743,17 +1789,19 @@ function WeekView({
                         type="button"
                         onClick={() => onEdit(entry)}
                         className={`relative h-full w-full overflow-hidden rounded-xl border ${color.border} ${color.bg} ${color.hover} px-2.5 py-2 text-left shadow-sm transition duration-150 hover:-translate-y-px hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60`}
-                        title={`${entry.course?.code || "Class"} - ${entry.startTime} to ${entry.endTime}${entry.venue ? ` - ${entry.venue}` : ""}`}
+                        title={`${entryDisplayTitle(entry)} - ${entry.startTime} to ${entry.endTime}${entry.venue ? ` - ${entry.venue}` : ""}`}
                       >
                         <span className={`absolute inset-y-0 left-0 w-1 ${color.accent}`} />
                         <div className="flex min-w-0 items-start justify-between gap-1 pl-1">
-                          <p className={`truncate text-xs font-bold ${color.text}`}>{formatCourseCode(entry.course?.code || "")}</p>
+                          <p className={`truncate text-xs font-bold ${color.text}`}>
+                            {entry.classType === "PERSONAL" ? entryDisplayTitle(entry) : formatCourseCode(entryDisplayCode(entry))}
+                          </p>
                           <span className={`shrink-0 rounded-md border ${color.border} bg-surface/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${color.text}`}>{entry.classType === "LECTURE" ? "Class" : CLASS_TYPE_LABEL[entry.classType]}</span>
                         </div>
                         <p className={`mt-0.5 pl-1 text-[11px] font-medium tabular-nums ${color.text} opacity-80`}>
                           {entry.startTime} - {entry.endTime} · {formatWeekDuration(duration)}
                         </p>
-                        {isLong && <p className={`mt-1 line-clamp-2 pl-1 text-[11px] leading-4 ${color.text} opacity-90`}>{entry.course?.name || "Scheduled class"}</p>}
+                        {isLong && entry.classType !== "PERSONAL" && <p className={`mt-1 line-clamp-2 pl-1 text-[11px] leading-4 ${color.text} opacity-90`}>{entryDisplayTitle(entry)}</p>}
                         {entry.venue && <p className={`mt-0.5 flex items-center gap-1 truncate pl-1 text-[10px] ${color.text} opacity-75`}><MapPin className="h-3 w-3 shrink-0" />{entry.venue}</p>}
                       </button>
                       {entry.googleEventId && (
@@ -1992,9 +2040,9 @@ function ListView({
                   className="flex-1 min-w-0 text-left group"
                 >
                   <h4 className={`font-medium ${color.text} text-sm sm:text-base truncate`}>
-                    {entry.course?.name}
+                    {entryDisplayTitle(entry)}
                   </h4>
-                  <p className={`text-xs sm:text-sm ${color.text} mt-0.5 opacity-80`}>{formatCourseCode(entry.course?.code || "")}</p>
+                  <p className={`text-xs sm:text-sm ${color.text} mt-0.5 opacity-80`}>{formatCourseCode(entryDisplayCode(entry))}</p>
                   <div className={`flex flex-wrap gap-2 sm:gap-4 mt-2 text-xs sm:text-sm ${color.text} opacity-90`}>
                     <div className="flex items-center gap-1">
                       <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
@@ -2091,6 +2139,7 @@ function TimetableEntryModal({
   const { confirm } = useConfirmDialog();
 
   const isEditing = Boolean(initial);
+  const isPersonalActivity = defaultClassType === "PERSONAL" || initial?.classType === "PERSONAL";
 
   const { data: autofillData } = useQuery<TimetableAutofillData>({
     queryKey: ["timetable-autofill"],
@@ -2105,9 +2154,9 @@ function TimetableEntryModal({
   const venueOptions = autofillData?.venues ?? [];
   const venueListId = "timetable-venue-options";
 
-  const initialCourseId = initial?.courseId ?? courses[0]?.id ?? "";
-  const initialStartTime = initial?.startTime ?? DEFAULT_START_TIME;
-  const initialEndTime = initial?.endTime ?? DEFAULT_END_TIME;
+  const initialCourseId = initial?.courseId ?? (isPersonalActivity ? "" : courses[0]?.id ?? "");
+  const initialStartTime = initial?.startTime ?? (isPersonalActivity ? "07:00" : DEFAULT_START_TIME);
+  const initialEndTime = initial?.endTime ?? (isPersonalActivity ? "07:50" : DEFAULT_END_TIME);
   const safeInitialEndTime =
     initialEndTime > initialStartTime
       ? initialEndTime
@@ -2123,6 +2172,7 @@ function TimetableEntryModal({
   const [venue, setVenue] = useState(initial?.venue ?? "");
   const defaultDraftClassType: ClassType = defaultClassType ?? initial?.classType ?? "LECTURE";
   const [classType, setClassType] = useState<ClassType>(defaultDraftClassType);
+  const [activityTitle, setActivityTitle] = useState(initial?.title ?? "");
 
   // Shared fields
   const [instructor, setInstructor] = useState(initial?.instructor ?? "");
@@ -2131,8 +2181,8 @@ function TimetableEntryModal({
   // Add mode (bulk)
   const [timetableKind, setTimetableKind] = useState<TimetableKind>("NON_IC");
   const [kindTouched, setKindTouched] = useState(false);
-  const [slotInput, setSlotInput] = useState("");
-  const [slotTouched, setSlotTouched] = useState(false);
+  const [slotInput, setSlotInput] = useState(isPersonalActivity ? "Personal" : "");
+  const [slotTouched, setSlotTouched] = useState(isPersonalActivity);
   const initialExistingCount = initialCourseId
     ? existingEntries.filter((e) => e.courseId === initialCourseId).length
     : 0;
@@ -2204,8 +2254,8 @@ function TimetableEntryModal({
       next.push({
         id: `manual|${normalizedSlot.toUpperCase()}`,
         dayOfWeek: "MONDAY",
-        startTime: DEFAULT_START_TIME,
-        endTime: DEFAULT_END_TIME,
+        startTime: isPersonalActivity ? "07:00" : DEFAULT_START_TIME,
+        endTime: isPersonalActivity ? "07:50" : DEFAULT_END_TIME,
         slot: normalizedSlot || undefined,
         venue: defaultVenue || undefined,
         classType: defaultDraftClassType,
@@ -2306,8 +2356,8 @@ function TimetableEntryModal({
         {
           id: makeId(),
           dayOfWeek: "MONDAY",
-          startTime: DEFAULT_START_TIME,
-          endTime: DEFAULT_END_TIME,
+          startTime: isPersonalActivity ? "07:00" : DEFAULT_START_TIME,
+          endTime: isPersonalActivity ? "07:50" : DEFAULT_END_TIME,
           slot: effectiveSlotInput.trim() || undefined,
           venue: suggestedVenueFor(effectiveKind) || undefined,
           classType: defaultDraftClassType,
@@ -2331,7 +2381,9 @@ function TimetableEntryModal({
   const title = (() => {
     if (initial?.isOfficial) return isAdmin ? "Edit approved class" : "Report timetable correction";
     if (initial?.isOfficialCorrection) return isAdmin ? "Edit approved class" : "Update timetable correction";
+    if (initial?.classType === "PERSONAL") return "Edit personal activity";
     if (initial) return initial.classType === "TA_DUTY" ? "Edit TA duty" : "Edit class";
+    if (defaultClassType === "PERSONAL") return "Add personal activity";
     if (defaultClassType === "TA_DUTY") return "Add TA duty";
     return "Add classes";
   })();
@@ -2340,8 +2392,12 @@ function TimetableEntryModal({
     e.preventDefault();
 
     // TA duties don't require a course
-    if (!courseId && classType !== "TA_DUTY") {
-      showToast("warning", "Select a course first (or create a TA duty without a course)");
+    if (!courseId && classType !== "TA_DUTY" && classType !== "PERSONAL") {
+      showToast("warning", "Select a course first (or create a private activity without a course)");
+      return;
+    }
+    if (classType === "PERSONAL" && !activityTitle.trim()) {
+      showToast("warning", "Add an activity name, for example Yoga");
       return;
     }
 
@@ -2363,6 +2419,7 @@ function TimetableEntryModal({
         slot: slot.trim() || undefined,
         venue: venue.trim() || undefined,
         classType,
+        title: classType === "PERSONAL" ? activityTitle.trim() : undefined,
         instructor: instructor.trim() || undefined,
         notes: notes.trim() || undefined,
       });
@@ -2409,6 +2466,7 @@ function TimetableEntryModal({
         slot: d.slot,
         venue: d.venue,
         classType: d.classType,
+        title: d.classType === "PERSONAL" ? activityTitle.trim() : undefined,
         instructor: instructor.trim() || undefined,
         notes: notes.trim() || undefined,
       })),
@@ -2460,10 +2518,22 @@ function TimetableEntryModal({
               {/* Course picker */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">
-                  Course {classType === "TA_DUTY" && "(optional for TA duties)"}
+                  {isPersonalActivity ? "Personal activity" : <>Course {classType === "TA_DUTY" && "(optional for TA duties)"}</>}
                 </label>
 
-                {initial ? (
+                {isPersonalActivity ? (
+                  <div className="space-y-3 rounded-xl border border-cyan-500/25 bg-cyan-500/5 p-3">
+                    <p className="text-xs text-foreground-secondary">Private to you — it will not change or appear in the published course timetable.</p>
+                    <input
+                      value={activityTitle}
+                      onChange={(e) => setActivityTitle(e.target.value)}
+                      placeholder="e.g., Yoga"
+                      maxLength={120}
+                      className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                      aria-label="Activity name"
+                    />
+                  </div>
+                ) : initial ? (
                   <div className="p-3 rounded-xl bg-background-secondary border border-border">
                     <p className="text-sm text-foreground truncate">
                       {initial.course ? `${formatCourseCode(initial.course.code)} — ${initial.course.name}` : "TA Duty (No course)"}
@@ -2586,24 +2656,28 @@ function TimetableEntryModal({
                         className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">Class Type</label>
-                      <select
-                        value={classType}
-                        onChange={(e) => setClassType(e.target.value as ClassType)}
-                        className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
-                      >
-                        {Object.entries(CLASS_TYPE_LABEL).map(([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
+                    {!isPersonalActivity && (
+                      <div>
+                        <label className="block text-sm font-medium text-foreground mb-2">Class Type</label>
+                        <select
+                          value={classType}
+                          onChange={(e) => setClassType(e.target.value as ClassType)}
+                          className="w-full px-3 py-2.5 rounded-xl border border-border bg-surface text-foreground focus:ring-4 focus:ring-primary/15"
+                        >
+                          {Object.entries(CLASS_TYPE_LABEL).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (
                 <div className="rounded-xl border border-border bg-background-secondary p-4 space-y-4">
+                  {!isPersonalActivity && (
+                    <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label className="flex items-center gap-3 p-3 rounded-xl border border-border bg-surface cursor-pointer hover:bg-surface-hover transition-colors">
                       <input
@@ -2684,6 +2758,8 @@ function TimetableEntryModal({
                         ))}
                       </ul>
                     </div>
+                  )}
+                    </>
                   )}
 
                   <div className="flex items-center justify-between gap-3">
@@ -2889,7 +2965,9 @@ function TimetableEntryModal({
                     ? isAdmin ? "Save changes" : "Submit correction"
                     : initial
                       ? "Save changes"
-                      : `Add classes (${activeDrafts.length})`}
+                      : defaultClassType === "PERSONAL"
+                        ? `Add activity (${activeDrafts.length})`
+                        : `Add classes (${activeDrafts.length})`}
                 </button>
               </div>
 
@@ -2898,7 +2976,9 @@ function TimetableEntryModal({
                   ? isAdmin
                     ? "Your changes are applied to the shared timetable immediately."
                     : "The approved timetable stays visible until an admin approves this correction."
-                  : "Changes update the shared timetable for everyone enrolled in the selected course."}
+                  : isPersonalActivity
+                    ? "This activity is private to you and does not affect the shared course timetable."
+                    : "Changes update the shared timetable for everyone enrolled in the selected course."}
               </p>
             </form>
       </div>

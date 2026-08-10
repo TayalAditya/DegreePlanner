@@ -44,12 +44,16 @@ export async function GET(
     }
 
     const isAdmin = session.user.role === "ADMIN";
-    const isOwnTaDuty =
-      entry.classType === ClassType.TA_DUTY &&
+    const isOwnPrivateEntry =
+      (entry.classType === ClassType.TA_DUTY || entry.classType === ClassType.PERSONAL) &&
       (isAdmin || entry.createdById === session.user.id);
 
-    // TA duties can be accessed by creator/admin without current enrollment check
-    if (!isAdmin && !isOwnTaDuty && entry.courseId) {
+    // Private entries can be accessed by their creator/admin without an
+    // enrollment check. Every other no-course entry is forbidden.
+    if (!isAdmin && !isOwnPrivateEntry && !entry.courseId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (!isAdmin && !isOwnPrivateEntry && entry.courseId) {
       const isEnrolled = await prisma.courseEnrollment.findFirst({
         where: {
           userId: session.user.id,
@@ -133,12 +137,16 @@ export async function PATCH(
 
     const isAdmin = session.user.role === "ADMIN";
     const officialCorrection = parseOfficialCorrectionNotes(existing.notes);
-    const isOwnTaDuty =
-      existing.classType === ClassType.TA_DUTY &&
+    const isOwnPrivateEntry =
+      (existing.classType === ClassType.TA_DUTY || existing.classType === ClassType.PERSONAL) &&
       (isAdmin || existing.createdById === session.user.id);
 
-    // TA duties can be edited by creator/admin without current enrollment check
-    if (!isAdmin && !isOwnTaDuty && existing.courseId) {
+    // Private entries can be edited by their creator/admin without an
+    // enrollment check. Every other no-course entry is forbidden.
+    if (!isAdmin && !isOwnPrivateEntry && !existing.courseId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (!isAdmin && !isOwnPrivateEntry && existing.courseId) {
       const isEnrolled = await prisma.courseEnrollment.findFirst({
         where: {
           userId: session.user.id,
@@ -223,12 +231,25 @@ export async function PATCH(
       if (!Object.values(ClassType).includes(body.classType)) {
         return NextResponse.json({ error: "Invalid classType" }, { status: 400 });
       }
+      if (
+        (existing.classType === ClassType.PERSONAL) !==
+        (body.classType === ClassType.PERSONAL)
+      ) {
+        return NextResponse.json({ error: "Personal activities cannot be converted to or from course classes" }, { status: 400 });
+      }
       data.classType = body.classType;
+    }
+    if (body.title !== undefined) {
+      const title = typeof body.title === "string" ? body.title.trim() : "";
+      if (existing.classType === ClassType.PERSONAL && (!title || title.length > 120)) {
+        return NextResponse.json({ error: "Personal activity title must be between 1 and 120 characters" }, { status: 400 });
+      }
+      data.title = existing.classType === ClassType.PERSONAL ? title : null;
     }
 
     // If non-admin is editing, reset approval status
     if (!isAdmin) {
-      if (isOwnTaDuty) {
+      if (isOwnPrivateEntry) {
         data.isApproved = true;
       } else {
         data.isApproved = false;
@@ -291,8 +312,8 @@ export async function DELETE(
 
     const isAdmin = session.user.role === "ADMIN";
     const officialCorrection = parseOfficialCorrectionNotes(entry.notes);
-    const isOwnTaDuty =
-      entry.classType === ClassType.TA_DUTY &&
+    const isOwnPrivateEntry =
+      (entry.classType === ClassType.TA_DUTY || entry.classType === ClassType.PERSONAL) &&
       (isAdmin || entry.createdById === session.user.id);
 
     if (officialCorrection && !isAdmin) {
@@ -302,8 +323,12 @@ export async function DELETE(
       );
     }
 
-    // TA duties can be deleted by creator/admin without current enrollment check
-    if (!isAdmin && !isOwnTaDuty && entry.courseId) {
+    // Private entries can be deleted by their creator/admin without an
+    // enrollment check. Every other no-course entry is forbidden.
+    if (!isAdmin && !isOwnPrivateEntry && !entry.courseId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (!isAdmin && !isOwnPrivateEntry && entry.courseId) {
       const isEnrolled = await prisma.courseEnrollment.findFirst({
         where: {
           userId: session.user.id,

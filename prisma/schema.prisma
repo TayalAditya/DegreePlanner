@@ -305,6 +305,7 @@ model TimetableEntry {
   roomNumber    String?
   building      String?
   classType     ClassType @default(LECTURE)
+  title         String?
   instructor    String?
   notes         String?
   createdAt     DateTime  @default(now())
@@ -636,6 +637,7 @@ enum ClassType {
   SEMINAR
   WORKSHOP
   TA_DUTY
+  PERSONAL
 }
 
 enum VenueType {

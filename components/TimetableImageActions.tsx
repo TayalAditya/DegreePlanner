@@ -14,6 +14,7 @@ export interface TimetableImageEntry {
   roomNumber?: string | null;
   building?: string | null;
   classType: string;
+  title?: string | null;
   instructor?: string | null;
   course?: {
     code: string;
@@ -40,7 +41,16 @@ const CLASS_LABELS: Record<string, string> = {
   SEMINAR: "Seminar",
   WORKSHOP: "Workshop",
   TA_DUTY: "TA Duty",
+  PERSONAL: "Personal activity",
 };
+
+function entryTitle(entry: TimetableImageEntry) {
+  return entry.course?.name ?? entry.title ?? (entry.classType === "TA_DUTY" ? "Teaching Assistant Duty" : "Personal activity");
+}
+
+function entryCode(entry: TimetableImageEntry) {
+  return entry.course?.code ?? (entry.classType === "TA_DUTY" ? "TA" : "Personal");
+}
 
 function readTheme() {
   const root = document.documentElement;
@@ -118,7 +128,7 @@ export async function createTimetableImageBlob({ semester, term, year, entries }
   const grouped = DAYS.map((day) => ({
     day,
     entries: sessions.filter((entry) => entry.dayOfWeek === day).map((entry) => {
-      const nameLines = wrapText(scratch, entry.course?.name ?? "Teaching Assistant Duty", CANVAS_WIDTH - MARGIN * 2 - 300);
+      const nameLines = wrapText(scratch, entryTitle(entry), CANVAS_WIDTH - MARGIN * 2 - 300);
       return { entry, nameLines, height: Math.max(112, 64 + nameLines.length * 34) };
     }),
   })).filter((group) => group.entries.length > 0);
@@ -188,7 +198,7 @@ export async function createTimetableImageBlob({ semester, term, year, entries }
       context.textAlign = "left";
       context.fillStyle = theme.primary;
       context.font = "700 25px ui-monospace, SFMono-Regular, Consolas, monospace";
-      context.fillText(entry.course?.code ?? "TA", MARGIN + 24, y + 39);
+      context.fillText(entryCode(entry), MARGIN + 24, y + 39);
       context.fillStyle = theme.foreground;
       context.font = "600 28px Inter, Arial, sans-serif";
       nameLines.forEach((line, lineIndex) => context.fillText(line, MARGIN + 24, y + 77 + lineIndex * 34));

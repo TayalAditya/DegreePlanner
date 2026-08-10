@@ -16,6 +16,7 @@ type BulkEntryInput = {
   slot?: string;
   venue?: string;
   classType?: ClassType;
+  title?: string;
   instructor?: string;
   notes?: string;
 };
@@ -23,7 +24,7 @@ type BulkEntryInput = {
 const timeRegex = /^\d{2}:\d{2}$/;
 
 function validateEntry(entry: any): { ok: true; value: BulkEntryInput } | { ok: false; error: string } {
-  const { dayOfWeek, startTime, endTime, slot, venue, classType, instructor, notes } = entry ?? {};
+  const { dayOfWeek, startTime, endTime, slot, venue, classType, title, instructor, notes } = entry ?? {};
 
   if (!dayOfWeek || !startTime || !endTime) {
     return { ok: false, error: "Missing required fields in one or more entries" };
@@ -40,6 +41,10 @@ function validateEntry(entry: any): { ok: true; value: BulkEntryInput } | { ok: 
 
   const selectedClassType: ClassType =
     classType && Object.values(ClassType).includes(classType) ? classType : ClassType.LECTURE;
+  const personalTitle = typeof title === "string" ? title.trim() : "";
+  if (selectedClassType === ClassType.PERSONAL && (!personalTitle || personalTitle.length > 120)) {
+    return { ok: false, error: "Personal activity title must be between 1 and 120 characters" };
+  }
 
   return {
     ok: true,
@@ -50,6 +55,7 @@ function validateEntry(entry: any): { ok: true; value: BulkEntryInput } | { ok: 
       slot: typeof slot === "string" ? slot.trim() || undefined : undefined,
       venue: typeof venue === "string" ? venue.trim() || undefined : undefined,
       classType: selectedClassType,
+      title: selectedClassType === ClassType.PERSONAL ? personalTitle : undefined,
       instructor: typeof instructor === "string" ? instructor.trim() || undefined : undefined,
       notes: typeof notes === "string" ? notes.trim() || undefined : undefined,
     },
@@ -84,15 +90,21 @@ export async function POST(req: NextRequest) {
       normalized.push(res.value);
     }
 
+    const allPrivateEntries = normalized.every(
+      (e) => e.classType === ClassType.TA_DUTY || e.classType === ClassType.PERSONAL,
+    );
     const allTaDuty = normalized.every((e) => e.classType === ClassType.TA_DUTY);
-    if (!courseId && !allTaDuty) {
-      return NextResponse.json({ error: "courseId is required unless all entries are TA_DUTY" }, { status: 400 });
+    if (!courseId && !allPrivateEntries) {
+      return NextResponse.json({ error: "courseId is required unless all entries are private activities" }, { status: 400 });
+    }
+    if (courseId && normalized.some((e) => e.classType === ClassType.PERSONAL)) {
+      return NextResponse.json({ error: "Personal activities cannot be attached to a course" }, { status: 400 });
     }
 
     if (courseId) {
       const isAdmin = session.user.role === "ADMIN";
       const enrollment = await prisma.courseEnrollment.findFirst({
-        where: allTaDuty
+        where: normalized.every((e) => e.classType === ClassType.TA_DUTY)
           ? {
               userId: session.user.id,
               courseId,
@@ -140,7 +152,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      if (session.user.role !== "ADMIN" && !allTaDuty) {
+      if (session.user.role !== "ADMIN" && !normalized.every((e) => e.classType === ClassType.TA_DUTY)) {
         const [course, offering, profile] = await Promise.all([
           prisma.course.findUnique({
             where: { id: courseId },
@@ -240,6 +252,7 @@ export async function POST(req: NextRequest) {
         const autoApprove =
           isAdmin ||
           e.classType === ClassType.TA_DUTY ||
+          e.classType === ClassType.PERSONAL ||
           isApproveableSlot(e.slot, e.dayOfWeek, e.startTime);
 
         const entry = await tx.timetableEntry.create({
@@ -254,6 +267,7 @@ export async function POST(req: NextRequest) {
             slot: e.slot,
             venue: e.venue,
             classType: e.classType ?? ClassType.LECTURE,
+            title: e.classType === ClassType.PERSONAL ? e.title : null,
             instructor: e.instructor,
             notes: e.notes,
             createdById: session.user.id,
