@@ -1,6 +1,6 @@
 {
   "version": "2026-2027-odd",
-  "generatedAt": "2026-08-10T17:13:50.722Z",
+  "generatedAt": "2026-08-10T17:41:02.743Z",
   "sourceWorkbook": "docs/CL 2026-27 Odd/Final Time Table Aug-Nov 2026.xlsx",
   "venues": [
     "A1-3",
@@ -1796,7 +1796,7 @@
         "code": "HS-304",
         "name": "Organizational Management",
         "credit": 3,
-        "slot": "FS3",
+        "slot": "NS",
         "kind": "NON_IC"
       },
       "IK-524": {
@@ -2335,6 +2335,7 @@
         "code": "ME-515",
         "name": "Carbon Materials and Technology",
         "credit": 3,
+        "slot": "Free Slot",
         "kind": "NON_IC"
       },
       "SP-503": {

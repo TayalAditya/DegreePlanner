@@ -75,6 +75,20 @@ const PUBLISHED_CLASSROOM_OVERRIDES: Record<string, string> = {
 // list. Keep this adjacent to the workbook-derived defaults so subsequent
 // regenerations retain updates issued after the workbook export.
 const PUBLISHED_NON_IC_COURSE_OVERRIDES: Record<string, CourseDefault> = {
+  "ME-515": {
+    code: "ME-515",
+    name: "Carbon Materials and Technology",
+    credit: 3,
+    slot: "Free Slot",
+    kind: "NON_IC",
+  },
+  "HS-304": {
+    code: "HS-304",
+    name: "Organizational Management",
+    credit: 3,
+    slot: "NS",
+    kind: "NON_IC",
+  },
   "CS-685": {
     code: "CS-685",
     name: "Natural Language Processing",
