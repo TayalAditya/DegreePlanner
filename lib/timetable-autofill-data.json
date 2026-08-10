@@ -1,6 +1,6 @@
 {
   "version": "2026-2027-odd",
-  "generatedAt": "2026-08-09T14:38:32.686Z",
+  "generatedAt": "2026-08-10T17:13:50.722Z",
   "sourceWorkbook": "docs/CL 2026-27 Odd/Final Time Table Aug-Nov 2026.xlsx",
   "venues": [
     "A1-3",
@@ -457,8 +457,8 @@
         "code": "BE-303",
         "name": "Applied Biostatistics",
         "credit": 4,
-        "slot": "C",
-        "classroom": "A10-1A",
+        "slot": "F",
+        "classroom": "A10-1B",
         "campus": "North Campus",
         "kind": "NON_IC"
       },
@@ -475,7 +475,7 @@
         "code": "CE-303",
         "name": "Water Resources Engineering",
         "credit": 3,
-        "slot": "C",
+        "slot": "H",
         "classroom": "A10-1B",
         "campus": "North Campus",
         "kind": "NON_IC"
@@ -647,7 +647,7 @@
         "name": "Product Manufacturing Technology",
         "credit": 3,
         "slot": "C",
-        "classroom": "A17-1B",
+        "classroom": "A11-1B",
         "campus": "North Campus",
         "kind": "NON_IC"
       },
@@ -790,8 +790,8 @@
         "code": "HS-529",
         "name": "Natural Resource and Development",
         "credit": 3,
-        "slot": "D",
-        "classroom": "SC-NKN",
+        "slot": "H",
+        "classroom": "A5-4",
         "campus": "South Campus",
         "kind": "NON_IC"
       },
@@ -863,7 +863,7 @@
         "name": "CMOS Analog IC Design",
         "credit": 4,
         "slot": "D",
-        "classroom": "A17-2C",
+        "classroom": "A17-2B",
         "campus": "North Campus",
         "kind": "NON_IC"
       },
@@ -872,7 +872,7 @@
         "name": "CMOS Analog IC Design",
         "credit": 4,
         "slot": "D",
-        "classroom": "A17-2C",
+        "classroom": "A17-2B",
         "campus": "North Campus",
         "kind": "NON_IC"
       },
@@ -1628,8 +1628,8 @@
         "name": "Continuum Mechanics",
         "credit": 3,
         "slot": "H",
-        "classroom": "CL-1",
-        "campus": "South Campus",
+        "classroom": "A10-3B",
+        "campus": "North Campus",
         "kind": "NON_IC"
       },
       "MT-505": {
@@ -2705,6 +2705,54 @@
         "code": "MV-498P",
         "name": "Major Technical Project - 1",
         "credit": 4,
+        "kind": "NON_IC"
+      },
+      "CS-685": {
+        "code": "CS-685",
+        "name": "Natural Language Processing",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A5-3",
+        "campus": "South Campus",
+        "kind": "NON_IC"
+      },
+      "EE-594": {
+        "code": "EE-594",
+        "name": "Modelling of Dynamical Systems and Identification",
+        "credit": 3,
+        "slot": "D",
+        "classroom": "A17-2D",
+        "campus": "North Campus",
+        "kind": "NON_IC",
+        "meetings": [
+          {
+            "dayOfWeek": "TUESDAY",
+            "startTime": "17:00",
+            "endTime": "18:30"
+          },
+          {
+            "dayOfWeek": "THURSDAY",
+            "startTime": "12:00",
+            "endTime": "12:50"
+          }
+        ]
+      },
+      "EE-595": {
+        "code": "EE-595",
+        "name": "Photonics Computing",
+        "credit": 3,
+        "slot": "F",
+        "classroom": "A17-2D",
+        "campus": "North Campus",
+        "kind": "NON_IC"
+      },
+      "BY-538": {
+        "code": "BY-538",
+        "name": "Biomedical Instrumentation and Diagnostic Technologies",
+        "credit": 3,
+        "slot": "H",
+        "classroom": "CL-3",
+        "campus": "South Campus",
         "kind": "NON_IC"
       }
     },

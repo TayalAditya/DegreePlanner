@@ -12,6 +12,11 @@ type CourseDefault = {
   classroom?: string;
   campus?: string;
   kind: TimetableKind;
+  meetings?: Array<{
+    dayOfWeek: "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY";
+    startTime: string;
+    endTime: string;
+  }>;
   variants?: Array<{ label: string; slot: string; classroom?: string }>;
 };
 
@@ -64,6 +69,115 @@ const PUBLISHED_CLASSROOM_OVERRIDES: Record<string, string> = {
   "IC-181": "A18-1",
   "IC-182": "A18-2",
   "IC-272": "Auditorium",
+};
+
+// Confirmed additions and corrections from the published Fall 2026 course
+// list. Keep this adjacent to the workbook-derived defaults so subsequent
+// regenerations retain updates issued after the workbook export.
+const PUBLISHED_NON_IC_COURSE_OVERRIDES: Record<string, CourseDefault> = {
+  "CS-685": {
+    code: "CS-685",
+    name: "Natural Language Processing",
+    credit: 3,
+    slot: "D",
+    classroom: "A5-3",
+    campus: "South Campus",
+    kind: "NON_IC",
+  },
+  "EE-512": {
+    code: "EE-512",
+    name: "CMOS Analog IC Design",
+    credit: 4,
+    slot: "D",
+    classroom: "A17-2B",
+    campus: "North Campus",
+    kind: "NON_IC",
+  },
+  "VL-404": {
+    code: "VL-404",
+    name: "CMOS Analog IC Design",
+    credit: 4,
+    slot: "D",
+    classroom: "A17-2B",
+    campus: "North Campus",
+    kind: "NON_IC",
+  },
+  "BE-303": {
+    code: "BE-303",
+    name: "Applied Biostatistics",
+    credit: 4,
+    slot: "F",
+    classroom: "A10-1B",
+    campus: "North Campus",
+    kind: "NON_IC",
+  },
+  "CE-303": {
+    code: "CE-303",
+    name: "Water Resources Engineering",
+    credit: 3,
+    slot: "H",
+    classroom: "A10-1B",
+    campus: "North Campus",
+    kind: "NON_IC",
+  },
+  "HS-529": {
+    code: "HS-529",
+    name: "Natural Resource and Development",
+    credit: 3,
+    slot: "H",
+    classroom: "A5-4",
+    campus: "South Campus",
+    kind: "NON_IC",
+  },
+  "ME-212": {
+    code: "ME-212",
+    name: "Product Manufacturing Technology",
+    credit: 3,
+    slot: "C",
+    classroom: "A11-1B",
+    campus: "North Campus",
+    kind: "NON_IC",
+  },
+  "ME-530": {
+    code: "ME-530",
+    name: "Continuum Mechanics",
+    credit: 3,
+    slot: "H",
+    classroom: "A10-3B",
+    campus: "North Campus",
+    kind: "NON_IC",
+  },
+  "EE-594": {
+    code: "EE-594",
+    name: "Modelling of Dynamical Systems and Identification",
+    credit: 3,
+    slot: "D",
+    classroom: "A17-2D",
+    campus: "North Campus",
+    kind: "NON_IC",
+    meetings: [
+      { dayOfWeek: "TUESDAY", startTime: "17:00", endTime: "18:30" },
+      { dayOfWeek: "THURSDAY", startTime: "12:00", endTime: "12:50" },
+    ],
+  },
+  "EE-595": {
+    code: "EE-595",
+    name: "Photonics Computing",
+    credit: 3,
+    slot: "F",
+    classroom: "A17-2D",
+    campus: "North Campus",
+    kind: "NON_IC",
+  },
+  "BY-538": {
+    code: "BY-538",
+    name: "Biomedical Instrumentation and Diagnostic Technologies",
+    credit: 3,
+    slot: "H",
+    classroom: "CL-3",
+    campus: "South Campus",
+    kind: "NON_IC",
+  },
 };
 
 // HS-108 is offered to B26 in two individually allocated English sections.
@@ -385,6 +499,11 @@ function main() {
   for (const override of PUBLISHED_PC_LAB_OVERRIDES) {
     pcLab[override.code] = override;
     if (override.venue) addVenue(override.venue);
+  }
+
+  for (const [code, course] of Object.entries(PUBLISHED_NON_IC_COURSE_OVERRIDES)) {
+    nonIc[code] = course;
+    if (course.classroom) addVenue(course.classroom);
   }
 
   for (const [code, classroom] of Object.entries(PUBLISHED_CLASSROOM_OVERRIDES)) {

@@ -14,6 +14,7 @@ export type OfficialCourseDefault = {
   classroom?: string;
   campus?: string;
   kind?: TimetableKind;
+  meetings?: OfficialSlotSession[];
   variants?: Array<{ label: string; slot: string; classroom?: string }>;
 };
 
@@ -269,22 +270,29 @@ export function buildOfficialCourseMeetings(
   const kind: TimetableKind = course?.kind ?? (data.defaults.ic[code] ? "IC" : pcLab?.kind ?? options.fallbackKind ?? "NON_IC");
   const venue = course?.classroom ?? options.fallbackVenue ?? undefined;
   const meetings: BuiltOfficialMeeting[] = [];
-  const tokens = extractOfficialSlotTokens(course?.slot ?? pcLab?.slot ?? options.fallbackSlot ?? "");
+  const explicitMeetings = course?.meetings;
 
-  for (const token of tokens) {
-    if (/^[A-H]$/.test(token)) {
-      const sessions = kind === "IC" ? IC_SLOTS[token] : NON_IC_SLOTS[token];
-      for (const session of sessions ?? []) {
-        meetings.push({ ...session, slot: token, venue, classType: "LECTURE" });
-      }
-      const fourth =
-        kind === "NON_IC" && requiresFourthNonIcTheorySession(options.ltpc)
-          ? NON_IC_FOURTH_SESSION[token]
-          : undefined;
-      if (fourth) meetings.push({ ...fourth, slot: token, venue, classType: "LECTURE" });
-    } else if (/^L[1-5]$/.test(token)) {
-      for (const session of LAB_SLOTS[token] ?? []) {
-        meetings.push({ ...session, slot: token, venue, classType: "LAB" });
+  if (explicitMeetings?.length) {
+    for (const session of explicitMeetings) {
+      meetings.push({ ...session, slot: course?.slot ?? "", venue, classType: "LECTURE" });
+    }
+  } else {
+    const tokens = extractOfficialSlotTokens(course?.slot ?? pcLab?.slot ?? options.fallbackSlot ?? "");
+    for (const token of tokens) {
+      if (/^[A-H]$/.test(token)) {
+        const sessions = kind === "IC" ? IC_SLOTS[token] : NON_IC_SLOTS[token];
+        for (const session of sessions ?? []) {
+          meetings.push({ ...session, slot: token, venue, classType: "LECTURE" });
+        }
+        const fourth =
+          kind === "NON_IC" && requiresFourthNonIcTheorySession(options.ltpc)
+            ? NON_IC_FOURTH_SESSION[token]
+            : undefined;
+        if (fourth) meetings.push({ ...fourth, slot: token, venue, classType: "LECTURE" });
+      } else if (/^L[1-5]$/.test(token)) {
+        for (const session of LAB_SLOTS[token] ?? []) {
+          meetings.push({ ...session, slot: token, venue, classType: "LAB" });
+        }
       }
     }
   }
