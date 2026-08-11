@@ -820,7 +820,7 @@ export default function ImportCoursesPage({
           }
 
           // B26 Semester 1 has exactly one choice from each family: IC basket,
-          // HSS (including IK-101), and IKS (IC-181/IC-182).
+          // HSS (including IK-101) and IKS (IC-181/IC-182).
           const b26ChoiceGroup = isBatch26 ? getB26ChoiceGroup(currentClicked) : null;
           if (
             b26ChoiceGroup &&
@@ -832,12 +832,12 @@ export default function ImportCoursesPage({
 
           if (isBatch26) {
             // No cross-semester pairing: B26's first-year sequence is fixed by
-            // its published curriculum, and only the three choice families above
+            // its published curriculum and only the three choice families above
             // are mutually exclusive.
           } else if (isBatch24) {
             // Batch 2024: IC102P is compulsory in Sem-2.
             // Sem-1 choice: IC140 vs IC181. Sem-2 choice: IC140 vs IC182.
-            // (IC140 in Sem-1) ↔ (IC182 in Sem-2), and (IC181 in Sem-1) ↔ (IC140 in Sem-2).
+            // (IC140 in Sem-1) ↔ (IC182 in Sem-2) and (IC181 in Sem-1) ↔ (IC140 in Sem-2).
             if (code === "IC140" && semester === 1) {
               if (c.code === "IC181" && c.semester === 1) return { ...c, selected: false };
               if (c.code === "IC140" && c.semester === 2) return { ...c, selected: false };
@@ -1603,7 +1603,7 @@ export default function ImportCoursesPage({
           </p>
           <p className="text-foreground-secondary mt-2">
             {userBatch === 2026
-              ? "Batch 2026: Semester 1 has exactly one IC Basket choice, one HSS choice (including IK-101), and one IKS choice (IC-181 or IC-182). Published compulsory IC Basket courses are selected automatically."
+              ? "Batch 2026: Semester 1 has exactly one IC Basket choice, one HSS choice (including IK-101) and one IKS choice (IC-181 or IC-182). Published compulsory IC Basket courses are selected automatically."
               : userBatch === 2024
               ? "Batch 2024: IC102P is compulsory in Semester 2. Choose IC140/IC181 in Semester 1 and IC140/IC182 in Semester 2 — selecting one will auto-pick the paired option. IC Basket courses allow only one selection per semester."
               : userBatch === 2025

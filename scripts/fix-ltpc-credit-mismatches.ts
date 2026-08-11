@@ -4,7 +4,7 @@
  * contradicted the offering credits).
  *
  * For each, credits were verified against the official CL / the split-course
- * structure, and a corrected L-T-P-C is set so its last component == credits:
+ * structure and a corrected L-T-P-C is set so its last component == credits:
  *
  *   EE-301   offering credits 4 -> 3  (Course row + ltpc both say 3; offering
  *            was the outlier). ltpc 3-0-0-3.

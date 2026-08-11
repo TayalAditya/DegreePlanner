@@ -83,7 +83,7 @@ export async function PATCH(req: NextRequest) {
     // program's pre-reg view; their scratch data is wiped on change (below).
     const acadSec = isAcadSec(session.user.email);
 
-    // Prevent branch changes if branch is already set (except GE-family ↔ GE-family, or acad-sec).
+    // Prevent branch changes if branch is already set (except GE-family ↔ GE-family or acad-sec).
     if (
       branch &&
       currentUser.branch &&

@@ -682,7 +682,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
     if (!isAdmin && entry.isOfficial) {
       const ok = await confirm({
         title: "Report a timetable correction?",
-        message: `${formatCourseCode(entry.course?.code || "This course")} is shown from the approved Aug–Nov 2026 timetable. Any slot, time, or venue change you submit will be sent to the admin for approval; the official schedule stays visible until it is approved.`,
+        message: `${formatCourseCode(entry.course?.code || "This course")} is shown from the approved Aug–Nov 2026 timetable. Any slot, time or venue change you submit will be sent to the admin for approval; the official schedule stays visible until it is approved.`,
         confirmText: "Report correction",
       });
       if (!ok) return;

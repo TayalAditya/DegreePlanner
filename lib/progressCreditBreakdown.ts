@@ -179,8 +179,20 @@ export function computeEnrollmentCreditBreakdown({
     const isIkCourse = /^IK\d/.test(normalizedCode);
     const rawBranch = String(userBranch || "").trim().toUpperCase();
     const checkBranch = normalizeBranchForIcBasket(rawBranch);
+    const mapping = pickMapping(enrollment, rawBranch, checkBranch);
+    const isHssIksCourse =
+      normalizedCode.startsWith("HS") ||
+      isIkCourse ||
+      normalizedCode === "IC181" ||
+      (normalizedCode === "IC182" && userBatch != null && userBatch >= 2024) ||
+      mapping?.courseCategory === "HSS" ||
+      mapping?.courseCategory === "IKS";
 
-    if (enrollment.isPassFail || enrollment.isInternship || /39[69]P$/i.test(courseCode)) return "FE";
+    // P/F uses the separate P/F allowance. A P/F HSS/IKS course still takes
+    // room in the combined HSS+IKS basket, so it counts toward the degree only
+    // through that basket's 20-credit cap.
+    if (enrollment.isPassFail) return isHssIksCourse ? "HSS" : "FE";
+    if (enrollment.isInternship || /39[69]P$/i.test(courseCode)) return "FE";
 
     const usesIc182AsIks = userBatch != null && userBatch >= 2024;
     // IKS courses share the HSS+IKS basket. The credit splitter below moves
@@ -220,7 +232,6 @@ export function computeEnrollmentCreditBreakdown({
       return "HSS";
     }
 
-    const mapping = pickMapping(enrollment, rawBranch, checkBranch);
     if (mapping?.courseCategory === "NA") return "FE";
     if (mapping?.courseCategory === "IKS" && isIkCourse) return "HSS";
     if (mapping?.courseCategory && mapping.courseCategory in categoryCredits) {

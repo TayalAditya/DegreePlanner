@@ -12,7 +12,7 @@ export type MaintenanceStatus = {
 
 // The maintenance window is shared by every dashboard request. Cache the raw
 // row briefly; `getMaintenanceStatus` still evaluates expiry against the
-// current time, and admin updates invalidate this cache immediately.
+// current time and admin updates invalidate this cache immediately.
 const getMaintenanceWindow = unstable_cache(
   () =>
     prisma.maintenanceWindow.findUnique({

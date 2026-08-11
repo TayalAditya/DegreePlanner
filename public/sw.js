@@ -1,6 +1,6 @@
 // Service Worker for PWA functionality
 
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v5";
 const STATIC_CACHE = `degree-planner-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `degree-planner-assets-${CACHE_VERSION}`;
 

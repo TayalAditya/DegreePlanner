@@ -15,7 +15,7 @@ const feedbackSchema = z
     message: z.string().trim().max(2000).optional(),
   })
   .refine((d) => d.rating !== undefined || d.emoji || d.message, {
-    message: "Provide a rating, reaction, or message",
+    message: "Provide a rating, reaction or message",
   });
 
 export async function GET(req: NextRequest) {

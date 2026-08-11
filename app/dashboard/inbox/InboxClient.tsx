@@ -469,7 +469,7 @@ export default function InboxClient() {
                     <div className="rounded-xl border border-border bg-background p-4 text-xs text-foreground-secondary">
                       <p>
                         Use this list to audit when a student sets a course type that differs from the default mapping.
-                        Their roll number, time, and course details are stored with the entry.
+                        Their roll number, time and course details are stored with the entry.
                       </p>
                     </div>
                   </div>

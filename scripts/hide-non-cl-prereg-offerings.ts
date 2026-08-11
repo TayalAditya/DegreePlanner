@@ -3,7 +3,7 @@
  * are branch-specific DC/DE / remedial / PG courses — they confuse students in
  * the pre-reg picker. Sets isActive=false (reversible); does NOT delete the row
  * and does NOT touch any existing enrollments (those link to Course, not the
- * offering, and credit calc reads Course.credits).
+ * offering and credit calc reads Course.credits).
  *
  * Explicitly KEPT active (legit, even though not a literal CL code):
  *   - split lab/theory halves EE-210(P), EE-212P, EE-261P, EE-301, EE-302P

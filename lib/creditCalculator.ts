@@ -618,10 +618,33 @@ export class CreditCalculator {
 
       addBreakdownCredits("total", credits);
 
-      // P/F courses consume the P/F allowance but always satisfy the Free
-      // Elective basket, even when their regular mapping is HSS or DE.
+      const code = enrollment.course.code.toUpperCase();
+      const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+      const isICB1 = ICB1_CODES.has(normalizedCode);
+      const isICB2 = ICB2_CODES.has(normalizedCode);
+      const isIkCourse = /^IK\d/.test(normalizedCode);
+      const passFailSourceCategory = pickBranchMappingCategory(
+        enrollment.course.branchMappings,
+        branch,
+        batchYear
+      );
+      const isHssIksCourse =
+        normalizedCode.startsWith("HS") ||
+        isIkCourse ||
+        normalizedCode === "IC181" ||
+        normalizedCode === "IC182" ||
+        passFailSourceCategory === "HSS" ||
+        passFailSourceCategory === "IKS";
+
+      // P/F always consumes the P/F allowance. HSS/IKS P/F courses also keep
+      // their place in the shared 20-credit HSS+IKS degree basket; only a
+      // portion beyond that cap is excluded from the degree total.
       if (enrollment.isPassFail) {
-        addBreakdownCredits("freeElective", credits);
+        if (isHssIksCourse) {
+          addHssCredits(credits);
+        } else {
+          addBreakdownCredits("freeElective", credits);
+        }
         return;
       }
 
@@ -630,12 +653,6 @@ export class CreditCalculator {
         addBreakdownCredits("freeElective", credits);
         return;
       }
-
-      const code = enrollment.course.code.toUpperCase();
-      const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
-      const isICB1 = ICB1_CODES.has(normalizedCode);
-      const isICB2 = ICB2_CODES.has(normalizedCode);
-      const isIkCourse = /^IK\d/.test(normalizedCode);
 
       // IC202P (Design Practicum) is NOT compulsory for CE/EP/BE(bio)/CH(chemical/BSCS)
       // from Batch-24 onwards — for those students it's a Free Elective, not Institute Core.

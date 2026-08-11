@@ -48,7 +48,7 @@ export type CreatePaperResult =
   | { ok: false; status: number; error: string };
 
 /**
- * The API contract for a paper list must never expose fileUrl, pathname, or
+ * The API contract for a paper list must never expose fileUrl, pathname or
  * filename. A public Blob URL is an access token when the backing store is
  * public, so leaking it defeats every route-level permission check.
  */
@@ -76,7 +76,7 @@ export function toPaperForClient(paper: PaperWithUploader): PaperForClientRespon
 /**
  * Shared create path for PYQ papers used by both the JSON (link) route and the
  * multipart upload route: validates fields, enforces the enrollment gate
- * (admins bypass), and creates the record with the correct review status.
+ * (admins bypass) and creates the record with the correct review status.
  */
 export async function createPaper(
   sessionUser: { id: string; email?: string | null; role?: string; enrollmentId?: string | null },

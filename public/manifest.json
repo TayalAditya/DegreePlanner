@@ -1,7 +1,7 @@
 {
   "name": "Degree Planner",
   "short_name": "DegreePlan",
-  "description": "Plan your academic journey with course tracking, credit calculation, and timetable management",
+  "description": "Plan your academic journey with course tracking, credit calculation and timetable management",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -26,7 +26,7 @@ async function main() {
 
   // ─── TU Munich – Semester Exchange courses ───────────────────────────────
   // Available to CSE students only, via semester exchange.
-  // Can be taken in Semester 5, 6, or 7.
+  // Can be taken in Semester 5, 6 or 7.
   const tumCourses = [
     {
       code: "IN2030",
@@ -51,7 +51,7 @@ async function main() {
   ];
 
   const semexDescription =
-    "Available via Semester Exchange (TU Munich) only. Can be taken in Semester 5, 6, or 7.";
+    "Available via Semester Exchange (TU Munich) only. Can be taken in Semester 5, 6 or 7.";
 
   for (const c of tumCourses) {
     const course = await prisma.course.upsert({
@@ -161,7 +161,7 @@ async function main() {
 
   // ─── Additional TU Munich courses ──────────────────────────────────────────
   const tumExtra = [
-    { code: "IN2375", name: "Computer Vision III: Detection, Segmentation, and Tracking", credits: 4 },
+    { code: "IN2375", name: "Computer Vision III: Detection, Segmentation and Tracking", credits: 4 },
     { code: "IN2106", name: "Master-Praktikum", credits: 6.66 },
     { code: "IN2339", name: "Data Analysis and Visualization in R", credits: 4 },
     { code: "IN2379", name: "Advanced Data Handling and Visualization Techniques", credits: 4 },
@@ -261,7 +261,7 @@ async function main() {
 
   // ─── TU Darmstadt – MSE Semester Exchange courses ────────────────────────
   const tuDarmstadtMSEDescription =
-    "Available via Semester Exchange (TU Darmstadt) only. Can be taken in Semester 5, 6, or 7.";
+    "Available via Semester Exchange (TU Darmstadt) only. Can be taken in Semester 5, 6 or 7.";
 
   const tumMSECourses: {
     code: string;
@@ -348,7 +348,7 @@ async function main() {
 
   // ─── TU Darmstadt – EE Semester Exchange courses ─────────────────────────
   const tuDarmstadtEEDescription =
-    "Available via Semester Exchange (TU Darmstadt) only. Can be taken in Semester 5, 6, or 7.";
+    "Available via Semester Exchange (TU Darmstadt) only. Can be taken in Semester 5, 6 or 7.";
 
   const tuDarmstadtEECourses: {
     code: string;
@@ -532,7 +532,7 @@ async function main() {
 
   // ─── RWTH Aachen – Semester Exchange courses (CSE) ─────────────────────
   const rwthDescription =
-    "Available via Semester Exchange (RWTH Aachen) only. Can be taken in Semester 5, 6, or 7.";
+    "Available via Semester Exchange (RWTH Aachen) only. Can be taken in Semester 5, 6 or 7.";
 
   // Pure FE courses
   const rwthFECourses = [
@@ -573,17 +573,21 @@ async function main() {
     console.log(`✓ ${c.code} ${c.name} (${c.credits} cr) → CSE:FE`);
   }
 
-  // 12.45308 Introduction to AI — replaces CS-305, split: 3cr DC + 1.66cr FE
+  // 12.45308 Introduction to AI — replaces CS-305, split: 3cr DC + 1.67cr FE
   const rwthAI = await prisma.course.upsert({
     where: { code: "12.45308" },
-    update: { name: "Introduction to Artificial Intelligence", credits: 4.66 },
+    update: {
+      name: "Introduction to Artificial Intelligence",
+      credits: 4.67,
+      description: `${rwthDescription} Replaces CS-305. Credits split: 3 cr count as DC, 1.67 cr counts as FE.`,
+    },
     create: {
       code: "12.45308",
       name: "Introduction to Artificial Intelligence",
-      credits: 4.66,
+      credits: 4.67,
       department: "RWTH Aachen (Semester Exchange)",
       level: 300,
-      description: `${rwthDescription} Replaces CS-305. Credits split: 3 cr count as DC, 1.66 cr counts as FE.`,
+      description: `${rwthDescription} Replaces CS-305. Credits split: 3 cr count as DC, 1.67 cr counts as FE.`,
       offeredInFall: true,
       offeredInSpring: true,
       isActive: true,
@@ -592,17 +596,24 @@ async function main() {
 
   await prisma.courseBranchMapping.upsert({
     where: { courseId_branch_batch: { courseId: rwthAI.id, branch: "CSE", batch: "" } },
-    update: { courseCategory: CourseCategoryType.DC, splitCategory: CourseCategoryType.FE, splitAmount: 1.66 },
+    update: { courseCategory: CourseCategoryType.DC, splitCategory: CourseCategoryType.FE, splitAmount: 1.67 },
     create: {
       courseId: rwthAI.id,
       branch: "CSE",
       courseCategory: CourseCategoryType.DC,
       isRequired: false,
       splitCategory: CourseCategoryType.FE,
-      splitAmount: 1.66,
+      splitAmount: 1.67,
     },
   });
-  console.log("✓ 12.45308 Introduction to Artificial Intelligence (4.66 cr) → CSE: 3cr DC + 1.66cr FE");
+  console.log("✓ 12.45308 Introduction to Artificial Intelligence (4.67 cr) → CSE: 3cr DC + 1.67cr FE");
+
+  // Batch-specific DC mappings override the generic CSE row, so they must
+  // retain the same split instead of silently allocating all credits to DC.
+  await prisma.courseBranchMapping.updateMany({
+    where: { courseId: rwthAI.id, courseCategory: CourseCategoryType.DC },
+    data: { splitCategory: CourseCategoryType.FE, splitAmount: 1.67 },
+  });
 
   // DE courses
   const rwthDECourses = [

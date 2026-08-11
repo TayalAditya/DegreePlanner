@@ -73,7 +73,7 @@ function parseTex(filepath) {
     const semContent = sm[2];
     semesterCourses[semNum] = [];
 
-    // Match course rows — LTPC columns can be numbers, dashes, or ---
+    // Match course rows — LTPC columns can be numbers, dashes or ---
     const courseRe =
       /\d+\s*&\s*([A-Z]{2,4}[-\s]*\d{2,4}P?)\s*&\s*([^&]+?)\s*&\s*[-\d.]+\s*&\s*[-\d.]+\s*&\s*[-\d.]+\s*&\s*(\d+)/g;
     let cm;

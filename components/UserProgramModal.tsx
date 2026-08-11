@@ -372,7 +372,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
   }, [userSettings.branch]);
 
   // Batch-aware resolution via the shared canonical scorer (lib/courseCategory.ts).
-  // getBranchCandidates() already covers branch aliases, GE, and COMMON (lowest priority),
+  // getBranchCandidates() already covers branch aliases, GE and COMMON (lowest priority),
   // so this subsumes the previous manual exact/direct/ge/common fallback chain.
   const pickRelevantBranchMapping = (
     branch: string | undefined,
@@ -391,7 +391,14 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
     icBasketUsed?: ICBasketUsed,
     hssUsed?: { credits: number }
   ): CourseCategory => {
-    if (enrollment.isPassFail) return "FE";
+    const passFailCode = enrollment.course.code.toUpperCase();
+    const passFailNormalizedCode = normalizeCode(passFailCode);
+    const passFailHssIks =
+      passFailNormalizedCode.startsWith("HS") ||
+      /^IK\d/.test(passFailNormalizedCode) ||
+      passFailNormalizedCode === "IC181" ||
+      passFailNormalizedCode === "IC182";
+    if (enrollment.isPassFail && !passFailHssIks) return "FE";
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
 
@@ -571,7 +578,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
 
     const isCompleted = e.status === "COMPLETED" && (!e.grade || e.grade !== "F");
 
-    // Branch-mapping-defined splits (e.g. 12.45308: 3cr DC + 1.66cr FE)
+    // Branch-mapping-defined splits (e.g. 12.45308: 3cr DC + 1.67cr FE)
     const mapping = pickRelevantBranchMapping(userSettings.branch, e.course.branchMappings);
     if (mapping?.splitCategory && mapping.splitAmount != null && mapping.splitAmount > 0) {
       const mainCat = (mapping.courseCategory in categoryLabels ? mapping.courseCategory : "FE") as CourseCategory;
@@ -1020,7 +1027,7 @@ export function UserProgramModal({ userId, userName, onClose }: UserProgramModal
                                 <option value="AUDIT">Audit — transcript only</option>
                               </select>
                               <p className="mt-1 text-xs text-foreground-secondary">
-                                P/F is allowed for FE, HSS/IKS, and DE. Audit never counts toward degree credits.
+                                P/F is allowed for FE, HSS/IKS and DE. Audit never counts toward degree credits.
                               </p>
                             </div>
                           </div>

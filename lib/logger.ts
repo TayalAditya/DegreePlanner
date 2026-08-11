@@ -68,7 +68,7 @@ class Logger {
       // Example: Sentry.captureMessage(entry.message, { level: entry.level, extra: entry.context });
     } else {
       // Server-side logging
-      // Example: Use winston, pino, or built-in console with structured logging
+      // Example: Use winston, pino or built-in console with structured logging
     }
   }
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { signOut } from "next-auth/react";
 import {
   FileQuestion,
   Search,
@@ -110,12 +109,6 @@ export function PYQView({ isAdmin }: PYQViewProps) {
 
   const resetPreviewZoom = useCallback(() => setPreviewZoom(1), []);
 
-  const secureExit = useCallback(() => {
-    setPreviewImageUrl(null);
-    setPreview(null);
-    void signOut({ callbackUrl: "/auth/signin" });
-  }, []);
-
   const loadData = useCallback(async () => {
     try {
       const [papersRes, enrollmentsRes] = await Promise.all([
@@ -194,17 +187,6 @@ export function PYQView({ isAdmin }: PYQViewProps) {
     const blockBrowserSaveAndPrint = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
       const command = event.ctrlKey || event.metaKey;
-      const devToolsShortcut =
-        event.key === "F12" ||
-        (command && event.shiftKey && ["i", "j", "c"].includes(key));
-
-      if (devToolsShortcut) {
-        event.preventDefault();
-        event.stopPropagation();
-        secureExit();
-        return;
-      }
-
       if (command && ["p", "s"].includes(key)) {
         event.preventDefault();
         return;
@@ -243,7 +225,7 @@ export function PYQView({ isAdmin }: PYQViewProps) {
       window.removeEventListener("keydown", blockBrowserSaveAndPrint, true);
       window.removeEventListener("wheel", zoomPreviewWithWheel, true);
     };
-  }, [preview, secureExit, changePreviewZoom, resetPreviewZoom]);
+  }, [preview, changePreviewZoom, resetPreviewZoom]);
 
   useEffect(() => {
     if (!preview) return;
@@ -262,27 +244,6 @@ export function PYQView({ isAdmin }: PYQViewProps) {
       window.removeEventListener("pagehide", closeOnHide);
     };
   }, [preview]);
-
-  useEffect(() => {
-    if (!preview) return;
-
-    // Browsers intentionally do not expose a reliable "DevTools is open" API.
-    // This catches the common docked-console case; keyboard shortcuts above cover
-    // the normal open paths. It is a deterrent, never the security boundary.
-    const checkDockedDevTools = () => {
-      const widthGap = window.outerWidth - window.innerWidth;
-      const heightGap = window.outerHeight - window.innerHeight;
-      if (widthGap > 200 || heightGap > 200) secureExit();
-    };
-
-    checkDockedDevTools();
-    const interval = window.setInterval(checkDockedDevTools, 750);
-    window.addEventListener("resize", checkDockedDevTools);
-    return () => {
-      window.clearInterval(interval);
-      window.removeEventListener("resize", checkDockedDevTools);
-    };
-  }, [preview, secureExit]);
 
   // Unique enrolled courses for the upload dropdown
   const enrolledCourses = useMemo(() => {
@@ -507,16 +468,16 @@ export function PYQView({ isAdmin }: PYQViewProps) {
         <div
           onClick={() => setPreview(null)}
           onContextMenu={(event) => event.preventDefault()}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-5"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-2 sm:p-5"
           role="dialog"
           aria-modal="true"
           aria-label="Protected question-paper viewer"
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            className="w-full max-w-5xl max-h-[95vh] overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl"
+            className="flex h-[calc(100dvh-1rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl sm:h-[min(95dvh,64rem)]"
           >
-            <div className="flex items-start justify-between gap-4 border-b border-border p-4 sm:p-5">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border p-4 sm:p-5">
               <div className="min-w-0">
                 <h2 className="truncate text-base font-bold text-foreground sm:text-lg">
                   {preview.paper.title ?? `${formatCourseCode(preview.paper.courseCode)} question paper`}
@@ -532,7 +493,7 @@ export function PYQView({ isAdmin }: PYQViewProps) {
               </button>
             </div>
 
-            <div className="relative flex min-h-[52vh] max-h-[72vh] items-start justify-center overflow-auto bg-background-secondary p-3 sm:p-5">
+            <div className="relative flex min-h-0 flex-1 items-start justify-center overflow-auto bg-background-secondary p-3 sm:p-5">
               {previewLoading && (
                 <div className="self-center flex items-center gap-2 text-sm text-foreground-secondary">
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -555,22 +516,22 @@ export function PYQView({ isAdmin }: PYQViewProps) {
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t border-border p-3 sm:p-4">
-              <div>
+            <div className="flex shrink-0 flex-col gap-2 border-t border-border p-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-4">
+              <div className="flex items-center justify-between gap-3">
                 <p className="text-xs text-foreground-secondary">
                   Page {preview.page}{preview.pageCount ? ` of ${preview.pageCount}` : ""}
                 </p>
-                <p className="mt-0.5 text-[11px] text-foreground-secondary">
+                <p className="hidden text-[11px] text-foreground-secondary sm:block">
                   Zoom affects only this question paper.
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center justify-between gap-2 sm:justify-end">
                 <div className="flex items-center gap-1" aria-label="Question paper zoom">
                   <button
                     type="button"
                     onClick={() => changePreviewZoom(-PREVIEW_ZOOM_STEP)}
                     disabled={previewZoom <= PREVIEW_ZOOM_MIN}
-                    className="rounded-lg border border-border p-2 text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Zoom out question paper"
                     title="Zoom out question paper"
                   >
@@ -579,7 +540,7 @@ export function PYQView({ isAdmin }: PYQViewProps) {
                   <button
                     type="button"
                     onClick={resetPreviewZoom}
-                    className="min-w-14 rounded-lg border border-border px-2 py-2 text-xs font-medium text-foreground transition-colors hover:bg-surface-hover"
+                    className="h-10 min-w-12 rounded-lg border border-border px-2 text-xs font-medium text-foreground transition-colors hover:bg-surface-hover"
                     aria-label="Reset question paper zoom"
                     title="Reset question paper zoom"
                   >
@@ -589,7 +550,7 @@ export function PYQView({ isAdmin }: PYQViewProps) {
                     type="button"
                     onClick={() => changePreviewZoom(PREVIEW_ZOOM_STEP)}
                     disabled={previewZoom >= PREVIEW_ZOOM_MAX}
-                    className="rounded-lg border border-border p-2 text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-border text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
                     aria-label="Zoom in question paper"
                     title="Zoom in question paper"
                   >
@@ -600,18 +561,20 @@ export function PYQView({ isAdmin }: PYQViewProps) {
                   type="button"
                   onClick={() => setPreview((current) => current && { ...current, page: current.page - 1 })}
                   disabled={previewLoading || preview.page === 1}
-                  className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Previous question-paper page"
+                  title="Previous page"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Previous
                 </button>
                 <button
                   type="button"
                   onClick={() => setPreview((current) => current && { ...current, page: current.page + 1 })}
                   disabled={previewLoading || Boolean(preview.pageCount && preview.page >= preview.pageCount)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border text-foreground transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  aria-label="Next question-paper page"
+                  title="Next page"
                 >
-                  Next
                   <ChevronRight className="h-4 w-4" />
                 </button>
               </div>

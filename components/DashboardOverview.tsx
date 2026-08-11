@@ -151,7 +151,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
   }, [userSettings?.branch]);
 
   // Batch-aware resolution via the shared canonical scorer (lib/courseCategory.ts).
-  // getBranchCandidates() already covers branch aliases, GE, and COMMON (lowest priority),
+  // getBranchCandidates() already covers branch aliases, GE and COMMON (lowest priority),
   // so this subsumes the previous manual exact/direct/ge/common fallback chain.
   const pickRelevantBranchMapping = (
     branch: string | undefined,
@@ -166,7 +166,14 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     enrollment: any,
     icBasketUsed?: { ic1: boolean; ic2: boolean }
   ): keyof typeof categoryLabels => {
-    if (enrollment.isPassFail) return "FE";
+    const passFailCode = enrollment.course?.code?.toUpperCase() || "";
+    const passFailNormalizedCode = normalizeCourseCode(passFailCode);
+    const passFailHssIks =
+      passFailNormalizedCode.startsWith("HS") ||
+      /^IK\d/.test(passFailNormalizedCode) ||
+      passFailNormalizedCode === "IC181" ||
+      passFailNormalizedCode === "IC182";
+    if (enrollment.isPassFail && !passFailHssIks) return "FE";
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course?.code ?? "")) return "FE";
 
@@ -302,6 +309,31 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
       const credits = Number(e.course?.credits || 0);
       let creditAllocations: CreditAllocation[] = [{ category, credits }];
 
+      const batch = typeof userSettings?.batch === "number"
+        ? userSettings.batch
+        : (() => {
+            const match = /B(\d{2})/i.exec(String(userSettings?.enrollmentId || ""));
+            return match ? 2000 + Number.parseInt(match[1], 10) : null;
+          })();
+      const mapping = pickRelevantBranchMapping(
+        userSettings?.branch,
+        e.course?.branchMappings,
+        batch
+      );
+      const splitAmount = Number(mapping?.splitAmount ?? 0);
+      if (
+        category !== "HSS" &&
+        mapping?.splitCategory &&
+        splitAmount > 0 &&
+        splitAmount < credits
+      ) {
+        const splitCategory = mapping.splitCategory as DashboardCategory;
+        creditAllocations = [
+          { category, credits: subtractCredits(credits, splitAmount) },
+          { category: splitCategory, credits: splitAmount },
+        ];
+      }
+
       if (category === "HSS") {
         const before = hssIksUsedForCategory.credits;
         const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, hssCoreCap);
@@ -407,7 +439,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
               Choose your General Engineering specialization
             </p>
             <p className="text-sm text-foreground-secondary mt-1">
-              Pick AI &amp; Robotics, Mechatronics &amp; AI, Communications Technology, or stay on
+              Pick AI &amp; Robotics, Mechatronics &amp; AI, Communications Technology or stay on
               Open Specialization. This sets your Discipline Core / Elective tracking — you can
               change it later.
             </p>

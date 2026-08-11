@@ -5,15 +5,15 @@ import { useSession } from "next-auth/react";
 import { MessageSquareHeart, X, Send, Star } from "lucide-react";
 import { useToast } from "./ToastProvider";
 
-const EMOJI_OPTIONS = [
-  { key: "useful", emoji: "🎯", label: "Useful" },
-  { key: "love", emoji: "❤️", label: "Love it" },
-  { key: "improve", emoji: "💡", label: "Improve" },
-  { key: "great_ux", emoji: "🚀", label: "Great UX" },
+const REACTION_OPTIONS = [
+  { key: "useful", label: "Useful" },
+  { key: "love", label: "Love it" },
+  { key: "improve", label: "Could improve" },
+  { key: "great_ux", label: "Easy to use" },
 ] as const;
 
 const COOLDOWN_MS = 12 * 60 * 60 * 1000;
-const LS_KEY = "pmd.🌟.last_vibe_check";
+const LS_KEY = "pmd.feedback.last_submitted";
 
 function canSubmit(): boolean {
   try {
@@ -41,7 +41,7 @@ export function FeedbackButton() {
 
   const handleOpen = () => {
     if (!canSubmit()) {
-      showToast("info", "You've already shared feedback recently — try again in a bit! 🙏");
+      showToast("info", "You've already shared feedback recently. Please try again later.");
       return;
     }
     setOpen(true);
@@ -73,7 +73,7 @@ export function FeedbackButton() {
       try { localStorage.setItem(LS_KEY, String(Date.now())); } catch {}
 
       setOpen(false);
-      showToast("success", "Thanks for your feedback! 🌟");
+      showToast("success", "Thanks for your feedback.");
     } catch {
       showToast("error", "Could not submit feedback — please try again.");
     } finally {
@@ -103,10 +103,10 @@ export function FeedbackButton() {
               <div className="flex items-start justify-between mb-5">
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">
-                    How&apos;s PlanMyDegree? ✨
+                    How&apos;s PlanMyDegree?
                   </h3>
                   <p className="text-sm text-foreground-secondary mt-1">
-                    Your feedback helps us improve!
+                    Your feedback helps us improve.
                   </p>
                 </div>
                 <button
@@ -148,13 +148,13 @@ export function FeedbackButton() {
                 </div>
               </div>
 
-              {/* Emoji reactions */}
+              {/* Optional reaction */}
               <div className="mb-5">
                 <label className="text-sm font-medium text-foreground mb-2 block">
                   Quick reaction <span className="text-foreground-secondary font-normal">(optional)</span>
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {EMOJI_OPTIONS.map((opt) => (
+                  {REACTION_OPTIONS.map((opt) => (
                     <button
                       key={opt.key}
                       type="button"
@@ -167,7 +167,6 @@ export function FeedbackButton() {
                           : "border-border bg-surface hover:bg-surface-hover text-foreground-secondary hover:text-foreground"
                       }`}
                     >
-                      <span className="text-base">{opt.emoji}</span>
                       <span>{opt.label}</span>
                     </button>
                   ))}

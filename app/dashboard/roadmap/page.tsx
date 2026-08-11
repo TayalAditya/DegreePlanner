@@ -8,6 +8,54 @@ import RoadmapClient, { type RoadmapData, type RoadmapCourse } from "./RoadmapCl
 
 const ROADMAP_SEMESTERS = [5, 6, 7, 8];
 const PLANNING_OPTION_CATEGORIES = new Set(["DC", "DE", "FE", "HSS", "IKS"]);
+
+function normalizeCourseCode(code: string) {
+  return code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/**
+ * CourseEquivalent rows represent renamed versions of the same academic
+ * requirement. Build connected components so aliases are deduplicated and a
+ * completion under any code satisfies the whole component.
+ */
+function buildCourseEquivalenceKeys(
+  courses: Array<{
+    code: string;
+    equivalents: Array<{ equivalent: { code: string } }>;
+    equivalentFor: Array<{ course: { code: string } }>;
+  }>
+) {
+  const parent = new Map<string, string>();
+
+  const find = (rawCode: string): string => {
+    const code = normalizeCourseCode(rawCode);
+    if (!parent.has(code)) parent.set(code, code);
+    const current = parent.get(code)!;
+    if (current === code) return code;
+    const root = find(current);
+    parent.set(code, root);
+    return root;
+  };
+
+  const union = (left: string, right: string) => {
+    const leftRoot = find(left);
+    const rightRoot = find(right);
+    if (leftRoot === rightRoot) return;
+    // Stable root makes the result independent of Prisma row order.
+    if (leftRoot < rightRoot) parent.set(rightRoot, leftRoot);
+    else parent.set(leftRoot, rightRoot);
+  };
+
+  for (const course of courses) {
+    find(course.code);
+    for (const entry of course.equivalents) union(course.code, entry.equivalent.code);
+    for (const entry of course.equivalentFor) union(course.code, entry.course.code);
+  }
+
+  const keys = new Map<string, string>();
+  for (const code of parent.keys()) keys.set(code, find(code));
+  return keys;
+}
 const REQUIRED_CATEGORIES = new Set(["IC", "DC", "MTP", "ISTP"]);
 
 function asRoadmapCategory(category: string) {
@@ -154,7 +202,11 @@ export default async function RoadmapPage() {
     // the same branch really registered for in the matching semester cycle.
     prisma.courseEnrollment.findMany({
       where: {
-        semester: { gte: 3, lt: currentSemester },
+        // Do not cap this at the student's current semester. A student entering
+        // Sem 5 still needs the older cohort's Sem 5/7 registrations when
+        // planning Sem 7, otherwise only their own cohort's Sem 3 core rows
+        // survive and the DE/FE opening evidence disappears.
+        semester: { gte: 3, lte: Math.max(...ROADMAP_SEMESTERS) },
         status: { not: "DROPPED" },
         user: {
           branch: { in: branchCandidates },
@@ -193,15 +245,24 @@ export default async function RoadmapPage() {
 
   // During the pre-registration window, past-semester IN_PROGRESS rows are
   // treated as completed in the same way as the pre-registration screen.
-  const completedCourseIds = new Set(
-    enrollments
-      .filter((enrollment) =>
-        enrollment.grade !== "F" &&
-        (enrollment.status === "COMPLETED" ||
-          (enrollment.status === "IN_PROGRESS" && enrollment.semester < currentSemester))
-      )
-      .map((enrollment) => enrollment.courseId)
+  const completedEnrollments = enrollments.filter((enrollment) =>
+    enrollment.grade !== "F" &&
+    (enrollment.status === "COMPLETED" ||
+      (enrollment.status === "IN_PROGRESS" && enrollment.semester < currentSemester))
   );
+  const completedCourseIds = new Set(completedEnrollments.map((enrollment) => enrollment.courseId));
+
+  const equivalenceKeyByCode = buildCourseEquivalenceKeys(mappedCourses);
+  const canonicalCourseKey = (code: string) => {
+    const normalized = normalizeCourseCode(code);
+    return equivalenceKeyByCode.get(normalized) ?? normalized;
+  };
+  const completedCanonicalCourseKeys = new Set(
+    completedEnrollments.map((enrollment) => canonicalCourseKey(enrollment.course.code))
+  );
+  const isCourseCompleted = (courseId: string | null | undefined, courseCode: string) =>
+    Boolean(courseId && completedCourseIds.has(courseId)) ||
+    completedCanonicalCourseKeys.has(canonicalCourseKey(courseCode));
   const passFailBySemester: Record<string, number> = {};
   for (const enrollment of enrollments) {
     if (!enrollment.isPassFail || enrollment.status === "DROPPED" || enrollment.status === "FAILED") continue;
@@ -274,6 +335,17 @@ export default async function RoadmapPage() {
   }));
   const semesterByNumber = new Map(semesters.map((semester) => [semester.semester, semester]));
 
+  type CurriculumCandidate = {
+    item: RoadmapCourse;
+    semester: number;
+    required: boolean;
+    mappingScore: number;
+  };
+  const curriculumCandidates = new Map<string, CurriculumCandidate>();
+  const branchOrder = new Map(
+    branchCandidates.map((candidate, index) => [normalizeBranchCode(candidate), index])
+  );
+
   for (const course of mappedCourses) {
     // Partner-university rows are transfer options for a SemEx plan, not
     // duplicate home-curriculum commitments. They stay available through
@@ -299,24 +371,46 @@ export default async function RoadmapPage() {
       name: course.name,
       credits: course.credits,
       category,
-      completed: completedCourseIds.has(course.id),
+      completed: isCourseCompleted(course.id, course.code),
       source: "curriculum",
       equivalents: Array.from(
         new Map(
           [
             ...course.equivalents.map((entry) => entry.equivalent),
             ...course.equivalentFor.map((entry) => entry.course),
-          ].map((entry) => [entry.code, entry])
+          ].map((entry) => [normalizeCourseCode(entry.code), entry])
         ).values()
       ),
     };
 
-    const target = semesterByNumber.get(semester)!;
-    if (REQUIRED_CATEGORIES.has(category) || mapping?.isRequired) {
-      target.requiredCourses.push(item);
-    } else {
-      target.mappedElectives.push(item);
+    const required = REQUIRED_CATEGORIES.has(category) || Boolean(mapping?.isRequired);
+    const mappingBranchIndex = mapping
+      ? branchOrder.get(normalizeBranchCode(mapping.branch)) ?? branchCandidates.length
+      : branchCandidates.length;
+    const mappingScore =
+      (mapping?.batch === String(batchYear) ? 10_000 : 0) +
+      Math.max(0, branchCandidates.length - mappingBranchIndex) * 100 +
+      (required ? 10 : 0);
+    const canonicalKey = canonicalCourseKey(course.code);
+    const current = curriculumCandidates.get(canonicalKey);
+
+    // Prefer the batch-specific curriculum code. The lexical tie-break keeps
+    // renamed aliases deterministic (for example EE-302 over EE-301) when the
+    // database contains equally specific legacy mappings.
+    if (
+      !current ||
+      mappingScore > current.mappingScore ||
+      (mappingScore === current.mappingScore && item.code.localeCompare(current.item.code) > 0)
+    ) {
+      curriculumCandidates.set(canonicalKey, { item, semester, required, mappingScore });
     }
+  }
+
+  for (const candidate of curriculumCandidates.values()) {
+    const target = semesterByNumber.get(candidate.semester);
+    if (!target) continue;
+    if (candidate.required) target.requiredCourses.push(candidate.item);
+    else target.mappedElectives.push(candidate.item);
   }
 
   const isEligibleOffering = (offering: (typeof offerings)[number], targetSemester: number) => {
@@ -350,7 +444,7 @@ export default async function RoadmapPage() {
     );
 
     if (!PLANNING_OPTION_CATEGORIES.has(category)) return null;
-    if (offering.course && completedCourseIds.has(offering.course.id)) return null;
+    if (isCourseCompleted(offering.course?.id, offering.courseCode)) return null;
 
     return {
       id: source === "live" ? offering.id : `historical-${targetSemester}-${offering.id}`,
@@ -413,9 +507,13 @@ export default async function RoadmapPage() {
     const latestForTarget = new Map<string, RegisteredCourseSignal>();
     for (const signal of registrationSignals.values()) {
       if (signal.semester % 2 !== targetSemester % 2) continue;
-      const current = latestForTarget.get(signal.course.id);
+      // A higher-semester registration is not eligibility evidence for a
+      // lower-semester plan (for example, Sem 7 must not populate Sem 5).
+      if (signal.semester > targetSemester) continue;
+      const signalKey = canonicalCourseKey(signal.course.code);
+      const current = latestForTarget.get(signalKey);
       if (!current || isNewerRegistrationSignal(signal, current)) {
-        latestForTarget.set(signal.course.id, signal);
+        latestForTarget.set(signalKey, signal);
       }
     }
     latestRegisteredBySemester.set(targetSemester, latestForTarget);
@@ -431,16 +529,18 @@ export default async function RoadmapPage() {
         if (!offering.isActive || offering.offeringSemester !== semester.semester) continue;
         if (!isEligibleOffering(offering, semester.semester)) continue;
         const option = toOfferingOption(offering, "live", semester.semester);
-        if (!option || publishedCodes.has(option.code)) continue;
-        publishedCodes.add(option.code);
+        const optionKey = option ? canonicalCourseKey(option.code) : "";
+        if (!option || publishedCodes.has(optionKey)) continue;
+        publishedCodes.add(optionKey);
         semester.liveOptions.push(option);
       }
     }
 
     const registeredCodes = new Set<string>();
     for (const signal of latestRegisteredBySemester.get(semester.semester)?.values() ?? []) {
-      if (completedCourseIds.has(signal.course.id) || registeredCodes.has(signal.course.code)) continue;
-      registeredCodes.add(signal.course.code);
+      const signalKey = canonicalCourseKey(signal.course.code);
+      if (isCourseCompleted(signal.course.id, signal.course.code) || registeredCodes.has(signalKey)) continue;
+      registeredCodes.add(signalKey);
       semester.registeredOptions.push({
         id: signal.course.id,
         code: signal.course.code,
@@ -474,8 +574,9 @@ export default async function RoadmapPage() {
 
     for (const offering of historicalCandidates) {
       const option = toOfferingOption(offering, "historical", semester.semester);
-      if (!option || historicalCodes.has(option.code) || publishedCodes.has(option.code) || registeredCodes.has(option.code)) continue;
-      historicalCodes.add(option.code);
+      const optionKey = option ? canonicalCourseKey(option.code) : "";
+      if (!option || historicalCodes.has(optionKey) || publishedCodes.has(optionKey) || registeredCodes.has(optionKey)) continue;
+      historicalCodes.add(optionKey);
       semester.historicalOptions.push(option);
     }
   }

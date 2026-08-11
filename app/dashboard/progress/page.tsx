@@ -213,7 +213,14 @@ export default function ProgressPage() {
   };
 
   const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any, hssUsed?: { credits: number }): CourseCategory => {
-    if (enrollment.isPassFail) return "FE";
+    const passFailCode = enrollment.course.code.toUpperCase();
+    const passFailNormalizedCode = normalizeCode(passFailCode);
+    const passFailHssIks =
+      passFailNormalizedCode.startsWith("HS") ||
+      /^IK\d/.test(passFailNormalizedCode) ||
+      passFailNormalizedCode === "IC181" ||
+      passFailNormalizedCode === "IC182";
+    if (enrollment.isPassFail && !passFailHssIks) return "FE";
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
 
@@ -732,7 +739,7 @@ export default function ProgressPage() {
 
     // Free Electives are capped at the programme requirement. Courses beyond
     // that cap remain visible in the transcript, but do not inflate the degree
-    // total, percentage, or remaining-credit calculation.
+    // total, percentage or remaining-credit calculation.
     const feRequired = Math.max(0, Number(creditsRequiredByCategory.FE ?? 0));
     creditsByCategory.FE = minCredits(feRequired, creditsByCategory.FE);
     const feStillNeeded = Math.max(0, subtractCredits(feRequired, creditsByCategory.FE));
@@ -801,7 +808,7 @@ export default function ProgressPage() {
         };
       }
 
-      // Check for branch-mapping-defined splits (e.g. 12.45308: 3cr DC + 1.66cr FE)
+      // Check for branch-mapping-defined splits (e.g. 12.45308: 3cr DC + 1.67cr FE)
       const mapping = pickRelevantBranchMapping(user?.branch, e.course.branchMappings);
       if (mapping?.splitCategory && mapping.splitAmount != null && mapping.splitAmount > 0) {
         const mainCr = subtractCredits(e.course.credits, mapping.splitAmount);

@@ -2,7 +2,7 @@ import prisma from "../lib/prisma";
 
 // Group 1: Strip page number artifacts + clean names
 const GROUP1_FIXES: Record<string, string> = {
-  "AR-501": "Robot Kinematics, Dynamics, and Control",
+  "AR-501": "Robot Kinematics, Dynamics and Control",
   "BE-401": "Bioengineering Mini Project, Term Paper and Seminar",
   "CE-510": "Modelling and Simulation in Water Resources Engineering",
   "CE-605": "Engineering Seismology and Seismic Hazard Assessment",
@@ -20,7 +20,7 @@ const GROUP1_FIXES: Record<string, string> = {
   "EE-553": "Foundations of Intelligent Communication Systems-I",
   "EE-630": "HVDC Transmission and Flexible AC Transmission Systems",
   "GE-522": "Entrepreneurship and Technology Commercialization",
-  "GE-523": "Startup Framework: Finance, Valuation, and Structure",
+  "GE-523": "Startup Framework: Finance, Valuation and Structure",
   "HS-263": "Popular Culture in Modern India: A Historical Perspective",
   "HS-503": "German Literature from World War II to Reunification",
   "HS-555": "Infrastructural Development in Highland South Asia",
@@ -73,7 +73,7 @@ async function main() {
   // ── AR-501 special: also upsert ME-452 with same name + credits ─────────
   const ar501 = await prisma.course.findUnique({ where: { code: "AR-501" } });
   if (ar501) {
-    const me452Name = "Robot Kinematics, Dynamics, and Control";
+    const me452Name = "Robot Kinematics, Dynamics and Control";
     const existing = await prisma.course.findUnique({ where: { code: "ME-452" } });
     if (existing) {
       await prisma.course.update({

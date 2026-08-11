@@ -8,7 +8,7 @@ import { PrismaClient, CourseCategoryType } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const hannoverDescription =
-  "Available via Semester Exchange (Leibniz University Hannover) only. Can be taken in Semester 5, 6, or 7.";
+  "Available via Semester Exchange (Leibniz University Hannover) only. Can be taken in Semester 5, 6 or 7.";
 
 const hannoverEECourses: {
   code: string;

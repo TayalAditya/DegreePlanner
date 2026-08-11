@@ -84,7 +84,7 @@ export function DashboardNav({ user }: DashboardNavProps) {
   const isAcadSecUser = ACAD_SEC_EMAILS.has((user.email ?? "").toLowerCase());
 
   // Acad-sec accounts only manage pre-reg plans — hide Users, Announcements,
-  // Course Mappings, and Inbox. Full ADMINs see everything.
+  // Course Mappings and Inbox. Full ADMINs see everything.
   const acadSecNavigation = adminNavigation.filter(
     (item) => item.href === "/dashboard/admin/pre-registration/plans"
   );

@@ -23,12 +23,12 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@napi-rs/canvas": "^0.1.89",
     "@auth/prisma-adapter": "^2.7.4",
     "@hookform/resolvers": "^3.9.1",
+    "@napi-rs/canvas": "^0.1.89",
     "@prisma/client": "^6.19.2",
     "@tanstack/react-query": "^5.62.14",
-    "@vercel/analytics": "^1.6.1",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.6.1",
     "@vercel/speed-insights": "^2.0.0",
     "date-fns": "^4.1.0",

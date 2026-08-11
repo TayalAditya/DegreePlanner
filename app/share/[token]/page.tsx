@@ -85,8 +85,15 @@ function resolveCourseCategory(
 ): CategoryKey {
   const courseCode = enrollment.course?.code ?? "";
 
-  // P/F and internship courses always satisfy Free Electives on shared profiles.
-  if (enrollment.isPassFail || enrollment.isInternship || /39[69]P$/i.test(courseCode)) return "FE";
+  const normalizedCode = courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const isHssIks =
+    normalizedCode.startsWith("HS") ||
+    /^IK\d/.test(normalizedCode) ||
+    normalizedCode === "IC181" ||
+    normalizedCode === "IC182";
+  // P/F uses a separate allowance. HSS/IKS P/F courses remain in the combined
+  // HSS+IKS basket, while internships are always Free Electives.
+  if ((enrollment.isPassFail && !isHssIks) || enrollment.isInternship || /39[69]P$/i.test(courseCode)) return "FE";
 
   // Table-first resolution via the shared resolver (lib/courseCategory.ts).
   const base = resolveBaseCategory(

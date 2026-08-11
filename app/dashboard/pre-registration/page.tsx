@@ -251,24 +251,29 @@ const PF_APPROVAL_CATS = new Set(["DE"]);
 function RegTypeSelector({
   id,
   category,
+  hssIksSource = false,
   regType,
   pfBudgetRemaining,
   onChange,
 }: {
   id: string;
   category: string;
+  hssIksSource?: boolean;
   regType: RegType;
   pfBudgetRemaining: number;
   onChange: (id: string, type: RegType) => void;
 }) {
   const [open, setOpen] = useState(false);
 
-  const allowPF = PF_FREE_CATS.has(category) || PF_APPROVAL_CATS.has(category);
+  const allowPF = hssIksSource || PF_FREE_CATS.has(category) || PF_APPROVAL_CATS.has(category);
   const isCore = !allowPF; // DC, IC, MTP, ISTP
 
   const options: { value: RegType; label: string }[] = [
     { value: "REGULAR", label: "Regular" },
-    ...(allowPF ? [{ value: "PASS_FAIL" as RegType, label: "Pass/Fail → FE" }] : []),
+    ...(allowPF ? [{
+      value: "PASS_FAIL" as RegType,
+      label: hssIksSource ? "Pass/Fail · HSS+IKS" : "Pass/Fail → FE",
+    }] : []),
     { value: "AUDIT", label: "Audit" },
   ];
 
@@ -321,8 +326,10 @@ function RegTypeSelector({
                     {opt.value === "REGULAR" && "Counts toward degree normally"}
                     {opt.value === "PASS_FAIL" &&
                       (pfExhausted
-                        ? `P/F budget exhausted (${PF_TOTAL} cr used)`
-                        : `Counts as FE, not ${CATEGORY_LABEL[category] ?? category} · ${pfBudgetRemaining} cr P/F remaining`)}
+                        ? "P/F budget exhausted (" + PF_TOTAL + " cr used)"
+                        : hssIksSource
+                          ? "Uses P/F allowance · counts toward your degree only through the " + HSS_IKS_DEGREE_CAP + " cr HSS+IKS cap · " + pfBudgetRemaining + " cr P/F remaining"
+                          : "Counts as FE, not " + (CATEGORY_LABEL[category] ?? category) + " · " + pfBudgetRemaining + " cr P/F remaining")}
                     {opt.value === "PASS_FAIL" && PF_APPROVAL_CATS.has(category) &&
                       <><br />Requires faculty & FA approval</>}
                     {opt.value === "AUDIT" && "Appears on transcript · does not count toward degree"}
@@ -370,6 +377,7 @@ function CourseCard({
   const normalizedCourseCode = offering.courseCode.replace(/[^A-Z0-9]/gi, "");
   const slotLabel = offering.slots || (/(?:396P|399P|498P)$/i.test(normalizedCourseCode) ? "NS" : null);
   const effectiveCategory = displayCategory ?? (offering.resolvedCategory === "IKS" ? "HSS" : offering.resolvedCategory);
+  const isHssIksSource = offering.resolvedCategory === "HSS" || offering.resolvedCategory === "IKS";
   const catColor = CATEGORY_COLOR[effectiveCategory] ?? "bg-surface-secondary text-foreground-secondary";
   const catLabel = CATEGORY_LABEL[effectiveCategory] ?? effectiveCategory;
 
@@ -431,6 +439,7 @@ function CourseCard({
             <RegTypeSelector
               id={offering.id}
               category={effectiveCategory}
+              hssIksSource={isHssIksSource}
               regType={regType ?? "REGULAR"}
               pfBudgetRemaining={pfBudgetRemaining ?? 0}
               onChange={onRegTypeChange}
@@ -456,7 +465,7 @@ function CourseCard({
           </p>
         )}
 
-        {categoryReason && !isCompleted && regType !== "PASS_FAIL" && regType !== "AUDIT" && (
+        {categoryReason && !isCompleted && regType !== "AUDIT" && (
           <p className={`mt-1 flex items-center gap-1 text-xs ${
             effectiveCategory === "NOT_IN_DEGREE" || categoryReason.includes("not counted")
               ? "text-warning"
@@ -479,7 +488,9 @@ function CourseCard({
         {checked && !isCompulsory && !isCompleted && regType === "PASS_FAIL" && (
           <p className="mt-1 text-xs text-accent flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" />
-            P/F counts toward FE{effectiveCategory === "FE" ? "." : `, not ${catLabel}.`}
+            {isHssIksSource
+              ? "P/F uses your P/F allowance. This HSS+IKS course counts toward your degree only within the " + HSS_IKS_DEGREE_CAP + " cr combined cap."
+              : "P/F counts toward FE" + (effectiveCategory === "FE" ? "." : ", not " + catLabel + ".")}
             {PF_APPROVAL_CATS.has(effectiveCategory) && " DE as P/F also requires faculty & FA approval."}
           </p>
         )}
@@ -1123,10 +1134,10 @@ export default function PreRegistrationPage() {
       }
     }
 
-    const isRegularHssIks = (offering: Offering) =>
+    const isDegreeHssIks = (offering: Offering) =>
       offering.completedInSemester === null &&
       (offering.resolvedCategory === "HSS" || offering.resolvedCategory === "IKS") &&
-      (regTypes.get(offering.id) ?? "REGULAR") === "REGULAR";
+      (regTypes.get(offering.id) ?? "REGULAR") !== "AUDIT";
     const allocateHssIks = (offering: Offering, before: number): EffectiveOfferingCategory => {
       const after = before + offering.credits;
       const hssCredits = Math.max(0, Math.min(hssCoreCap, after) - Math.min(hssCoreCap, before));
@@ -1156,16 +1167,16 @@ export default function PreRegistrationPage() {
       return { category, reason, allocations };
     };
 
-    // Use completed HSS+IKS credits plus the currently selected regular courses.
+    // Use completed HSS+IKS credits plus the selected regular and P/F courses.
     // A course that crosses 20 credits is split exactly rather than making the
     // whole course look like it counts (or does not count).
     let hssIksUsed = data.hssIksCreditsCompleted ?? (completed.HSS ?? 0);
     const selectedById = new Map(data.offerings.map((offering) => [offering.id, offering]));
     const selectedHssIks = [
-      ...data.offerings.filter((offering) => offering.isCompulsory && isRegularHssIks(offering)),
+      ...data.offerings.filter((offering) => offering.isCompulsory && isDegreeHssIks(offering)),
       ...Array.from(selected)
         .map((id) => selectedById.get(id))
-        .filter((offering): offering is Offering => Boolean(offering) && !offering!.isCompulsory && isRegularHssIks(offering!)),
+        .filter((offering): offering is Offering => Boolean(offering) && !offering!.isCompulsory && isDegreeHssIks(offering!)),
     ];
     for (const offering of selectedHssIks) {
       map.set(offering.id, allocateHssIks(offering, hssIksUsed));
@@ -1180,7 +1191,7 @@ export default function PreRegistrationPage() {
         if (!map.has(offering.id)) {
           map.set(
             offering.id,
-            isRegularHssIks(offering)
+            isDegreeHssIks(offering)
               ? allocateHssIks(offering, hssIksUsed)
               : { category: "HSS" },
           );
@@ -1231,13 +1242,12 @@ export default function PreRegistrationPage() {
         add("AUDIT", o.credits);
         continue;
       }
-      // Every P/F course consumes only the Free Elective basket, irrespective
-      // of whether its regular classification is HSS, IKS or DE.
       const effective = effectiveOfferingCategories.get(o.id);
-      const cat = registrationType === "PASS_FAIL"
+      const isHssIks = o.resolvedCategory === "HSS" || o.resolvedCategory === "IKS";
+      const cat = registrationType === "PASS_FAIL" && !isHssIks
         ? "FE"
         : effective?.category ?? (o.resolvedCategory === "IKS" ? "HSS" : o.resolvedCategory);
-      const allocations = registrationType === "REGULAR" ? effective?.allocations : undefined;
+      const allocations = isHssIks ? effective?.allocations : undefined;
       if (allocations && allocations.length > 0) {
         for (const allocation of allocations) add(allocation.category, allocation.credits);
       } else {
@@ -1266,12 +1276,13 @@ export default function PreRegistrationPage() {
       if (!offering.isCompulsory && !selected.has(offering.id)) continue;
       const registrationType = regTypes.get(offering.id) ?? "REGULAR";
       const effective = effectiveOfferingCategories.get(offering.id);
-      const category = registrationType === "PASS_FAIL"
+      const isHssIks = offering.resolvedCategory === "HSS" || offering.resolvedCategory === "IKS";
+      const category = registrationType === "PASS_FAIL" && !isHssIks
         ? "FE"
         : registrationType === "AUDIT"
           ? "AUDIT"
           : effective?.category ?? (offering.resolvedCategory === "IKS" ? "HSS" : offering.resolvedCategory);
-      const notInDegreeCredits = registrationType === "REGULAR"
+      const notInDegreeCredits = registrationType !== "AUDIT" && isHssIks
         ? (effective?.allocations ?? [])
             .filter((allocation) => allocation.category === "NOT_IN_DEGREE")
             .reduce((sum, allocation) => sum + allocation.credits, 0)
@@ -1284,7 +1295,7 @@ export default function PreRegistrationPage() {
         instructor: offering.instructor,
         slots: offering.slots,
         category,
-        categoryReason: registrationType === "REGULAR" ? effective?.reason : undefined,
+        categoryReason: registrationType !== "AUDIT" && isHssIks ? effective?.reason : undefined,
         degreeCredits: registrationType === "AUDIT" ? 0 : offering.credits - notInDegreeCredits,
         notInDegreeCredits,
         registrationType,
@@ -1699,7 +1710,7 @@ export default function PreRegistrationPage() {
                 <h2 className="text-base font-semibold text-foreground">Your course history is incomplete</h2>
                 <p className="text-sm text-foreground-secondary mt-1">
                   You won&apos;t be able to see your course registration correctly without adding your past courses —
-                  compulsory courses, credit limits, and what&apos;s already done won&apos;t show up right.
+                  compulsory courses, credit limits and what&apos;s already done won&apos;t show up right.
                 </p>
               </div>
             </div>
@@ -2383,7 +2394,7 @@ export default function PreRegistrationPage() {
                     const isAudit = course.registrationType === "AUDIT";
                     const isCompulsory = data?.offerings.find((o) => o.id === course.id)?.isCompulsory ?? false;
                     const type = course.registrationType === "PASS_FAIL"
-                      ? "P/F → FE"
+                      ? "P/F · " + (CATEGORY_LABEL[course.category] ?? course.category)
                       : isAudit
                         ? "Audit · not in degree"
                         : `Regular · ${CATEGORY_LABEL[course.category] ?? course.category}`;
@@ -2407,7 +2418,7 @@ export default function PreRegistrationPage() {
                               className="w-full rounded border border-border bg-surface px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                             >
                               <option value="REGULAR">Regular · {CATEGORY_LABEL[course.category] ?? course.category}</option>
-                              <option value="PASS_FAIL">P/F → FE</option>
+                              <option value="PASS_FAIL">{"P/F · " + (CATEGORY_LABEL[course.category] ?? course.category)}</option>
                               <option value="AUDIT">Audit · not in degree</option>
                             </select>
                           )}

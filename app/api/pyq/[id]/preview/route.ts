@@ -113,7 +113,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     }
     if (!isPreviewablePyqMimeType(paper.mimeType)) {
       return NextResponse.json(
-        { error: "This legacy file type cannot be safely previewed. Please ask an administrator to re-upload it as a PDF, JPG, or PNG." },
+        { error: "This legacy file type cannot be safely previewed. Please ask an administrator to re-upload it as a PDF, JPG or PNG." },
         { status: 415 }
       );
     }

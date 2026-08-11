@@ -145,7 +145,7 @@ export function MaintenanceScreen({ endsAt, message }: MaintenanceScreenProps) {
               onChange={(event) => setFeedback(event.target.value)}
               maxLength={2000}
               rows={3}
-              placeholder="Feature request, issue, or a small suggestion..."
+              placeholder="Feature request, issue or a small suggestion..."
               className="mt-4 w-full resize-none rounded-xl border border-white/15 bg-black/20 px-3 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
             <div className="mt-3 flex items-center justify-between gap-3">

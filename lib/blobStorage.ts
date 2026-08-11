@@ -28,7 +28,7 @@ export function isBlobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);
 }
 
-/** Validate a file's size and type. Returns an error message, or null if valid. */
+/** Validate a file's size and type. Returns an error message or null if valid. */
 export function validateUploadFile(file: File): string | null {
   if (file.size > MAX_FILE_SIZE) {
     return "File too large. Maximum size is 10MB";

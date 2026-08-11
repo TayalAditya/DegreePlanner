@@ -229,7 +229,7 @@ export default function SupportPage() {
       <div className="bg-surface rounded-2xl border border-border p-6 sm:p-8">
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Support & Feedback</h1>
         <p className="text-foreground-secondary mt-2">
-          Contact us, suggest improvements, or report issues — directly inside the app.
+          Contact us, suggest improvements or report issues — directly inside the app.
         </p>
         {supportEmail && (
           <p className="text-sm text-foreground-secondary mt-3">

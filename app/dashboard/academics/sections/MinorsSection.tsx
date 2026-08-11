@@ -96,7 +96,7 @@ export default function MinorsSection() {
             <div>
               <p className="font-semibold text-sm mb-2">Electives (2 courses):</p>
               <p className="text-xs text-muted-foreground">
-                Choose from Financial Accounting, Organisational Behaviour, Consumer Behaviour, Financial Management, Entrepreneurship, and more
+                Choose from Financial Accounting, Organisational Behaviour, Consumer Behaviour, Financial Management, Entrepreneurship and more
               </p>
             </div>
           </div>
@@ -108,14 +108,14 @@ export default function MinorsSection() {
             <div>
               <p className="font-semibold text-sm mb-2">Compulsory (2 courses):</p>
               <ul className="text-sm space-y-1 text-muted-foreground">
-                <li>• AR 501/ME 452: Robot Kinematics, Dynamics, and Control</li>
+                <li>• AR 501/ME 452: Robot Kinematics, Dynamics and Control</li>
                 <li>• AR 503: Mechatronics</li>
               </ul>
             </div>
             <div>
               <p className="font-semibold text-sm mb-2">Electives (2 out of 14):</p>
               <p className="text-xs text-muted-foreground">
-                Advanced Design, Robot Programming, Principles of Robot Autonomy, Cognitive Robotics, Probabilistic Robotics, Deep Learning for Robotics, Autonomous Mobile Robots, and more
+                Advanced Design, Robot Programming, Principles of Robot Autonomy, Cognitive Robotics, Probabilistic Robotics, Deep Learning for Robotics, Autonomous Mobile Robots and more
               </p>
             </div>
           </div>
@@ -130,7 +130,7 @@ export default function MinorsSection() {
         <div className="space-y-2 text-sm">
           <p><strong>Mandatory Foundation (1 of 2):</strong> QT 301 or QT 302/PH 513/EP 301</p>
           <p><strong>Mandatory Lab (1 of 2):</strong> QT 303P or QT 304P/QT 501P</p>
-          <p><strong>Mandatory Advanced (1 of 4):</strong> Quantum Computation, Communication, Sensing, or Materials</p>
+          <p><strong>Mandatory Advanced (1 of 4):</strong> Quantum Computation, Communication, Sensing or Materials</p>
           <p><strong>Optional:</strong> Engineering Foundation, Solid State Physics, Quantum Optics, Post Quantum Security</p>
         </div>
       </div>

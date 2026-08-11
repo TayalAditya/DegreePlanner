@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "Degree Planner - Plan Your Academic Journey",
-  description: "Comprehensive degree planning tool with course tracking, credit calculation, and progress visualization",
+  description: "Comprehensive degree planning tool with course tracking, credit calculation and progress visualization",
   manifest: "/manifest.json",
   icons: {
     icon: [

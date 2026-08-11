@@ -57,7 +57,7 @@ export function validatePyqUploadFile(file: File): string | null {
     return "File too large. Maximum size is 10MB";
   }
   if (!PYQ_ALLOWED_FILE_TYPES.includes(file.type as (typeof PYQ_ALLOWED_FILE_TYPES)[number])) {
-    return "Invalid file type. Question papers must be PDF, JPG, or PNG files.";
+    return "Invalid file type. Question papers must be PDF, JPG or PNG files.";
   }
   return null;
 }

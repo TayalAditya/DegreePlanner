@@ -156,7 +156,7 @@ export async function POST(
   if (isPassFail) {
     if (!isInternshipCourse && !["FE", "HSS", "IKS", "DE"].includes(detectedCategory)) {
       return NextResponse.json(
-        { error: "Pass/Fail is only available for Free Electives, HSS/IKS, and Discipline Electives" },
+        { error: "Pass/Fail is only available for Free Electives, HSS/IKS and Discipline Electives" },
         { status: 400 }
       );
     }

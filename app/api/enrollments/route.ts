@@ -10,6 +10,7 @@ import {
 import { loadDashboardEnrollments } from "@/lib/enrollmentsQuery";
 import { courseIdentityKey } from "@/lib/courseIdentity";
 import { getBranchCandidates, getProgramLookupBranchCode } from "@/lib/branchInfo";
+import { pickBranchMapping } from "@/lib/courseCategory";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
 import {
@@ -182,6 +183,13 @@ export async function POST(request: NextRequest) {
         credits: true,
         isBranchSpecific: true,
         isPassFailEligible: true,
+        branchMappings: {
+          select: {
+            courseCategory: true,
+            branch: true,
+            batch: true,
+          },
+        },
       },
     });
 
@@ -251,6 +259,17 @@ export async function POST(request: NextRequest) {
 
     const normalizedCourseCode = normalizeCourseCode(course.code);
     const semesterNumber = typeof semester === "string" ? parseInt(semester, 10) : Number(semester);
+    const mappedCategory = pickBranchMapping(
+      course.branchMappings,
+      user.branch ?? undefined,
+      user.batch
+    )?.courseCategory;
+    const isHssIksSource =
+      mappedCategory === "HSS" ||
+      mappedCategory === "IKS" ||
+      /^(HS|IK)/.test(normalizedCourseCode) ||
+      normalizedCourseCode === "IC181" ||
+      normalizedCourseCode === "IC182";
 
     const isDpIstp = normalizedCourseCode === "DP301P";
     const isDpMtp1 = isMtp1CourseCode(normalizedCourseCode);
@@ -273,8 +292,10 @@ export async function POST(request: NextRequest) {
     const is399PCourse = isOnsiteSemesterInternshipCourse(course.code);
     const finalIsPassFail =
       isInternshipCourse ||
-      (finalCourseType === CourseType.FREE_ELECTIVE ? Boolean(isPassFail) : false);
-    if (isInternshipCourse) finalCourseType = CourseType.FREE_ELECTIVE;
+      ((finalCourseType === CourseType.FREE_ELECTIVE || isHssIksSource) ? Boolean(isPassFail) : false);
+    if (isInternshipCourse || (finalIsPassFail && isHssIksSource)) {
+      finalCourseType = CourseType.FREE_ELECTIVE;
+    }
 
     const exclusivity = await validateOnsiteInternshipExclusivity(
       session.user.id,
@@ -295,10 +316,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate P/F course enrollment (FE only)
-    if (isPassFail && !isInternshipCourse && finalCourseType !== CourseType.FREE_ELECTIVE) {
+    // HSS/IKS P/F uses the P/F allowance and follows the shared HSS+IKS 20-credit cap.
+    if (
+      isPassFail &&
+      !isInternshipCourse &&
+      !isHssIksSource &&
+      finalCourseType !== CourseType.FREE_ELECTIVE
+    ) {
       return NextResponse.json(
-        { error: "Only Free Electives can be taken as Pass/Fail" },
+        { error: "Pass/Fail is available only for Free Electives and HSS+IKS courses" },
         { status: 400 }
       );
     }

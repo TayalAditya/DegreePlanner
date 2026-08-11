@@ -120,7 +120,7 @@ const HSS_FE_CAP = 20;
 // Split one course's credits across the HSS+IKS buckets given how much of the
 // combined basket is already used. Returns the portion that satisfies the HSS
 // core requirement (0–coreCap), the portion that spills into Free Elective
-// (coreCap–HSS_FE_CAP), and the portion drained out of the degree (>HSS_FE_CAP).
+// (coreCap–HSS_FE_CAP) and the portion drained out of the degree (>HSS_FE_CAP).
 // `used` is advanced by the caller to (before + hss + fe); notInDegree does NOT
 // advance it — but since it only ever occurs once used has reached HSS_FE_CAP,
 // the running total effectively stops at the cap either way.
@@ -227,7 +227,14 @@ export function ProgressChart({
   };
 
   const getCourseCategory = (enrollment: any, icBasketUsed?: any, branch?: string, hssUsed?: { credits: number }): keyof typeof categoryCredits => {
-    if (enrollment.isPassFail) return "FE";
+    const passFailCode = enrollment.course?.code?.toUpperCase() || "";
+    const passFailNormalizedCode = passFailCode.replace(/[^A-Z0-9]/g, "");
+    const passFailHssIks =
+      passFailNormalizedCode.startsWith("HS") ||
+      /^IK\d/.test(passFailNormalizedCode) ||
+      passFailNormalizedCode === "IC181" ||
+      passFailNormalizedCode === "IC182";
+    if (enrollment.isPassFail && !passFailHssIks) return "FE";
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course?.code ?? "")) return "FE";
 
@@ -408,17 +415,14 @@ export function ProgressChart({
       const code = String(e.course?.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
       const credits = e.course?.credits || 0;
 
-      // Check for branch-mapping-defined splits (e.g. 12.45308: 3cr DC + 1.66cr FE)
+      // Check for branch-mapping-defined splits (e.g. 12.45308: 3cr DC + 1.67cr FE)
       const mappings: any[] = e.course?.branchMappings || [];
       if (mappings.length > 0 && userBranch) {
-        const rawBranch = String(userBranch).trim().toUpperCase();
-        const aliasList = getBranchCandidates(rawBranch).filter((b) => b !== "COMMON");
-        const candidates = [rawBranch, ...aliasList, "COMMON"];
-        let splitMapping: any = null;
-        for (const c of candidates) {
-          const m = mappings.find((m: any) => m.branch === c && (!m.batch || m.batch === ""));
-          if (m) { splitMapping = m; break; }
-        }
+        const splitMapping = pickBranchMapping(
+          mappings as BranchMapping[],
+          userBranch,
+          userBatch
+        );
         if (splitMapping?.splitCategory && splitMapping.splitAmount != null && splitMapping.splitAmount > 0) {
           const mainCr = subtractCredits(credits, splitMapping.splitAmount);
           const mainCat = splitMapping.courseCategory in categoryCredits ? splitMapping.courseCategory : "FE";
@@ -538,7 +542,7 @@ export function ProgressChart({
       }
       bucket.total = addCredits(bucket.total, c);
       switch (category) {
-        // Split "core" into IC (institute core + basket), DC, and HSS+IKS so the
+        // Split "core" into IC (institute core + basket), DC and HSS+IKS so the
         // remaining breakdown can show each separately instead of one clubbed row.
         case "IC":
         case "IC_BASKET":
@@ -577,23 +581,11 @@ export function ProgressChart({
 
       const mappings: any[] = e.course?.branchMappings || [];
       if (mappings.length > 0 && userBranch) {
-        const rawBranch = String(userBranch).trim().toUpperCase();
-        const aliasList = getBranchCandidates(rawBranch).filter((branch) => branch !== "COMMON");
-        const candidates = [rawBranch, ...aliasList, "COMMON"];
-        let splitMapping: any = null;
-        for (const c of candidates) {
-          const batchSpecific = mappings.find((m: any) => m.branch === c && userBatch && m.batch === String(userBatch));
-          if (batchSpecific) {
-            splitMapping = batchSpecific;
-            break;
-          }
-
-          const global = mappings.find((m: any) => m.branch === c && (!m.batch || m.batch === ""));
-          if (global) {
-            splitMapping = global;
-            break;
-          }
-        }
+        const splitMapping = pickBranchMapping(
+          mappings as BranchMapping[],
+          userBranch,
+          userBatch
+        );
 
         if (splitMapping?.splitCategory && splitMapping.splitAmount != null && splitMapping.splitAmount > 0) {
           const mainCr = subtractCredits(credits, splitMapping.splitAmount);

@@ -66,6 +66,8 @@ export async function GET(req: NextRequest) {
       branch: true,
       batch: true,
       courseCategory: true,
+      splitCategory: true,
+      splitAmount: true,
       course: { select: { code: true } },
     },
   });
@@ -82,12 +84,25 @@ export async function GET(req: NextRequest) {
 
   const batchYear = userBatch ? Number(userBatch) : null;
   const categoriesByCode: Record<string, string> = {};
+  const splitsByCode: Record<
+    string,
+    { category: string; splitCategory: string; splitAmount: number }
+  > = {};
 
   for (const [code, list] of mappingsByCode) {
     const best = pickBranchMapping(list, requestedBranch, batchYear);
     if (!best) continue;
     const uiCategory = toUiCategory(best.courseCategory as CourseCategoryType);
     categoriesByCode[code] = uiCategory === "IKS" && /^IK\d/.test(code) ? "FE" : uiCategory;
+
+    const splitAmount = Number(best.splitAmount ?? 0);
+    if (best.splitCategory && splitAmount > 0) {
+      splitsByCode[code] = {
+        category: categoriesByCode[code],
+        splitCategory: toUiCategory(best.splitCategory as CourseCategoryType),
+        splitAmount,
+      };
+    }
   }
 
   return NextResponse.json({
@@ -95,5 +110,6 @@ export async function GET(req: NextRequest) {
     batch: userBatch,
     candidates,
     categoriesByCode,
+    splitsByCode,
   });
 }

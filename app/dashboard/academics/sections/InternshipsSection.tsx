@@ -44,7 +44,7 @@ export default function InternshipsSection() {
             <p className="font-semibold">Course Code: DP-396P</p>
             <p><strong>Credits:</strong> 6 P/F (Free Electives)</p>
             <p><strong>Duration:</strong> Minimum 14 weeks</p>
-            <p><strong>Semesters:</strong> 6th, 7th, or 8th</p>
+            <p><strong>Semesters:</strong> 6th, 7th or 8th</p>
             <p><strong>Courses Allowed:</strong> Max 9 credits alongside</p>
             <div className="mt-4 p-3 rounded-lg bg-accent/10 dark:bg-accent/15 border border-border/60">
               <p className="font-semibold">Requirements:</p>

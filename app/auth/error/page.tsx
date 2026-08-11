@@ -24,7 +24,7 @@ function AuthErrorContent() {
     },
     batch_not_supported: {
       title: "Batch Not Supported",
-      description: "Currently, we're operating for Batch 2023, all of Batch 2025, and supported sets of Batch 2022/2024 students. We might expand to other batches later. Please check back soon!",
+      description: "Currently, we're operating for Batch 2023, all of Batch 2025 and supported sets of Batch 2022/2024 students. We might expand to other batches later. Please check back soon!",
     },
     domain_not_allowed: {
       title: "Email Domain Not Allowed",

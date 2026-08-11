@@ -55,7 +55,7 @@ export async function POST(_req: NextRequest) {
   // Arbitrary URLs cannot be protected: the source owner controls them and a
   // direct redirect would reintroduce downloads. QPs must use /api/pyq/upload.
   return NextResponse.json(
-    { error: "Direct links are disabled. Upload a PDF, JPG, or PNG through the protected upload endpoint." },
+    { error: "Direct links are disabled. Upload a PDF, JPG or PNG through the protected upload endpoint." },
     { status: 405, headers: { Allow: "GET" } }
   );
 }

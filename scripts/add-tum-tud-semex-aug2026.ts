@@ -9,9 +9,9 @@ import { CourseCategoryType, PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const tumDescription =
-  "Available via Semester Exchange (TU Munich) only. Can be taken in Semester 5, 6, or 7.";
+  "Available via Semester Exchange (TU Munich) only. Can be taken in Semester 5, 6 or 7.";
 const tuDarmstadtDescription =
-  "Available via Semester Exchange (TU Darmstadt) only. Can be taken in Semester 5, 6, or 7.";
+  "Available via Semester Exchange (TU Darmstadt) only. Can be taken in Semester 5, 6 or 7.";
 
 const tumCseDisciplineElectives = [
   { code: "CIT423004", name: "Robust Machine Learning", credits: 2 },

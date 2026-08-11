@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     if (!courseId || !branch || !courseCategory) {
       return NextResponse.json(
-        { error: "courseId, branch, and courseCategory are required" },
+        { error: "courseId, branch and courseCategory are required" },
         { status: 400 }
       );
     }

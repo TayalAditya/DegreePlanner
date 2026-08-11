@@ -1,8 +1,8 @@
 // fix-mevlsi-b25-prereg.ts
 // Two fixes for MEVLSI B25 (2025) pre-registration:
-//  1. EE-311 renamed to VL-201 from B25 onwards → remove MEVLSI from EE-311's 2026
-//     offering so B25 MEVLSI students don't see it at all (VL-201 takes its place).
-//     Also drop the stray EE-311 MEVLSI batch="2025" FE mapping.
+//  1. B25 MEVLSI uses EE-311 in semester 3. Ensure its batch mapping is DC/S3
+//     and remove the obsolete batch-specific VL-201 mapping. Offering visibility
+//     is handled in the API because CourseOffering.branches is not batch-scoped.
 //  2. EE-302P (Control Systems Lab) 2026 offering has null slots + null instructor,
 //     so the pre-reg filter (`!slots && !instructor`) hides it. Copy slot/instructor
 //     from the EE-302 theory offering so the compulsory DC lab shows up.
@@ -11,37 +11,24 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  // ── Fix 1: hide EE-311 for MEVLSI (renamed to VL-201 B25 onwards) ──
-  const ee311Off = await prisma.courseOffering.findFirst({
-    where: { offeringYear: 2026, courseCode: "EE-311" },
-    select: { id: true, branches: true },
-  });
-  if (ee311Off) {
-    if (ee311Off.branches.includes("MEVLSI")) {
-      const newBranches = ee311Off.branches.filter((b) => b !== "MEVLSI");
-      await prisma.courseOffering.update({
-        where: { id: ee311Off.id },
-        data: { branches: newBranches },
-      });
-      console.log(`UPDATED EE-311 offering: removed MEVLSI from branches`);
-    } else {
-      console.log(`OK      EE-311 offering already excludes MEVLSI`);
-    }
-  } else {
-    console.log(`SKIP    no EE-311 2026 offering`);
-  }
-
-  // Drop stray EE-311 MEVLSI batch="2025" FE mapping (from earlier attempt)
-  const ee311 = await prisma.course.findFirst({ where: { code: "EE-311" } });
+  // ── Fix 1: B25 MEVLSI uses EE-311, not VL-201 ──
+  const [ee311, vl201] = await Promise.all([
+    prisma.course.findFirst({ where: { code: "EE-311" } }),
+    prisma.course.findFirst({ where: { code: "VL-201" } }),
+  ]);
   if (ee311) {
-    const where = { courseId_branch_batch: { courseId: ee311.id, branch: "MEVLSI", batch: "2025" } };
-    const stray = await prisma.courseBranchMapping.findUnique({ where });
-    if (stray) {
-      await prisma.courseBranchMapping.delete({ where });
-      console.log(`DELETED stray EE-311 MEVLSI batch="2025" (${stray.courseCategory}) mapping`);
-    } else {
-      console.log(`OK      no stray EE-311 MEVLSI batch="2025" mapping`);
-    }
+    await prisma.courseBranchMapping.upsert({
+      where: { courseId_branch_batch: { courseId: ee311.id, branch: "MEVLSI", batch: "2025" } },
+      create: { courseId: ee311.id, branch: "MEVLSI", batch: "2025", courseCategory: "DC", semester: 3 },
+      update: { courseCategory: "DC", semester: 3 },
+    });
+    console.log(`OK      EE-311 MEVLSI batch="2025" is DC semester 3`);
+  }
+  if (vl201) {
+    const removed = await prisma.courseBranchMapping.deleteMany({
+      where: { courseId: vl201.id, branch: "MEVLSI", batch: { in: ["2025", "B25"] } },
+    });
+    console.log(`REMOVED ${removed.count} obsolete B25 VL-201 mapping(s)`);
   }
 
   // ── Fix 2: give EE-302P a slot + instructor so pre-reg shows it ──

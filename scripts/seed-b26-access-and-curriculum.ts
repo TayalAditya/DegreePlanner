@@ -38,7 +38,7 @@ type ProgramSpec = {
 };
 
 // These five degree-credit distributions differ from their historic generic
-// records, or represent a programme introduced with B26.
+// records or represent a programme introduced with B26.
 const B26_PROGRAMS: ProgramSpec[] = [
   {
     code: "CSE_B26",

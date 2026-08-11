@@ -300,7 +300,7 @@ export async function POST(req: NextRequest) {
         if (requestedPassFail && !isInternshipCourse && !passFailEligibleCategories.has(rawType)) {
           errors.push({
             courseCode,
-            error: "P/F is available only for Free Electives, HSS+IKS, or Discipline Electives.",
+            error: "P/F is available only for Free Electives, HSS+IKS or Discipline Electives.",
           });
           continue;
         }

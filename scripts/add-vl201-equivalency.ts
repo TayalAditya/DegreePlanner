@@ -1,7 +1,7 @@
 // add-vl201-equivalency.ts
 // 1. Ensure VL-201 exists in DB
 // 2. Create bidirectional equivalency: EE-311 ↔ VL-201
-// 3. Add DC branch mapping for VL-201 → MEVLSI B25 sem=3
+// B25 MEVLSI curriculum mapping is intentionally handled separately and uses recoded VL-201.
 // Run: npx tsx scripts/add-vl201-equivalency.ts
 import { PrismaClient } from "@prisma/client";
 
@@ -51,32 +51,9 @@ async function main() {
     }
   }
 
-  // 3. B25 MEVLSI sem=3 DC mappings: VL-201, EE-212, EE-212P
-  //    (base mappings have these at sem=4; B25 moves them to sem=3)
-  const b25Sem3Mappings: Array<{ code: string; courseId?: string }> = [
-    { code: "VL-201" },
-    { code: "EE-212" },
-    { code: "EE-212P" },
-  ];
-
-  for (const entry of b25Sem3Mappings) {
-    const course = await prisma.course.findFirst({ where: { code: entry.code } });
-    if (!course) {
-      console.log(`  SKIP  ${entry.code} — not found in DB`);
-      continue;
-    }
-    const existing = await prisma.courseBranchMapping.findUnique({
-      where: { courseId_branch_batch: { courseId: course.id, branch: "MEVLSI", batch: "B25" } },
-    });
-    if (!existing) {
-      await prisma.courseBranchMapping.create({
-        data: { courseId: course.id, branch: "MEVLSI", batch: "B25", courseCategory: "DC", semester: 3 },
-      });
-      console.log(`CREATED mapping ${entry.code} MEVLSI B25 DC sem=3`);
-    } else {
-      console.log(`OK      mapping ${entry.code} MEVLSI B25 already exists (${existing.courseCategory} sem=${existing.semester})`);
-    }
-  }
+  // B25 curriculum mappings are intentionally not managed here. EE-311 and
+  // VL-201 remain equivalent for completion/progress purposes, while the
+  // cohort-specific compulsory course is maintained by fix-mevlsi-b25-ee311.ts.
 
   console.log("\nDone.");
 }

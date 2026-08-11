@@ -367,7 +367,6 @@ export async function GET() {
   const hssIksCreditsCompleted = completed
     .filter((enrollment) =>
       enrollment.grade !== "F" &&
-      !enrollment.isPassFail &&
       isHssIksCourse(enrollment.course.code, batch)
     )
     .reduce((sum, enrollment) => sum + enrollment.course.credits, 0);
@@ -388,16 +387,18 @@ export async function GET() {
       for (const e of completed) {
         if (e.grade === "F") continue;
         const cr = e.course.credits;
-        // P/F always uses the FE basket; it must not consume the HSS+IKS cap.
-        if (e.isPassFail) {
-          add("FE", cr);
-          continue;
-        }
         const code = e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
         const mapping = pickBranchMapping(e.course.branchMappings, normalizedBranch, batch);
 
         // IK-xxx, IC-181, IC-182 → HSS+IKS combined basket
         const isHssIks = isHssIksCourse(code, batch);
+        // P/F still consumes the student's P/F allowance. When the course is
+        // HSS/IKS, it must also consume the shared HSS+IKS capacity so the
+        // client can show the exact degree-counting and excluded portions.
+        if (e.isPassFail && !isHssIks) {
+          add("FE", cr);
+          continue;
+        }
         let cat = isHssIks ? "HSS" :
           (mapping?.courseCategory ??
             (code.startsWith("HS") ? "HSS" : code.startsWith("IC") ? "IC" : "FE"));

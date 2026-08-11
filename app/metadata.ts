@@ -15,7 +15,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "Degree Planner - Plan Your Academic Journey",
   description:
-    "Comprehensive degree planning tool with course tracking, credit calculation, timetable management, and progress visualization",
+    "Comprehensive degree planning tool with course tracking, credit calculation, timetable management and progress visualization",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

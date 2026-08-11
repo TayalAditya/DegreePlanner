@@ -10,7 +10,7 @@ import { PrismaClient, CourseCategoryType } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const rwthDescription =
-  "Available via Semester Exchange (RWTH Aachen) only. Can be taken in Semester 5, 6, or 7.";
+  "Available via Semester Exchange (RWTH Aachen) only. Can be taken in Semester 5, 6 or 7.";
 
 const courses = [
   { code: "81.0008_5", name: "Entrepreneurship 101 - Thinking & Acting Like an Entrepreneur 2" },

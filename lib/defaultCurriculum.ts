@@ -1717,7 +1717,7 @@ const applyBatchOverrides = (
         );
       }
       case 2: {
-        // B26: IC113 and IC102P are in Sem-2; IC114, IC140, and the
+        // B26: IC113 and IC102P are in Sem-2; IC114, IC140 and the
         // first-semester IKS/HSS choices are not. Preserve ICB/DC rows.
         const retained = courses.filter((course) =>
           course.category === "ICB" || course.category === "DC"

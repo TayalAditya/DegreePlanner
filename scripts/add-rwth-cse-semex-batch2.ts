@@ -1,6 +1,6 @@
 /**
  * RWTH Aachen — additional Semester Exchange courses (CSE branch).
- * Adds new courses + CourseBranchMapping for CSE, and reconciles a couple of
+ * Adds new courses + CourseBranchMapping for CSE and reconciles a couple of
  * existing courses' names.
  * Run: npx tsx scripts/add-rwth-cse-semex-batch2.ts
  */
@@ -9,7 +9,7 @@ import { PrismaClient, CourseCategoryType } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const rwthDescription =
-  "Available via Semester Exchange (RWTH Aachen) only. Can be taken in Semester 5, 6, or 7.";
+  "Available via Semester Exchange (RWTH Aachen) only. Can be taken in Semester 5, 6 or 7.";
 
 // New courses. The 81.0008 Entrepreneurship modules share one base code at RWTH
 // but are distinct courses, so we suffix _1.._8 to keep unique course codes.

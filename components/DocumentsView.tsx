@@ -740,7 +740,7 @@ function EditDocumentModal({
           <div>
             <h2 className="text-lg font-bold text-foreground">Edit Document</h2>
             <p className="text-sm text-foreground-secondary mt-1">
-              Update title, category, visibility, or the URL/embed link.
+              Update title, category, visibility or the URL/embed link.
             </p>
           </div>
           <button
@@ -885,7 +885,7 @@ function AddLinkModal({
           <div>
             <h2 className="text-lg font-bold text-foreground">Add Document</h2>
             <p className="text-sm text-foreground-secondary mt-1">
-              Upload a file (PDF, Word, or image) or paste a Google Drive / YouTube / Canva link to embed.
+              Upload a file (PDF, Word or image) or paste a Google Drive / YouTube / Canva link to embed.
             </p>
           </div>
           <button
@@ -943,7 +943,7 @@ function AddLinkModal({
                   {file.name} — {(file.size / (1024 * 1024)).toFixed(2)} MB
                 </p>
               )}
-              <p className="mt-1 text-xs text-foreground-secondary">Max 10MB. PDF, Word, or image files.</p>
+              <p className="mt-1 text-xs text-foreground-secondary">Max 10MB. PDF, Word or image files.</p>
             </div>
           ) : (
             <div>

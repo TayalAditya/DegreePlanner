@@ -26,7 +26,7 @@ const SEM_INLINE_RE = /\b([1-8])\s*SEMESTER\b/i;
 const CREDITS_RE = /\b([1-9](?:\.\d)?)\b/;
 
 function normalizeTextForParsing(text: string): string {
-  // Normalise line endings, and lightly stitch common OCR line breaks inside course codes.
+  // Normalise line endings and lightly stitch common OCR line breaks inside course codes.
   // This is especially common in screenshots where the "IC-" part wraps to the next line.
   const normalized = text.replace(/\r\n?/g, "\n");
 
@@ -88,7 +88,7 @@ export function parseTranscriptText(text: string): DetectedCourse[] {
       continue;
     }
 
-    // If we have a pending prefix, and the current line begins with a 3-digit token (optionally with a suffix),
+    // If we have a pending prefix and the current line begins with a 3-digit token (optionally with a suffix),
     // reconstruct the full code.
     let synthesizedCode: string | null = null;
     if (pendingPrefix && i <= pendingPrefixExpiresAt) {

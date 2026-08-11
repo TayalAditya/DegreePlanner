@@ -2,7 +2,7 @@
 // Introduce CS-304 as a compulsory Semester-5 DC for Batch-24 (2024) MNC students.
 //
 // Context: CS-304 only had an MNC mapping for batch="2023" (DC, sem 4). B24 MNC
-// pre-registers for sem 5, and for a B24 student the batch="2023" mapping scores a
+// pre-registers for sem 5 and for a B24 student the batch="2023" mapping scores a
 // 1000 penalty in pickCategory → CS-304 falls back to FE and never shows as a
 // compulsory DC. B24's curriculum places CS-304 in sem 5, so add a B24-specific
 // MNC mapping (batch="2024", DC, semester=5). The offering already has

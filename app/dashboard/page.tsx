@@ -163,7 +163,7 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <p className="mt-3 text-sm text-foreground-secondary">
-            Review your courses, credits, and current-semester plan.
+            Review your courses, credits and current-semester plan.
           </p>
         )}
       </header>
