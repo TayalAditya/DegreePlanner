@@ -136,6 +136,9 @@ model Course {
   name               String
   credits            Float
   department         String
+  /// Optional admin-defined catalogue grouping. When empty, the catalogue
+  /// derives a school from the course code and department as before.
+  catalogSection     String?
   level              Int
   description        String?
   offeredInFall      Boolean               @default(false)
@@ -163,6 +166,7 @@ model Course {
 
   @@index([code])
   @@index([department])
+  @@index([catalogSection])
 }
 
 model CourseEquivalent {

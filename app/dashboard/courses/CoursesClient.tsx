@@ -30,6 +30,7 @@ interface Course {
   name: string;
   credits: number;
   department: string;
+  catalogSection?: string | null;
   level: number;
   description?: string;
   offeredInFall: boolean;
@@ -74,6 +75,12 @@ interface ProjectRequirements {
   mtp: number;
 }
 
+interface CourseCategorySplit {
+  category: string;
+  splitCategory: string;
+  splitAmount: number;
+}
+
 type RegistrationType = "REGULAR" | "PASS_FAIL" | "AUDIT";
 
 // Color scheme for each category
@@ -89,6 +96,43 @@ const categoryColors = {
   ISTP: { bg: "bg-accent/10", text: "text-accent", bar: "bg-accent", border: "border-accent/20" },
   NOT_IN_DEGREE: { bg: "bg-foreground-muted/10", text: "text-foreground-muted", bar: "bg-foreground-muted", border: "border-foreground-muted/20" },
 };
+
+function CourseCategoryBadges({
+  category,
+  credits,
+  split,
+  compact = false,
+}: {
+  category: string;
+  credits: number;
+  split?: CourseCategorySplit;
+  compact?: boolean;
+}) {
+  const normalizedCategory = category === "ICB" ? "IC_BASKET" : category;
+  const mainColors = categoryColors[normalizedCategory as keyof typeof categoryColors];
+  if (!mainColors) return null;
+
+  const className = compact
+    ? "px-2.5 py-1 rounded font-medium text-xs"
+    : "px-3 py-1 rounded font-medium text-xs";
+  const mainCredits = split ? subtractCredits(credits, split.splitAmount) : credits;
+  const splitColors = split
+    ? categoryColors[(split.splitCategory === "ICB" ? "IC_BASKET" : split.splitCategory) as keyof typeof categoryColors]
+    : null;
+
+  return (
+    <>
+      <span className={`${className} ${mainColors.bg} ${mainColors.text}`}>
+        {category}{split ? ` · ${formatCredits(mainCredits)} Cr` : ""}
+      </span>
+      {split && splitColors && (
+        <span className={`${className} ${splitColors.bg} ${splitColors.text}`}>
+          {split.splitCategory} · {formatCredits(split.splitAmount)} Cr
+        </span>
+      )}
+    </>
+  );
+}
 
 const DEPARTMENT_PAGE_SIZE = 20;
 
@@ -109,7 +153,7 @@ type SchoolKey =
   | "LUH" // Leibniz University Hannover (Semester Exchange)
   | "OTHER";
 
-type SchoolFilter = "all" | SchoolKey;
+type SchoolFilter = "all" | string;
 
 const SCHOOL_META: Record<SchoolKey, { label: string; order: number; prefixes: string[] }> = {
   SCEE: {
@@ -169,6 +213,35 @@ function getCourseSchoolKey(course: Pick<Course, "code" | "department">): School
   return "OTHER";
 }
 
+type CatalogSection = {
+  key: string;
+  label: string;
+  order: number;
+  shortLabel: string;
+};
+
+function getCourseCatalogSection(course: Pick<Course, "code" | "department" | "catalogSection">): CatalogSection {
+  const customSection = course.catalogSection?.trim();
+  if (customSection) {
+    return {
+      key: `custom:${customSection.toLocaleLowerCase()}`,
+      label: customSection,
+      shortLabel: customSection,
+      // Keep explicitly-administered sections before the catch-all but after
+      // the established school order. Their name remains the source of truth.
+      order: 99.5,
+    };
+  }
+
+  const schoolKey = getCourseSchoolKey(course);
+  return {
+    key: schoolKey,
+    label: SCHOOL_META[schoolKey].label,
+    shortLabel: schoolKey,
+    order: SCHOOL_META[schoolKey].order,
+  };
+}
+
 interface CoursesClientProps {
   initialEnrollments?: Enrollment[];
   initialUser?: User | null;
@@ -189,6 +262,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   const [programId, setProgramId] = useState<string | null>(initialProgramId ?? null);
   const [projectRequirements, setProjectRequirements] = useState<ProjectRequirements | null>(null);
   const [dbCourseCategoryMap, setDbCourseCategoryMap] = useState<Map<string, string>>(new Map());
+  const [dbCourseSplitMap, setDbCourseSplitMap] = useState<Map<string, CourseCategorySplit>>(new Map());
   const [allCourses, setAllCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(!hasInitialData);
   const [searchQuery, setSearchQuery] = useState("");
@@ -273,6 +347,8 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
         const data = await res.json();
         const entries = Object.entries(data?.categoriesByCode ?? {}) as Array<[string, string]>;
         setDbCourseCategoryMap(new Map(entries));
+        const splitEntries = Object.entries(data?.splitsByCode ?? {}) as Array<[string, CourseCategorySplit]>;
+        setDbCourseSplitMap(new Map(splitEntries));
       } catch (err: any) {
         if (err?.name === "AbortError") return;
         console.warn("Failed to load course category map:", err);
@@ -282,6 +358,12 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     loadCourseCategoryMap();
     return () => controller.abort();
   }, [tab, user?.branch]);
+
+  const resolvedUserBatch = (() => {
+    if (typeof user?.batch === "number" && user.batch > 2000) return user.batch;
+    const match = /B(\d{2})/i.exec(String(user?.enrollmentId || ""));
+    return match ? 2000 + parseInt(match[1], 10) : null;
+  })();
 
   const loadData = async () => {
     try {
@@ -309,22 +391,20 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     }
   };
 
-  const schoolCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
+  const schoolOptions = useMemo(() => {
+    const sections = new Map<string, CatalogSection & { count: number }>();
     for (const course of allCourses) {
-      const key = getCourseSchoolKey(course);
-      counts[key] = (counts[key] ?? 0) + 1;
+      const section = getCourseCatalogSection(course);
+      const existing = sections.get(section.key);
+      sections.set(section.key, {
+        ...section,
+        count: (existing?.count ?? 0) + 1,
+      });
     }
-    return counts;
+    return Array.from(sections.values()).sort((a, b) =>
+      a.order - b.order || a.label.localeCompare(b.label)
+    );
   }, [allCourses]);
-
-  const schoolOptions = useMemo(
-    () =>
-      SCHOOL_ORDER
-        .map((key) => ({ key, label: SCHOOL_META[key].label, count: schoolCounts[key] ?? 0 }))
-        .filter((o) => o.count > 0),
-    [schoolCounts]
-  );
 
   const normalizeCourseCodeForSearch = (text: string) =>
     text.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -344,7 +424,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       normalizeCourseCodeForSearch(course.code).includes(searchNormalized) ||
       course.name.toLowerCase().includes(searchLower) ||
       course.department.toLowerCase().includes(searchLower);
-    const matchesDept = selectedDept === "all" || getCourseSchoolKey(course) === selectedDept;
+    const matchesDept = selectedDept === "all" || getCourseCatalogSection(course).key === selectedDept;
 
     // Category filter: check against the branch-specific category map
     let matchesCategory = true;
@@ -358,23 +438,23 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   }), [allCourses, searchLower, searchNormalized, selectedDept, selectedCategories, dbCourseCategoryMap]);
 
   const departmentGroups = useMemo(() => {
-    const bySchool: Record<string, Course[]> = {};
+    const bySchool = new Map<string, { section: CatalogSection; courses: Course[] }>();
     for (const course of filteredCourses) {
       // Internship courses are shown in the dedicated section above — skip them here
       const normCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
       if (normCode.endsWith("399P") || normCode.endsWith("396P")) continue;
-      const key = getCourseSchoolKey(course);
-      const list = bySchool[key] ?? [];
-      list.push(course);
-      bySchool[key] = list;
+      const section = getCourseCatalogSection(course);
+      const group = bySchool.get(section.key) ?? { section, courses: [] };
+      group.courses.push(course);
+      bySchool.set(section.key, group);
     }
 
-    return SCHOOL_ORDER
-      .filter((key) => (bySchool[key]?.length ?? 0) > 0)
-      .map((key) => ({
-        dept: key,
-        label: SCHOOL_META[key].label,
-        courses: (bySchool[key] ?? []).sort((a, b) => a.code.localeCompare(b.code)),
+    return Array.from(bySchool.values())
+      .sort((a, b) => a.section.order - b.section.order || a.section.label.localeCompare(b.section.label))
+      .map(({ section, courses }) => ({
+        dept: section.key,
+        label: section.label,
+        courses: courses.sort((a, b) => a.code.localeCompare(b.code)),
       }));
   }, [filteredCourses]);
 
@@ -498,24 +578,23 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     enrollment: Enrollment,
     icBasketUsed?: { ic1: boolean; ic2: boolean }
   ): string => {
-    if (enrollment.isPassFail) return "FE";
-    // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
-    if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
-
     const code = enrollment.course.code.toUpperCase();
     const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     const isIkCourse = /^IK\d/.test(normalizedCode);
+    const isHssIksCourse =
+      normalizedCode.startsWith("HS") ||
+      isIkCourse ||
+      normalizedCode === "IC181" ||
+      normalizedCode === "IC182";
+
+    // P/F uses its own allowance. HSS/IKS P/F courses remain in the combined
+    // HSS+IKS basket so that only the portion beyond 20 credits is excluded.
+    if (enrollment.isPassFail && !isHssIksCourse) return "FE";
+    // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches.
+    if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
 
     // Hard overrides (batch-sensitive)
-    const inferredBatch = (() => {
-      const batch = user?.batch;
-      if (typeof batch === "number" && batch > 2000) return batch;
-      const enrollmentId = String(user?.enrollmentId || "").toUpperCase();
-      const match = /B(\d{2})/i.exec(enrollmentId);
-      if (match) return 2000 + parseInt(match[1], 10);
-      return null;
-    })();
-    const usesIc182AsIks = inferredBatch != null && inferredBatch >= 2024;
+    const usesIc182AsIks = resolvedUserBatch != null && resolvedUserBatch >= 2024;
 
     if (normalizedCode === "IK593") return "HSS"; // IK-xxx → HSS+IKS basket
     if (normalizedCode === "IC181") return "HSS"; // IC-181 → HSS+IKS basket
@@ -546,10 +625,11 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
         return "IC_BASKET";
       }
 
-      const branchCandidates = getBranchCandidates(user.branch);
-      const mapping = branchCandidates
-        .map((branch) => enrollment.course.branchMappings?.find((candidate) => candidate.branch === branch))
-        .find(Boolean);
+      const mapping = pickBranchMapping(
+        enrollment.course.branchMappings as BranchMapping[],
+        user.branch,
+        resolvedUserBatch
+      );
       if (mapping?.courseCategory === "DC") return "DC";
       if (mapping?.courseCategory === "DE") return "DE";
       return "FE";
@@ -561,7 +641,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       const mapping = pickBranchMapping(
         enrollment.course.branchMappings as BranchMapping[],
         user.branch,
-        inferredBatch
+        resolvedUserBatch
       );
 
       if (mapping) {
@@ -640,10 +720,11 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       .sort((a, b) => a.semester - b.semester)
       .forEach((e) => {
         if (user?.branch && e.course.branchMappings && e.course.branchMappings.length > 0) {
-          const branchCandidates = getBranchCandidates(user.branch);
-          const mapping = branchCandidates
-            .map((b) => e.course.branchMappings?.find((m) => m.branch === b))
-            .find(Boolean);
+          const mapping = pickBranchMapping(
+            e.course.branchMappings as BranchMapping[],
+            user.branch,
+            resolvedUserBatch
+          );
           if (mapping?.splitCategory && mapping?.splitAmount != null && mapping.splitAmount > 0) {
             const mainCr = subtractCredits(e.course.credits, mapping.splitAmount);
             const mainCat = mapping.courseCategory in credits ? mapping.courseCategory : "FE";
@@ -685,7 +766,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
   }, [enrollments, projectRequirements?.de, user?.branch, user?.batch, user?.enrollmentId]);
 
   // Calculate HSS+IKS credits already completed (for cap check).
-  // Includes HS-xxx, IC-181, IC-182 (B24+), and IK-xxx — matching creditCalculator's addHssCredits logic.
+  // Includes HS-xxx, IC-181, IC-182 (B24+) and IK-xxx — matching creditCalculator's addHssCredits logic.
   const hssCreditsCompleted = useMemo(() => {
     const inferredBatch = (() => {
       const b = user?.batch; if (typeof b === "number" && b > 2000) return b;
@@ -719,10 +800,11 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       .sort((a, b) => a.semester - b.semester)
       .forEach((e) => {
         if (user?.branch && e.course.branchMappings && e.course.branchMappings.length > 0) {
-          const branchCandidates = getBranchCandidates(user.branch);
-          const mapping = branchCandidates
-            .map((b) => e.course.branchMappings?.find((m) => m.branch === b))
-            .find(Boolean);
+          const mapping = pickBranchMapping(
+            e.course.branchMappings as BranchMapping[],
+            user.branch,
+            resolvedUserBatch
+          );
           if (mapping?.splitCategory && mapping?.splitAmount != null && mapping.splitAmount > 0) {
             const mainCat = mapping.courseCategory || "FE";
             splits.set(e.id, {
@@ -906,11 +988,11 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
       const isAudit = registrationType === "AUDIT" && !addingIsSemesterInternship;
       const passFailSourceCategory = getPassFailSourceCategory(addingCourse, courseType);
       if (isPassFail && !addingIsSemesterInternship && !passFailSourceCategory) {
-        showToast("error", "Pass/Fail is only available for Free Electives, HSS/IKS, and Discipline Electives.");
+        showToast("error", "Pass/Fail is only available for Free Electives, HSS/IKS and Discipline Electives.");
         return;
       }
-      // P/F courses always consume the Free Elective basket, regardless of the
-      // category they would have used under regular grading.
+      // P/F consumes the P/F allowance. Its academic category is retained so
+      // HSS/IKS P/F courses can be capped at 20 credits by the shared calculator.
       if (isPassFail) finalCourseType = "FREE_ELECTIVE";
 
       const response = await fetch("/api/enrollments", {
@@ -1202,7 +1284,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                                       {enrollment.term} {enrollment.year}
                                     </span>
                                     <span className="px-2 py-1 bg-surface-hover rounded">
-                                      {SCHOOL_META[getCourseSchoolKey(enrollment.course)].label}
+                                      {getCourseCatalogSection(enrollment.course).label}
                                     </span>
                                   </div>
                                   {(() => {
@@ -1318,10 +1400,10 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
               </div>
               <select
                 value={selectedDept}
-                onChange={(e) => setSelectedDept(e.target.value as SchoolFilter)}
+                onChange={(e) => setSelectedDept(e.target.value)}
                 className="px-6 py-3 bg-surface border-2 border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary text-foreground font-medium shadow-sm transition-all cursor-pointer min-w-[200px]"
               >
-                <option value="all">All Schools ({schoolOptions.length})</option>
+                <option value="all">All Sections ({schoolOptions.length})</option>
                 {schoolOptions.map((opt) => (
                   <option key={opt.key} value={opt.key}>
                     {opt.label}
@@ -1414,13 +1496,13 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
 
                           <div className="flex flex-wrap items-center gap-2 text-sm">
                         {(() => {
-                          const schoolKey = getCourseSchoolKey(course);
+                          const section = getCourseCatalogSection(course);
                           return (
                             <span
-                              title={SCHOOL_META[schoolKey].label}
+                              title={section.label}
                               className="px-3 py-1 bg-surface-hover rounded font-medium text-foreground"
                             >
-                              {schoolKey}
+                              {section.shortLabel}
                             </span>
                           );
                         })()}
@@ -1428,12 +1510,12 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                           const normalizedCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
                           const cat = dbCourseCategoryMap.get(normalizedCode);
                           if (!cat) return null;
-                          const colors = categoryColors[cat as keyof typeof categoryColors];
-                          if (!colors) return null;
                           return (
-                            <span className={`px-3 py-1 rounded font-medium text-xs ${colors.bg} ${colors.text}`}>
-                              {cat}
-                            </span>
+                            <CourseCategoryBadges
+                              category={cat}
+                              credits={course.credits}
+                              split={dbCourseSplitMap.get(normalizedCode)}
+                            />
                           );
                         })()}
                         <span className="px-3 py-1 bg-surface-hover rounded text-foreground-secondary">
@@ -1580,12 +1662,13 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                                             const normalizedCode = course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
                                             const cat = dbCourseCategoryMap.get(normalizedCode);
                                             if (!cat) return null;
-                                            const colors = categoryColors[cat as keyof typeof categoryColors];
-                                            if (!colors) return null;
                                             return (
-                                              <span className={`px-2.5 py-1 rounded font-medium text-xs ${colors.bg} ${colors.text}`}>
-                                                {cat}
-                                              </span>
+                                              <CourseCategoryBadges
+                                                category={cat}
+                                                credits={course.credits}
+                                                split={dbCourseSplitMap.get(normalizedCode)}
+                                                compact
+                                              />
                                             );
                                           })()}
                                           {enrolledCourseIds.has(course.id) ? (
@@ -1797,7 +1880,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                       {formatCredits(addingCourse.credits)} Credits
                     </span>
                     <span className="px-2 py-1 bg-surface text-foreground-secondary text-sm rounded">
-                      {SCHOOL_META[getCourseSchoolKey(addingCourse)].label}
+                      {getCourseCatalogSection(addingCourse).label}
                     </span>
                   </div>
                 </div>
@@ -2019,6 +2102,17 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                       const rawCat = dbCourseCategoryMap.get(normalizedCode);
                       if (rawCat && catMeta[rawCat]) {
                         const { label, color } = catMeta[rawCat];
+                        const split = dbCourseSplitMap.get(normalizedCode);
+                        const splitMeta = split ? catMeta[split.splitCategory] : null;
+                        if (split && splitMeta) {
+                          return (
+                            <span>
+                              → Will count as <span className={`font-semibold ${color}`}>{label} ({formatCredits(subtractCredits(addingCourse.credits, split.splitAmount))} cr)</span>
+                              {" + "}
+                              <span className={`font-semibold ${splitMeta.color}`}>{splitMeta.label} ({formatCredits(split.splitAmount)} cr)</span>
+                            </span>
+                          );
+                        }
                         return <span>→ Will count as <span className={`font-semibold ${color}`}>{label}</span></span>;
                       }
 
@@ -2058,10 +2152,12 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                               <p className="text-xs text-error mt-1">No other course can be enrolled in the same semester.</p>
                             ) : passFailSourceCategory ? (
                               <p className="text-xs text-success mt-1">
-                                {passFailSourceCategory} P/F will count as a Free Elective.
+                                {passFailSourceCategory === "HSS" || passFailSourceCategory === "IKS"
+                                  ? "P/F uses your P/F allowance and counts toward the degree only within the 20-credit HSS+IKS cap."
+                                  : passFailSourceCategory + " P/F will count as a Free Elective."}
                               </p>
                             ) : (
-                              <p className="text-xs text-foreground-secondary mt-1">P/F is available only for Free Electives, HSS/IKS, and Discipline Electives.</p>
+                              <p className="text-xs text-foreground-secondary mt-1">P/F is available only for Free Electives, HSS/IKS and Discipline Electives.</p>
                             )}
                           </div>
                           <label className="inline-flex items-center gap-2">

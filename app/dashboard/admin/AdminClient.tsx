@@ -1,10 +1,12 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
+import Link from "next/link";
 import {
   Users, Search, TrendingUp, GraduationCap, Megaphone, Plus, X,
   ChevronDown, ChevronRight, CheckCircle2, Clock, LogIn, ShieldCheck, ShieldX,
+  ClipboardList, GitBranch, Inbox, Power, Settings2, ArrowUpRight, Bell, BookOpen,
 } from "lucide-react";
 import { UserProgramModal } from "@/components/UserProgramModal";
 import { addCredits, formatCredits } from "@/lib/utils";
@@ -268,6 +270,135 @@ interface LoginAttemptsResponse {
 
 const PAGE_SIZE = 50;
 
+type MaintenanceStatus = {
+  active: boolean;
+  endsAt: string | null;
+  message: string | null;
+  canManage: boolean;
+};
+
+function OperationsPanel({ onAnnounce }: { onAnnounce: () => void }) {
+  const { data: maintenance, isLoading } = useQuery<MaintenanceStatus>({
+    queryKey: ["maintenance-status"],
+    queryFn: async () => {
+      const res = await fetch("/api/maintenance");
+      if (!res.ok) throw new Error("Could not load maintenance status");
+      return res.json();
+    },
+    staleTime: 30_000,
+  });
+
+  const controls = [
+    {
+      title: "Pre-registration",
+      description: "Review saved course plans across the open semesters.",
+      href: "/dashboard/admin/pre-registration/plans",
+      icon: ClipboardList,
+      tone: "text-info bg-info/10 border-info/20",
+    },
+    {
+      title: "Course setup",
+      description: "Create catalogue courses, basket rules and registration offerings.",
+      href: "/dashboard/admin/courses",
+      icon: BookOpen,
+      tone: "text-accent bg-accent/10 border-accent/20",
+    },
+    {
+      title: "Course mappings",
+      description: "Set branch and batch-specific credit categories.",
+      href: "/dashboard/course-mappings",
+      icon: GitBranch,
+      tone: "text-primary bg-primary/10 border-primary/20",
+    },
+    {
+      title: "Inbox",
+      description: "Resolve support, feedback and category-change requests.",
+      href: "/dashboard/inbox",
+      icon: Inbox,
+      tone: "text-success bg-success/10 border-success/20",
+    },
+    {
+      title: "Announcements",
+      description: "Publish, edit or remove student-facing updates.",
+      href: "/dashboard/admin/announcements",
+      icon: Bell,
+      tone: "text-warning bg-warning/10 border-warning/20",
+    },
+  ];
+
+  const maintenanceLabel = isLoading
+    ? "Checking access…"
+    : maintenance?.active && maintenance.endsAt
+      ? `Active until ${new Date(maintenance.endsAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}`
+      : "Normal access is active";
+
+  return (
+    <section className="rounded-2xl border border-border bg-surface p-4 sm:p-5 space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4 text-primary" />
+            <h2 className="font-semibold text-foreground">Operations</h2>
+          </div>
+          <p className="mt-1 text-sm text-foreground-secondary">
+            Configure academic data, communicate updates and handle student requests from one place.
+          </p>
+        </div>
+        <button
+          onClick={onAnnounce}
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 transition-opacity"
+        >
+          <Plus className="w-4 h-4" />
+          New announcement
+        </button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {controls.map(({ title, description, href, icon: Icon, tone }) => (
+          <Link
+            key={href}
+            href={href}
+            className="group rounded-xl border border-border bg-background p-4 transition-colors hover:border-primary/40 hover:bg-surface-hover"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <span className={`inline-flex rounded-lg border p-2 ${tone}`}><Icon className="w-4 h-4" /></span>
+              <ArrowUpRight className="w-4 h-4 text-foreground-secondary transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+            </div>
+            <p className="mt-3 text-sm font-semibold text-foreground">{title}</p>
+            <p className="mt-1 text-xs leading-5 text-foreground-secondary">{description}</p>
+          </Link>
+        ))}
+      </div>
+
+      <div className={`flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${
+        maintenance?.active ? "border-warning/30 bg-warning/10" : "border-border bg-background"
+      }`}>
+        <div className="flex min-w-0 items-start gap-3">
+          <span className={`mt-0.5 inline-flex rounded-lg p-2 ${maintenance?.active ? "bg-warning/15 text-warning" : "bg-surface-hover text-foreground-secondary"}`}>
+            <Power className="w-4 h-4" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Maintenance window</p>
+            <p className="mt-0.5 text-xs text-foreground-secondary">{maintenanceLabel}</p>
+          </div>
+        </div>
+        {maintenance?.canManage ? (
+          <Link
+            href="/dashboard/shutdown"
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover transition-colors"
+          >
+            Manage window <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
+        ) : (
+          <p className="max-w-sm text-xs leading-5 text-foreground-secondary">
+            Maintenance controls are reserved for the documents-admin account. All other admin tools above remain available.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function LoginAttemptsTab() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -275,7 +406,7 @@ function LoginAttemptsTab() {
   const [page, setPage] = useState(1);
 
   // Debounce search input
-  const searchTimerRef = useMemo(() => ({ current: undefined as ReturnType<typeof setTimeout> | undefined }), []);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const handleSearch = useCallback((value: string) => {
     setSearch(value);
     if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
@@ -491,8 +622,9 @@ export default function AdminClient() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Users className="w-6 h-6 text-primary" />
-            Admin
+            Admin control centre
           </h1>
+          <p className="mt-1 text-sm text-foreground-secondary">Manage people, academic setup and student-facing operations.</p>
         </div>
         <button
           onClick={() => setShowAnnounceModal(true)}
@@ -502,6 +634,8 @@ export default function AdminClient() {
           Announce
         </button>
       </div>
+
+      <OperationsPanel onAnnounce={() => setShowAnnounceModal(true)} />
 
       {/* Tabs */}
       <div className="flex gap-1 p-1 bg-surface border border-border rounded-xl w-fit">

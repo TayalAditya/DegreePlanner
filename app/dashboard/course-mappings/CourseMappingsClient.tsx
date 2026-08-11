@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Save, Search, Filter, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 
@@ -43,6 +43,7 @@ const BRANCHES = [
   { code: "CHE", name: "B.Tech Chemical Engineering (B26)" },
   { code: "QS", name: "B.Tech Quantum Science & Engineering (B26)" },
   { code: "AG", name: "B.Tech Agricultural Engineering & Data Analytics (B26)" },
+  { code: "COMMON", name: "All other branches (FE default)" },
 ];
 
 // "" = all batches (default/generic); named years are batch-specific overrides.
@@ -85,18 +86,7 @@ export default function CourseMappingsClient() {
   const [currentPage, setCurrentPage] = useState(1);
   const PAGE_SIZE = 50;
 
-  useEffect(() => {
-    fetchCourses();
-  }, []);
-
-  useEffect(() => {
-    if (selectedBranch) {
-      fetchMappings(selectedBranch, selectedBatch);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedBranch, selectedBatch]);
-
-  const fetchCourses = async () => {
+  const fetchCourses = useCallback(async () => {
     try {
       const res = await fetch("/api/courses");
       const data = await res.json();
@@ -105,9 +95,9 @@ export default function CourseMappingsClient() {
       console.error("Failed to fetch courses:", error);
       showToast("error", "Failed to fetch courses");
     }
-  };
+  }, [showToast]);
 
-  const fetchMappings = async (branch: string, batch: string) => {
+  const fetchMappings = useCallback(async (branch: string, batch: string) => {
     try {
       setLoading(true);
       // Fetch selected batch AND the generic ("") fallback so we can show differences
@@ -127,7 +117,17 @@ export default function CourseMappingsClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    void fetchCourses();
+  }, [fetchCourses]);
+
+  useEffect(() => {
+    if (selectedBranch) {
+      void fetchMappings(selectedBranch, selectedBatch);
+    }
+  }, [selectedBranch, selectedBatch, fetchMappings]);
 
   // When looking up a category for a course in the current view:
   // - If editing a batch-specific view, the batch-specific mapping overrides the generic one.
@@ -176,7 +176,6 @@ export default function CourseMappingsClient() {
       }
     }
     return result;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mappings, selectedBranch, courses]);
 
   const handleCategoryChange = (courseId: string, category: string) => {
@@ -408,7 +407,7 @@ export default function CourseMappingsClient() {
             <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
             <div className="text-blue-800 dark:text-blue-300">
               <strong>Batch override mode — {selectedBatchLabel}.</strong> Changes here only apply to {selectedBatchLabel} students.
-              Rows without a batch-specific mapping fall back to the "All Batches" default (shown in grey).
+              Rows without a batch-specific mapping fall back to the &quot;All Batches&quot; default (shown in grey).
               Rows marked <span className="font-semibold text-blue-600 dark:text-blue-400">↗ override</span> already have a {selectedBatchLabel}-specific mapping.
             </div>
           </div>

@@ -120,6 +120,7 @@ export async function GET(req: NextRequest) {
         name: true,
         credits: true,
         department: true,
+        catalogSection: true,
         level: true,
         description: true,
         offeredInFall: true,
