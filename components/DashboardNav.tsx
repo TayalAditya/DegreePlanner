@@ -26,7 +26,10 @@ import {
   Users,
   Megaphone,
   CalendarCheck,
+  ClipboardList,
+  BookPlus,
   Power,
+  type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
@@ -52,6 +55,48 @@ interface DashboardNavProps {
   };
 }
 
+type NavigationItem = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+};
+
+function NavigationLinks({
+  items,
+  isActiveRoute,
+  onNavigate,
+}: {
+  items: NavigationItem[];
+  isActiveRoute: (href: string) => boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <div className="space-y-1">
+      {items.map((item) => {
+        const Icon = item.icon;
+        const isActive = isActiveRoute(item.href);
+        return (
+          <Link
+            key={item.name}
+            href={item.href}
+            onClick={onNavigate}
+            aria-current={isActive ? "page" : undefined}
+            className={`group relative flex items-center gap-3 overflow-hidden rounded-lg border px-3 py-2.5 text-sm font-medium transition-all duration-200 no-touch:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
+              isActive
+                ? "border-primary/20 bg-primary/10 text-primary"
+                : "border-transparent text-foreground-secondary hover:bg-surface-hover hover:text-foreground"
+            }`}
+          >
+            {isActive && <span className="absolute inset-0 rounded-xl border border-primary/20 bg-primary/10 shadow-sm" aria-hidden="true" />}
+            <Icon className="relative z-10 h-5 w-5 shrink-0" />
+            <span className="relative z-10 truncate">{item.name}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
 export function DashboardNav({ user }: DashboardNavProps) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -73,10 +118,11 @@ export function DashboardNav({ user }: DashboardNavProps) {
   ];
 
   const adminNavigation = [
-    { name: "Users", href: "/dashboard/admin", icon: Users },
-    { name: "Announcements", href: "/dashboard/admin/announcements", icon: Megaphone },
-{ name: "Pre-Reg Plans", href: "/dashboard/admin/pre-registration/plans", icon: Users },
+    { name: "Admin Centre", href: "/dashboard/admin", icon: Users },
+    { name: "Course Setup", href: "/dashboard/admin/courses", icon: BookPlus },
     { name: "Course Mappings", href: "/dashboard/course-mappings", icon: GitBranch },
+    { name: "Pre-Reg Plans", href: "/dashboard/admin/pre-registration/plans", icon: ClipboardList },
+    { name: "Announcements", href: "/dashboard/admin/announcements", icon: Megaphone },
     { name: "Inbox", href: "/dashboard/inbox", icon: Inbox },
     ...(isDocumentsAdmin(user) ? [{ name: "Shutdown", href: "/dashboard/shutdown", icon: Power }] : []),
   ];
@@ -89,15 +135,14 @@ export function DashboardNav({ user }: DashboardNavProps) {
     (item) => item.href === "/dashboard/admin/pre-registration/plans"
   );
 
-  const allNavigation =
-    user.role === "ADMIN"
-      ? [...navigation, ...adminNavigation]
-      : isAcadSecUser
-      ? [...navigation, ...acadSecNavigation]
-      : navigation;
+  const adminToolsNavigation = user.role === "ADMIN"
+    ? adminNavigation
+    : isAcadSecUser
+      ? acadSecNavigation
+      : [];
 
   const isActiveRoute = (href: string) => {
-    if (href === "/dashboard") return pathname === "/dashboard";
+    if (href === "/dashboard" || href === "/dashboard/admin") return pathname === href;
     return pathname.startsWith(href);
   };
 
@@ -179,36 +224,23 @@ export function DashboardNav({ user }: DashboardNavProps) {
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-4 scrollbar-hide flex flex-col gap-4">
-              <>
-                <div className="space-y-1">
-                  {allNavigation.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = isActiveRoute(item.href);
-                    return (
-                   <Link
-                     key={item.name}
-                     href={item.href}
-                     onClick={() => setMobileMenuOpen(false)}
-                     aria-current={isActive ? "page" : undefined}
-                     className={`group relative overflow-hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-                       isActive
-                         ? "text-primary bg-primary/10 border border-primary/20"
-                         : "text-foreground-secondary hover:text-foreground hover:bg-surface-hover border border-transparent"
-                     }`}
-                   >
-                        {isActive && (
-                          <span
-                            className="absolute inset-0 rounded-xl bg-primary/10 border border-primary/20 shadow-sm transition-all duration-150"
-                            aria-hidden="true"
-                          />
-                        )}
-                        <Icon className="w-5 h-5 flex-shrink-0 relative z-10" />
-                        <span className="truncate relative z-10">{item.name}</span>
-                      </Link>
-                    );
-                  })}
+              <NavigationLinks
+                items={navigation}
+                isActiveRoute={isActiveRoute}
+                onNavigate={() => setMobileMenuOpen(false)}
+              />
+              {adminToolsNavigation.length > 0 && (
+                <div className="border-t border-border/60 pt-4">
+                  <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-primary">
+                    Admin tools
+                  </p>
+                  <NavigationLinks
+                    items={adminToolsNavigation}
+                    isActiveRoute={isActiveRoute}
+                    onNavigate={() => setMobileMenuOpen(false)}
+                  />
                 </div>
-              </>
+              )}
 
               {/* Appearance — inside scroll area so it doesn't crowd the footer */}
               <div className="border-t border-border/60 pt-4">
@@ -257,33 +289,15 @@ export function DashboardNav({ user }: DashboardNavProps) {
               <ThemeToggle variant="palette" className="bg-transparent border-0 p-0 shadow-none" />
             </div>
 
-            <div className="space-y-1">
-            {allNavigation.map((item) => {
-              const Icon = item.icon;
-              const isActive = isActiveRoute(item.href);
-              return (
-               <Link
-                   key={item.name}
-                   href={item.href}
-                   aria-current={isActive ? "page" : undefined}
-                   className={`group relative overflow-hidden flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium border transition-all duration-200 no-touch:hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 ${
-                     isActive
-                       ? "text-primary bg-primary/10 border-primary/20"
-                       : "bg-transparent border-transparent text-foreground-secondary hover:text-foreground hover:bg-surface-hover"
-                   }`}
-                 >
-                  {isActive && (
-                    <span
-                      className="absolute inset-0 rounded-xl bg-primary/10 border border-primary/20 shadow-sm transition-all duration-150"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <Icon className="w-5 h-5 flex-shrink-0 relative z-10" />
-                  <span className="truncate relative z-10">{item.name}</span>
-                </Link>
-              );
-            })}
-            </div>
+            <NavigationLinks items={navigation} isActiveRoute={isActiveRoute} />
+            {adminToolsNavigation.length > 0 && (
+              <div className="border-t border-border/60 pt-4">
+                <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-primary">
+                  Admin tools
+                </p>
+                <NavigationLinks items={adminToolsNavigation} isActiveRoute={isActiveRoute} />
+              </div>
+            )}
           </div>
         </>
 
