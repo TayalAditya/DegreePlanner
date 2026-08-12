@@ -127,9 +127,15 @@ export async function PATCH(
       }
     }
 
+    const updateData = user.role === "ADMIN"
+      ? validatedData
+      : Object.fromEntries(
+          Object.entries(validatedData).filter(([key]) => key !== "isPublic" && key !== "isActive")
+        );
+
     const updated = await prisma.venue.update({
       where: { id },
-      data: validatedData,
+      data: updateData,
     });
 
     return NextResponse.json(updated);

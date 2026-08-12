@@ -7,6 +7,7 @@ import {
   Users, Search, TrendingUp, GraduationCap, Megaphone, Plus, X,
   ChevronDown, ChevronRight, CheckCircle2, Clock, LogIn, ShieldCheck, ShieldX,
   ClipboardList, GitBranch, Inbox, Power, Settings2, ArrowUpRight, Bell, BookOpen,
+  CalendarDays, Gauge, MapPinned,
 } from "lucide-react";
 import { UserProgramModal } from "@/components/UserProgramModal";
 import { addCredits, formatCredits } from "@/lib/utils";
@@ -324,6 +325,20 @@ function OperationsPanel({ onAnnounce }: { onAnnounce: () => void }) {
       icon: Bell,
       tone: "text-warning bg-warning/10 border-warning/20",
     },
+    {
+      title: "Schedule control",
+      description: "Add official classes, set venues and approve timetable corrections.",
+      href: "/dashboard/timetable",
+      icon: CalendarDays,
+      tone: "text-info bg-info/10 border-info/20",
+    },
+    {
+      title: "Venue catalogue",
+      description: "Maintain shared classrooms, labs and online locations.",
+      href: "/dashboard/admin/venues",
+      icon: MapPinned,
+      tone: "text-success bg-success/10 border-success/20",
+    },
   ];
 
   const maintenanceLabel = isLoading
@@ -368,6 +383,26 @@ function OperationsPanel({ onAnnounce }: { onAnnounce: () => void }) {
             <p className="mt-1 text-xs leading-5 text-foreground-secondary">{description}</p>
           </Link>
         ))}
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="mt-0.5 inline-flex rounded-lg bg-primary/10 p-2 text-primary">
+            <Gauge className="w-4 h-4" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-foreground">Performance monitoring</p>
+            <p className="mt-0.5 text-xs text-foreground-secondary">Speed Insights is collecting real visitor web-vitals for this deployment.</p>
+          </div>
+        </div>
+        <a
+          href="https://vercel.com/tayaladityas-projects/dp/speed-insights"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-hover transition-colors"
+        >
+          Open Speed Insights <ArrowUpRight className="w-3.5 h-3.5" />
+        </a>
       </div>
 
       <div className={`flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between ${

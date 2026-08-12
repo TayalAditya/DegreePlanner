@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true },
+      select: { id: true, role: true },
     });
 
     if (!user) {
@@ -62,8 +62,12 @@ export async function GET(request: NextRequest) {
     if (building) where.building = building;
     if (isActive !== null) where.isActive = isActive === "true";
     
-    // Filter: public venues OR user's custom venues
-    if (includeCustom) {
+    // Admins need the complete catalogue, including private and inactive venues,
+    // so they can maintain the options used by the shared timetable.
+    if (user.role === "ADMIN") {
+      // No visibility restriction.
+    } else if (includeCustom) {
+      // Students can see public venues and only the private venues they created.
       where.OR = [
         { isPublic: true },
         { createdBy: user.id },
@@ -135,7 +139,10 @@ export async function POST(request: NextRequest) {
     const venue = await prisma.venue.create({
       data: {
         ...validatedData,
-        isCustom: true,
+        // An admin-created venue is a shared catalogue record. Personal venues
+        // stay private even when a non-admin submits the public default.
+        isCustom: user.role !== "ADMIN",
+        isPublic: user.role === "ADMIN" ? validatedData.isPublic : false,
         createdBy: user.id,
       },
     });
