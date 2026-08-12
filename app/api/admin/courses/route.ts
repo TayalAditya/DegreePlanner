@@ -18,7 +18,9 @@ const courseFieldsSchema = z.object({
   credits: z.coerce.number().positive().max(100),
   department: z.string().trim().min(2).max(160),
   catalogSection: nullableText(120),
-  level: z.coerce.number().int().min(0).max(20),
+  // Catalogue levels follow the academic convention (100, 200, 300, 500),
+  // not a semester number. Existing catalogue records already use these values.
+  level: z.coerce.number().int().min(0).max(999),
   description: nullableText(4000),
   ltpc: nullableText(40),
   offeredInFall: z.coerce.boolean().default(false),
