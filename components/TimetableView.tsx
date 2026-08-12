@@ -1013,8 +1013,8 @@ export function TimetableView({ userId }: TimetableViewProps) {
       )}
 
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row justify-between gap-3">
-        <div className="min-w-0">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div className="min-w-0 lg:max-w-sm">
           <p className="text-sm font-semibold text-foreground">
             {context ? `Semester ${context.semester} · ${context.term} ${context.year}` : "Current semester"}
           </p>
@@ -1027,25 +1027,25 @@ export function TimetableView({ userId }: TimetableViewProps) {
           </p>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="min-w-0 space-y-2 lg:w-[min(100%,34rem)]">
           {isAdmin && (
             <button
               type="button"
               onClick={() => setPublishedScheduleMode((current) => !current)}
-              className="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/15 sm:w-auto"
+              className="inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/15"
             >
               <Calendar className="h-4 w-4" />
               {isPublishedSchedule ? "Back to my timetable" : "Manage published timetable"}
             </button>
           )}
 
-          {/* Secondary actions: icon-strip on mobile, full labels on sm+ */}
-          <div className="flex items-center gap-2">
+          {/* Keep the compact, evenly sized action strip until there is room for every label. */}
+          <div className="grid grid-cols-4 gap-2 xl:flex xl:justify-end">
             {/* Calendar add */}
             <button
               onClick={openCalendarPicker}
               disabled={entries.length === 0}
-              className="dp-icon-btn sm:hidden disabled:opacity-50 disabled:cursor-not-allowed"
+              className="dp-icon-btn w-full xl:hidden disabled:opacity-50 disabled:cursor-not-allowed"
               title="Add to Google Calendar"
             >
               <Download className="w-4 h-4" />
@@ -1053,7 +1053,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
             <button
               onClick={openCalendarPicker}
               disabled={entries.length === 0}
-              className="hidden sm:flex px-3 py-2 min-h-[36px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center gap-2 transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="hidden xl:flex px-3 py-2 min-h-[36px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center gap-2 transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Download className="w-4 h-4" />
               Add to Calendar
@@ -1064,7 +1064,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
               <button
                 onClick={handleClearAllCalendar}
                 disabled={clearingCalendar}
-                className="dp-icon-btn text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed sm:hidden"
+                className="dp-icon-btn w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 disabled:cursor-not-allowed xl:hidden"
                 title="Remove all from Google Calendar"
               >
                 {clearingCalendar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -1074,7 +1074,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
               <button
                 onClick={handleClearAllCalendar}
                 disabled={clearingCalendar}
-                className="hidden sm:flex px-3 py-2 min-h-[36px] border border-border rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 items-center gap-2 transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="hidden xl:flex px-3 py-2 min-h-[36px] border border-border rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 items-center gap-2 transition-colors active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {clearingCalendar ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 Remove all
@@ -1084,14 +1084,14 @@ export function TimetableView({ userId }: TimetableViewProps) {
             {/* View toggle */}
             <button
               onClick={() => setView(view === "week" ? "list" : "week")}
-              className="dp-icon-btn md:hidden"
+              className="dp-icon-btn w-full xl:hidden"
               title={view === "week" ? "List View" : "Week View"}
             >
               <Calendar className="w-4 h-4" />
             </button>
             <button
               onClick={() => setView(view === "week" ? "list" : "week")}
-              className="hidden md:flex px-3 py-2 min-h-[36px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center transition-colors active:scale-[0.99]"
+              className="hidden xl:flex px-3 py-2 min-h-[36px] border border-border rounded-xl text-sm font-medium text-foreground-secondary hover:bg-background-secondary items-center transition-colors active:scale-[0.99]"
             >
               {view === "week" ? "List View" : "Week View"}
             </button>
@@ -1108,7 +1108,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
                 setAutofillPickerOpen(true);
               }}
               disabled={!canAutofill || autofillMissingMutation.isPending}
-              className="dp-icon-btn sm:hidden disabled:opacity-60 disabled:cursor-not-allowed text-primary"
+              className="dp-icon-btn w-full xl:hidden disabled:opacity-60 disabled:cursor-not-allowed text-primary"
               title={`Auto-fill missing (${autofillCandidates.length})`}
             >
               {autofillMissingMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
@@ -1124,7 +1124,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
                 setAutofillPickerOpen(true);
               }}
               disabled={!canAutofill || autofillMissingMutation.isPending}
-              className="hidden sm:inline-flex px-3 py-2 min-h-[36px] rounded-xl border border-primary/25 bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/15 transition-colors active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed items-center gap-2"
+              className="hidden xl:inline-flex px-3 py-2 min-h-[36px] rounded-xl border border-primary/25 bg-primary/10 text-primary text-sm font-semibold hover:bg-primary/15 transition-colors active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed items-center gap-2"
             >
               {autofillMissingMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
               Auto-fill ({autofillCandidates.length})
@@ -1132,7 +1132,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
           </div>
 
           {/* Primary actions: always full-width on mobile, auto on sm+ */}
-          <div className="flex gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <button
               onClick={() => {
                 if (!canAddClass) {
@@ -1142,7 +1142,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
                 openAdd();
               }}
               disabled={!canAddClass}
-              className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary-hover flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              className="min-w-0 w-full px-3 py-2 min-h-[44px] bg-primary text-white rounded-xl text-sm font-semibold leading-tight hover:bg-primary-hover flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
               <Plus className="w-4 h-4" />
               {isAdmin && isPublishedSchedule ? "Add any class" : "Add Class"}
@@ -1156,7 +1156,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
                 openAddTADuty();
               }}
               disabled={!canAddTaDuty}
-              className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] border-2 border-primary/50 bg-primary/5 text-primary rounded-xl text-sm font-semibold hover:bg-primary/10 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              className="min-w-0 w-full px-3 py-2 min-h-[44px] border-2 border-primary/50 bg-primary/5 text-primary rounded-xl text-sm font-semibold leading-tight hover:bg-primary/10 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
               <Plus className="w-4 h-4" />
               Add TA Duty
@@ -1170,7 +1170,7 @@ export function TimetableView({ userId }: TimetableViewProps) {
                 openAddPersonalActivity();
               }}
               disabled={!canAddPersonalActivity}
-              className="flex-1 sm:flex-none px-4 py-2 min-h-[44px] border-2 border-cyan-500/45 bg-cyan-500/5 text-cyan-700 dark:text-cyan-300 rounded-xl text-sm font-semibold hover:bg-cyan-500/10 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+              className="min-w-0 w-full px-3 py-2 min-h-[44px] border-2 border-cyan-500/45 bg-cyan-500/5 text-cyan-700 dark:text-cyan-300 rounded-xl text-sm font-semibold leading-tight hover:bg-cyan-500/10 flex items-center justify-center gap-2 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
             >
               <Plus className="w-4 h-4" />
               Add personal activity
