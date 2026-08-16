@@ -546,6 +546,38 @@ export const MINORS: MinorDefinition[] = [
       },
     ],
   },
+  {
+    code: "VLSI_DESIGN",
+    name: "Minor in VLSI Design",
+    totalCreditsRequired: 9,
+    eligibleBatches: [2025, 2026, 2027, 2028],
+    groups: [
+      {
+        id: "all",
+        title: "Compulsory (all 3 required)",
+        requiredCount: 3,
+        courseCodes: ["VL-404", "EE-524", "EE-519P"],
+        countsTowardMinor: true,
+        note: "VL-404 CMOS Analog IC Design (4 cr) + EE-524 Digital MOS LSI Circuits (3 cr) + EE-519P Digital IC Design Practicum (2 cr). All three courses are compulsory.",
+      },
+    ],
+  },
+  {
+    code: "VLSI_TECH",
+    name: "Minor in VLSI Technology",
+    totalCreditsRequired: 10,
+    eligibleBatches: [2025, 2026, 2027, 2028],
+    groups: [
+      {
+        id: "all",
+        title: "Compulsory (all 3 required)",
+        requiredCount: 3,
+        courseCodes: ["VL-311", "VL-312", "EE-615"],
+        countsTowardMinor: true,
+        note: "VL-311 CMOS Processing and Practicum (4 cr) + VL-312 Electronic System Packaging (3 cr) + EE-615 Nanoelectronics and Nano-Microfabrication (3 cr). All three courses are compulsory.",
+      },
+    ],
+  },
 ];
 
 function normalizeMinorCourseCode(code: string): string {
