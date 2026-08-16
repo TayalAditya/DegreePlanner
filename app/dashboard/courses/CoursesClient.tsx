@@ -242,6 +242,20 @@ function getCourseCatalogSection(course: Pick<Course, "code" | "department" | "c
   };
 }
 
+// A course that the student has saved in their pre-registration plan but has
+// not yet enrolled in. Ghost-rendered in the current semester section with a
+// "Planned" badge so students can see their plan without leaving the page.
+interface PlannedCourse {
+  /** Pre-registration offering id — used as a stable React key. */
+  offeringId: string;
+  courseId: string | null;
+  courseCode: string;
+  courseName: string;
+  credits: number;
+  /** The semester number this plan is for (upcoming Fall/Spring). */
+  semester: number;
+}
+
 interface CoursesClientProps {
   initialEnrollments?: Enrollment[];
   initialUser?: User | null;
@@ -256,6 +270,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
 
   const [preRegLockedSemester, setPreRegLockedSemester] = useState<number | null>(null);
   const [academicCurrentSemester, setAcademicCurrentSemester] = useState<number | null>(null);
+  const [plannedCourses, setPlannedCourses] = useState<PlannedCourse[]>([]);
   const [tab, setTab] = useState<"my-courses" | "catalog">("my-courses");
   const [enrollments, setEnrollments] = useState<Enrollment[]>(initialEnrollments ?? []);
   const [user, setUser] = useState<User | null>(initialUser ?? null);
@@ -309,7 +324,35 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
         if (typeof d.currentSemester === "number" && !d.isPastProgram) {
           setAcademicCurrentSemester(d.currentSemester);
         }
-        if (d.phase === "PRE_REGISTRATION" && d.upcomingSemester) setPreRegLockedSemester(d.upcomingSemester);
+        if (d.phase === "PRE_REGISTRATION" && d.upcomingSemester) {
+          setPreRegLockedSemester(d.upcomingSemester);
+          // Fetch the pre-reg saved plan and surface it as ghost WIP entries
+          // in the current semester section so students can see their plan.
+          fetch("/api/pre-registration", { cache: "no-store" })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+              if (!data) return;
+              const { offerings, savedPlan, offeringSemester } = data as {
+                offerings: Array<{ id: string; courseId: string | null; courseCode: string; courseName: string; credits: number }>;
+                savedPlan: { selectedIds: string[] };
+                offeringSemester: number;
+              };
+              if (!savedPlan?.selectedIds?.length) return;
+              const selectedSet = new Set(savedPlan.selectedIds);
+              const planned: PlannedCourse[] = offerings
+                .filter(o => selectedSet.has(o.id))
+                .map(o => ({
+                  offeringId: o.id,
+                  courseId: o.courseId,
+                  courseCode: o.courseCode,
+                  courseName: o.courseName,
+                  credits: o.credits,
+                  semester: offeringSemester,
+                }));
+              setPlannedCourses(planned);
+            })
+            .catch(() => {});
+        }
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -714,7 +757,8 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     const hssUsed = { credits: 0 };
     const branchConfig = getAllBranches().find((b) => b.code === user?.branch);
     const hssCoreCapLocal = branchConfig?.icCredits != null && branchConfig.icCredits <= 52 ? 12 : 15;
-    const hssFeCapLocal = 20;
+    // B23 BOA relaxation: HSS+IKS degree cap raised from 20 → 30.
+    const hssFeCapLocal = resolvedUserBatch === 2023 ? 30 : 20;
     enrollments
       .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
       .sort((a, b) => a.semester - b.semester)
@@ -1205,7 +1249,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
           <div
             className="space-y-4"
           >
-            {enrollments.length === 0 ? (
+            {enrollments.length === 0 && plannedCourses.length === 0 ? (
               <div className="text-center py-12 bg-surface rounded-xl border border-border">
                 <BookOpen className="w-16 h-16 text-foreground-secondary mx-auto mb-4 opacity-50" />
                 <h3 className="text-xl font-semibold text-foreground mb-2">
@@ -1224,11 +1268,23 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
               </div>
             ) : (
               <div className="space-y-6">
-                {Array.from(new Set(enrollments.map(e => e.semester)))
+                {Array.from(new Set([
+                  ...enrollments.map(e => e.semester),
+                  ...plannedCourses.map(p => p.semester),
+                ]))
                   .sort((a, b) => a - b)
                   .map((semNum) => {
                     const semesterEnrollments = enrollments.filter(e => e.semester === semNum);
+                    // Planned courses for this semester — exclude any already enrolled
+                    const enrolledCourseIdSet = new Set(semesterEnrollments.map(e => e.courseId));
+                    const enrolledCodeSet = new Set(semesterEnrollments.map(e => e.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "")));
+                    const semesterPlanned = plannedCourses.filter(p =>
+                      p.semester === semNum &&
+                      !(p.courseId && enrolledCourseIdSet.has(p.courseId)) &&
+                      !enrolledCodeSet.has(p.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, ""))
+                    );
                     const semCredits = sumCredits(semesterEnrollments.map((e) => e.course.credits));
+                    const plannedCredits = sumCredits(semesterPlanned.map((p) => p.credits));
                     
                     return (
                       <div key={semNum} className="space-y-3">
@@ -1238,10 +1294,10 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                           </h3>
                           <div className="flex items-center gap-3">
                             <span className="text-sm text-foreground-secondary">
-                              {semesterEnrollments.length} courses
+                              {semesterEnrollments.length}{semesterPlanned.length > 0 ? ` + ${semesterPlanned.length} planned` : ""} courses
                             </span>
                             <span className="px-4 py-1.5 bg-primary text-white rounded-full font-bold text-sm">
-                              {formatCredits(semCredits)} Credits
+                              {formatCredits(semCredits)}{semesterPlanned.length > 0 ? ` + ${formatCredits(plannedCredits)} planned` : ""} Credits
                             </span>
                           </div>
                         </div>
@@ -1366,6 +1422,44 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
                                     <Trash2 className="w-4 h-4" />
                                   </button>
                                 </div>
+                              </div>
+                            </div>
+                          ))}
+                          {/* Ghost entries for pre-registration planned courses */}
+                          {semesterPlanned.map((planned) => (
+                            <div
+                              key={`prereg-${planned.offeringId}`}
+                              className="group bg-surface/60 rounded-lg border border-dashed border-primary/40 p-4 opacity-80"
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                    <h3 className="text-lg font-bold text-foreground">
+                                      {formatCourseCode(planned.courseCode)}
+                                    </h3>
+                                    <span className="px-1.5 py-0.5 bg-primary/10 text-primary text-[10px] font-semibold rounded-full border border-primary/20">
+                                      {formatCredits(planned.credits)} Cr
+                                    </span>
+                                    {/* Planned badge */}
+                                    <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-warning/10 text-warning border border-warning/30">
+                                      Planned
+                                    </span>
+                                  </div>
+                                  <p className="text-foreground font-medium mb-2 text-sm">
+                                    {planned.courseName}
+                                  </p>
+                                  <p className="text-xs text-foreground-secondary">
+                                    Saved in your pre-registration plan
+                                  </p>
+                                </div>
+                                {/* Link to pre-registration page */}
+                                <a
+                                  href="/dashboard/pre-registration"
+                                  className="flex-shrink-0 px-3 py-2 text-xs font-medium text-primary border border-primary/30 rounded-lg hover:bg-primary/10 transition-colors"
+                                  title="Edit pre-registration plan"
+                                >
+                                  Edit plan
+                                </a>
                               </div>
                             </div>
                           ))}

@@ -567,10 +567,12 @@ export class CreditCalculator {
     const icBasketUsed = state.icBasketUsed;
     const seenCanonicalCodes = (state.seenCanonicalCodes ??= new Set<string>());
 
-    // HSS+IKS combined basket: BTech = 15 core, BSCS = 12 core; above 20 → don't count, 16-20 (BTech) → FE
+    // HSS+IKS combined basket: BTech = 15 core, BSCS = 12 core.
+    // Degree cap: B23 students get a 30-credit cap (BOA relaxation); all others 20.
+    // 0–coreCap → core(HSS); coreCap–degreeCap → FE; above degreeCap → NOT_IN_DEGREE.
     let hssCreditsAccumulated = state.hssCreditsAccumulated;
     const HSS_CORE_CAP = (programIcCredits ?? 60) <= 52 ? 12 : 15; // BSCS: 12, BTech: 15
-    const HSS_FE_CAP = 20;
+    const HSS_FE_CAP = batchYear === 2023 ? 30 : 20;
     const addBreakdownCredits = (key: keyof CreditBreakdown, credits: number) => {
       breakdown[key] = addCredits(breakdown[key], credits);
     };

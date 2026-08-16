@@ -71,15 +71,16 @@ const IC_BASKET_COMPULSIONS: Record<string, { ic1?: string; ic2?: string }> = {
 };
 
 // HSS+IKS combined credits beyond this cap do not count toward the degree total.
-const HSS_FE_CAP = 20;
+// Cap is batch-specific: B23 gets a 30-credit BOA relaxation; all others stay at 20.
+// Passed as a parameter so the pure function stays testable.
 
 // Split one course's credits across the HSS+IKS buckets:
-//   0–coreCap → core(HSS) ; coreCap–20 → FE ; >20 → Not in Degree (drained)
-function splitHssIksCredits(before: number, credits: number, coreCap: number) {
+//   0–coreCap → core(HSS) ; coreCap–feCap → FE ; >feCap → Not in Degree (drained)
+function splitHssIksCredits(before: number, credits: number, coreCap: number, feCap: number) {
   const afterCore = minCredits(coreCap, addCredits(before, credits));
   const hss = subtractCredits(afterCore, minCredits(coreCap, before));
-  const afterFe = minCredits(HSS_FE_CAP, addCredits(before, credits));
-  const fe = subtractCredits(afterFe, minCredits(HSS_FE_CAP, addCredits(before, hss)));
+  const afterFe = minCredits(feCap, addCredits(before, credits));
+  const fe = subtractCredits(afterFe, minCredits(feCap, addCredits(before, hss)));
   const notInDegree = subtractCredits(credits, addCredits(hss, fe));
   return { hss, fe, notInDegree };
 }
@@ -152,6 +153,8 @@ export function computeEnrollmentCreditBreakdown({
   const icBasketUsed = { ic1: false, ic2: false };
   const hssUsed = { credits: 0 };
   const hssCoreCap = (programIcCredits ?? 60) <= 52 ? 12 : 15;
+  // B23 BOA relaxation: HSS+IKS degree cap raised from 20 → 30.
+  const hssFeCap = userBatch === 2023 ? 30 : 20;
 
   const shouldCount = (enrollment: EnrollmentLike) => {
     if (enrollment.status === "COMPLETED") return !enrollment.grade || enrollment.grade !== "F";
@@ -296,7 +299,7 @@ export function computeEnrollmentCreditBreakdown({
 
     if (category === "HSS" || category === "IKS") {
       const before = hssUsed.credits;
-      const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, hssCoreCap);
+      const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, hssCoreCap, hssFeCap);
       hssUsed.credits = addCredits(before, addCredits(hss, fe));
       if (hss > 0) categoryCredits.HSS = addCredits(categoryCredits.HSS, hss);
       if (fe > 0) categoryCredits.FE = addCredits(categoryCredits.FE, fe);

@@ -429,7 +429,8 @@ export async function GET() {
       const HSS_IKS_REQ = (req.icCredits ?? 60) <= 52 ? 12 : 15;
 
       // HSS overflow → FE (credits beyond HSS requirement count as FE)
-      const HSS_IKS_DEGREE_CAP = 20;
+      // B23 BOA relaxation: degree cap raised from 20 → 30.
+      const HSS_IKS_DEGREE_CAP = batchYear === 2023 ? 30 : 20;
       const hssRaw = tally.HSS ?? 0;
       const hssFeCredits = Math.max(0, Math.min(HSS_IKS_DEGREE_CAP, hssRaw) - HSS_IKS_REQ);
       const hssNotInDegree = Math.max(0, hssRaw - HSS_IKS_DEGREE_CAP);
