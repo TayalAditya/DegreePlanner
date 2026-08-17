@@ -18,7 +18,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { StatCard } from "@/components/StatCard";
 import { getAllBranches } from "@/lib/branches";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
-import { pickBranchMapping, getHssIksDegreeCap, type BranchMapping } from "@/lib/courseCategory";
+import { pickBranchMapping, getHssIksDegreeCap, hssIksCountsAsDe, routeHssIksSplit, type BranchMapping } from "@/lib/courseCategory";
 import { getSpecialDpCategory, getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { addCredits, formatCourseCode, formatCredits, subtractCredits, sumCredits } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
@@ -782,13 +782,24 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
         if (category === "HSS" || category === "IKS") {
           const before = hssUsed.credits;
           const afterCore = Math.min(hssCoreCapLocal, before + e.course.credits);
-          const hss = Math.max(0, afterCore - Math.min(hssCoreCapLocal, before));
+          const hssPortion = Math.max(0, afterCore - Math.min(hssCoreCapLocal, before));
           const afterFe = Math.min(hssFeCapLocal, before + e.course.credits);
-          const fe = Math.max(0, afterFe - Math.min(hssFeCapLocal, before + hss));
-          const notInDegree = Math.max(0, e.course.credits - hss - fe);
+          const fePortion = Math.max(0, afterFe - Math.min(hssFeCapLocal, before + hssPortion));
+          // A DE-paying course (IK-502 for B23 DSE) consumes the same basket
+          // room; only the destination of the credits that fit changes, so
+          // `hssUsed` below is unaffected by the routing.
+          const { hss, fe, de, notInDegree } = routeHssIksSplit(
+            {
+              hss: hssPortion,
+              fe: fePortion,
+              notInDegree: Math.max(0, e.course.credits - hssPortion - fePortion),
+            },
+            hssIksCountsAsDe(e.course.code, user?.branch, resolvedUserBatch)
+          );
           hssUsed.credits = Math.min(hssFeCapLocal, before + e.course.credits);
           if (hss > 0) credits["HSS"] = addCredits(credits["HSS"], hss);
           if (fe > 0) credits["FE"] = addCredits(credits["FE"], fe);
+          if (de > 0) credits["DE"] = addCredits(credits["DE"], de);
           if (notInDegree > 0) credits["NOT_IN_DEGREE"] = addCredits(credits["NOT_IN_DEGREE"], notInDegree);
         } else if (category in credits) {
           credits[category] = addCredits(credits[category], e.course.credits);

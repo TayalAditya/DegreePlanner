@@ -8,7 +8,7 @@ import { EnrollmentStatus, ProgramStatus, ProgramType } from "@prisma/client";
 import { creditCalculator } from "@/lib/creditCalculator";
 import { isAcadSec } from "@/lib/permissions";
 import { getBatchAdjustedCredits } from "@/lib/branches";
-import { pickBranchMapping, getHssIksDegreeCap } from "@/lib/courseCategory";
+import { pickBranchMapping, getHssIksDegreeCap, hssIksCountsAsDe } from "@/lib/courseCategory";
 import { MINORS } from "@/lib/minors";
 
 const PRE_REG_OPEN = new Date("2026-08-15T00:00:00+05:30");
@@ -383,6 +383,10 @@ export async function GET() {
 
       const tally: Record<string, number> = { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, HSS: 0, IKS: 0, FE: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0 };
       const add = (cat: string, cr: number) => { tally[cat] = (tally[cat] ?? 0) + cr; };
+      // Credits that occupy the HSS+IKS basket but pay out as DE (IK-502 for B23
+      // DSE). Tracked apart from tally.HSS so the cap split below can move the
+      // portion that fits into DE, while the credits still consume basket room.
+      let hssIksAsDeCredits = 0;
 
       for (const e of completed) {
         if (e.grade === "F") continue;
@@ -397,6 +401,16 @@ export async function GET() {
         // client can show the exact degree-counting and excluded portions.
         if (e.isPassFail && !isHssIks) {
           add("FE", cr);
+          continue;
+        }
+        // IK-502 for B23 DSE: consumes HSS+IKS room but pays out as DE. Counted
+        // into HSS here so it consumes the basket, and remembered separately so
+        // the cap split below can redirect the part that fits. P/F is excluded to
+        // match the per-course engines, where a P/F IK-502 keeps the ordinary
+        // HSS+IKS treatment rather than becoming a P/F DE.
+        if (!e.isPassFail && hssIksCountsAsDe(code, normalizedBranch, batch)) {
+          hssIksAsDeCredits += cr;
+          add("HSS", cr);
           continue;
         }
         let cat = isHssIks ? "HSS" :
@@ -432,11 +446,31 @@ export async function GET() {
       // B23 BOA relaxation: degree cap raised from 20 → 30.
       const HSS_IKS_DEGREE_CAP = getHssIksDegreeCap(batchYear);
       const hssRaw = tally.HSS ?? 0;
-      const hssFeCredits = Math.max(0, Math.min(HSS_IKS_DEGREE_CAP, hssRaw) - HSS_IKS_REQ);
+      // This surface caps a SUM rather than walking courses in semester order, so
+      // the DE-paying credits are given the tail of the basket: everything else
+      // fills the basket first, and IK-502 keeps only what is left under the cap.
+      // That matches "check whether the course fits" and is deterministic here,
+      // where there is no per-course ordering to appeal to. It can differ from the
+      // per-course engines by a credit or two, but only for a student who both
+      // exceeds the HSS+IKS cap and took IK-502 before their last HS/IK course.
+      const hssOther = Math.max(0, hssRaw - hssIksAsDeCredits);
+      const hssIksDeCredits = Math.max(0, Math.min(hssIksAsDeCredits, HSS_IKS_DEGREE_CAP - hssOther));
+      const hssCoreCredits = Math.min(hssOther, HSS_IKS_REQ);
+      const hssFeCredits = Math.max(0, Math.min(hssOther, HSS_IKS_DEGREE_CAP) - hssCoreCredits);
       const hssNotInDegree = Math.max(0, hssRaw - HSS_IKS_DEGREE_CAP);
-      tally.HSS = Math.min(hssRaw, HSS_IKS_REQ);
+      tally.HSS = hssCoreCredits;
       tally.FE = (tally.FE ?? 0) + hssFeCredits;
+      tally.DE = (tally.DE ?? 0) + hssIksDeCredits;
       tally.NOT_IN_DEGREE = hssNotInDegree;
+
+      // The DE overflow clamp above ran before these DE credits existed, so
+      // re-apply it. progressCreditBreakdown clamps DE after its per-course loop
+      // for exactly the same reason.
+      if (hssIksDeCredits > 0) {
+        const lateDeOverflow = Math.max(0, (tally.DE ?? 0) - adjustedDeCredits);
+        tally.DE = Math.min(tally.DE ?? 0, adjustedDeCredits);
+        tally.FE = (tally.FE ?? 0) + lateDeOverflow;
+      }
 
       completedBreakdown = tally;
       const batchAdj = getBatchAdjustedCredits(normalizedBranch, batchYear, { dcCredits: req.dcCredits, deCredits: req.deCredits });

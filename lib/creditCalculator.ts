@@ -4,7 +4,7 @@ import { normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
 import { getBatchAdjustedCredits } from "@/lib/branches";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
-import { pickBranchMapping, pickBranchMappingCategory, getHssIksDegreeCap } from "@/lib/courseCategory";
+import { pickBranchMapping, pickBranchMappingCategory, getHssIksDegreeCap, hssIksCountsAsDe, routeHssIksSplit } from "@/lib/courseCategory";
 import {
   isMtp1CourseCode,
   isMtp2CourseCode,
@@ -579,7 +579,7 @@ export class CreditCalculator {
     const subtractBreakdownCredits = (key: keyof CreditBreakdown, credits: number) => {
       breakdown[key] = subtractCredits(breakdown[key], credits);
     };
-    const addHssCredits = (credits: number) => {
+    const addHssCredits = (credits: number, countsAsDe = false) => {
       const prev = hssCreditsAccumulated;
       hssCreditsAccumulated = addCredits(hssCreditsAccumulated, credits);
       state.hssCreditsAccumulated = hssCreditsAccumulated;
@@ -595,9 +595,17 @@ export class CreditCalculator {
         )
       );
       const ignored = subtractCredits(credits, corePortion, fePortion);
-      addBreakdownCredits("core", corePortion);
-      addBreakdownCredits("freeElective", fePortion);
-      subtractBreakdownCredits("total", ignored); // undo the total increment for credits that don't count
+      // A DE-paying HSS+IKS course (IK-502 for B23 DSE) still consumes basket
+      // room above, so `hssCreditsAccumulated` is already correct; only the
+      // destination of the credits that fit changes. See routeHssIksSplit.
+      const routed = routeHssIksSplit(
+        { hss: corePortion, fe: fePortion, notInDegree: ignored },
+        countsAsDe
+      );
+      addBreakdownCredits("core", routed.hss);
+      addBreakdownCredits("freeElective", routed.fe);
+      addBreakdownCredits("de", routed.de);
+      subtractBreakdownCredits("total", routed.notInDegree); // undo the total increment for credits that don't count
     };
 
     // A course retains the category defined by its official branch mapping.
@@ -702,6 +710,19 @@ export class CreditCalculator {
         } else {
           addBreakdownCredits("freeElective", credits);
         }
+        return;
+      }
+
+      // A course that consumes HSS+IKS room but pays out as DE (IK-502 for B23
+      // DSE). This MUST precede pickBranchMapping: IK-502 is mapped as a plain
+      // DE for DSE, so the mapping switch below would credit all 4 credits to DE
+      // and never consult the HSS+IKS cap at all.
+      //
+      // Deliberately placed after the P/F branch above, so a P/F IK-502 keeps
+      // the ordinary HSS+IKS treatment rather than becoming a P/F DE — P/F
+      // credits go to FE everywhere else in this engine.
+      if (hssIksCountsAsDe(code, branch, batchYear)) {
+        addHssCredits(credits, true);
         return;
       }
 

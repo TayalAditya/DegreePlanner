@@ -1,6 +1,6 @@
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
-import { pickBranchMapping, getHssIksDegreeCap, type BranchMapping } from "@/lib/courseCategory";
+import { pickBranchMapping, getHssIksDegreeCap, hssIksCountsAsDe, routeHssIksSplit, type BranchMapping } from "@/lib/courseCategory";
 import { addCredits, minCredits, subtractCredits } from "@/lib/utils";
 
 type CategoryKey = "IC" | "IC_BASKET" | "DC" | "DE" | "FE" | "HSS" | "IKS" | "MTP" | "ISTP" | "NOT_IN_DEGREE";
@@ -235,6 +235,14 @@ export function computeEnrollmentCreditBreakdown({
       return "HSS";
     }
 
+    // IK-502 for B23 DSE consumes HSS+IKS room and the split below re-routes the
+    // in-cap portion to DE. Must precede the mapping lookup, which maps IK-502 to
+    // a plain DE for DSE and would skip the cap entirely. Placed after the P/F
+    // return above so a P/F IK-502 keeps the ordinary HSS+IKS treatment.
+    if (hssIksCountsAsDe(courseCode, userBranch, userBatch)) {
+      return "HSS";
+    }
+
     if (mapping?.courseCategory === "NA") return "FE";
     if (mapping?.courseCategory === "IKS" && isIkCourse) return "HSS";
     if (mapping?.courseCategory && mapping.courseCategory in categoryCredits) {
@@ -299,10 +307,16 @@ export function computeEnrollmentCreditBreakdown({
 
     if (category === "HSS" || category === "IKS") {
       const before = hssUsed.credits;
-      const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, hssCoreCap, hssFeCap);
-      hssUsed.credits = addCredits(before, addCredits(hss, fe));
+      // A DE-paying course still consumes basket room, so `hssUsed` advances by
+      // everything that fit (hss + fe + de) regardless of where it landed.
+      const { hss, fe, de, notInDegree } = routeHssIksSplit(
+        splitHssIksCredits(before, credits, hssCoreCap, hssFeCap),
+        hssIksCountsAsDe(enrollment.course?.code, userBranch, userBatch)
+      );
+      hssUsed.credits = addCredits(before, hss, fe, de);
       if (hss > 0) categoryCredits.HSS = addCredits(categoryCredits.HSS, hss);
       if (fe > 0) categoryCredits.FE = addCredits(categoryCredits.FE, fe);
+      if (de > 0) categoryCredits.DE = addCredits(categoryCredits.DE, de);
       if (notInDegree > 0) categoryCredits.NOT_IN_DEGREE = addCredits(categoryCredits.NOT_IN_DEGREE, notInDegree);
       return;
     }

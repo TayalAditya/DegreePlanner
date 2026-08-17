@@ -24,6 +24,7 @@
 import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { ICB1_CODES, ICB2_CODES } from "@/lib/icBasketConfig";
+import { addCredits } from "@/lib/utils";
 
 export interface BranchMapping {
   courseCategory: string;
@@ -64,6 +65,79 @@ export const normalizeBatchYear = (batch?: number | string | null): number | nul
 
 export const getHssIksDegreeCap = (batchYear?: number | string | null) =>
   normalizeBatchYear(batchYear) === 2023 ? HSS_IKS_DEGREE_CAP_B23 : HSS_IKS_DEGREE_CAP_DEFAULT;
+
+/**
+ * Courses that take their place in the HSS+IKS basket but pay out as DE, for one
+ * specific branch + batch.
+ *
+ * IK-502 (Introduction to Bio-signals) is IK-coded, so by default it lands in the
+ * shared HSS+IKS basket like any other IKS course. For B23 DSE it is a DE
+ * instead: the course is still checked against the HSS+IKS degree cap, but the
+ * credits that fit are credited to DE rather than to HSS core / FE, and anything
+ * beyond the cap does not count toward the degree at all.
+ *
+ * Two properties of this rule that are easy to get wrong:
+ *   - It CONSUMES basket room. Taking IK-502 leaves less HSS+IKS space for other
+ *     HS/IK courses even though its own credits land in DE.
+ *   - A course straddling the cap splits pro-rata — the in-cap part becomes DE,
+ *     the remainder is excluded. It is not all-or-nothing.
+ *
+ * Every other branch and batch keeps the ordinary HSS+IKS treatment.
+ */
+const HSS_IKS_AS_DE_RULES: ReadonlyArray<{
+  code: string;
+  batchYear: number;
+  branches: ReadonlySet<string>;
+}> = [
+  {
+    code: "IK502",
+    batchYear: 2023,
+    // DSE only. DS and DSAI are accepted because this codebase aliases the whole
+    // data-science family (see getBranchCandidates / isDataScienceBranch) and a
+    // B23 row may carry any of the three spellings. DSAI only became a
+    // standalone curriculum in B25, so this does not sweep in a separate B23
+    // DSAI cohort — there isn't one.
+    branches: new Set(["DSE", "DS", "DSAI"]),
+  },
+];
+
+/**
+ * Does this course consume HSS+IKS room but count as DE for this student?
+ * See HSS_IKS_AS_DE_RULES. Callers apply the cap themselves and then pass the
+ * result through `routeHssIksSplit`.
+ */
+export function hssIksCountsAsDe(
+  code?: string | null,
+  branch?: string | null,
+  batchYear?: number | string | null,
+): boolean {
+  const normalizedCode = String(code ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (!normalizedCode) return false;
+  const normalizedBranch = normalizeBranchCode(branch) || String(branch ?? "").trim().toUpperCase();
+  const year = normalizeBatchYear(batchYear);
+  return HSS_IKS_AS_DE_RULES.some(
+    (rule) =>
+      rule.code === normalizedCode &&
+      rule.batchYear === year &&
+      rule.branches.has(normalizedBranch),
+  );
+}
+
+/**
+ * Send an HSS+IKS cap split to its final baskets.
+ *
+ * The cap splitters answer "how much of this course fits" — a core portion, an
+ * FE portion, and the excluded remainder. For a DE-paying course everything that
+ * fit becomes DE instead. The consumed amount (`hss + fe + de`) is identical
+ * either way, which is exactly what makes the basket bookkeeping unchanged.
+ */
+export function routeHssIksSplit(
+  split: { hss: number; fe: number; notInDegree: number },
+  countsAsDe: boolean,
+): { hss: number; fe: number; de: number; notInDegree: number } {
+  if (!countsAsDe) return { hss: split.hss, fe: split.fe, de: 0, notInDegree: split.notInDegree };
+  return { hss: 0, fe: 0, de: addCredits(split.hss, split.fe), notInDegree: split.notInDegree };
+}
 
 /**
  * Pick the best mapping for a given branch + batch.

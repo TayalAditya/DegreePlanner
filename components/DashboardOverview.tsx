@@ -7,7 +7,7 @@ import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
 import { addCredits, formatCourseCode, formatCredits, minCredits, subtractCredits, sumCredits } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
-import { pickBranchMapping, getHssIksDegreeCap, HSS_IKS_DEGREE_CAP_DEFAULT, type BranchMapping } from "@/lib/courseCategory";
+import { pickBranchMapping, getHssIksDegreeCap, hssIksCountsAsDe, routeHssIksSplit, HSS_IKS_DEGREE_CAP_DEFAULT, type BranchMapping } from "@/lib/courseCategory";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 
 interface DashboardOverviewProps {
@@ -242,6 +242,11 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     if (normalizedCode === "IC181") return "HSS"; // → HSS+IKS
     if (normalizedCode === "IC182") return isBatch24Or25 ? "HSS" : "IC";
 
+    // IK-502 for B23 DSE consumes HSS+IKS room; the split at the call site
+    // re-routes the in-cap portion to DE. Must precede the branch-mapping block
+    // below, which maps IK-502 to a plain DE for DSE and would skip the cap.
+    if (hssIksCountsAsDe(normalizedCode, userSettings?.branch, inferredBatch)) return "HSS";
+
     if (enrollment.course?.branchMappings && enrollment.course.branchMappings.length > 0 && userSettings?.branch) {
       const mapping = pickRelevantBranchMapping(userSettings.branch, enrollment.course.branchMappings, inferredBatch);
 
@@ -337,14 +342,20 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
 
       if (category === "HSS") {
         const before = hssIksUsedForCategory.credits;
-        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, hssCoreCap, getHssIksDegreeCap(batch));
+        // A DE-paying course still consumes basket room, so the accumulator
+        // advances by everything that fit (hss + fe + de).
+        const { hss, fe, de, notInDegree } = routeHssIksSplit(
+          splitHssIksCredits(before, credits, hssCoreCap, getHssIksDegreeCap(batch)),
+          hssIksCountsAsDe(e.course?.code, userSettings?.branch, batch)
+        );
         creditAllocations = [];
         if (hss > 0) creditAllocations.push({ category: "HSS", credits: hss });
         if (fe > 0) creditAllocations.push({ category: "FE", credits: fe });
+        if (de > 0) creditAllocations.push({ category: "DE", credits: de });
         if (notInDegree > 0) {
           creditAllocations.push({ category: "NOT_IN_DEGREE", credits: notInDegree });
         }
-        hssIksUsedForCategory.credits = addCredits(before, hss, fe);
+        hssIksUsedForCategory.credits = addCredits(before, hss, fe, de);
       }
 
       categorizedById.set(e.id, {
