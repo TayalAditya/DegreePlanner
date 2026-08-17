@@ -1,6 +1,6 @@
 {
   "version": "2026-2027-odd",
-  "generatedAt": "2026-08-10T17:41:02.743Z",
+  "generatedAt": "2026-08-17T08:48:35.460Z",
   "sourceWorkbook": "docs/CL 2026-27 Odd/Final Time Table Aug-Nov 2026.xlsx",
   "venues": [
     "A1-3",
@@ -1682,7 +1682,7 @@
       },
       "GE-523": {
         "code": "GE-523",
-        "name": "Startup Framework: Finance, Valuation and Structure",
+        "name": "Startup Framework: Finance, Valuation, and Structure",
         "credit": 3,
         "slot": "FS1",
         "kind": "NON_IC"
@@ -2997,56 +2997,87 @@
       "kind": "IC",
       "code": "IC-152",
       "name": "Introduction to Python and Data Science",
-      "slot": "G1, G2, G3, G4",
-      "venue": "A10 PC Lab + A11 PC Lab",
+      "slot": "G1, G2, G3, G4, G5, G6, G7, G8",
       "time": "02:00-05:00 PM",
       "allocations": [
         {
           "branches": [
-            "EE",
-            "BE",
-            "CE",
-            "QS"
+            "AG",
+            "CHE",
+            "BSCS"
           ],
           "slot": "G1",
           "day": "Monday",
-          "venue": "A10 PC Lab + A11 PC Lab",
+          "venue": "A11 PC Lab",
           "time": "02:00-05:00 PM"
         },
         {
           "branches": [
-            "BSCS",
-            "DSAI",
-            "EP",
-            "CHE",
-            "GE"
+            "BE",
+            "EE"
           ],
           "slot": "G2",
+          "day": "Monday",
+          "venue": "A10 PC Lab",
+          "time": "02:00-05:00 PM"
+        },
+        {
+          "branches": [
+            "CE",
+            "GE"
+          ],
+          "slot": "G3",
           "day": "Tuesday",
-          "venue": "A10 PC Lab + A11 PC Lab",
+          "venue": "A11 PC Lab",
+          "time": "02:00-05:00 PM"
+        },
+        {
+          "branches": [
+            "CSE"
+          ],
+          "slot": "G4",
+          "day": "Tuesday",
+          "venue": "A10 PC Lab",
+          "time": "02:00-05:00 PM"
+        },
+        {
+          "branches": [
+            "DSAI",
+            "MSE"
+          ],
+          "slot": "G5",
+          "day": "Wednesday",
+          "venue": "A11 PC Lab",
+          "time": "02:00-05:00 PM"
+        },
+        {
+          "branches": [
+            "ME",
+            "EP"
+          ],
+          "slot": "G6",
+          "day": "Wednesday",
+          "venue": "A10 PC Lab",
           "time": "02:00-05:00 PM"
         },
         {
           "branches": [
             "MNC",
             "MEVLSI",
-            "MSE",
-            "CSE"
+            "QS"
           ],
-          "slot": "G3",
-          "day": "Wednesday",
-          "venue": "A10 PC Lab + A11 PC Lab",
+          "slot": "G7",
+          "day": "Thursday",
+          "venue": "A11 PC Lab",
           "time": "02:00-05:00 PM"
         },
         {
           "branches": [
-            "ME",
-            "IMBA",
-            "AG"
+            "IMBA"
           ],
-          "slot": "G4",
+          "slot": "G8",
           "day": "Thursday",
-          "venue": "A10 PC Lab + A11 PC Lab",
+          "venue": "A10 PC Lab",
           "time": "02:00-05:00 PM"
         }
       ]

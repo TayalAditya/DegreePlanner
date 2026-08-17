@@ -57,6 +57,42 @@ const PUBLISHED_PC_LAB_OVERRIDES: PcLabRow[] = [
     venue: "A5 PC Lab-1",
     time: "02:00-05:00 PM",
   },
+  // IC-152 Python lab, revised B26 allocation. The workbook's Lab Slot sheet
+  // groups B26 into four day-groups (G1-G4) that each occupy BOTH PC labs at
+  // once. The revised published table instead splits every day across the two
+  // labs, so a day now carries two disjoint branch groups in different rooms —
+  // eight groups, not four. That shape cannot be expressed by the sheet parser
+  // (one venue per day-group), hence a full override.
+  //
+  // Slot labels stay in the G-series on purpose. `extractOfficialSlotTokens`
+  // reads `pcLab.slot` as a fallback and treats L1-L5 as real lab slots, so
+  // naming these L1-L4 (which is what 2-5 PM Mon-Thu would otherwise imply)
+  // would emit a lab meeting on all four days for every student, with only the
+  // student's own day corrected by their allocation. "G7"/"G8" are new labels;
+  // the published table identifies a group only by (day, venue).
+  {
+    kind: "IC",
+    code: "IC-152",
+    name: "Introduction to Python and Data Science",
+    slot: "G1, G2, G3, G4, G5, G6, G7, G8",
+    // No top-level `venue`: the two labs differ per allocation, and every
+    // allocation below carries its own room.
+    time: "02:00-05:00 PM",
+    allocations: [
+      // Monday — A11 then A10
+      { branches: ["AG", "CHE", "BSCS"], slot: "G1", day: "Monday", venue: "A11 PC Lab", time: "02:00-05:00 PM" },
+      { branches: ["BE", "EE"], slot: "G2", day: "Monday", venue: "A10 PC Lab", time: "02:00-05:00 PM" },
+      // Tuesday
+      { branches: ["CE", "GE"], slot: "G3", day: "Tuesday", venue: "A11 PC Lab", time: "02:00-05:00 PM" },
+      { branches: ["CSE"], slot: "G4", day: "Tuesday", venue: "A10 PC Lab", time: "02:00-05:00 PM" },
+      // Wednesday
+      { branches: ["DSAI", "MSE"], slot: "G5", day: "Wednesday", venue: "A11 PC Lab", time: "02:00-05:00 PM" },
+      { branches: ["ME", "EP"], slot: "G6", day: "Wednesday", venue: "A10 PC Lab", time: "02:00-05:00 PM" },
+      // Thursday
+      { branches: ["MNC", "MEVLSI", "QS"], slot: "G7", day: "Thursday", venue: "A11 PC Lab", time: "02:00-05:00 PM" },
+      { branches: ["IMBA"], slot: "G8", day: "Thursday", venue: "A10 PC Lab", time: "02:00-05:00 PM" },
+    ],
+  },
 ];
 
 // Confirmed venue corrections published after the workbook export. The
