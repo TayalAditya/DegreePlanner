@@ -90,3 +90,17 @@ scripts/*.json
 scripts/*.txt
 tasks.txt
 /*.xlsx
+
+# Root-level scratch files. `scripts/_*` above only covers scripts/, so one-off
+# work parked at the repo root was still showing up as untracked.
+/_*
+dev-server.log
+temp-screenshot.cjs
+/*.tex
+
+# Screenshots of the live app. These capture real student dashboards, so they
+# must never be committed even though they are taken from this project.
+/photos/
+
+# Kiro IDE settings (machine-specific tool paths)
+/.kiro/
