@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { MINORS } from "@/lib/minors";
+import { syncPlanToEnrollments } from "@/lib/planEnrollmentSync";
 import { EnrollmentStatus, ProgramStatus, ProgramType } from "@prisma/client";
 
 const normalizeCourseCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -181,6 +182,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Capture the previous selection before the upsert overwrites it: it tells the
+  // enrollment sync which courses this plan used to own, so dropping a course
+  // from the plan removes its enrollment while hand-added courses stay put.
+  const priorPlan = await prisma.preRegistrationPlan.findUnique({
+    where: { userId_offeringSemester_offeringYear: { userId: session.user.id, offeringSemester: semester, offeringYear: year } },
+    select: { selectedIds: true },
+  });
+
   const plan = await prisma.preRegistrationPlan.upsert({
     where: { userId_offeringSemester_offeringYear: { userId: session.user.id, offeringSemester: semester, offeringYear: year } },
     create: { userId: session.user.id, offeringSemester: semester, offeringYear: year, selectedIds: canonicalIds, registrationTypes: canonicalTypes },
@@ -188,5 +197,40 @@ export async function POST(req: NextRequest) {
     select: { updatedAt: true },
   });
 
-  return NextResponse.json({ ok: true, updatedAt: plan.updatedAt });
+  // Mirror the plan into CourseEnrollment rows for this term so the dashboard,
+  // progress and courses pages — which all read enrollments, not plans — show the
+  // same courses and the same credit totals as this page. Scoped to the plan's own
+  // (semester, year, term) and to IN_PROGRESS/AUDIT rows; completed and graded
+  // history is never touched. See lib/planEnrollmentSync.ts.
+  //
+  // A sync failure must not lose the student's saved plan: the plan is already
+  // committed above, so report the save as successful and surface the sync
+  // problem separately rather than 500-ing the whole request.
+  let enrollmentSync: { created: number; updated: number; deleted: number } | null = null;
+  let enrollmentSyncError: string | null = null;
+  try {
+    const syncResult = await syncPlanToEnrollments(prisma, session.user.id, semester, year, {
+      previousSelectedIds: priorPlan?.selectedIds ?? [],
+    });
+    enrollmentSync = {
+      created: syncResult.created,
+      updated: syncResult.updated,
+      deleted: syncResult.deleted,
+    };
+  } catch (error) {
+    enrollmentSyncError = (error as Error).message;
+    console.error("[pre-registration/plan] enrollment sync failed", {
+      userId: session.user.id,
+      semester,
+      year,
+      error,
+    });
+  }
+
+  return NextResponse.json({
+    ok: true,
+    updatedAt: plan.updatedAt,
+    enrollmentSync,
+    enrollmentSyncError,
+  });
 }

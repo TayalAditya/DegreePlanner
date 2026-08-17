@@ -16,7 +16,10 @@ const TERM_ORDER: Record<Term, number> = {
 
 // Derive the {year, term} for a semester the same way enrollments are stored:
 // Fall (odd) opens the academic year, Spring (even) is the next calendar year.
-function contextFromSemester(semester: number, batchYear: number): CurrentTimetableContext {
+// Exported because plan→enrollment sync must use this exact convention: a plan's
+// own `offeringYear` is a raw calendar year and would produce duplicate rows
+// against the CourseEnrollment [userId, courseId, semester, year, term] key.
+export function contextFromSemester(semester: number, batchYear: number): CurrentTimetableContext {
   return {
     semester,
     year: batchYear + Math.floor(semester / 2),
