@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { PieChart, Pie, Cell, Label, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { getAllDefaultCourses, type DefaultCourse } from "@/lib/defaultCurriculum";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
-import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
+import { pickBranchMapping, getHssIksDegreeCap, HSS_IKS_DEGREE_CAP_DEFAULT, type BranchMapping } from "@/lib/courseCategory";
 import {
   addCredits,
   formatCourseCode,
@@ -115,20 +115,21 @@ const HSS_CORE_CAP_DEFAULT = 15;
 // HSS+IKS combined credits beyond this cap do not count toward the degree total.
 // Credits 0–HSS_CORE_CAP satisfy the HSS core requirement; HSS_CORE_CAP–HSS_FE_CAP
 // spill into Free Elective; anything above HSS_FE_CAP is "Not in Degree" (drained).
-const HSS_FE_CAP = 20;
+// B23 BOA relaxation: HSS+IKS degree cap is 30 credits; all other batches use 20.
+const HSS_FE_CAP_DEFAULT = HSS_IKS_DEGREE_CAP_DEFAULT;
 
 // Split one course's credits across the HSS+IKS buckets given how much of the
 // combined basket is already used. Returns the portion that satisfies the HSS
 // core requirement (0–coreCap), the portion that spills into Free Elective
-// (coreCap–HSS_FE_CAP) and the portion drained out of the degree (>HSS_FE_CAP).
+// (coreCap–feCap) and the portion drained out of the degree (>feCap).
 // `used` is advanced by the caller to (before + hss + fe); notInDegree does NOT
-// advance it — but since it only ever occurs once used has reached HSS_FE_CAP,
+// advance it — but since it only ever occurs once used has reached feCap,
 // the running total effectively stops at the cap either way.
-function splitHssIksCredits(before: number, credits: number, coreCap: number) {
+function splitHssIksCredits(before: number, credits: number, coreCap: number, feCap: number) {
   const afterCore = minCredits(coreCap, addCredits(before, credits));
   const hss = subtractCredits(afterCore, minCredits(coreCap, before));
-  const afterFe = minCredits(HSS_FE_CAP, addCredits(before, credits));
-  const fe = subtractCredits(afterFe, minCredits(HSS_FE_CAP, addCredits(before, hss)));
+  const afterFe = minCredits(feCap, addCredits(before, credits));
+  const fe = subtractCredits(afterFe, minCredits(feCap, addCredits(before, hss)));
   const notInDegree = subtractCredits(credits, addCredits(hss, fe));
   return { hss, fe, notInDegree };
 }
@@ -439,7 +440,7 @@ export function ProgressChart({
         (code === "IC182" && (userBatch === 2024 || userBatch === 2025));
       if (isIksType) {
         const before = hssUsed.credits;
-        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP);
+        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP, getHssIksDegreeCap(userBatch));
         hssUsed.credits = addCredits(before, addCredits(hss, fe));
         if (hss > 0) categoryCredits.HSS = addCredits(categoryCredits.HSS, hss);
         if (fe > 0) categoryCredits.FE = addCredits(categoryCredits.FE, fe);
@@ -449,7 +450,7 @@ export function ProgressChart({
       const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
       if (category === "HSS") {
         const before = hssUsed.credits;
-        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP);
+        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP, getHssIksDegreeCap(userBatch));
         hssUsed.credits = addCredits(before, addCredits(hss, fe));
         if (hss > 0) categoryCredits.HSS = addCredits(categoryCredits.HSS, hss);
         if (fe > 0) categoryCredits.FE = addCredits(categoryCredits.FE, fe);
@@ -601,7 +602,7 @@ export function ProgressChart({
         (code === "IC182" && (userBatch === 2024 || userBatch === 2025));
       if (isIksType) {
         const before = hssUsed.credits;
-        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP);
+        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP, getHssIksDegreeCap(userBatch));
         hssUsed.credits = addCredits(before, addCredits(hss, fe));
         if (hss > 0) add(bucket, "HSS", hss);
         if (fe > 0) add(bucket, "FE", fe);
@@ -612,7 +613,7 @@ export function ProgressChart({
       const category = getCourseCategory(e, icBasketUsed, userBranch, hssUsed);
       if (category === "HSS") {
         const before = hssUsed.credits;
-        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP);
+        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, HSS_CORE_CAP, getHssIksDegreeCap(userBatch));
         hssUsed.credits = addCredits(before, addCredits(hss, fe));
         if (hss > 0) add(bucket, "HSS", hss);
         if (fe > 0) add(bucket, "FE", fe);

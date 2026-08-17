@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, createContext, useContext } from "react";
 import { PreRegistrationSkeleton } from "./loading";
 import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check, EyeOff, Eye, FileX, FileWarning } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
@@ -9,10 +9,15 @@ import { PlanImageDownloadButton, createPlanImageBlob } from "@/components/PlanI
 import { formatCredits, formatCourseCode } from "@/lib/utils";
 import {
   areMinorRequirementAlternatives,
+  getEligibleMinors,
   getMinorRequirementCountingKey,
   MINORS,
 } from "@/lib/minors";
 import { getBatch23FacultyAdvisor } from "@/lib/batch23FacultyAdvisors";
+import {
+  getHssIksDegreeCap,
+  HSS_IKS_DEGREE_CAP_DEFAULT as HSS_IKS_CAP_FALLBACK,
+} from "@/lib/courseCategory";
 
 interface Offering {
   id: string;
@@ -108,7 +113,14 @@ const CATEGORY_BAR_COLOR: Record<string, string> = {
   NOT_IN_DEGREE: "bg-foreground-secondary",
 };
 
-const HSS_IKS_DEGREE_CAP = 20;
+const HSS_IKS_DEGREE_CAP_DEFAULT = HSS_IKS_CAP_FALLBACK; // per-batch value resolved via getHssIksDegreeCap
+
+// The HSS+IKS degree cap is one number for the whole page (B23 = 30, everyone
+// else = 20). Provided via context rather than prop-drilled, so the course
+// cards, the P/F dropdown and the summary banners can never quote three
+// different caps — that mismatch is exactly what this fixes.
+const HssIksDegreeCapContext = createContext(HSS_IKS_DEGREE_CAP_DEFAULT);
+const useHssIksDegreeCap = () => useContext(HssIksDegreeCapContext);
 
 // These minors use the HSS+IKS basket naturally. Their courses become FE only
 // after that basket is already fulfilled; other minor-counting courses are FE.
@@ -263,6 +275,7 @@ function RegTypeSelector({
   pfBudgetRemaining: number;
   onChange: (id: string, type: RegType) => void;
 }) {
+  const hssDegreeCapCr = useHssIksDegreeCap();
   const [open, setOpen] = useState(false);
 
   const allowPF = hssIksSource || PF_FREE_CATS.has(category) || PF_APPROVAL_CATS.has(category);
@@ -328,7 +341,7 @@ function RegTypeSelector({
                       (pfExhausted
                         ? "P/F budget exhausted (" + PF_TOTAL + " cr used)"
                         : hssIksSource
-                          ? "Uses P/F allowance · counts toward your degree only through the " + HSS_IKS_DEGREE_CAP + " cr HSS+IKS cap · " + pfBudgetRemaining + " cr P/F remaining"
+                          ? "Uses P/F allowance · counts toward your degree only through the " + hssDegreeCapCr + " cr HSS+IKS cap · " + pfBudgetRemaining + " cr P/F remaining"
                           : "Counts as FE, not " + (CATEGORY_LABEL[category] ?? category) + " · " + pfBudgetRemaining + " cr P/F remaining")}
                     {opt.value === "PASS_FAIL" && PF_APPROVAL_CATS.has(category) &&
                       <><br />Requires faculty & FA approval</>}
@@ -373,6 +386,7 @@ function CourseCard({
   displayCategory?: string;
   categoryReason?: string;
 }) {
+  const hssDegreeCapCr = useHssIksDegreeCap();
   const isCompleted = offering.completedInSemester !== null;
   const normalizedCourseCode = offering.courseCode.replace(/[^A-Z0-9]/gi, "");
   const slotLabel = offering.slots || (/(?:396P|399P|498P)$/i.test(normalizedCourseCode) ? "NS" : null);
@@ -489,7 +503,7 @@ function CourseCard({
           <p className="mt-1 text-xs text-accent flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" />
             {isHssIksSource
-              ? "P/F uses your P/F allowance. This HSS+IKS course counts toward your degree only within the " + HSS_IKS_DEGREE_CAP + " cr combined cap."
+              ? "P/F uses your P/F allowance. This HSS+IKS course counts toward your degree only within the " + hssDegreeCapCr + " cr combined cap."
               : "P/F counts toward FE" + (effectiveCategory === "FE" ? "." : ", not " + catLabel + ".")}
             {PF_APPROVAL_CATS.has(effectiveCategory) && " DE as P/F also requires faculty & FA approval."}
           </p>
@@ -754,6 +768,10 @@ export default function PreRegistrationPage() {
   const [regTypes, setRegTypes] = useState<Map<string, RegType>>(new Map());
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
+
+  // B23 BOA relaxation raises the HSS+IKS degree cap 20 → 30. Resolved once here
+  // and passed down, so every card and dropdown quotes the same number.
+  const hssIksDegreeCap = getHssIksDegreeCap(data?.studentInfo?.batch);
 
   const handleRegTypeChange = (id: string, type: RegType) => {
     if (type === "PASS_FAIL" && hasSelected399P) {
@@ -1121,6 +1139,8 @@ export default function PreRegistrationPage() {
     const requirements = data.programRequirements;
     const completed = data.completedBreakdown;
     const hssCoreCap = requirements?.HSS ?? 15;
+    // B23 BOA relaxation: HSS+IKS degree cap is 30; all others stay at 20.
+    const HSS_IKS_DEGREE_CAP = hssIksDegreeCap;
     const minorCountsAsFE = Boolean(
       minorData && !HSS_NATIVE_MINOR_CODES.has(minorData.minor.code),
     );
@@ -1697,6 +1717,7 @@ export default function PreRegistrationPage() {
   const showIncompleteWarning = incompleteSemesters.length > 0 && !incompleteWarningDismissed;
 
   return (
+    <HssIksDegreeCapContext.Provider value={hssIksDegreeCap}>
     <div className="max-w-6xl mx-auto pb-36 sm:pb-24">
       {/* Incomplete semester warning modal */}
       {showIncompleteWarning && (
@@ -1768,7 +1789,7 @@ export default function PreRegistrationPage() {
           className="text-sm bg-background border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 w-full sm:w-auto sm:min-w-[280px]"
         >
           <option value="">— Select a minor / specialization —</option>
-          {MINORS.filter((m) => !m.eligibleBatches || (data?.studentInfo?.batch && m.eligibleBatches.includes(data.studentInfo.batch))).map((m) => (
+          {getEligibleMinors(data?.studentInfo?.batch).map((m) => (
             <option key={m.code} value={m.code}>{m.name}</option>
           ))}
         </select>
@@ -2172,7 +2193,7 @@ export default function PreRegistrationPage() {
             <p className="mt-0.5 text-xs text-foreground-secondary">
               {hssShownAsFe.length > 0 && <>{hssShownAsFe.length} HSS + IKS course{hssShownAsFe.length === 1 ? " is" : "s are"} available under Free Electives because this basket is already complete.</>}
               {hssShownAsFe.length > 0 && hssNotInDegree.length > 0 && " "}
-              {hssNotInDegree.length > 0 && <>{hssNotInDegree.length} course{hssNotInDegree.length === 1 ? " is" : "s are"} not counted because HSS + IKS is capped at {HSS_IKS_DEGREE_CAP} cr.</>}
+              {hssNotInDegree.length > 0 && <>{hssNotInDegree.length} course{hssNotInDegree.length === 1 ? " is" : "s are"} not counted because HSS + IKS is capped at {hssIksDegreeCap} cr.</>}
             </p>
           </div>
         </div>
@@ -2505,5 +2526,6 @@ export default function PreRegistrationPage() {
         </div>
       </div>
     </div>
+    </HssIksDegreeCapContext.Provider>
   );
 }

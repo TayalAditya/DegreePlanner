@@ -7,7 +7,7 @@ import { BookOpen, TrendingUp, AlertCircle } from "lucide-react";
 import { addCredits, formatCourseCode, formatCredits, minCredits, subtractCredits, sumCredits } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
-import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
+import { pickBranchMapping, getHssIksDegreeCap, HSS_IKS_DEGREE_CAP_DEFAULT, type BranchMapping } from "@/lib/courseCategory";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 
 interface DashboardOverviewProps {
@@ -20,7 +20,8 @@ interface DashboardOverviewProps {
 
 const HSS_CORE_CAP = 15; // Dynamic in practice; 15 BTech / 12 BSCS — component uses program data
 
-const HSS_FE_CAP = 20;
+// B23 BOA relaxation: HSS+IKS degree cap is 30 credits; all other batches use 20.
+const HSS_FE_CAP_DEFAULT = HSS_IKS_DEGREE_CAP_DEFAULT;
 
 const categoryLabels = {
   IC: "Institute Core",
@@ -51,11 +52,11 @@ const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: st
 type DashboardCategory = keyof typeof categoryLabels;
 type CreditAllocation = { category: DashboardCategory; credits: number };
 
-function splitHssIksCredits(before: number, credits: number, coreCap: number) {
+function splitHssIksCredits(before: number, credits: number, coreCap: number, feCap: number) {
   const hss = Math.max(0, Math.min(credits, coreCap - before));
   const fe = Math.max(
     0,
-    Math.min(credits - hss, HSS_FE_CAP - Math.max(coreCap, before))
+    Math.min(credits - hss, feCap - Math.max(coreCap, before))
   );
   return { hss, fe, notInDegree: Math.max(0, credits - hss - fe) };
 }
@@ -336,7 +337,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
 
       if (category === "HSS") {
         const before = hssIksUsedForCategory.credits;
-        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, hssCoreCap);
+        const { hss, fe, notInDegree } = splitHssIksCredits(before, credits, hssCoreCap, getHssIksDegreeCap(batch));
         creditAllocations = [];
         if (hss > 0) creditAllocations.push({ category: "HSS", credits: hss });
         if (fe > 0) creditAllocations.push({ category: "FE", credits: fe });

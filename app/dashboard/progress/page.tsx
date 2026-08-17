@@ -23,6 +23,7 @@ import {
   MTP_COMPONENT_CREDITS,
   MTP_TOTAL_CREDITS,
 } from "@/lib/mtpConfig";
+import { getHssIksDegreeCap, HSS_IKS_DEGREE_CAP_DEFAULT } from "@/lib/courseCategory";
 
 interface Enrollment {
   id: string;
@@ -146,7 +147,8 @@ const categoryLabels = {
 
 // HSS_CORE_CAP is now dynamic (set inside calculateProgress based on program); module-level kept for ProgressChart display only.
 const HSS_CORE_CAP_DEFAULT = 15; // BTech default
-const HSS_FE_CAP = 20;
+// B23 BOA relaxation: HSS+IKS degree cap is 30 credits; all other batches use 20.
+const HSS_FE_CAP_DEFAULT = HSS_IKS_DEGREE_CAP_DEFAULT;
 
 export default function ProgressPage() {
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -178,6 +180,11 @@ export default function ProgressPage() {
     if (match) return 2000 + Number.parseInt(match[1], 10);
     return null;
   }, [user?.batch, user?.enrollmentId]);
+
+  // B23 BOA relaxation: HSS+IKS degree cap is 30; all other batches use 20.
+  // Declared here (not further down) because getCourseCategory closes over it and
+  // runs during calculateProgress() — a later `const` would be a TDZ ReferenceError.
+  const hssFeCap = getHssIksDegreeCap(inferredBatch);
 
   const mappingBranchAliases = useMemo(() => {
     if (!user?.branch) return [];
@@ -272,8 +279,8 @@ export default function ProgressPage() {
     // HS-xxx courses always go to HSS — never let branch mapping override
     if (normalizedCode.startsWith("HS")) {
       if (hssUsed) {
-        // Cap at HSS_FE_CAP=20; accumulateSplitAware splits [0-12]→core [12-20]→FE [20+]→ignored
-        hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
+        // Cap at hssFeCap; accumulateSplitAware splits [0-12]→core [12-hssFeCap]→FE [hssFeCap+]→ignored
+        hssUsed.credits = Math.min(hssFeCap, addCredits(hssUsed.credits, credits));
       }
       return "HSS";
     }
@@ -336,7 +343,7 @@ export default function ProgressPage() {
         const resolvedCat = mapping.courseCategory as CourseCategory;
         // Apply HSS cap for non-HS-prefix courses mapped to HSS (e.g. German intensive courses)
         if (resolvedCat === "HSS" && hssUsed) {
-          hssUsed.credits = Math.min(HSS_FE_CAP, addCredits(hssUsed.credits, credits));
+          hssUsed.credits = Math.min(hssFeCap, addCredits(hssUsed.credits, credits));
         }
         return resolvedCat;
       }
@@ -578,10 +585,10 @@ export default function ProgressPage() {
         (eCode === "IC182" && inferredBatch != null && inferredBatch >= 2024);
       if (isIksType) {
         const before = hssU?.credits ?? 0;
-        if (hssU) hssU.credits = Math.min(HSS_FE_CAP, addCredits(before, e.course.credits));
+        if (hssU) hssU.credits = Math.min(hssFeCap, addCredits(before, e.course.credits));
         const after = hssU?.credits ?? before;
         const corePortion = Math.max(0, Math.min(HSS_CORE_CAP, after) - Math.min(HSS_CORE_CAP, before));
-        const fePortion = Math.max(0, Math.min(HSS_FE_CAP, after) - Math.max(HSS_CORE_CAP, before));
+        const fePortion = Math.max(0, Math.min(hssFeCap, after) - Math.max(HSS_CORE_CAP, before));
         const notInDegree = subtractCredits(e.course.credits, addCredits(corePortion, fePortion));
         if (corePortion > 0) map["HSS"] = addCredits(map["HSS"] ?? 0, corePortion);
         if (fePortion > 0) map["FE"] = addCredits(map["FE"] ?? 0, fePortion);
@@ -593,7 +600,7 @@ export default function ProgressPage() {
       const hssAfter = hssU?.credits ?? hssBefore;
       if (category === "HSS") {
         const corePortion = Math.max(0, Math.min(HSS_CORE_CAP, hssAfter) - Math.min(HSS_CORE_CAP, hssBefore));
-        const fePortion = Math.max(0, Math.min(HSS_FE_CAP, hssAfter) - Math.max(HSS_CORE_CAP, hssBefore));
+        const fePortion = Math.max(0, Math.min(hssFeCap, hssAfter) - Math.max(HSS_CORE_CAP, hssBefore));
         const notInDegree = subtractCredits(e.course.credits, addCredits(corePortion, fePortion));
         if (corePortion > 0) map["HSS"] = addCredits(map["HSS"] ?? 0, corePortion);
         if (fePortion > 0) map["FE"] = addCredits(map["FE"] ?? 0, fePortion);
@@ -790,6 +797,8 @@ export default function ProgressPage() {
   const hssCoreCapForSemesterDisplay = Number(
     progress?.creditsRequiredByCategory?.HSS ?? HSS_CORE_CAP_DEFAULT
   );
+  // B23 BOA relaxation: HSS+IKS degree cap is 30; all other batches use 20.
+  // (hssFeCap is declared once near inferredBatch — see the TDZ note there.)
 
   const semesterCourses = sortedActiveEnrollments
     .map((e) => {
@@ -837,12 +846,12 @@ export default function ProgressPage() {
         (eCode2 === "IC182" && inferredBatch != null && inferredBatch >= 2024);
       const hssBefore = hssUsedForDisplay.credits;
       if (isIksDisplay) {
-        hssUsedForDisplay.credits = Math.min(progress?.creditsRequiredByCategory?.HSS ?? HSS_FE_CAP, hssBefore + (e.course.credits || 0));
+        hssUsedForDisplay.credits = Math.min(progress?.creditsRequiredByCategory?.HSS ?? hssFeCap, hssBefore + (e.course.credits || 0));
       }
       let category = getCourseCategory(e, icBasketUsedForDisplay, hssUsedForDisplay);
       if (!isIksDisplay && eCode2.startsWith("HS") && category !== "HSS") {
         category = "HSS";
-        hssUsedForDisplay.credits = Math.min(HSS_FE_CAP, hssBefore + (e.course.credits || 0));
+        hssUsedForDisplay.credits = Math.min(hssFeCap, hssBefore + (e.course.credits || 0));
       }
 
       // Build the HSS+IKS allocation once for both this table and the
@@ -858,7 +867,7 @@ export default function ProgressPage() {
           0,
           Math.min(
             sourceCredits - hssCredits,
-            HSS_FE_CAP - Math.max(hssCoreCapForSemesterDisplay, hssBeforeForSemester)
+            hssFeCap - Math.max(hssCoreCapForSemesterDisplay, hssBeforeForSemester)
           )
         );
         const notInDegreeCredits = Math.max(0, sourceCredits - hssCredits - feCredits);
@@ -1235,7 +1244,7 @@ export default function ProgressPage() {
               continue;
             }
 
-            // HSS and IKS share one 20-credit basket. Recalculate their display
+            // HSS and IKS share one basket. Recalculate their display
             // allocation here so the detailed list always shows the same spill
             // into FE as the category totals (for example, 1 HSS + 2 FE of a
             // 3-credit course when the 15-credit HSS cap is crossed).
@@ -1249,7 +1258,7 @@ export default function ProgressPage() {
                 0,
                 Math.min(
                   sourceCredits - hssCredits,
-                  HSS_FE_CAP - Math.max(hssCoreCap, hssIksUsedForList)
+                  hssFeCap - Math.max(hssCoreCap, hssIksUsedForList)
                 )
               );
               const notInDegreeCredits = Math.max(0, sourceCredits - hssCredits - feCredits);
