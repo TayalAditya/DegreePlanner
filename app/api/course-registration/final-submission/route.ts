@@ -211,6 +211,17 @@ export async function POST(req: NextRequest) {
   // as the response is returned, so a fire-and-forget fetch never completes in
   // production. postToSheet swallows its own errors and has an 8s timeout, so a
   // webhook outage can't fail the submission — the DB write above already holds.
+  //
+  // Two payload shapes are sent on purpose. `header`/`row` is what an updated
+  // Apps Script reads. The flat fields below are the legacy shape: an Apps Script
+  // that has NOT been redeployed yet ignores header/row and falls back to those,
+  // so it still records who submitted and when instead of appending a blank row.
+  // Once the script is updated the legacy fields are simply unused.
+  const submittedAtLabel =
+    row.revision > 1
+      ? `${row.updatedAt.toISOString()} (edit #${row.revision})`
+      : row.submittedAt.toISOString();
+
   const sheetSynced = await postToSheet({
     tab: SHEET_TAB,
     header: SHEET_HEADER,
@@ -220,10 +231,15 @@ export async function POST(req: NextRequest) {
       branch,
       ctx.offeringSemester,
       formatCoursesForSheet(courses),
-      row.revision > 1
-        ? `${row.updatedAt.toISOString()} (edit #${row.revision})`
-        : row.submittedAt.toISOString(),
+      submittedAtLabel,
     ],
+    // Legacy fallback — see above.
+    studentName: name,
+    rollNumber: roll,
+    branch,
+    offeringSemester: ctx.offeringSemester,
+    offeringYear: ctx.offeringYear,
+    reportedAt: submittedAtLabel,
   });
 
   return NextResponse.json({
