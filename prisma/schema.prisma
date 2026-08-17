@@ -39,6 +39,7 @@ model User {
   preRegistrationPlans     PreRegistrationPlan[]
   preRegNotSubmitted       PreRegNotSubmitted[]
   samarthReports           SamarthReport[]
+  finalCourseSubmissions   FinalCourseSubmission[]
   sessions                 Session[]
   supportTickets           SupportTicket[]
   feedbacks                Feedback[]
@@ -515,6 +516,36 @@ model PreRegNotSubmitted {
   offeringSemester Int
   offeringYear     Int
   createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, offeringSemester, offeringYear])
+  @@index([offeringSemester, offeringYear])
+}
+
+// Student ka apna final course registration declaration. Samarth aur Sootrank pe
+// alag-alag (ya galat) submission ho gaya ho — yahan student batata hai ki asli
+// mein kya register karna hai aur kis form mein (Regular / Pass-Fail / Audit).
+// Acad Sec isko authoritative maan ke portals reconcile karta hai.
+// DB source of truth + Google Sheet mirror (finalCoursePlan tab).
+model FinalCourseSubmission {
+  id               String   @id @default(cuid())
+  userId           String
+  rollNumber       String
+  studentName      String
+  branch           String
+  batchYear        Int
+  offeringSemester Int
+  offeringYear     Int
+  /// [{ code, name, credits, slots, registrationType }] — submit ke waqt freeze.
+  /// Snapshot deliberately: yeh record hai ki student ne kya declare kiya tha, so
+  /// baad mein draft plan ya offerings badalne se yeh chupchaap drift na kare.
+  courses          Json
+  totalCredits     Float    @default(0)
+  /// Har edit pe badhta hai. Sheet append-only hai, so revision se pata chalta
+  /// hai ki kaunsi row latest declaration hai.
+  revision         Int      @default(1)
+  submittedAt      DateTime @default(now())
+  updatedAt        DateTime @updatedAt
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, offeringSemester, offeringYear])

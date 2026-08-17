@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, createContext, useContext } from "react";
 import { PreRegistrationSkeleton } from "./loading";
-import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check, EyeOff, Eye, FileX, FileWarning } from "lucide-react";
+import { Lock, AlertTriangle, CheckCircle, ExternalLink, BookOpen, Info, ChevronDown, ChevronRight, Save, Mail, Briefcase, Plus, Copy, Check, EyeOff, Eye, FileX, FileWarning, ClipboardList, Pencil } from "lucide-react";
 import { useToast } from "@/components/ToastProvider";
 import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { PlanImageDownloadButton, createPlanImageBlob } from "@/components/PlanImageDownloadButton";
@@ -78,6 +78,75 @@ interface PlannedCourse {
   degreeCredits?: number;
   notInDegreeCredits?: number;
   registrationType: RegType;
+}
+
+/** One course as declared in a final submission (frozen server-side at submit). */
+interface SubmittedCourse {
+  code: string;
+  name: string;
+  credits: number;
+  slots: string;
+  registrationType: RegType;
+}
+
+/** GET /api/course-registration/final-submission, when a declaration exists. */
+interface FinalSubmission {
+  courses: SubmittedCourse[];
+  totalCredits: number;
+  revision: number;
+  submittedAt: string;
+  updatedAt: string;
+}
+
+const REG_TYPE_SHORT: Record<RegType, string> = {
+  REGULAR: "Regular",
+  PASS_FAIL: "Pass-Fail",
+  AUDIT: "Audit",
+};
+
+/**
+ * Segmented Regular / Pass-Fail / Audit control for the final-submission review.
+ * Deliberately delegates to the page's existing handleRegTypeChange so the P/F
+ * allowance guard applies here too and this can't drift from the course cards.
+ */
+function RegTypePicker({
+  value,
+  onChange,
+  full = false,
+}: {
+  value: RegType;
+  onChange: (type: RegType) => void;
+  full?: boolean;
+}) {
+  const options: RegType[] = ["REGULAR", "PASS_FAIL", "AUDIT"];
+  return (
+    <div
+      role="group"
+      aria-label="Register as"
+      className={`inline-flex rounded-lg border border-border overflow-hidden ${full ? "w-full" : ""}`}
+    >
+      {options.map((option) => {
+        const active = value === option;
+        return (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onChange(option)}
+            className={`px-2.5 py-1.5 text-xs font-medium transition-colors border-r border-border last:border-r-0 ${
+              full ? "flex-1" : ""
+            } ${
+              active
+                ? "bg-primary text-white"
+                : "bg-surface text-foreground-secondary hover:bg-surface-hover hover:text-foreground"
+            }`}
+          >
+            {REG_TYPE_SHORT[option]}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 type EffectiveOfferingCategory = {
@@ -765,6 +834,11 @@ export default function PreRegistrationPage() {
   const [sootrankReported, setSootrankReported] = useState<Set<string>>(new Set());
   const [notSubmitted, setNotSubmitted] = useState(false);
   const [notSubmittedBusy, setNotSubmittedBusy] = useState(false);
+  // Final course registration declaration — what the student says should actually
+  // be registered, when Samarth/Sootrank disagree. null until the GET resolves.
+  const [finalSubmission, setFinalSubmission] = useState<FinalSubmission | null>(null);
+  const [finalReviewOpen, setFinalReviewOpen] = useState(false);
+  const [finalBusy, setFinalBusy] = useState(false);
   const [regTypes, setRegTypes] = useState<Map<string, RegType>>(new Map());
   const { showToast } = useToast();
   const { confirm } = useConfirmDialog();
@@ -853,8 +927,12 @@ export default function PreRegistrationPage() {
         .then((r) => r.json())
         .then((j) => Boolean(j?.reported))
         .catch(() => false),
+      fetch("/api/course-registration/final-submission")
+        .then((r) => r.json())
+        .then((j) => (j?.submitted ? (j as FinalSubmission) : null))
+        .catch(() => null),
     ])
-      .then(([d, courses, reported, notSubmittedFlag]) => {
+      .then(([d, courses, reported, notSubmittedFlag, finalSub]) => {
         setData(d);
         if (Array.isArray(reported.samarth) && reported.samarth.length > 0) {
           setSamarthReported(new Set(reported.samarth));
@@ -863,6 +941,7 @@ export default function PreRegistrationPage() {
           setSootrankReported(new Set(reported.sootrank));
         }
         setNotSubmitted(notSubmittedFlag);
+        setFinalSubmission(finalSub);
 
         // Restore saved plan from embedded response — no second round-trip
         const plan = d.savedPlan;
@@ -1343,6 +1422,29 @@ export default function PreRegistrationPage() {
     return rows;
   }, [data, selected, selectedExtra, internshipCourses, mtp1Course, regTypes, effectiveOfferingCategories]);
 
+  // What the final-submission review pane lists, and what gets submitted. Audits
+  // are included on purpose — an audited course still has to be registered as an
+  // audit on the portal, which is exactly the kind of thing that gets mis-entered.
+  const finalCourses = plannedCourses;
+  const finalTotalCredits = useMemo(
+    () => finalCourses.reduce((sum, course) => sum + course.credits, 0),
+    [finalCourses]
+  );
+
+  /**
+   * True when the plan on screen no longer matches what was submitted, so the
+   * card can prompt a re-submit instead of silently showing a stale declaration.
+   * Compared on the fields the Acad Sec acts on: which course, and in what form.
+   */
+  const finalPlanDiffersFromSubmission = useMemo(() => {
+    if (!finalSubmission) return false;
+    const submitted = finalSubmission.courses;
+    if (submitted.length !== finalCourses.length) return true;
+    const key = (code: string, type: RegType) => `${code.toUpperCase()}|${type}`;
+    const submittedKeys = new Set(submitted.map((c) => key(c.code, c.registrationType)));
+    return finalCourses.some((c) => !submittedKeys.has(key(c.code, c.registrationType)));
+  }, [finalSubmission, finalCourses]);
+
   const handleToggle = (offering: Offering) => {
     if (offering.isCompulsory || offering.completedInSemester !== null) return;
     const completedMinorAlternative = minorData?.groups
@@ -1594,6 +1696,72 @@ export default function PreRegistrationPage() {
       showToast("error", "Could not update your Samarth submission status");
     } finally {
       setNotSubmittedBusy(false);
+    }
+  };
+
+  /**
+   * Submit (or re-submit) the plan as the student's final course registration.
+   * The list sent is exactly what the review pane shows, built from
+   * `plannedCourses` — the same source the plan image and category totals use.
+   */
+  const handleSubmitFinal = async () => {
+    if (finalCourses.length === 0) {
+      showToast("error", "Add at least one course to your plan first.");
+      return;
+    }
+
+    const isEdit = Boolean(finalSubmission);
+    const ok = await confirm({
+      title: isEdit ? "Update your final submission?" : "Submit as your final registration?",
+      message: isEdit
+        ? `This replaces your earlier submission with these ${finalCourses.length} course(s), ${formatCredits(finalTotalCredits)} credits. The Academic Secretary will work from the updated list.`
+        : `You are telling the Academic Secretary that these ${finalCourses.length} course(s), ${formatCredits(finalTotalCredits)} credits, are what you want registered — with the types shown. This is treated as your final allocation.`,
+      confirmText: isEdit ? "Update submission" : "Yes, submit as final",
+      cancelText: "Review again",
+    });
+    if (!ok) return;
+
+    setFinalBusy(true);
+    try {
+      const res = await fetch("/api/course-registration/final-submission", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courses: finalCourses.map((c) => ({
+            code: c.code,
+            name: c.name,
+            credits: c.credits,
+            slots: c.slots ?? "",
+            registrationType: c.registrationType,
+          })),
+        }),
+      });
+      if (!res.ok) throw new Error();
+      const json = (await res.json()) as FinalSubmission & { sheetSynced?: boolean };
+
+      setFinalSubmission({
+        courses: json.courses,
+        totalCredits: json.totalCredits,
+        revision: json.revision,
+        submittedAt: json.submittedAt,
+        updatedAt: json.updatedAt,
+      });
+      setFinalReviewOpen(false);
+
+      // Don't claim a clean end-to-end sync when the sheet mirror failed — the
+      // submission is safe either way, but the Acad Sec's sheet may lag.
+      if (json.sheetSynced === false) {
+        showToast(
+          "warning",
+          "Submission saved. Syncing to the Academic Secretary's sheet is delayed — it will be picked up."
+        );
+      } else {
+        showToast("success", isEdit ? "Submission updated — this is now your final registration" : "Submitted — this is your final registration");
+      }
+    } catch {
+      showToast("error", "Could not submit right now. Please try again.");
+    } finally {
+      setFinalBusy(false);
     }
   };
 
@@ -1930,6 +2098,183 @@ export default function PreRegistrationPage() {
           <span className="font-medium text-foreground">This is your course registration plan.</span>{" "}
           Degree Planner saves eligible current-semester courses by category. Submit or confirm it on the institute portal when required.
         </p>
+      </div>
+
+      {/* Final course registration — what the student actually wants registered.
+          Sits above the "not submitted" card: that one reports a missing
+          submission, this one corrects a wrong or mismatched submission. */}
+      <div className={`rounded-xl border overflow-hidden transition-colors ${
+        finalSubmission ? "border-success/40 bg-success/8" : "border-border bg-surface"
+      }`}>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            {finalSubmission
+              ? <CheckCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-success" />
+              : <ClipboardList className="w-5 h-5 flex-shrink-0 mt-0.5 text-foreground-secondary" />}
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">
+                {finalSubmission
+                  ? "Submitted — this is your final course registration"
+                  : "Courses on Samarth or Sootrank don't match what you want?"}
+              </p>
+              <p className="text-xs text-foreground-secondary mt-0.5">
+                {finalSubmission ? (
+                  <>
+                    {finalSubmission.courses.length} course
+                    {finalSubmission.courses.length === 1 ? "" : "s"} ·{" "}
+                    {formatCredits(finalSubmission.totalCredits)} credits · submitted{" "}
+                    <span className="font-medium text-foreground">
+                      {new Date(finalSubmission.updatedAt).toLocaleString("en-IN", {
+                        day: "numeric", month: "short", year: "numeric",
+                        hour: "2-digit", minute: "2-digit",
+                      })}
+                    </span>
+                    {finalSubmission.revision > 1 && ` · edit #${finalSubmission.revision}`}
+                  </>
+                ) : (
+                  <>
+                    The two portals sometimes hold different submissions. Tell the Academic Secretary
+                    what you actually want registered — and in what form (Regular, Pass-Fail or Audit).
+                    Whatever you submit here is treated as <span className="font-medium text-foreground">final</span>.
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFinalReviewOpen((open) => !open)}
+            className={`flex-shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              finalSubmission
+                ? "border border-border bg-surface hover:bg-surface-hover text-foreground"
+                : "bg-primary text-white hover:bg-primary/90"
+            }`}
+          >
+            {finalSubmission
+              ? <><Pencil className="w-4 h-4 shrink-0" />{finalReviewOpen ? "Close" : "Edit submission"}</>
+              : <><ClipboardList className="w-4 h-4 shrink-0" />{finalReviewOpen ? "Close" : "Report incorrect submission"}</>}
+          </button>
+        </div>
+
+        {/* Plan changed after submitting → nudge a re-submit rather than leaving a
+            stale declaration on record without saying so. */}
+        {finalSubmission && finalPlanDiffersFromSubmission && !finalReviewOpen && (
+          <div className="border-t border-border/60 bg-warning/8 px-4 py-3 flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
+            <p className="text-xs text-foreground-secondary">
+              Your plan above has changed since you submitted.{" "}
+              <button
+                type="button"
+                onClick={() => setFinalReviewOpen(true)}
+                className="font-medium text-primary hover:underline"
+              >
+                Review and update your submission
+              </button>{" "}
+              so the Academic Secretary works from the latest list.
+            </p>
+          </div>
+        )}
+
+        {finalReviewOpen && (
+          <div className="border-t border-border/60 bg-background-secondary/40">
+            <div className="px-4 py-3">
+              <p className="text-xs text-foreground-secondary">
+                Confirm each course and how you want it counted. Changing a type here also updates it
+                on the course list above.
+              </p>
+            </div>
+
+            {finalCourses.length === 0 ? (
+              <div className="px-4 pb-4">
+                <p className="text-sm text-foreground-secondary">
+                  Your plan is empty. Pick your courses above, then come back here to submit them.
+                </p>
+              </div>
+            ) : (
+              <>
+                {/* Desktop: table. Mobile: stacked cards — a 5-column table is
+                    unreadable under ~640px, so the layouts genuinely differ. */}
+                <div className="hidden sm:block px-4 pb-2 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-foreground-secondary border-b border-border">
+                        <th className="py-2 pr-3 font-medium">Course</th>
+                        <th className="py-2 pr-3 font-medium whitespace-nowrap">Slots</th>
+                        <th className="py-2 pr-3 font-medium whitespace-nowrap">Credits</th>
+                        <th className="py-2 font-medium">Register as</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {finalCourses.map((course) => (
+                        <tr key={course.id} className="border-b border-border/50 last:border-0 align-middle">
+                          <td className="py-2.5 pr-3">
+                            <span className="font-medium text-foreground">{formatCourseCode(course.code)}</span>
+                            <span className="block text-xs text-foreground-secondary truncate max-w-xs">{course.name}</span>
+                          </td>
+                          <td className="py-2.5 pr-3 text-foreground-secondary whitespace-nowrap">{course.slots || "—"}</td>
+                          <td className="py-2.5 pr-3 text-foreground-secondary whitespace-nowrap">{formatCredits(course.credits)}</td>
+                          <td className="py-2.5">
+                            <RegTypePicker
+                              value={course.registrationType}
+                              onChange={(type) => handleRegTypeChange(course.id, type)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="sm:hidden px-4 pb-2 space-y-2.5">
+                  {finalCourses.map((course) => (
+                    <div key={course.id} className="rounded-lg border border-border bg-surface p-3">
+                      <p className="text-sm font-medium text-foreground">{formatCourseCode(course.code)}</p>
+                      <p className="text-xs text-foreground-secondary mt-0.5 mb-2">{course.name}</p>
+                      <p className="text-xs text-foreground-secondary mb-2">
+                        {formatCredits(course.credits)} credits · Slots {course.slots || "—"}
+                      </p>
+                      <RegTypePicker
+                        value={course.registrationType}
+                        onChange={(type) => handleRegTypeChange(course.id, type)}
+                        full
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t border-border/60 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <p className="text-sm text-foreground-secondary">
+                    <span className="font-medium text-foreground">{finalCourses.length}</span> course
+                    {finalCourses.length === 1 ? "" : "s"} ·{" "}
+                    <span className="font-medium text-foreground">{formatCredits(finalTotalCredits)}</span> credits
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleSubmitFinal}
+                    disabled={finalBusy}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {finalBusy
+                      ? <div className="w-4 h-4 shrink-0 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                      : <Check className="w-4 h-4 shrink-0" />}
+                    {finalSubmission ? "Update submission" : "Submit as final"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Reassurance, only once there's actually something submitted. */}
+        {finalSubmission && !finalReviewOpen && (
+          <div className="border-t border-border/60 bg-success/8 px-4 py-3">
+            <p className="text-xs text-foreground-secondary">
+              <span className="font-medium text-success">Your allocation is final.</span> The Academic
+              Secretary has your submission and will get the portals matched to it — you won&apos;t be
+              left with an academic issue over this. Reach out any time if something still looks off.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Global "not submitted on Samarth" status */}
