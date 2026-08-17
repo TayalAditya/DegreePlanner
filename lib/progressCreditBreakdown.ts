@@ -1,6 +1,6 @@
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
-import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
+import { pickBranchMapping, getHssIksDegreeCap, type BranchMapping } from "@/lib/courseCategory";
 import { addCredits, minCredits, subtractCredits } from "@/lib/utils";
 
 type CategoryKey = "IC" | "IC_BASKET" | "DC" | "DE" | "FE" | "HSS" | "IKS" | "MTP" | "ISTP" | "NOT_IN_DEGREE";
@@ -154,7 +154,7 @@ export function computeEnrollmentCreditBreakdown({
   const hssUsed = { credits: 0 };
   const hssCoreCap = (programIcCredits ?? 60) <= 52 ? 12 : 15;
   // B23 BOA relaxation: HSS+IKS degree cap raised from 20 → 30.
-  const hssFeCap = userBatch === 2023 ? 30 : 20;
+  const hssFeCap = getHssIksDegreeCap(userBatch);
 
   const shouldCount = (enrollment: EnrollmentLike) => {
     if (enrollment.status === "COMPLETED") return !enrollment.grade || enrollment.grade !== "F";

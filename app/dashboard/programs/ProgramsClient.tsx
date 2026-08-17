@@ -938,7 +938,7 @@ export default function ProgramsClient({
             </div>
           )}
 
-          <MinorPlannerCard enrollments={enrollments} isLoading={enrollmentsLoading} />
+          <MinorPlannerCard enrollments={enrollments} isLoading={enrollmentsLoading} batchYear={inferredBatch} />
 
           {/* Secondary Programs (Minor/Double Major) */}
           {secondaryPrograms.length > 0 && (

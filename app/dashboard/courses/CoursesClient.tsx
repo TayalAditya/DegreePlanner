@@ -18,7 +18,7 @@ import { useConfirmDialog } from "@/components/ConfirmDialog";
 import { StatCard } from "@/components/StatCard";
 import { getAllBranches } from "@/lib/branches";
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
-import { pickBranchMapping, type BranchMapping } from "@/lib/courseCategory";
+import { pickBranchMapping, getHssIksDegreeCap, type BranchMapping } from "@/lib/courseCategory";
 import { getSpecialDpCategory, getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { addCredits, formatCourseCode, formatCredits, subtractCredits, sumCredits } from "@/lib/utils";
 import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
@@ -758,7 +758,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     const branchConfig = getAllBranches().find((b) => b.code === user?.branch);
     const hssCoreCapLocal = branchConfig?.icCredits != null && branchConfig.icCredits <= 52 ? 12 : 15;
     // B23 BOA relaxation: HSS+IKS degree cap raised from 20 → 30.
-    const hssFeCapLocal = resolvedUserBatch === 2023 ? 30 : 20;
+    const hssFeCapLocal = getHssIksDegreeCap(resolvedUserBatch);
     enrollments
       .filter((e) => e.status === "COMPLETED" && (!e.grade || e.grade !== "F"))
       .sort((a, b) => a.semester - b.semester)

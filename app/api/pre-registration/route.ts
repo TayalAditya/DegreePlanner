@@ -8,7 +8,7 @@ import { EnrollmentStatus, ProgramStatus, ProgramType } from "@prisma/client";
 import { creditCalculator } from "@/lib/creditCalculator";
 import { isAcadSec } from "@/lib/permissions";
 import { getBatchAdjustedCredits } from "@/lib/branches";
-import { pickBranchMapping } from "@/lib/courseCategory";
+import { pickBranchMapping, getHssIksDegreeCap } from "@/lib/courseCategory";
 import { MINORS } from "@/lib/minors";
 
 const PRE_REG_OPEN = new Date("2026-08-15T00:00:00+05:30");
@@ -430,7 +430,7 @@ export async function GET() {
 
       // HSS overflow → FE (credits beyond HSS requirement count as FE)
       // B23 BOA relaxation: degree cap raised from 20 → 30.
-      const HSS_IKS_DEGREE_CAP = batchYear === 2023 ? 30 : 20;
+      const HSS_IKS_DEGREE_CAP = getHssIksDegreeCap(batchYear);
       const hssRaw = tally.HSS ?? 0;
       const hssFeCredits = Math.max(0, Math.min(HSS_IKS_DEGREE_CAP, hssRaw) - HSS_IKS_REQ);
       const hssNotInDegree = Math.max(0, hssRaw - HSS_IKS_DEGREE_CAP);

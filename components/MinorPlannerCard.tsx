@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, GraduationCap, ChevronUp } from "lucide-react";
-import { MINORS, type MinorDefinition, type MinorRequirementGroup } from "@/lib/minors";
+import { MINORS, getEligibleMinors, type MinorDefinition, type MinorRequirementGroup } from "@/lib/minors";
 import { MINOR_PLANNER_STORAGE_KEYS } from "@/lib/minorPlannerClient";
 import { addCredits, formatCourseCode, formatCredits } from "@/lib/utils";
 
@@ -19,6 +19,8 @@ type EnrollmentLike = {
 interface MinorPlannerCardProps {
   enrollments: EnrollmentLike[];
   isLoading?: boolean;
+  /** Restricts the list to minors this batch can take. See getEligibleMinors. */
+  batchYear?: number | null;
 }
 
 type CourseState = {
@@ -243,7 +245,7 @@ function computeMinorProgress(
   };
 }
 
-export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlannerCardProps) {
+export function MinorPlannerCard({ enrollments, isLoading = false, batchYear = null }: MinorPlannerCardProps) {
   const [enabled, setEnabled] = useState(() => {
     try {
       const storedEnabled = localStorage.getItem(STORAGE_KEYS.enabled);
@@ -275,7 +277,11 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
       // ignore
     }
 
-    return MINORS[0]?.code ? [MINORS[0].code] : [];
+    // Default to the first minor this batch can actually take — MINORS[0] is
+    // batch-restricted (MGMT is B23-only), so it would default a B25 student to
+    // a minor that is then filtered out of the list.
+    const firstEligible = getEligibleMinors(batchYear)[0]?.code;
+    return firstEligible ? [firstEligible] : [];
   });
 
   const [countedCourseCodesConfigured, setCountedCourseCodesConfigured] = useState(() => {
@@ -313,9 +319,12 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
     }
   });
 
+  // Same eligibility rule as the course registration planner — see
+  // getEligibleMinors. Both lists must agree or a minor shows up in one page
+  // and silently vanishes from the other.
   const availableMinors = useMemo(() => {
-    return [...MINORS].sort((a, b) => a.name.localeCompare(b.name));
-  }, []);
+    return [...getEligibleMinors(batchYear)].sort((a, b) => a.name.localeCompare(b.name));
+  }, [batchYear]);
 
   useEffect(() => {
     try {
@@ -478,10 +487,10 @@ export function MinorPlannerCard({ enrollments, isLoading = false }: MinorPlanne
     });
   };
 
-  const selectAllMinors = () => setSelectedMinorCodes(MINORS.map((m) => m.code));
+  const selectAllMinors = () => setSelectedMinorCodes(availableMinors.map((m) => m.code));
   const clearMinors = () => setSelectedMinorCodes([]);
 
-  if (!MINORS.length) {
+  if (!availableMinors.length) {
     return (
       <div className="bg-surface rounded-lg border border-border p-4 sm:p-6">
         <div className="flex items-center gap-2 mb-2">

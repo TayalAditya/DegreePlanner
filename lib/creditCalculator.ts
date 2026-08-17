@@ -4,7 +4,7 @@ import { normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
 import { getBatchAdjustedCredits } from "@/lib/branches";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
-import { pickBranchMapping, pickBranchMappingCategory } from "@/lib/courseCategory";
+import { pickBranchMapping, pickBranchMappingCategory, getHssIksDegreeCap } from "@/lib/courseCategory";
 import {
   isMtp1CourseCode,
   isMtp2CourseCode,
@@ -572,7 +572,7 @@ export class CreditCalculator {
     // 0–coreCap → core(HSS); coreCap–degreeCap → FE; above degreeCap → NOT_IN_DEGREE.
     let hssCreditsAccumulated = state.hssCreditsAccumulated;
     const HSS_CORE_CAP = (programIcCredits ?? 60) <= 52 ? 12 : 15; // BSCS: 12, BTech: 15
-    const HSS_FE_CAP = batchYear === 2023 ? 30 : 20;
+    const HSS_FE_CAP = getHssIksDegreeCap(batchYear);
     const addBreakdownCredits = (key: keyof CreditBreakdown, credits: number) => {
       breakdown[key] = addCredits(breakdown[key], credits);
     };

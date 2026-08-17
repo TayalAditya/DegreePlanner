@@ -1,3 +1,5 @@
+import { normalizeBatchYear } from "@/lib/courseCategory";
+
 export type MinorRequirementGroup = {
   id: string;
   title: string;
@@ -548,9 +550,8 @@ export const MINORS: MinorDefinition[] = [
   },
   {
     code: "VLSI_DESIGN",
-    name: "Minor in VLSI Design",
+    name: "Minor in VLSI Design (B25 onwards)",
     totalCreditsRequired: 9,
-    eligibleBatches: [2025, 2026, 2027, 2028],
     groups: [
       {
         id: "all",
@@ -564,9 +565,8 @@ export const MINORS: MinorDefinition[] = [
   },
   {
     code: "VLSI_TECH",
-    name: "Minor in VLSI Technology",
+    name: "Minor in VLSI Technology (B25 onwards)",
     totalCreditsRequired: 10,
-    eligibleBatches: [2025, 2026, 2027, 2028],
     groups: [
       {
         id: "all",
@@ -582,6 +582,29 @@ export const MINORS: MinorDefinition[] = [
 
 function normalizeMinorCourseCode(code: string): string {
   return code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/**
+ * Minors visible to a given batch.
+ *
+ * Use this everywhere a minor list is rendered. The Programs page and the course
+ * registration planner previously filtered independently — the registration page
+ * applied `eligibleBatches` while the Programs page applied nothing — so a minor
+ * could appear in one and not the other. Routing both through this helper is what
+ * keeps them in step.
+ *
+ * A minor with no `eligibleBatches` is open to every batch; where a minor is only
+ * offered from a given batch onward, that belongs in its `name` (e.g. "(B25
+ * onwards)") so students still see it exists rather than silently losing it.
+ *
+ * `batchYear` may be null when a profile has no batch and no parseable roll
+ * number; in that case show the unrestricted minors rather than an empty list.
+ */
+export function getEligibleMinors(batchYear?: number | string | null): MinorDefinition[] {
+  const batch = normalizeBatchYear(batchYear);
+  return MINORS.filter(
+    (minor) => !minor.eligibleBatches || (batch != null && minor.eligibleBatches.includes(batch))
+  );
 }
 
 /** Returns a stable key for counting a course inside one minor requirement. */

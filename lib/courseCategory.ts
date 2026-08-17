@@ -34,6 +34,38 @@ export interface BranchMapping {
 }
 
 /**
+ * HSS+IKS core requirement: the credits that satisfy the degree's HSS+IKS
+ * basket. BTech = 15, BSCS = 12 (identified by its lower IC requirement).
+ */
+export const getHssIksCoreCap = (programIcCredits?: number | null) =>
+  (programIcCredits ?? 60) <= 52 ? 12 : 15;
+
+/**
+ * HSS+IKS degree cap: combined HSS+IKS credits beyond this do not count toward
+ * the degree total at all (they show as "Not in Degree").
+ *
+ * B23 received a BOA relaxation raising the cap from 20 → 30; every other batch
+ * stays at 20. Every surface that splits HSS+IKS credits MUST read the cap from
+ * here — a hardcoded 20 silently under-counts a B23 student's degree total.
+ */
+export const HSS_IKS_DEGREE_CAP_DEFAULT = 20;
+export const HSS_IKS_DEGREE_CAP_B23 = 30;
+
+/**
+ * `User.batch` is a 4-digit year in most rows but a 2-digit one ("23") in some
+ * older records, so normalize before comparing. Getting this wrong would hand a
+ * B23 student the 20-credit cap instead of 30.
+ */
+export const normalizeBatchYear = (batch?: number | string | null): number | null => {
+  const raw = Number(batch);
+  if (!Number.isFinite(raw) || raw <= 0) return null;
+  return raw < 100 ? 2000 + Math.trunc(raw) : Math.trunc(raw);
+};
+
+export const getHssIksDegreeCap = (batchYear?: number | string | null) =>
+  normalizeBatchYear(batchYear) === 2023 ? HSS_IKS_DEGREE_CAP_B23 : HSS_IKS_DEGREE_CAP_DEFAULT;
+
+/**
  * Pick the best mapping for a given branch + batch.
  * Within the same branch priority, a batch-specific mapping beats a generic one (batch="").
  * Moved verbatim from the former private copy in creditCalculator.ts (the canonical scorer).
