@@ -21,12 +21,24 @@ import { postToSheet } from "@/lib/sheetWebhook";
 /** Google Sheet tab this endpoint appends to. */
 const SHEET_TAB = "finalCoursePlan";
 
+/**
+ * One course per column so the Acad Sec can scan/sort/filter them, rather than
+ * one crowded cell. The count is FIXED so that "Time of Submission" always lands
+ * in the same column no matter how many courses a student took — a dynamic width
+ * would stagger it row to row and make the tab unsortable.
+ *
+ * 12 is well above a real semester load (~5–7, up to ~10 with labs). A student
+ * who somehow exceeds it does not lose data: the overflow is folded into the last
+ * course column rather than truncated.
+ */
+const MAX_COURSE_COLUMNS = 12;
+
 const SHEET_HEADER = [
   "Name",
   "Roll No",
   "Branch",
   "Semester",
-  "Courses",
+  ...Array.from({ length: MAX_COURSE_COLUMNS }, (_, i) => `Course ${i + 1}`),
   "Time of Submission",
 ];
 
@@ -45,6 +57,13 @@ const REG_TYPE_LABEL: Record<RegType, string> = {
   REGULAR: "Regular",
   PASS_FAIL: "Pass-Fail",
   AUDIT: "Audit",
+};
+
+/** Compact form for the sheet cells: `CS-301 (R)`, `HS-102 (P/F)`, `IK-502 (A)`. */
+const REG_TYPE_ABBREV: Record<RegType, string> = {
+  REGULAR: "R",
+  PASS_FAIL: "P/F",
+  AUDIT: "A",
 };
 
 /**
@@ -99,15 +118,34 @@ function parseCourses(raw: unknown): SubmittedCourse[] {
   return courses;
 }
 
-/** `CS-301 (Regular, 4cr, C); HS-102 (Audit, 3cr, F)` — one sheet cell. */
+/** `CS-301 (R)` — course code plus how it is to be registered. */
+const formatCourseCell = (course: SubmittedCourse) =>
+  `${course.code} (${REG_TYPE_ABBREV[course.registrationType]})`;
+
+/**
+ * Spread courses across the fixed course columns, padding unused ones so the
+ * trailing timestamp always lands in the same column.
+ *
+ * If there are more courses than columns, the last column carries the remainder
+ * joined together — a submission is a student's academic record, so it must never
+ * be silently cut short by a layout constant.
+ */
+function courseColumns(courses: SubmittedCourse[]): string[] {
+  const cells = courses.map(formatCourseCell);
+  if (cells.length > MAX_COURSE_COLUMNS) {
+    const kept = cells.slice(0, MAX_COURSE_COLUMNS - 1);
+    kept.push(cells.slice(MAX_COURSE_COLUMNS - 1).join("; "));
+    return kept;
+  }
+  return [...cells, ...Array(MAX_COURSE_COLUMNS - cells.length).fill("")];
+}
+
+/**
+ * Single-cell summary, used only for the legacy payload shape (an Apps Script
+ * that has not been redeployed yet has no per-course columns to write into).
+ */
 const formatCoursesForSheet = (courses: SubmittedCourse[]) =>
-  courses
-    .map((c) => {
-      const bits = [REG_TYPE_LABEL[c.registrationType], `${c.credits}cr`];
-      if (c.slots) bits.push(c.slots);
-      return `${c.code} (${bits.join(", ")})`;
-    })
-    .join("; ");
+  courses.map(formatCourseCell).join("; ");
 
 const roundCredits = (value: number) => Math.round(value * 100) / 100;
 
@@ -230,7 +268,7 @@ export async function POST(req: NextRequest) {
       roll,
       branch,
       ctx.offeringSemester,
-      formatCoursesForSheet(courses),
+      ...courseColumns(courses),
       submittedAtLabel,
     ],
     // Legacy fallback — see above.
@@ -239,7 +277,7 @@ export async function POST(req: NextRequest) {
     branch,
     offeringSemester: ctx.offeringSemester,
     offeringYear: ctx.offeringYear,
-    reportedAt: submittedAtLabel,
+    reportedAt: `${formatCoursesForSheet(courses)} · ${submittedAtLabel}`,
   });
 
   return NextResponse.json({
