@@ -4,6 +4,14 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { postToSheet } from "@/lib/sheetWebhook";
+import {
+  buildFinalPlanSheetRow,
+  FINAL_PLAN_SHEET_HEADER,
+  FINAL_PLAN_SHEET_TAB,
+  formatCoursesInline,
+  formatSubmittedAt,
+  type SheetRegType,
+} from "@/lib/finalSubmissionSheet";
 
 /**
  * The student's own FINAL course registration declaration.
@@ -19,30 +27,9 @@ import { postToSheet } from "@/lib/sheetWebhook";
  */
 
 /** Google Sheet tab this endpoint appends to. */
-const SHEET_TAB = "finalCoursePlan";
+const SHEET_TAB = FINAL_PLAN_SHEET_TAB;
 
-/**
- * One course per column so the Acad Sec can scan/sort/filter them, rather than
- * one crowded cell. The count is FIXED so that "Time of Submission" always lands
- * in the same column no matter how many courses a student took — a dynamic width
- * would stagger it row to row and make the tab unsortable.
- *
- * 12 is well above a real semester load (~5–7, up to ~10 with labs). A student
- * who somehow exceeds it does not lose data: the overflow is folded into the last
- * course column rather than truncated.
- */
-const MAX_COURSE_COLUMNS = 12;
-
-const SHEET_HEADER = [
-  "Name",
-  "Roll No",
-  "Branch",
-  "Semester",
-  ...Array.from({ length: MAX_COURSE_COLUMNS }, (_, i) => `Course ${i + 1}`),
-  "Time of Submission",
-];
-
-type RegType = "REGULAR" | "PASS_FAIL" | "AUDIT";
+type RegType = SheetRegType;
 
 /** One declared course, as stored in `FinalCourseSubmission.courses`. */
 type SubmittedCourse = {
@@ -51,19 +38,6 @@ type SubmittedCourse = {
   credits: number;
   slots: string;
   registrationType: RegType;
-};
-
-const REG_TYPE_LABEL: Record<RegType, string> = {
-  REGULAR: "Regular",
-  PASS_FAIL: "Pass-Fail",
-  AUDIT: "Audit",
-};
-
-/** Compact form for the sheet cells: `CS-301 (R)`, `HS-102 (P/F)`, `IK-502 (A)`. */
-const REG_TYPE_ABBREV: Record<RegType, string> = {
-  REGULAR: "R",
-  PASS_FAIL: "P/F",
-  AUDIT: "A",
 };
 
 /**
@@ -117,35 +91,6 @@ function parseCourses(raw: unknown): SubmittedCourse[] {
 
   return courses;
 }
-
-/** `CS-301 (R)` — course code plus how it is to be registered. */
-const formatCourseCell = (course: SubmittedCourse) =>
-  `${course.code} (${REG_TYPE_ABBREV[course.registrationType]})`;
-
-/**
- * Spread courses across the fixed course columns, padding unused ones so the
- * trailing timestamp always lands in the same column.
- *
- * If there are more courses than columns, the last column carries the remainder
- * joined together — a submission is a student's academic record, so it must never
- * be silently cut short by a layout constant.
- */
-function courseColumns(courses: SubmittedCourse[]): string[] {
-  const cells = courses.map(formatCourseCell);
-  if (cells.length > MAX_COURSE_COLUMNS) {
-    const kept = cells.slice(0, MAX_COURSE_COLUMNS - 1);
-    kept.push(cells.slice(MAX_COURSE_COLUMNS - 1).join("; "));
-    return kept;
-  }
-  return [...cells, ...Array(MAX_COURSE_COLUMNS - cells.length).fill("")];
-}
-
-/**
- * Single-cell summary, used only for the legacy payload shape (an Apps Script
- * that has not been redeployed yet has no per-course columns to write into).
- */
-const formatCoursesForSheet = (courses: SubmittedCourse[]) =>
-  courses.map(formatCourseCell).join("; ");
 
 const roundCredits = (value: number) => Math.round(value * 100) / 100;
 
@@ -255,29 +200,28 @@ export async function POST(req: NextRequest) {
   // that has NOT been redeployed yet ignores header/row and falls back to those,
   // so it still records who submitted and when instead of appending a blank row.
   // Once the script is updated the legacy fields are simply unused.
-  const submittedAtLabel =
-    row.revision > 1
-      ? `${row.updatedAt.toISOString()} (edit #${row.revision})`
-      : row.submittedAt.toISOString();
+  const submittedAtLabel = formatSubmittedAt(row.submittedAt, row.updatedAt, row.revision);
 
   const sheetSynced = await postToSheet({
     tab: SHEET_TAB,
-    header: SHEET_HEADER,
-    row: [
-      name,
-      roll,
+    header: FINAL_PLAN_SHEET_HEADER,
+    row: buildFinalPlanSheetRow({
+      studentName: name,
+      rollNumber: roll,
       branch,
-      ctx.offeringSemester,
-      ...courseColumns(courses),
-      submittedAtLabel,
-    ],
+      offeringSemester: ctx.offeringSemester,
+      courses,
+      submittedAt: row.submittedAt,
+      updatedAt: row.updatedAt,
+      revision: row.revision,
+    }),
     // Legacy fallback — see above.
     studentName: name,
     rollNumber: roll,
     branch,
     offeringSemester: ctx.offeringSemester,
     offeringYear: ctx.offeringYear,
-    reportedAt: `${formatCoursesForSheet(courses)} · ${submittedAtLabel}`,
+    reportedAt: `${formatCoursesInline(courses)} · ${submittedAtLabel}`,
   });
 
   return NextResponse.json({
