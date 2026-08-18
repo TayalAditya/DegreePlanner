@@ -25,8 +25,15 @@
  *      the tab lets the script recreate it with the right header.
  *
  *   npx tsx scripts/resync-final-submissions-to-sheet.ts           # preview
- *   npx tsx scripts/resync-final-submissions-to-sheet.ts --apply   # write
+ *   npx tsx scripts/resync-final-submissions-to-sheet.ts --csv     # write a CSV to paste/import
+ *   npx tsx scripts/resync-final-submissions-to-sheet.ts --apply   # write via the webhook
+ *
+ * --csv needs NONE of the above: it writes tmp/finalCoursePlan-export.csv straight
+ * from the database, so the correct per-course columns can be pasted into the
+ * sheet before the Apps Script is redeployed.
  */
+import fs from "node:fs";
+import path from "node:path";
 import prisma from "@/lib/prisma";
 import { postToSheet } from "@/lib/sheetWebhook";
 import {
@@ -39,10 +46,22 @@ import {
 } from "@/lib/finalSubmissionSheet";
 
 const APPLY = process.argv.includes("--apply");
+const CSV = process.argv.includes("--csv");
+
+/** tmp/ is gitignored — these rows are real student records and must not be committed. */
+const CSV_PATH = path.join("tmp", "finalCoursePlan-export.csv");
+
+/** RFC4180: quote when the value contains a comma, quote or newline; double inner quotes. */
+const csvCell = (value: string | number) => {
+  const s = String(value ?? "");
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};
 
 async function main() {
   console.log(
-    `\nRe-sync finalCoursePlan from DB  [${APPLY ? "APPLY — writing" : "DRY RUN — no writes"}]\n`
+    `\nRe-sync finalCoursePlan from DB  [${
+      APPLY ? "APPLY — writing via webhook" : CSV ? "CSV — writing a file" : "DRY RUN — no writes"
+    }]\n`
   );
 
   const submissions = await prisma.finalCourseSubmission.findMany({
@@ -61,6 +80,7 @@ async function main() {
 
   let sent = 0;
   let failed = 0;
+  const csvRows: string[] = [FINAL_PLAN_SHEET_HEADER.map(csvCell).join(",")];
 
   for (const s of submissions) {
     const courses = (s.courses as SheetCourse[]) ?? [];
@@ -80,6 +100,8 @@ async function main() {
         `sem${s.offeringSemester} rev${s.revision}  ${courses.length} course(s)`
     );
     console.log(`      ${formatCoursesInline(courses) || "(none)"}`);
+
+    csvRows.push(row.map(csvCell).join(","));
 
     if (!APPLY) continue;
 
@@ -108,6 +130,17 @@ async function main() {
 
   console.log("\n─── summary ───");
   console.log(`  submissions : ${submissions.length}`);
+
+  if (CSV) {
+    fs.mkdirSync(path.dirname(CSV_PATH), { recursive: true });
+    fs.writeFileSync(CSV_PATH, `${csvRows.join("\n")}\n`, "utf8");
+    console.log(`  written     : ${CSV_PATH}`);
+    console.log("\n  Import it into the sheet: File -> Import -> Upload, and choose");
+    console.log("  \"Insert new sheet\" (or replace the finalCoursePlan tab).");
+    console.log("  This path needs no Apps Script redeploy.\n");
+    return;
+  }
+
   if (APPLY) {
     console.log(`  appended    : ${sent}`);
     console.log(`  failed      : ${failed}`);
@@ -117,8 +150,9 @@ async function main() {
     console.log("\n  Done. Check the finalCoursePlan tab.\n");
   } else {
     console.log("\n  DRY RUN — nothing was written.");
-    console.log("  Deploy the updated Apps Script and delete the old finalCoursePlan tab first,");
-    console.log("  then re-run with --apply.\n");
+    console.log("  --csv    write a CSV to import into the sheet (no redeploy needed)");
+    console.log("  --apply  post via the webhook (needs the updated Apps Script deployed");
+    console.log("           and the old finalCoursePlan tab deleted first)\n");
   }
 }
 
