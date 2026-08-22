@@ -26,6 +26,7 @@ import { courseIdentityKey } from "@/lib/courseIdentity";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
 import { IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
+import { isYifVacationInternship, YIF_STARTUP_PRACTICUMS } from "@/lib/yif";
 
 type RegistrationType = "REGULAR" | "PASS_FAIL" | "AUDIT";
 
@@ -68,6 +69,7 @@ interface ImportCoursesClientProps {
   initialEnrollmentId?: string | null;
   initialDoingMTP?: boolean;
   initialDoingMTP2?: boolean;
+  initialDoingYIF?: boolean;
   initialManualCourseImportOnly?: boolean;
   initialBatch24Icb1Course?: string | null;
   initialBatch26SelectedCourseCodes?: string[];
@@ -203,6 +205,7 @@ export default function ImportCoursesPage({
   initialEnrollmentId,
   initialDoingMTP,
   initialDoingMTP2,
+  initialDoingYIF = false,
   initialManualCourseImportOnly = false,
   initialBatch24Icb1Course,
   initialBatch26SelectedCourseCodes = [],
@@ -231,6 +234,7 @@ export default function ImportCoursesPage({
   const [currentSemester, setCurrentSemester] = useState(initialCurrentSemester ?? 6);
   const [doingMTP, setDoingMTP] = useState(initialDoingMTP ?? true);
   const [doingMTP2, setDoingMTP2] = useState(initialDoingMTP2 ?? true);
+  const [doingYIF, setDoingYIF] = useState(initialDoingYIF);
   const [manualCourseImportOnly, setManualCourseImportOnly] = useState(initialManualCourseImportOnly);
   const [courses, setCourses] = useState<SelectedCourse[]>([]);
   const [importedCourseKeys, setImportedCourseKeys] = useState<Set<string>>(
@@ -335,7 +339,7 @@ export default function ImportCoursesPage({
       return;
     }
     loadDefaultCourses();
-  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingMTP2, userBatch, batch24Icb1Course, batch26SelectedCourseKey, manualCourseImportOnly]);
+  }, [branch, geSubBranch, currentSemester, importedCourseKeys, catalogIndex, doingMTP, doingMTP2, doingYIF, userBatch, batch24Icb1Course, batch26SelectedCourseKey, manualCourseImportOnly]);
 
   useEffect(() => {
     setCustomSemester(currentSemester);
@@ -374,6 +378,7 @@ export default function ImportCoursesPage({
 
         setDoingMTP(data.doingMTP ?? true);
         setDoingMTP2(data.doingMTP2 ?? true);
+        setDoingYIF(data.doingYIF ?? false);
         setManualCourseImportOnly(data.manualCourseImportOnly === true);
       }
     } catch (error) {
@@ -420,10 +425,34 @@ export default function ImportCoursesPage({
 
   const loadDefaultCourses = () => {
     const effectiveBranch = (branch === "GE" || branch.startsWith("GE-")) ? geSubBranch : branch;
-    const defaultCourses = getAllDefaultCourses(effectiveBranch, currentSemester, userBatch)
+    const pathCourses = getAllDefaultCourses(effectiveBranch, currentSemester, userBatch)
       .filter((course) => !course.unpublished);
+    const vacationYifCourses: DefaultCourse[] = doingYIF
+      ? pathCourses
+          .filter((course) => isYifVacationInternship(course.code, course.credits))
+          .map((course) => ({ ...course, category: "FE", optional: true, tag: "YIF" }))
+      : [];
+    const defaultCourses = pathCourses
+      .filter((course) => !(doingYIF && isYifVacationInternship(course.code, course.credits)));
+    const yifCourses: DefaultCourse[] = doingYIF
+      ? [
+          ...vacationYifCourses,
+          ...YIF_STARTUP_PRACTICUMS.map((component, index) => ({
+          code: component.code,
+          name: component.name,
+          credits: component.credits,
+          // YIF is applied by the server-side credit engine. FE keeps this
+          // transcript-import row compatible with the existing CourseType enum.
+          category: "FE" as const,
+          semester: 6 + index,
+          optional: true,
+          tag: "YIF",
+          })),
+        ]
+      : [];
+    const coursesForPath = [...defaultCourses, ...yifCourses];
     const normalizeCatalog = (code: string) => normalizeCourseCode(code);
-    const resolvedCourses = defaultCourses.map((course) => {
+    const resolvedCourses = coursesForPath.map((course) => {
       const match = catalogIndex[normalizeCatalog(course.code)];
       if (!match) return course;
       return {
@@ -488,6 +517,10 @@ export default function ImportCoursesPage({
         const isISTP = ISTP_CODES.some((code) => normalize(code) === normalizedCode);
         const isMTP1 = isMtp1CourseCode(normalizedCode);
         const isMTP2 = isMtp2CourseCode(normalizedCode);
+        const isB23 = userBatch === 2023;
+        const isBlockedIstp = doingYIF && isISTP && !isB23;
+        const isBlockedMtp = doingYIF && (isMTP1 || isMTP2);
+        if (isBlockedIstp || isBlockedMtp) return false;
         if (!doingMTP && isMTP1) {
           return false;
         }

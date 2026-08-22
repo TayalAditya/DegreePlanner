@@ -68,6 +68,7 @@ interface User {
   enrollmentId?: string | null;
   doingMTP?: boolean;
   doingMTP2?: boolean;
+  doingYIF?: boolean;
 }
 
 interface ProjectRequirements {
@@ -510,7 +511,7 @@ export default function CoursesPage({ initialEnrollments, initialUser, initialCa
     );
   }, []);
 
-  const hasSkippedMtp = user?.doingMTP === false || user?.doingMTP2 === false;
+  const hasSkippedMtp = user?.doingYIF === true || user?.doingMTP === false || user?.doingMTP2 === false;
 
   // Normally the primary programme comes from the server wrapper. This keeps
   // the requirement card reliable if that optional prefetch ever falls back to

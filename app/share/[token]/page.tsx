@@ -20,6 +20,7 @@ import {
 import { getMtpComponent, MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
 import prisma from "@/lib/prisma";
 import { addCredits, formatCourseCode } from "@/lib/utils";
+import { yifComponentForCourse, YIF_FREE_ELECTIVE_REDUCTION, YIF_TOTAL_CREDITS } from "@/lib/yif";
 
 type SharePageProps = {
   params: Promise<{ token: string }>;
@@ -35,6 +36,7 @@ type ProfileUser = {
   doingMTP: boolean;
   doingMTP2: boolean;
   doingISTP: boolean;
+  doingYIF: boolean;
   enrollmentId: string | null;
 };
 
@@ -58,6 +60,7 @@ const categoryOrder: CategoryKey[] = [
   "HSS",
   "MTP",
   "ISTP",
+  "YIF",
   "NOT_IN_DEGREE",
 ];
 
@@ -71,6 +74,7 @@ const categoryLabels: Record<CategoryKey, string> = {
   IKS: "Indian Knowledge System",
   MTP: "Major Technical Project",
   ISTP: "ISTP",
+  YIF: "Young Innovators' Fellowship",
   NOT_IN_DEGREE: "Not in Degree",
 };
 
@@ -81,11 +85,13 @@ function isCountedCompleted(enrollment: DashboardEnrollment) {
 function resolveCourseCategory(
   enrollment: DashboardEnrollment,
   userBranch?: string | null,
-  userBatch?: number | null
+  userBatch?: number | null,
+  doingYIF = false,
 ): CategoryKey {
   const courseCode = enrollment.course?.code ?? "";
 
   const normalizedCode = courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (doingYIF && yifComponentForCourse(courseCode, userBatch, enrollment.course?.credits)) return "YIF";
   const isHssIks =
     normalizedCode.startsWith("HS") ||
     /^IK\d/.test(normalizedCode) ||
@@ -116,14 +122,15 @@ function resolveCourseCategory(
 function buildCourseRows(
   enrollments: DashboardEnrollment[],
   userBranch?: string | null,
-  userBatch?: number | null
+  userBatch?: number | null,
+  doingYIF = false,
 ): SharedCourseRow[] {
   return enrollments.map((enrollment) => ({
     semester: enrollment.semester,
     code: formatCourseCode(enrollment.course?.code ?? ""),
     name: enrollment.course?.name ?? "Untitled course",
     credits: Number(enrollment.course?.credits ?? 0),
-    category: resolveCourseCategory(enrollment, userBranch, userBatch),
+    category: resolveCourseCategory(enrollment, userBranch, userBatch, doingYIF),
   }));
 }
 
@@ -181,7 +188,10 @@ function buildRequiredCredits(
   let deAdjustment = 0;
   let feAdjustment = 0;
 
-  if (programmeIstpCredits > 0 && !istpCompleted && !doingISTPPref) {
+  if (user.doingYIF) {
+    mtpRequired = 0;
+    istpRequired = 0;
+  } else if (programmeIstpCredits > 0 && !istpCompleted && !doingISTPPref) {
     istpRequired = 0;
     if (isBatch22) {
       deAdjustment += 3;
@@ -191,26 +201,27 @@ function buildRequiredCredits(
     }
   }
 
-  if (!doingMTP1Pref && !mtp1Completed) {
+  if (!user.doingYIF && !doingMTP1Pref && !mtp1Completed) {
     mtpRequired = Math.max(0, mtpRequired - MTP_COMPONENT_CREDITS);
     deAdjustment += MTP_COMPONENT_CREDITS;
   }
 
-  if (!doingMTP2Pref && !mtp2Completed) {
+  if (!user.doingYIF && !doingMTP2Pref && !mtp2Completed) {
     mtpRequired = Math.max(0, mtpRequired - MTP_COMPONENT_CREDITS);
     deAdjustment += MTP_COMPONENT_CREDITS;
   }
 
   return {
-    IC: Math.max(0, (program?.icCredits ?? 60) - icBasketRequired - hssRequired),
+    IC: Math.max(0, (program?.icCredits ?? 60) - icBasketRequired - hssRequired - (user.doingYIF && !isBSProgram ? 2 : 0)),
     IC_BASKET: icBasketRequired,
     DC: program?.dcCredits ?? 0,
     DE: (program?.deCredits ?? 0) + deAdjustment,
-    FE: (program?.feCredits ?? 0) + feAdjustment,
+    FE: Math.max(0, (program?.feCredits ?? 0) + feAdjustment - (user.doingYIF ? YIF_FREE_ELECTIVE_REDUCTION : 0)),
     HSS: hssRequired,
     IKS: 0,
     MTP: mtpRequired,
     ISTP: istpRequired,
+    YIF: user.doingYIF ? YIF_TOTAL_CREDITS : 0,
     NOT_IN_DEGREE: 0,
   } satisfies CategoryCreditBreakdown;
 }
@@ -274,6 +285,7 @@ export default async function SharePage({ params }: SharePageProps) {
       doingMTP: true,
       doingMTP2: true,
       doingISTP: true,
+      doingYIF: true,
       enrollmentId: true,
     },
   });
@@ -302,7 +314,7 @@ export default async function SharePage({ params }: SharePageProps) {
     session.user.id
       ? prisma.user.findUnique({
           where: { id: session.user.id },
-          select: { id: true, branch: true, batch: true },
+          select: { id: true, branch: true, batch: true, doingYIF: true },
         })
       : null,
   ]);
@@ -314,6 +326,7 @@ export default async function SharePage({ params }: SharePageProps) {
     userBatch: profileUser.batch,
     programIcCredits: program?.icCredits,
     requiredDE: program?.deCredits ?? 0,
+    doingYIF: profileUser.doingYIF,
   });
   const requiredCredits = buildRequiredCredits(
     program,
@@ -321,7 +334,7 @@ export default async function SharePage({ params }: SharePageProps) {
     profileEnrollments,
     creditBreakdown.categoryCredits
   );
-  const profileCourseRows = buildCourseRows(profileEnrollments, profileUser.branch, profileUser.batch);
+  const profileCourseRows = buildCourseRows(profileEnrollments, profileUser.branch, profileUser.batch, profileUser.doingYIF);
   const semesterCredits = buildSemesterCredits(profileEnrollments);
   const totalCreditsRequired = program?.totalCreditsRequired ?? 160;
   const totalCreditsEarned = creditBreakdown.counted.total;
@@ -333,7 +346,8 @@ export default async function SharePage({ params }: SharePageProps) {
       ? buildCourseRows(
           await loadDashboardEnrollments(viewerUser.id),
           viewerUser.branch,
-          viewerUser.batch
+          viewerUser.batch,
+          viewerUser.doingYIF
         )
       : [];
 

@@ -25,6 +25,7 @@ interface ProgressChartProps {
   userBatch?: number | null;
   doingMTP?: boolean;
   doingMTP2?: boolean;
+  doingYIF?: boolean;
   disableMinorPlanner?: boolean; // admin modal: don't apply viewer's minor planner to someone else's courses
 }
 
@@ -39,12 +40,14 @@ const COLORS = {
   NOT_IN_DEGREE: "#94a3b8", // slate/grey — HSS+IKS credits beyond the 20-credit cap, not counted toward degree
   MTP: "#ef4444", // red
   ISTP: "#14b8a6", // teal
+  YIF: "#0891b2", // cyan
   core: "#4f46e5", // indigo
   de: "#06b6d4", // cyan
   pe: "#8b5cf6", // purple
   freeElective: "#10b981", // emerald
   mtp: "#f59e0b", // amber
   istp: "#ef4444", // red
+  yif: "#0891b2", // cyan
 };
 
 const ICB1_CODES = new Set([
@@ -144,6 +147,7 @@ export function ProgressChart({
   userBatch,
   doingMTP,
   doingMTP2,
+  doingYIF,
   disableMinorPlanner,
 }: ProgressChartProps) {
   const includeCurrentSemesterCredits = useSyncExternalStore(
@@ -484,7 +488,7 @@ export function ProgressChart({
   }
 
   const DISPLAY_NAMES: Record<string, string> = { HSS: "HSS+IKS", IKS: "HSS+IKS", IC_BASKET: "IC Basket", NOT_IN_DEGREE: "Not in Degree" };
-  const categoryData = Object.entries(categoryCredits)
+  const categoryData = (doingYIF ? [] : Object.entries(categoryCredits))
     .filter(([, value]) => value > 0)
     .map(([name, value]) => ({
       name: DISPLAY_NAMES[name] ?? name,
@@ -519,10 +523,16 @@ export function ProgressChart({
           total: Number(progress?.required?.freeElective || 0),
           color: COLORS.freeElective,
         },
+        {
+          name: "YIF",
+          value: Number(progress?.completed?.yif || 0),
+          total: Number(progress?.required?.yif || 0),
+          color: COLORS.yif,
+        },
       ].filter((item) => item.total > 0);
 
   const breakdownFromEnrollments = (() => {
-    if (!enrollments || enrollments.length === 0) return null;
+    if (doingYIF || !enrollments || enrollments.length === 0) return null;
 
     const requiredDE = Number(progress?.required?.de || 0);
 
@@ -740,6 +750,7 @@ export function ProgressChart({
       { key: "freeElective", label: "Free Electives (FE)", required: required.freeElective, completed: completed.freeElective, inProgress: inProgress.freeElective },
       { key: "mtp", label: "MTP", required: required.mtp, completed: completed.mtp, inProgress: inProgress.mtp },
       { key: "istp", label: "ISTP", required: required.istp, completed: completed.istp, inProgress: inProgress.istp },
+      { key: "yif", label: "Young Innovators' Fellowship (YIF)", required: required.yif, completed: completed.yif, inProgress: inProgress.yif },
     ]
       .map((r) => {
         const req = Number(r.required || 0);

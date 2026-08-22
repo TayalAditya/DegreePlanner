@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { GraduationCap, Award, BookOpen, Target, ChevronDown, AlertCircle } from "lucide-react";
+import { GraduationCap, Award, BookOpen, Target, ChevronDown, AlertCircle, BriefcaseBusiness, CheckCircle2, LockKeyhole } from "lucide-react";
 import dynamic from "next/dynamic";
 const ProgressChart = dynamic(() => import("@/components/ProgressChart").then(m => ({ default: m.ProgressChart })), { ssr: false, loading: () => <div className="h-64 animate-pulse bg-surface-elevated rounded-xl" /> });
 const MinorPlannerCard = dynamic(() => import("@/components/MinorPlannerCard").then(m => ({ default: m.MinorPlannerCard })), { ssr: false, loading: () => <div className="h-24 animate-pulse bg-surface rounded-lg border border-border" /> });
@@ -10,6 +10,7 @@ import { useMinorPlannerSelection } from "@/lib/minorPlannerClient";
 import { computeEnrollmentCreditBreakdown } from "@/lib/progressCreditBreakdown";
 import { addCredits, formatCourseCode, formatCredits, minCredits, sumCredits } from "@/lib/utils";
 import { getMtpCourseCode, MTP_COMPONENT_CREDITS, MTP_TOTAL_CREDITS } from "@/lib/mtpConfig";
+import { getEntrepreneurshipSpecializationStatus, normalizeYifCourseCode, yifComponentForCourse, YIF_STARTUP_PRACTICUMS } from "@/lib/yif";
 
 interface Program {
   id: string;
@@ -67,6 +68,7 @@ interface UserSettings {
   doingMTP?: boolean;
   doingMTP2?: boolean;
   doingISTP?: boolean;
+  doingYIF?: boolean;
   totalPassFailCredits?: number;
 }
 
@@ -93,6 +95,7 @@ export default function ProgramsClient({
   const [doingMTP1, setDoingMTP1] = useState(initialUserSettings?.doingMTP ?? true);
   const [doingMTP2, setDoingMTP2] = useState(initialUserSettings?.doingMTP2 ?? true);
   const [doingISTP, setDoingISTP] = useState(initialUserSettings?.doingISTP ?? true);
+  const [doingYIF, setDoingYIF] = useState(initialUserSettings?.doingYIF ?? false);
   const [savingPrefs, setSavingPrefs] = useState(false);
   const [savedPrefs, setSavedPrefs] = useState(false);
   const { confirm } = useConfirmDialog();
@@ -252,6 +255,7 @@ export default function ProgramsClient({
         setDoingMTP1(mtp1);
         setDoingMTP2(data?.doingMTP2 ?? true);
         setDoingISTP(data?.doingISTP ?? true);
+        setDoingYIF(data?.doingYIF ?? false);
       }
     } catch (error) {
       console.error("Failed to load program progress:", error);
@@ -262,14 +266,14 @@ export default function ProgramsClient({
     }
   };
 
-  const saveProjectPrefs = async (mtp1: boolean, mtp2: boolean, istp: boolean) => {
+  const saveProjectPrefs = async (mtp1: boolean, mtp2: boolean, istp: boolean, yif = doingYIF) => {
     setSavingPrefs(true);
     setSavedPrefs(false);
     try {
       const response = await fetch("/api/user/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ doingMTP: mtp1, doingMTP2: mtp2, doingISTP: istp }),
+        body: JSON.stringify({ doingMTP: mtp1, doingMTP2: mtp2, doingISTP: istp, doingYIF: yif }),
       });
       if (!response.ok) throw new Error("Could not save project preferences");
       setSavedPrefs(true);
@@ -295,12 +299,12 @@ export default function ProgramsClient({
       if (!ok) return;
 
       setDoingMTP1(false);
-      saveProjectPrefs(false, doingMTP2, doingISTP);
+      saveProjectPrefs(false, doingMTP2, doingISTP, false);
       return;
     }
 
     setDoingMTP1(true);
-    saveProjectPrefs(true, doingMTP2, doingISTP);
+    saveProjectPrefs(true, doingMTP2, doingISTP, false);
   };
 
   const handleMTP2Change = async (checked: boolean) => {
@@ -316,12 +320,12 @@ export default function ProgramsClient({
       if (!ok) return;
 
       setDoingMTP2(false);
-      saveProjectPrefs(doingMTP1, false, doingISTP);
+      saveProjectPrefs(doingMTP1, false, doingISTP, false);
       return;
     }
 
     setDoingMTP2(true);
-    saveProjectPrefs(doingMTP1, true, doingISTP);
+    saveProjectPrefs(doingMTP1, true, doingISTP, false);
   };
 
   const handleISTPChange = async (checked: boolean) => {
@@ -340,7 +344,29 @@ export default function ProgramsClient({
     }
 
     setDoingISTP(checked);
-    saveProjectPrefs(doingMTP1, doingMTP2, checked);
+    saveProjectPrefs(doingMTP1, doingMTP2, checked, false);
+  };
+
+  const handleYIFChange = async (checked: boolean) => {
+    if (checked) {
+      const ok = await confirm({
+        title: "Switch to YIF?",
+        message: "YIF replaces the vacation internship, ISTP, MTP-1, MTP-2 and 8 FE credits with its 22-credit fellowship basket. Any in-progress ISTP/MTP enrollment will be removed; B23 DP-301P is kept as the SP-501 equivalent.",
+        confirmText: "Enable YIF",
+        cancelText: "Keep regular path",
+        variant: "warning",
+      });
+      if (!ok) return;
+    }
+
+    setDoingYIF(checked);
+    if (checked) {
+      setDoingMTP1(false); setDoingMTP2(false); setDoingISTP(false);
+      await saveProjectPrefs(false, false, false, true);
+    } else {
+      setDoingMTP1(true); setDoingMTP2(true); setDoingISTP(true);
+      await saveProjectPrefs(true, true, true, false);
+    }
   };
 
   // The server calculator applies branch- and batch-specific requirement changes
@@ -360,6 +386,7 @@ export default function ProgramsClient({
       userBatch: inferredBatch,
       programIcCredits: primaryProgram?.program.icCredits,
       requiredDE: Number(progressData?.required?.de ?? 0),
+      doingYIF,
       includeCurrentSemesterCredits,
     });
 
@@ -382,6 +409,7 @@ export default function ProgramsClient({
       freeElective: countedFromEnrollments("freeElective", Number(progressData?.required?.freeElective ?? 0)),
       mtp: countedFromEnrollments("mtp", Number(progressData?.required?.mtp ?? 0)),
       istp: countedFromEnrollments("istp", Number(progressData?.required?.istp ?? 0)),
+      yif: countedFromEnrollments("yif", Number(progressData?.required?.yif ?? 0)),
       pe: counted("pe"),
     };
   }, [
@@ -389,10 +417,36 @@ export default function ProgramsClient({
     programEnrollments,
     userSettings?.branch,
     inferredBatch,
+    doingYIF,
     includeCurrentSemesterCredits,
     primaryProgram?.program.icCredits,
     displayedDcRequirement,
   ]);
+
+  const entrepreneurshipSpecialization = useMemo(
+    () => getEntrepreneurshipSpecializationStatus({ batch: inferredBatch, enrollments: programEnrollments }),
+    [inferredBatch, programEnrollments],
+  );
+  const yifComponentStatus = useMemo(() => {
+    const statusFor = (codes: string[]) => {
+      const matching = programEnrollments.filter((enrollment) => codes.includes(normalizeYifCourseCode(enrollment.course?.code)));
+      if (matching.some((enrollment) => enrollment.status === "COMPLETED" && enrollment.grade !== "F")) return "completed" as const;
+      if (matching.some((enrollment) => enrollment.status === "IN_PROGRESS")) return "in-progress" as const;
+      return "pending" as const;
+    };
+    return {
+      sp1: statusFor(inferredBatch === 2023 ? ["SP501", "DP301P"] : ["SP501"]),
+      sp2: statusFor(["SP502"]), sp3: statusFor(["SP503"]),
+      vacation: (() => {
+        const matching = programEnrollments.filter((enrollment) =>
+          yifComponentForCourse(enrollment.course?.code, inferredBatch, enrollment.course?.credits) === "vacation",
+        );
+        if (matching.some((enrollment) => enrollment.status === "COMPLETED" && enrollment.grade !== "F")) return "completed" as const;
+        if (matching.some((enrollment) => enrollment.status === "IN_PROGRESS")) return "in-progress" as const;
+        return "pending" as const;
+      })(),
+    };
+  }, [inferredBatch, programEnrollments]);
 
   const secondaryPrograms = userPrograms.filter((p) => !p.isPrimary);
 
@@ -670,11 +724,42 @@ export default function ProgramsClient({
                         </div>
                       </div>
                     )}
+
+                    {progressData && progressData.required.yif > 0 && (
+                      <div className="bg-cyan-500/10 rounded-xl p-3 border border-cyan-500/20">
+                        <p className="text-[11px] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wider">YIF</p>
+                        <p className="text-xs text-foreground-secondary mb-2">Young Innovators&apos; Fellowship</p>
+                        <p className="text-xl font-bold text-foreground">{formatCredits(displayProgress?.yif ?? progressData.completed.yif)}<span className="text-xs font-normal text-foreground-secondary"> / {formatCredits(progressData.required.yif)} cr</span></p>
+                        <div className="mt-2 h-1 bg-cyan-500/20 rounded-full overflow-hidden"><div className="h-full bg-cyan-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.yif ?? progressData.completed.yif) / progressData.required.yif) * 100)}%` }} /></div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* MTP/ISTP Preferences */}
-                {primaryProgram.program.mtpIstpCredits > 0 && (
+                <div className="mt-6 pt-6 border-t border-border">
+                  <details open={doingYIF} className="group rounded-xl border border-cyan-500/30 bg-cyan-500/5">
+                    <summary className="flex cursor-pointer list-none items-start justify-between gap-4 p-4 marker:content-none">
+                      <div className="flex min-w-0 items-start gap-3"><BriefcaseBusiness className="mt-0.5 h-5 w-5 shrink-0 text-cyan-600 dark:text-cyan-300" /><div className="min-w-0"><h4 className="font-semibold text-foreground">Young Innovators&apos; Fellowship (YIF)</h4><p className="mt-0.5 text-xs text-foreground-secondary">Replaces Vacation Internship, ISTP, MTP-1, MTP-2 and 8 FE credits with a 22-credit fellowship basket.</p></div></div>
+                      <div className="flex shrink-0 items-center gap-3"><input type="checkbox" aria-label="Enable Young Innovators' Fellowship" checked={doingYIF} onClick={(event) => event.stopPropagation()} onChange={(event) => void handleYIFChange(event.target.checked)} disabled={savingPrefs} className="mt-0.5 h-5 w-5 accent-cyan-600 disabled:cursor-not-allowed" /><ChevronDown className="mt-0.5 h-5 w-5 text-foreground-secondary transition-transform group-open:rotate-180" /></div>
+                    </summary>
+                    <div className="border-t border-cyan-500/20 px-4 pb-4 pt-3">
+                      <div className="grid gap-3 md:grid-cols-3">
+                        {YIF_STARTUP_PRACTICUMS.map((component, index) => {
+                          const key = `sp${index + 1}` as "sp1" | "sp2" | "sp3";
+                          const state = yifComponentStatus[key];
+                          const prerequisite = index === 0 ? inferredBatch === 2023 ? "B23: DP-301P may fulfil this component" : "First component" : index === 1 ? "Requires SP-501" : "Requires SP-501 and SP-502";
+                          return <div key={component.code} className="rounded-lg border border-border bg-background/70 p-3"><div className="flex items-start justify-between gap-2"><div><p className="text-sm font-semibold text-foreground">{component.code}</p><p className="text-xs text-foreground-secondary">{component.name} · {component.credits} cr</p></div>{state === "completed" ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" /> : state === "in-progress" ? <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-semibold text-cyan-700 dark:text-cyan-300">In progress</span> : <LockKeyhole className="h-4 w-4 shrink-0 text-foreground-muted" />}</div><p className="mt-2 text-[11px] text-foreground-secondary">{prerequisite}</p></div>;
+                        })}
+                      </div>
+                      <p className="mt-3 text-xs text-foreground-secondary">Vacation Internship (2 cr) is counted inside YIF when your branch&apos;s 010 internship record is present.</p>
+                      {yifComponentStatus.vacation === "completed" && <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">Vacation Internship recorded.</p>}
+                      {yifComponentStatus.vacation === "in-progress" && <p className="mt-1 text-xs font-medium text-cyan-700 dark:text-cyan-300">Vacation Internship is in progress.</p>}
+                      <div className="mt-4 rounded-lg border border-border bg-background/70 p-3"><p className="text-sm font-semibold text-foreground">Entrepreneurship specialization eligibility</p><p className="mt-1 text-xs text-foreground-secondary">Complete the YIF sequence together with HS-510 and GE-523.</p>{entrepreneurshipSpecialization.eligible ? <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">Eligible based on the recorded courses.</p> : <p className="mt-2 text-xs text-foreground-secondary">Remaining: {entrepreneurshipSpecialization.missing.join(", ")}</p>}</div>
+                    </div>
+                  </details>
+                </div>
+                {!doingYIF && primaryProgram.program.mtpIstpCredits > 0 && (
                   <div className="mt-6 pt-6 border-t border-border">
                     <>
                         <div className="flex items-center justify-between mb-4">
@@ -839,6 +924,7 @@ export default function ProgramsClient({
                     userBatch={inferredBatch}
                     doingMTP={doingMTP1}
                     doingMTP2={doingMTP2}
+                    doingYIF={doingYIF}
                   />
                 ) : (
                   <div className="bg-surface rounded-lg border border-border p-6">

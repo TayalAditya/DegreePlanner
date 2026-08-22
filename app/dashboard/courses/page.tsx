@@ -17,6 +17,7 @@ export default async function CoursesPage() {
     enrollmentId?: string | null;
     doingMTP?: boolean;
     doingMTP2?: boolean;
+    doingYIF?: boolean;
   } | null = null;
   let initialProgramId: string | null = null;
   // Cheap count so the "Course Catalog (N)" tab shows a real number on first
@@ -38,6 +39,7 @@ export default async function CoursesPage() {
             totalPassFailCredits: true,
             doingMTP: true,
             doingMTP2: true,
+            doingYIF: true,
             programs: {
               where: { status: "ACTIVE" },
               orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
@@ -59,6 +61,7 @@ export default async function CoursesPage() {
           totalPassFailCredits: userRecord.totalPassFailCredits ?? 0,
           doingMTP: userRecord.doingMTP,
           doingMTP2: userRecord.doingMTP2,
+          doingYIF: userRecord.doingYIF,
         };
         initialProgramId = userRecord.programs[0]?.programId ?? null;
       }

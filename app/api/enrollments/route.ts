@@ -13,6 +13,7 @@ import { getBranchCandidates, getProgramLookupBranchCode } from "@/lib/branchInf
 import { pickBranchMapping } from "@/lib/courseCategory";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
+import { getYifPrerequisiteError } from "@/lib/yif";
 import {
   canTakePassFailCourse,
   validateBranchSpecificCourse,
@@ -119,6 +120,7 @@ export async function POST(request: NextRequest) {
         doingMTP: true,
         doingMTP2: true,
         doingISTP: true,
+        doingYIF: true,
         programs: {
           where: { isPrimary: true },
           select: { programId: true },
@@ -287,6 +289,27 @@ export async function POST(request: NextRequest) {
     const specialDpCourseType = getSpecialDpCourseType(normalizedCourseCode);
     if (specialDpCourseType) finalCourseType = specialDpCourseType as CourseType;
 
+    if (user.doingYIF) {
+      const isB23 = user.batch === 2023 || /B23/i.test(String(user.enrollmentId || ""));
+      if (isDpMtp || finalCourseType === CourseType.MTP || (isDpIstp && !isB23)) {
+        return NextResponse.json(
+          { error: "Students on YIF cannot register for ISTP, MTP-1 or MTP-2. B23 DP-301P remains the SP-501 equivalent." },
+          { status: 400 },
+        );
+      }
+
+      const yifEnrollments = await prisma.courseEnrollment.findMany({
+        where: { userId: session.user.id, status: { notIn: [EnrollmentStatus.DROPPED, EnrollmentStatus.FAILED] } },
+        select: { status: true, grade: true, course: { select: { code: true } } },
+      });
+      const yifError = getYifPrerequisiteError({
+        courseCode: course.code,
+        batch: isB23 ? 2023 : user.batch,
+        enrollments: yifEnrollments,
+      });
+      if (yifError) return NextResponse.json({ error: yifError }, { status: 400 });
+    }
+
     // Internship courses (XX-396P / XX-399P) are always P/F — bypass user toggle and 9cr limit check
     const isInternshipCourse = isSemesterInternshipCourse(course.code);
     const is399PCourse = isOnsiteSemesterInternshipCourse(course.code);
@@ -415,9 +438,9 @@ export async function POST(request: NextRequest) {
     // If a user re-adds ISTP/MTP courses, auto-enable the corresponding preferences
     // so Programs checkboxes stay consistent.
     const preferenceUpdates: { doingMTP?: boolean; doingMTP2?: boolean; doingISTP?: boolean } = {};
-    if (isDpIstp && user.doingISTP === false) preferenceUpdates.doingISTP = true;
-    if (isDpMtp1 && user.doingMTP === false) preferenceUpdates.doingMTP = true;
-    if (isDpMtp2 && user.doingMTP2 === false) {
+    if (!user.doingYIF && isDpIstp && user.doingISTP === false) preferenceUpdates.doingISTP = true;
+    if (!user.doingYIF && isDpMtp1 && user.doingMTP === false) preferenceUpdates.doingMTP = true;
+    if (!user.doingYIF && isDpMtp2 && user.doingMTP2 === false) {
       preferenceUpdates.doingMTP2 = true;
     }
 

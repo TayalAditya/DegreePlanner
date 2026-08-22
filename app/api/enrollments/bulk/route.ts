@@ -6,6 +6,7 @@ import { courseIdentityKey } from "@/lib/courseIdentity";
 import { getProgramLookupBranchCode } from "@/lib/branchInfo";
 import { getSpecialDpCourseType } from "@/lib/specialCourseCategories";
 import { getMtpComponent, isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
+import { getYifPrerequisiteError } from "@/lib/yif";
 import { EnrollmentStatus } from "@prisma/client";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import {
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
         doingMTP: true,
         doingMTP2: true,
         doingISTP: true,
+        doingYIF: true,
         programs: {
           where: { isPrimary: true },
           select: { programId: true },
@@ -158,6 +160,7 @@ export async function POST(req: NextRequest) {
     const maybeEnableProjectPrefsForCourse = async (normalizedCode: string) => {
       const updates: { doingMTP?: boolean; doingMTP2?: boolean; doingISTP?: boolean } = {};
 
+      if (user.doingYIF) return;
       if (normalizedCode === "DP301P" && !doingISTPPref) {
         updates.doingISTP = true;
         doingISTPPref = true;
@@ -192,6 +195,7 @@ export async function POST(req: NextRequest) {
         year: true,
         term: true,
         status: true,
+        grade: true,
         isPassFail: true,
         passFailCredits: true,
         course: {
@@ -225,6 +229,14 @@ export async function POST(req: NextRequest) {
         );
       });
     const passFailEligibleCategories = new Set(["FE", "HSS", "IKS", "DE"]);
+    const yifEnrollmentRecords: Array<{
+      status: EnrollmentStatus | string;
+      grade?: string | null;
+      course: { code: string };
+    }> = existingActiveEnrollments.map((enrollment) => ({
+      status: enrollment.status, grade: enrollment.grade, course: { code: enrollment.course.code },
+    }));
+    const isB23 = user.batch === 2023 || /B23/i.test(String(user.enrollmentId || ""));
 
     for (const enrollment of enrollments) {
       try {
@@ -307,6 +319,27 @@ export async function POST(req: NextRequest) {
         if (isPassFail) courseType = "FREE_ELECTIVE";
         const specialDpCourseType = getSpecialDpCourseType(normalizedCode);
         if (specialDpCourseType && !isInternshipCourse) courseType = specialDpCourseType;
+
+        if (user.doingYIF) {
+          const isMtp = isMtp1CourseCode(normalizedCode) || isMtp2CourseCode(normalizedCode) || courseType === "MTP";
+          const isIstp = normalizedCode === "DP301P" || courseType === "ISTP";
+          if (isMtp || (isIstp && !isB23)) {
+            errors.push({
+              courseCode,
+              error: "Students on YIF cannot import ISTP, MTP-1 or MTP-2. B23 DP-301P is accepted as the SP-501 equivalent.",
+            });
+            continue;
+          }
+          const yifError = getYifPrerequisiteError({
+            courseCode: course.code,
+            batch: isB23 ? 2023 : user.batch,
+            enrollments: yifEnrollmentRecords,
+          });
+          if (yifError) {
+            errors.push({ courseCode, error: yifError });
+            continue;
+          }
+        }
         await maybeEnableProjectPrefsForCourse(normalizedCode);
 
         const previousPassFailCredits = existingInSameSemester?.isPassFail
@@ -403,6 +436,12 @@ export async function POST(req: NextRequest) {
           });
           existingByIdentity.set(identityKey, nextList);
         }
+
+        yifEnrollmentRecords.push({
+          status,
+          grade: normalizedGrade,
+          course: { code: course.code },
+        });
 
         passFailCreditsUsed = is399PCourse
           ? PASS_FAIL_LIMITS.TOTAL_CREDITS

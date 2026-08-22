@@ -2,8 +2,9 @@ import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { pickBranchMapping, getHssIksDegreeCap, hssIksCountsAsDe, routeHssIksSplit, type BranchMapping } from "@/lib/courseCategory";
 import { addCredits, minCredits, subtractCredits } from "@/lib/utils";
+import { yifComponentForCourse } from "@/lib/yif";
 
-type CategoryKey = "IC" | "IC_BASKET" | "DC" | "DE" | "FE" | "HSS" | "IKS" | "MTP" | "ISTP" | "NOT_IN_DEGREE";
+type CategoryKey = "IC" | "IC_BASKET" | "DC" | "DE" | "FE" | "HSS" | "IKS" | "MTP" | "ISTP" | "YIF" | "NOT_IN_DEGREE";
 
 export type CategoryCreditBreakdown = Record<CategoryKey, number>;
 
@@ -15,6 +16,7 @@ export type CountedCreditBreakdown = {
   freeElective: number;
   mtp: number;
   istp: number;
+  yif: number;
   notInDegree: number;
   total: number;
 };
@@ -46,6 +48,7 @@ type Options = {
   /** Program IC requirement determines the HSS+IKS core cap: BTech=15, BSCS=12. */
   programIcCredits?: number | null;
   requiredDE?: number;
+  doingYIF?: boolean;
   includeCurrentSemesterCredits?: boolean;
 };
 
@@ -95,6 +98,7 @@ const emptyCategoryCredits = (): CategoryCreditBreakdown => ({
   IKS: 0,
   MTP: 0,
   ISTP: 0,
+  YIF: 0,
   NOT_IN_DEGREE: 0,
 });
 
@@ -136,6 +140,7 @@ const countedFromCategories = (categoryCredits: CategoryCreditBreakdown): Counte
     freeElective: categoryCredits.FE,
     mtp: categoryCredits.MTP,
     istp: categoryCredits.ISTP,
+    yif: categoryCredits.YIF,
     notInDegree: categoryCredits.NOT_IN_DEGREE,
     total,
   };
@@ -147,10 +152,12 @@ export function computeEnrollmentCreditBreakdown({
   userBatch,
   programIcCredits,
   requiredDE = 0,
+  doingYIF = false,
   includeCurrentSemesterCredits = false,
 }: Options) {
   const categoryCredits = emptyCategoryCredits();
   const icBasketUsed = { ic1: false, ic2: false };
+  let yifSp1Used = false;
   const hssUsed = { credits: 0 };
   const hssCoreCap = (programIcCredits ?? 60) <= 52 ? 12 : 15;
   // B23 BOA relaxation: HSS+IKS degree cap raised from 20 → 30.
@@ -280,8 +287,20 @@ export function computeEnrollmentCreditBreakdown({
     );
 
   sortedEnrollments.forEach((enrollment) => {
-    const category = getCourseCategory(enrollment);
     const credits = Number(enrollment.course?.credits || 0);
+
+    if (doingYIF) {
+      const yifComponent = yifComponentForCourse(enrollment.course?.code, userBatch, credits);
+      if (yifComponent) {
+        if (yifComponent !== "sp1" || !yifSp1Used) {
+          categoryCredits.YIF = addCredits(categoryCredits.YIF, credits);
+          if (yifComponent === "sp1") yifSp1Used = true;
+        }
+        return;
+      }
+    }
+
+    const category = getCourseCategory(enrollment);
 
     // A branch mapping can allocate one course across two baskets. For example,
     // CSE's IN-2406 contributes 3 DC + 1 FE rather than four credits to one

@@ -10,6 +10,8 @@ import { isAcadSec } from "@/lib/permissions";
 import { getBatchAdjustedCredits } from "@/lib/branches";
 import { pickBranchMapping, getHssIksDegreeCap, hssIksCountsAsDe } from "@/lib/courseCategory";
 import { MINORS } from "@/lib/minors";
+import { isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
+import { yifComponentForCourse } from "@/lib/yif";
 
 const PRE_REG_OPEN = new Date("2026-08-15T00:00:00+05:30");
 
@@ -47,12 +49,14 @@ export async function GET() {
   // truth instead of making pre-registration wait for a new sign-in.
   const currentUser = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { branch: true, batch: true, name: true, totalPassFailCredits: true },
+    select: { branch: true, batch: true, name: true, totalPassFailCredits: true, doingYIF: true },
   });
   const branch = currentUser?.branch ?? sessionBranch;
   const batch = currentUser?.batch ?? sessionBatch;
   const name = currentUser?.name ?? sessionName;
   const batchYear = inferBatchYear(batch, enrollmentId);
+  const doingYIF = currentUser?.doingYIF ?? false;
+  const isB23 = batchYear === 2023;
 
   // Acad sec users don't have branch/batch — they shouldn't see the student pre-reg view at all.
   // They use the admin plans page instead. Return empty offerings so the page doesn't error.
@@ -235,6 +239,13 @@ export async function GET() {
     .filter((o) => {
       if (!o.slots && !o.instructor) return false;
       const normalizedOfferingCode = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (doingYIF) {
+        const isBlockedProject =
+          isMtp1CourseCode(normalizedOfferingCode) ||
+          isMtp2CourseCode(normalizedOfferingCode) ||
+          (normalizedOfferingCode === "DP301P" && !isB23);
+        if (isBlockedProject) return false;
+      }
       const isB25MevlsiSem3 =
         normalizedBranch === "MEVLSI" && batchYear === 2025 && offeringSemester === 3;
       // For B25 MEVLSI, EE-311 was recoded as VL-201. Exposing both equivalent
@@ -270,6 +281,9 @@ export async function GET() {
       let resolvedCategory = icBasketFulfilled && baseCat === "IC_BASKET" ? "FE" : baseCat;
 
       const normalizedCodeEarly = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (doingYIF && yifComponentForCourse(o.courseCode, batchYear, o.credits)) {
+        resolvedCategory = "YIF";
+      }
 
       // B24/B25 CE/BE/EP/BSCS: IC202P (Design Practicum) is optional — reclassify to FE.
       const dpOptionalBranches = new Set(["CE", "BE", "EP", "BSCS"]);
@@ -381,7 +395,7 @@ export async function GET() {
       const adjustedDeCredits = Number(progress?.required?.de ?? req.deCredits);
       const adjustedFeCredits = Number(progress?.required?.freeElective ?? req.feCredits);
 
-      const tally: Record<string, number> = { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, HSS: 0, IKS: 0, FE: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0 };
+      const tally: Record<string, number> = { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, HSS: 0, IKS: 0, FE: 0, MTP: 0, ISTP: 0, YIF: 0, NOT_IN_DEGREE: 0 };
       const add = (cat: string, cr: number) => { tally[cat] = (tally[cat] ?? 0) + cr; };
       // Credits that occupy the HSS+IKS basket but pay out as DE (IK-502 for B23
       // DSE). Tracked apart from tally.HSS so the cap split below can move the
@@ -473,6 +487,7 @@ export async function GET() {
       }
 
       completedBreakdown = tally;
+      completedBreakdown.YIF = Number(progress.completed.yif ?? 0);
       const batchAdj = getBatchAdjustedCredits(normalizedBranch, batchYear, { dcCredits: req.dcCredits, deCredits: req.deCredits });
       programRequirements = {
         IC:       Math.max(0, req.icCredits - IC_BASKET_REQ - HSS_IKS_REQ),
@@ -482,6 +497,7 @@ export async function GET() {
         FE:   adjustedFeCredits,
         MTP:  progress.required.mtp,
         ISTP: progress.required.istp,
+        YIF:  progress.required.yif,
         HSS:  HSS_IKS_REQ,
         IKS:  0, // merged into HSS
         NOT_IN_DEGREE: 0,

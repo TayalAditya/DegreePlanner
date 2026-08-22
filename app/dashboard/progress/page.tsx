@@ -24,6 +24,7 @@ import {
   MTP_TOTAL_CREDITS,
 } from "@/lib/mtpConfig";
 import { getHssIksDegreeCap, HSS_IKS_DEGREE_CAP_DEFAULT } from "@/lib/courseCategory";
+import { yifComponentForCourse, YIF_FREE_ELECTIVE_REDUCTION, YIF_TOTAL_CREDITS } from "@/lib/yif";
 
 interface Enrollment {
   id: string;
@@ -55,6 +56,7 @@ interface User {
   doingMTP?: boolean;
   doingMTP2?: boolean;
   doingISTP?: boolean;
+  doingYIF?: boolean;
   batch?: number | null;
   enrollmentId?: string | null;
 }
@@ -82,6 +84,7 @@ interface ProgressData {
     IKS: number;
     MTP: number;
     ISTP: number;
+    YIF: number;
     NOT_IN_DEGREE: number;
   };
   creditsInProgressByCategory: {
@@ -95,6 +98,7 @@ interface ProgressData {
     IKS: number;
     MTP: number;
     ISTP: number;
+    YIF: number;
     NOT_IN_DEGREE: number;
   };
   creditsRequiredByCategory: {
@@ -108,6 +112,7 @@ interface ProgressData {
     IKS: number;
     MTP: number;
     ISTP: number;
+    YIF: number;
     NOT_IN_DEGREE: number;
   };
   semesterWiseCredits: { semester: number; credits: number; inProgressCredits: number; notInDegreeCredits: number }[];
@@ -125,6 +130,7 @@ const categoryColors = {
   IKS: { bg: "bg-warning/10", text: "text-warning", bar: "bg-warning" },
   MTP: { bg: "bg-error/10", text: "text-error", bar: "bg-error" },
   ISTP: { bg: "bg-accent/10", text: "text-accent", bar: "bg-accent" },
+  YIF: { bg: "bg-cyan-500/10", text: "text-cyan-700 dark:text-cyan-300", bar: "bg-cyan-500" },
   NOT_IN_DEGREE: { bg: "bg-foreground-muted/10", text: "text-foreground-muted", bar: "bg-foreground-muted" },
   AUDIT: { bg: "bg-foreground-muted/10", text: "text-foreground-muted", bar: "bg-foreground-muted" },
 };
@@ -140,6 +146,7 @@ const categoryLabels = {
   IKS: "HSS+IKS",
   MTP: "Major Technical Project",
   ISTP: "Interactive Socio-Technical Practicum",
+  YIF: "Young Innovators' Fellowship",
   NOT_IN_DEGREE: "Not in Degree (HSS+IKS excess)",
   AUDIT: "Audit (NC)",
 };
@@ -237,6 +244,8 @@ export default function ProgressPage() {
     const isICB2 = ICB2_CODES.has(normalizedCode);
     const isIkCourse = /^IK\d/.test(normalizedCode);
     const credits = enrollment.course.credits || 0;
+
+    if (user?.doingYIF && yifComponentForCourse(enrollment.course.code, inferredBatch, credits)) return "YIF";
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && user?.branch) {
@@ -515,9 +524,9 @@ export default function ProgressPage() {
         totalCreditsEarned: 0,
         totalCreditsInProgress: 0,
         totalCreditsRequired,
-        creditsByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0 },
-        creditsInProgressByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0 },
-        creditsRequiredByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0 },
+        creditsByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, YIF: 0, NOT_IN_DEGREE: 0 },
+        creditsInProgressByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, YIF: 0, NOT_IN_DEGREE: 0 },
+        creditsRequiredByCategory: { IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, YIF: 0, NOT_IN_DEGREE: 0 },
         semesterWiseCredits: [],
       };
     }
@@ -543,6 +552,7 @@ export default function ProgressPage() {
       IKS: 0,
       MTP: 0,
       ISTP: 0,
+      YIF: 0,
       NOT_IN_DEGREE: 0,
     };
 
@@ -557,6 +567,7 @@ export default function ProgressPage() {
       IKS: 0,
       MTP: 0,
       ISTP: 0,
+      YIF: 0,
       NOT_IN_DEGREE: 0,
     };
 
@@ -646,7 +657,7 @@ export default function ProgressPage() {
     let deAdjustment = 0; // DE credit adjustment when skipping MTP/MTP-2
     let feAdjustment = 0; // FE credit adjustment when skipping ISTP
 
-    if (programmeIstpCredits > 0 && !istpCompleted && !doingISTPPref) {
+    if (!user?.doingYIF && programmeIstpCredits > 0 && !istpCompleted && !doingISTPPref) {
       istpRequired = 0;
       if (isBatch22) {
         deAdjustment += 3;
@@ -656,12 +667,12 @@ export default function ProgressPage() {
       }
     }
 
-    if (!doingMTP1Pref && !mtp1Completed) {
+    if (!user?.doingYIF && !doingMTP1Pref && !mtp1Completed) {
       mtpRequired = Math.max(0, subtractCredits(mtpRequired, MTP_COMPONENT_CREDITS));
       deAdjustment += MTP_COMPONENT_CREDITS;
     }
 
-    if (!doingMTP2Pref && !mtp2Completed) {
+    if (!user?.doingYIF && !doingMTP2Pref && !mtp2Completed) {
       mtpRequired = Math.max(0, subtractCredits(mtpRequired, MTP_COMPONENT_CREDITS));
       deAdjustment += MTP_COMPONENT_CREDITS;
     }
@@ -679,18 +690,19 @@ export default function ProgressPage() {
     );
 
     const creditsRequiredByCategory = {
-      IC: Math.max(0, icCredits - icBasketRequired - HSS_CORE_CAP - iksRequired),
+      IC: Math.max(0, icCredits - icBasketRequired - HSS_CORE_CAP - iksRequired - (user?.doingYIF && !isBSProgram ? 2 : 0)),
       IC_BASKET: icBasketRequired,
       DC: batchAdjustedCredits.dcCredits,
       DE: batchAdjustedCredits.deCredits + deAdjustment,
-      PE: isBSProgram
+      PE: user?.doingYIF ? 0 : isBSProgram
         ? Math.max(0, (programCredits.mtpIstpCredits ?? 0) - MTP_TOTAL_CREDITS)
         : 0,
-      FE: (programCredits.feCredits ?? 0) + feAdjustment,
+      FE: Math.max(0, (programCredits.feCredits ?? 0) + feAdjustment - (user?.doingYIF ? YIF_FREE_ELECTIVE_REDUCTION : 0)),
       HSS: HSS_CORE_CAP,
       IKS: iksRequired,
-      MTP: mtpRequired,
-      ISTP: istpRequired,
+      MTP: user?.doingYIF ? 0 : mtpRequired,
+      ISTP: user?.doingYIF ? 0 : istpRequired,
+      YIF: user?.doingYIF ? YIF_TOTAL_CREDITS : 0,
       NOT_IN_DEGREE: 0,
     };
 
@@ -705,7 +717,7 @@ export default function ProgressPage() {
     sortedCompleted.forEach((e) => {
       const cur = semesterMap.get(e.semester) || { completed: 0, inProgress: 0, notInDegree: 0 };
       const tmp: Record<string, number> = {
-        IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, NOT_IN_DEGREE: 0,
+        IC: 0, IC_BASKET: 0, DC: 0, DE: 0, PE: 0, FE: 0, HSS: 0, IKS: 0, MTP: 0, ISTP: 0, YIF: 0, NOT_IN_DEGREE: 0,
       };
       accumulateSplitAware(tmp, e, semIcBasketUsed, semHssUsed);
       semesterMap.set(e.semester, {
@@ -751,6 +763,11 @@ export default function ProgressPage() {
     creditsByCategory.FE = minCredits(feRequired, creditsByCategory.FE);
     const feStillNeeded = Math.max(0, subtractCredits(feRequired, creditsByCategory.FE));
     creditsInProgressByCategory.FE = minCredits(feStillNeeded, creditsInProgressByCategory.FE);
+
+    const yifRequired = Math.max(0, Number(creditsRequiredByCategory.YIF ?? 0));
+    creditsByCategory.YIF = minCredits(yifRequired, creditsByCategory.YIF);
+    const yifStillNeeded = Math.max(0, subtractCredits(yifRequired, creditsByCategory.YIF));
+    creditsInProgressByCategory.YIF = minCredits(yifStillNeeded, creditsInProgressByCategory.YIF);
 
     const countedCategoryTotal = (categories: Record<string, number>) =>
       Object.entries(categories)

@@ -11,6 +11,7 @@ import {
   MTP_COMPONENT_CREDITS,
   MTP_TOTAL_CREDITS,
 } from "@/lib/mtpConfig";
+import { yifComponentForCourse, YIF_FREE_ELECTIVE_REDUCTION, YIF_TOTAL_CREDITS } from "@/lib/yif";
 import {
   addCredits,
   formatCredits,
@@ -27,6 +28,7 @@ export interface CreditBreakdown {
   freeElective: number;
   mtp: number;
   istp: number;
+  yif: number;
   total: number;
 }
 
@@ -42,13 +44,15 @@ export interface ProgramProgress {
   /** Per-category required credits — used by ProgressChart for dynamic HSS cap */
   creditsRequiredByCategory?: {
     IC?: number; IC_BASKET?: number; DC?: number; DE?: number;
-    FE?: number; HSS?: number; IKS?: number; MTP?: number; ISTP?: number; PE?: number;
+    FE?: number; HSS?: number; IKS?: number; MTP?: number; ISTP?: number; PE?: number; YIF?: number;
   };
 }
 
 type CreditClassificationState = {
   icBasketUsed: { ic1: boolean; ic2: boolean };
   hssCreditsAccumulated: number;
+  /** SP-501 and B23's DP-301P are one YIF component, never two. */
+  yifSp1Used?: boolean;
   /** Canonical codes already counted — used to skip duplicate/equivalent enrollments. */
   seenCanonicalCodes?: Set<string>;
 };
@@ -132,7 +136,7 @@ export class CreditCalculator {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { doingMTP: true, doingMTP2: true, doingISTP: true, branch: true, batch: true, enrollmentId: true },
+      select: { doingMTP: true, doingMTP2: true, doingISTP: true, doingYIF: true, branch: true, batch: true, enrollmentId: true },
     });
 
     const enrollments = await prisma.courseEnrollment.findMany({
@@ -205,6 +209,9 @@ export class CreditCalculator {
     let feCredits = program.feCredits;
     let mtpCredits = mtpCreditsFull;
     let istpCredits = istpCreditsFull;
+    let researchRequirement = researchCredits;
+    let yifCredits = 0;
+    const doingYIF = user?.doingYIF ?? false;
 
     // GE Open Specialisation (plain "GE") merges the DE pool into Free Electives:
     // DC 36 + DE 0 + FE 52. Named GE tracks (GE-ROBO/MECH/COMM/FIN) keep the
@@ -215,7 +222,16 @@ export class CreditCalculator {
       feCredits = mergedFe;
     }
 
-    {
+    if (doingYIF) {
+      // YIF moves the 2-credit vacation internship, ISTP, both MTP components
+      // and eight FE credits into one 22-credit programme basket. The BSCS
+      // model's MTP + research buckets are likewise replaced by the same 22cr.
+      feCredits = Math.max(0, subtractCredits(feCredits, YIF_FREE_ELECTIVE_REDUCTION));
+      mtpCredits = 0;
+      istpCredits = 0;
+      researchRequirement = 0;
+      yifCredits = YIF_TOTAL_CREDITS;
+    } else {
       const isBatch22 = inferredBatch === 2022;
 
       const doingMTP1Pref = user?.doingMTP ?? true;
@@ -245,13 +261,19 @@ export class CreditCalculator {
       }
     }
 
+    const requiredCoreCredits = Math.max(
+      0,
+      subtractCredits(program.icCredits + effectiveDcCredits, doingYIF && !isBSProgram ? 2 : 0),
+    );
+
     const required: CreditBreakdown = {
-      core: program.icCredits + effectiveDcCredits,
+      core: requiredCoreCredits,
       de: deCredits,
-      pe: researchCredits, // reuse pe field for BS Research credits
+      pe: researchRequirement, // reuse pe field for BS Research credits
       freeElective: feCredits,
       mtp: mtpCredits,
       istp: istpCredits,
+      yif: yifCredits,
       total: program.totalCreditsRequired,
     };
 
@@ -269,7 +291,8 @@ export class CreditCalculator {
       user?.branch || undefined,
       user?.batch ?? null,
       classificationState,
-      program.icCredits
+      program.icCredits,
+      doingYIF,
     );
 
     const inProgress = this.calculateCreditsByType(
@@ -277,7 +300,8 @@ export class CreditCalculator {
       user?.branch || undefined,
       user?.batch ?? null,
       classificationState,
-      program.icCredits
+      program.icCredits,
+      doingYIF,
     );
 
     // DE overflow → FE: excess DE credits beyond requirement count as Free Electives
@@ -303,6 +327,7 @@ export class CreditCalculator {
       "freeElective",
       "mtp",
       "istp",
+      "yif",
     ];
     for (const key of countedKeys) {
       const cap = Math.max(0, Number(required[key] ?? 0));
@@ -323,6 +348,7 @@ export class CreditCalculator {
       freeElective: Math.max(0, subtractCredits(required.freeElective, completed.freeElective)),
       mtp: Math.max(0, subtractCredits(required.mtp, completed.mtp)),
       istp: Math.max(0, subtractCredits(required.istp, completed.istp)),
+      yif: Math.max(0, subtractCredits(required.yif, completed.yif)),
       total: Math.max(0, subtractCredits(required.total, completed.total)),
     };
 
@@ -349,7 +375,8 @@ export class CreditCalculator {
         IKS: 0,
         MTP: mtpCredits,
         ISTP: istpCredits,
-        PE: researchCredits,
+        PE: researchRequirement,
+        YIF: yifCredits,
       },
     };
   }
@@ -522,7 +549,8 @@ export class CreditCalculator {
     branch?: string,
     batchYear?: number | null,
     classificationState?: CreditClassificationState,
-    programIcCredits?: number
+    programIcCredits?: number,
+    doingYIF = false,
   ): CreditBreakdown {
     const breakdown: CreditBreakdown = {
       core: 0,
@@ -531,6 +559,7 @@ export class CreditCalculator {
       freeElective: 0,
       mtp: 0,
       istp: 0,
+      yif: 0,
       total: 0,
     };
 
@@ -563,6 +592,7 @@ export class CreditCalculator {
       icBasketUsed: { ic1: false, ic2: false },
       hssCreditsAccumulated: 0,
       seenCanonicalCodes: new Set<string>(),
+      yifSp1Used: false,
     };
     const icBasketUsed = state.icBasketUsed;
     const seenCanonicalCodes = (state.seenCanonicalCodes ??= new Set<string>());
@@ -630,6 +660,24 @@ export class CreditCalculator {
 
       const code = enrollment.course.code.toUpperCase();
       const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+
+      if (doingYIF) {
+        const yifComponent = yifComponentForCourse(
+          normalizedCode,
+          batchYear,
+          credits,
+        );
+        if (yifComponent) {
+          // DP-301P and SP-501 are alternatives for B23. The first successful
+          // record fulfils this four-credit slot; a duplicate remains visible in
+          // the transcript but cannot inflate YIF progress.
+          if (yifComponent !== "sp1" || !state.yifSp1Used) {
+            addBreakdownCredits("yif", credits);
+            if (yifComponent === "sp1") state.yifSp1Used = true;
+          }
+          return;
+        }
+      }
       const isICB1 = ICB1_CODES.has(normalizedCode);
       const isICB2 = ICB2_CODES.has(normalizedCode);
       const isIkCourse = /^IK\d/.test(normalizedCode);

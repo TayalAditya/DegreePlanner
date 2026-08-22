@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
         doingMTP: true,
         doingMTP2: true,
         doingISTP: true,
+        doingYIF: true,
         manualCourseImportOnly: true,
         totalPassFailCredits: true,
         createdAt: true,
@@ -62,12 +63,12 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, enrollmentId, branch, doingMTP, doingMTP2, doingISTP } = body;
+    const { name, enrollmentId, branch, doingMTP, doingMTP2, doingISTP, doingYIF } = body;
 
     // Check if user already has a branch set
     const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { branch: true, doingMTP: true, doingMTP2: true, doingISTP: true },
+      select: { branch: true, batch: true, enrollmentId: true, doingMTP: true, doingMTP2: true, doingISTP: true, doingYIF: true },
     });
 
     if (!currentUser) {
@@ -114,7 +115,41 @@ export async function PATCH(req: NextRequest) {
       }
     }
 
-    const updatingMTPPrefs = doingMTP !== undefined || doingMTP2 !== undefined;
+    const updatingYIF = doingYIF !== undefined;
+    const enablingYIF = Boolean(doingYIF) && !currentUser.doingYIF;
+    const disablingYIF = doingYIF === false && currentUser.doingYIF;
+    const batchFromEnrollment = /B23/i.test(String(currentUser.enrollmentId || "")) ? 2023 : currentUser.batch;
+    const isB23 = batchFromEnrollment === 2023;
+
+    if (enablingYIF) {
+      const completedProjects = await prisma.courseEnrollment.findMany({
+        where: {
+          userId: session.user.id,
+          status: EnrollmentStatus.COMPLETED,
+          OR: [
+            { courseType: CourseType.MTP },
+            { courseType: CourseType.ISTP },
+            { course: { code: { endsWith: "498P" } } },
+            { course: { code: { endsWith: "499P" } } },
+            { course: { code: { contains: "301P" } } },
+          ],
+        },
+        select: { grade: true, course: { select: { code: true } } },
+      });
+      const incompatibleCompleted = completedProjects.some((enrollment) => {
+        if (enrollment.grade === "F") return false;
+        const code = enrollment.course.code.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        return !(isB23 && code === "DP301P");
+      });
+      if (incompatibleCompleted) {
+        return NextResponse.json(
+          { error: "YIF cannot be enabled after a passed ISTP, MTP-1 or MTP-2 record. B23 DP-301P is the only accepted equivalent." },
+          { status: 409 },
+        );
+      }
+    }
+
+    const updatingMTPPrefs = !currentUser.doingYIF && (doingMTP !== undefined || doingMTP2 !== undefined);
     const updatingISTPPref = doingISTP !== undefined;
 
     let nextDoingMTP = currentUser.doingMTP;
@@ -125,11 +160,23 @@ export async function PATCH(req: NextRequest) {
     if (doingMTP2 !== undefined) nextDoingMTP2 = Boolean(doingMTP2);
     if (doingISTP !== undefined) nextDoingISTP = Boolean(doingISTP);
 
+    if (enablingYIF) {
+      nextDoingMTP = false;
+      nextDoingMTP2 = false;
+      nextDoingISTP = false;
+    } else if (disablingYIF) {
+      // Leaving the YIF path restores the ordinary default requirements. It
+      // does not recreate project enrollments that were removed on opt-in.
+      nextDoingMTP = true;
+      nextDoingMTP2 = true;
+      nextDoingISTP = true;
+    }
+
     const currentDoingMTP2 = currentUser.doingMTP2 ?? true;
 
-    const skippingMTP1 = updatingMTPPrefs && currentUser.doingMTP && !nextDoingMTP;
-    const skippingMTP2 = updatingMTPPrefs && currentDoingMTP2 && !nextDoingMTP2;
-    const skippingISTP = updatingISTPPref && currentUser.doingISTP && !nextDoingISTP;
+    const skippingMTP1 = (updatingMTPPrefs || enablingYIF) && currentUser.doingMTP && !nextDoingMTP;
+    const skippingMTP2 = (updatingMTPPrefs || enablingYIF) && currentDoingMTP2 && !nextDoingMTP2;
+    const skippingISTP = (updatingISTPPref || enablingYIF) && currentUser.doingISTP && !nextDoingISTP;
 
     const user = await prisma.$transaction(async (tx) => {
       // Auto-deregister enrolled courses for skipped components (only IN_PROGRESS)
@@ -138,7 +185,10 @@ export async function PATCH(req: NextRequest) {
           where: {
             userId: session.user.id,
             status: EnrollmentStatus.IN_PROGRESS,
-            course: { code: { endsWith: "498P" } },
+            OR: [
+              { courseType: CourseType.MTP },
+              { course: { code: { endsWith: "498P" } } },
+            ],
           },
         });
       }
@@ -148,7 +198,10 @@ export async function PATCH(req: NextRequest) {
           where: {
             userId: session.user.id,
             status: EnrollmentStatus.IN_PROGRESS,
-            course: { code: { endsWith: "499P" } },
+            OR: [
+              { courseType: CourseType.MTP },
+              { course: { code: { endsWith: "499P" } } },
+            ],
           },
         });
       }
@@ -158,6 +211,9 @@ export async function PATCH(req: NextRequest) {
           where: {
             userId: session.user.id,
             status: EnrollmentStatus.IN_PROGRESS,
+            // B23 DP-301P is the accepted SP-501 equivalent and must survive
+            // switching on YIF.
+            ...(enablingYIF && isB23 ? { NOT: { course: { code: { contains: "301P" } } } } : {}),
             OR: [
               { courseType: CourseType.ISTP },
               { course: { code: { endsWith: "301P" } } },
@@ -173,8 +229,9 @@ export async function PATCH(req: NextRequest) {
           ...(name && { name }),
           ...(enrollmentId !== undefined && { enrollmentId }),
           ...(branch && { branch }),
-          ...(doingMTP !== undefined || doingMTP2 !== undefined ? { doingMTP: nextDoingMTP, doingMTP2: nextDoingMTP2 } : {}),
-          ...(doingISTP !== undefined && { doingISTP: nextDoingISTP }),
+          ...(updatingYIF || doingMTP !== undefined || doingMTP2 !== undefined ? { doingMTP: nextDoingMTP, doingMTP2: nextDoingMTP2 } : {}),
+          ...(updatingYIF || doingISTP !== undefined ? { doingISTP: nextDoingISTP } : {}),
+          ...(updatingYIF ? { doingYIF: Boolean(doingYIF) } : {}),
         },
         select: {
           id: true,
@@ -187,6 +244,7 @@ export async function PATCH(req: NextRequest) {
           doingMTP: true,
           doingMTP2: true,
           doingISTP: true,
+          doingYIF: true,
           manualCourseImportOnly: true,
           totalPassFailCredits: true,
         },

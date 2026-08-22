@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import { MINORS } from "@/lib/minors";
 import { syncPlanToEnrollments } from "@/lib/planEnrollmentSync";
 import { EnrollmentStatus, ProgramStatus, ProgramType } from "@prisma/client";
+import { isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
+import { getYifPrerequisiteError } from "@/lib/yif";
 
 const normalizeCourseCode = (code: string) => code.toUpperCase().replace(/[^A-Z0-9]/g, "");
 
@@ -79,7 +81,7 @@ export async function POST(req: NextRequest) {
 
   // A 399P onsite internship is an all-semester commitment. Validate plans on
   // the server too so a stale tab or direct API request cannot bypass the UI.
-  const [offeringMatches, courseMatches, activeMinorPrograms, completedCourses] = await Promise.all([
+  const [offeringMatches, courseMatches, activeMinorPrograms, completedCourses, yifProfile] = await Promise.all([
     prisma.courseOffering.findMany({
       where: { id: { in: canonicalIds } },
       select: { id: true, courseCode: true, credits: true },
@@ -102,7 +104,11 @@ export async function POST(req: NextRequest) {
         status: { in: [EnrollmentStatus.COMPLETED, EnrollmentStatus.IN_PROGRESS] },
         grade: { not: "F" },
       },
-      select: { course: { select: { code: true } } },
+      select: { status: true, grade: true, course: { select: { code: true } } },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { doingYIF: true, batch: true, enrollmentId: true },
     }),
   ]);
   const itemsById = new Map<string, { code: string; credits: number }>();
@@ -124,6 +130,31 @@ export async function POST(req: NextRequest) {
       .filter((code): code is string => Boolean(code))
       .map(normalizeCourseCode)
   );
+
+  if (yifProfile?.doingYIF) {
+    const isB23 = yifProfile.batch === 2023 || /B23/i.test(String(yifProfile.enrollmentId || ""));
+    const selectedYifItems = canonicalIds
+      .map((id) => itemsById.get(id))
+      .filter((item): item is { code: string; credits: number } => Boolean(item));
+    const restrictedProject = selectedYifItems.find((item) => {
+      const normalized = normalizeCourseCode(item.code);
+      return isMtp1CourseCode(normalized) || isMtp2CourseCode(normalized) || (normalized === "DP301P" && !isB23);
+    });
+    if (restrictedProject) {
+      return NextResponse.json(
+        { error: "YIF students cannot plan ISTP, MTP-1 or MTP-2. B23 DP-301P remains the SP-501 equivalent." },
+        { status: 400 },
+      );
+    }
+    for (const item of selectedYifItems) {
+      const yifError = getYifPrerequisiteError({
+        courseCode: item.code,
+        batch: isB23 ? 2023 : yifProfile.batch,
+        enrollments: completedCourses,
+      });
+      if (yifError) return NextResponse.json({ error: yifError }, { status: 400 });
+    }
+  }
   for (const minorCodeToValidate of activeMinorCodes) {
     const minor = MINORS.find((item) => item.code === minorCodeToValidate);
     if (!minor) continue;

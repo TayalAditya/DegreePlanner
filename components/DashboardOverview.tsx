@@ -9,6 +9,7 @@ import { ICB1_CODES, ICB2_CODES, IC_BASKET_COMPULSIONS, normalizeBranchForIcBask
 import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { pickBranchMapping, getHssIksDegreeCap, hssIksCountsAsDe, routeHssIksSplit, HSS_IKS_DEGREE_CAP_DEFAULT, type BranchMapping } from "@/lib/courseCategory";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
+import { yifComponentForCourse } from "@/lib/yif";
 
 interface DashboardOverviewProps {
   userId: string;
@@ -34,6 +35,7 @@ const categoryLabels = {
   NOT_IN_DEGREE: "Not in Degree",
   MTP: "MTP",
   ISTP: "ISTP",
+  YIF: "YIF",
 } as const;
 
 const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: string }> = {
@@ -47,6 +49,7 @@ const categoryColors: Record<keyof typeof categoryLabels, { bg: string; text: st
   NOT_IN_DEGREE: { bg: "bg-foreground-muted/10", text: "text-foreground-muted" },
   MTP: { bg: "bg-error/10", text: "text-error" },
   ISTP: { bg: "bg-accent/10", text: "text-accent" },
+  YIF: { bg: "bg-cyan-500/10", text: "text-cyan-700 dark:text-cyan-300" },
 };
 
 type DashboardCategory = keyof typeof categoryLabels;
@@ -194,6 +197,10 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
       return null;
     })();
     const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
+
+    if (userSettings?.doingYIF && yifComponentForCourse(enrollment.course?.code, inferredBatch, credits)) {
+      return "YIF";
+    }
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && userSettings?.branch) {
@@ -412,6 +419,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
           NOT_IN_DEGREE: 0,
           MTP: 0,
           ISTP: 0,
+          YIF: 0,
         };
       }
       const categorized = categorizedById.get(e.id);

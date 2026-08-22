@@ -4,6 +4,7 @@ import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { getBranchCandidates, normalizeBranchCode } from "@/lib/branchInfo";
 import { pickBranchMapping, resolveBaseCategory } from "@/lib/courseCategory";
 import { creditCalculator } from "@/lib/creditCalculator";
+import { yifComponentForCourse, YIF_STARTUP_PRACTICUMS } from "@/lib/yif";
 import RoadmapClient, { type RoadmapData, type RoadmapCourse } from "./RoadmapClient";
 
 const ROADMAP_SEMESTERS = [5, 6, 7, 8];
@@ -56,7 +57,7 @@ function buildCourseEquivalenceKeys(
   for (const code of parent.keys()) keys.set(code, find(code));
   return keys;
 }
-const REQUIRED_CATEGORIES = new Set(["IC", "DC", "MTP", "ISTP"]);
+const REQUIRED_CATEGORIES = new Set(["IC", "DC", "MTP", "ISTP", "YIF"]);
 
 function asRoadmapCategory(category: string) {
   return category === "IC_BASKET_CANDIDATE" ? "FE" : category;
@@ -83,7 +84,7 @@ export default async function RoadmapPage() {
   const [user, primaryProgram] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { branch: true, batch: true, enrollmentId: true, totalPassFailCredits: true },
+      select: { branch: true, batch: true, enrollmentId: true, totalPassFailCredits: true, doingYIF: true },
     }),
     prisma.userProgram.findFirst({
       where: { userId, isPrimary: true },
@@ -104,7 +105,7 @@ export default async function RoadmapPage() {
   const normalizedCandidates = new Set(branchCandidates.map(normalizeBranchCode));
   const batchValues = ["", String(batchYear)];
 
-  const [mappedCourses, enrollments, offerings, registeredEnrollments, programProgress] = await Promise.all([
+  const [mappedCourses, enrollments, offerings, registeredEnrollments, programProgress, yifCourses] = await Promise.all([
     prisma.course.findMany({
       where: {
         isActive: true,
@@ -241,6 +242,12 @@ export default async function RoadmapPage() {
     primaryProgram
       ? creditCalculator.calculateProgramProgress(userId, primaryProgram.programId)
       : Promise.resolve(null),
+    user?.doingYIF
+      ? prisma.course.findMany({
+          where: { code: { in: YIF_STARTUP_PRACTICUMS.map((component) => component.code) }, isActive: true },
+          select: { id: true, code: true, name: true, credits: true },
+        })
+      : Promise.resolve([]),
   ]);
 
   // During the pre-registration window, past-semester IN_PROGRESS rows are
@@ -358,13 +365,17 @@ export default async function RoadmapPage() {
     const semester = mapping?.semester ?? null;
     if (!semester || !semesterByNumber.has(semester)) continue;
 
-    const category = asRoadmapCategory(
+    let category = asRoadmapCategory(
       resolveBaseCategory(
         { code: course.code, branchMappings: course.branchMappings },
         branch,
         batchYear
       )
     );
+    if (user?.doingYIF && yifComponentForCourse(course.code, batchYear, course.credits)) {
+      category = "YIF";
+    }
+    if (user?.doingYIF && (category === "MTP" || category === "ISTP")) continue;
     const item: RoadmapCourse = {
       id: course.id,
       code: course.code,
@@ -411,6 +422,27 @@ export default async function RoadmapPage() {
     if (!target) continue;
     if (candidate.required) target.requiredCourses.push(candidate.item);
     else target.mappedElectives.push(candidate.item);
+  }
+
+  if (user?.doingYIF) {
+    const b23Sp1EquivalentDone = batchYear === 2023 && completedEnrollments.some(
+      (enrollment) => normalizeCourseCode(enrollment.course.code) === "DP301P",
+    );
+    for (const [index, component] of YIF_STARTUP_PRACTICUMS.entries()) {
+      const course = yifCourses.find((item) => normalizeCourseCode(item.code) === component.normalizedCode);
+      const target = semesterByNumber.get(6 + index);
+      if (!course || !target || (index === 0 && b23Sp1EquivalentDone)) continue;
+      if (target.requiredCourses.some((item) => normalizeCourseCode(item.code) === normalizeCourseCode(course.code))) continue;
+      target.requiredCourses.push({
+        id: course.id,
+        code: course.code,
+        name: index === 0 && batchYear === 2023 ? `${course.name} (DP-301P equivalent accepted)` : course.name,
+        credits: course.credits,
+        category: "YIF",
+        completed: isCourseCompleted(course.id, course.code),
+        source: "curriculum",
+      });
+    }
   }
 
   const isEligibleOffering = (offering: (typeof offerings)[number], targetSemester: number) => {
@@ -605,6 +637,7 @@ export default async function RoadmapPage() {
             freeElective: programProgress.remaining.freeElective,
             mtp: programProgress.remaining.mtp,
             istp: programProgress.remaining.istp,
+            yif: programProgress.remaining.yif,
             pe: programProgress.remaining.pe,
           },
         }

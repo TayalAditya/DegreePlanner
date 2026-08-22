@@ -115,6 +115,16 @@ export default function CourseSetupClient() {
     return courses.filter((course) => `${course.code} ${course.name} ${course.department}`.toLowerCase().includes(query));
   }, [courses, search]);
 
+  // Catalogue sections are data, not a second manually maintained enum. Once
+  // an admin creates a custom section for one course, make it reusable for
+  // every subsequent "New course" form.
+  const catalogSections = useMemo(() => {
+    const customSections = courses
+      .map((course) => course.catalogSection?.trim())
+      .filter((section): section is string => Boolean(section));
+    return Array.from(new Set([...CATALOG_SECTIONS, ...customSections]));
+  }, [courses]);
+
   const loadCourses = useCallback(async () => {
     setLoading(true);
     try {
@@ -138,7 +148,7 @@ export default function CourseSetupClient() {
       if (!response.ok) throw new Error(data.error);
       const course = data.course as CourseDetails;
       setSelected(course); setCourseForm(toCourseForm(course)); setInitialBasket(false); setMappingForm(emptyMapping()); setOfferingForm(emptyOffering());
-      if (course.catalogSection && CATALOG_SECTIONS.includes(course.catalogSection)) {
+      if (course.catalogSection && catalogSections.includes(course.catalogSection)) {
         setCatalogPreset(course.catalogSection); setCustomCatalogSection("");
       } else if (course.catalogSection) {
         setCatalogPreset("__custom__"); setCustomCatalogSection(course.catalogSection);
@@ -258,7 +268,7 @@ export default function CourseSetupClient() {
               <Field label="L-T-P-C"><input value={courseForm.ltpc} onChange={(e) => setCourseForm({ ...courseForm, ltpc: e.target.value })} placeholder="3-0-0-3" className={inputClass} /></Field>
               <Field label="Course level" hint="Use the catalogue level, e.g. 100, 200, 300 or 500."><input type="number" min="0" max="999" value={courseForm.level} onChange={(e) => setCourseForm({ ...courseForm, level: e.target.value })} placeholder="300" className={inputClass} /></Field>
               <Field label="Department / source school"><input value={courseForm.department} onChange={(e) => setCourseForm({ ...courseForm, department: e.target.value })} placeholder="School of Computing..." className={inputClass} /></Field>
-              <Field label="Catalogue section" hint="Choose an existing section or create a named one that will group this course in the catalogue."><select value={catalogPreset} onChange={(e) => setCatalogPreset(e.target.value)} className={inputClass}><option value="">Automatic from code / department</option>{CATALOG_SECTIONS.map((section) => <option key={section} value={section}>{section}</option>)}<option value="__custom__">Create a new section…</option></select></Field>
+              <Field label="Catalogue section" hint="Choose an existing section or create a named one that will group this course in the catalogue."><select value={catalogPreset} onChange={(e) => setCatalogPreset(e.target.value)} className={inputClass}><option value="">Automatic from code / department</option>{catalogSections.map((section) => <option key={section} value={section}>{section}</option>)}<option value="__custom__">Create a new section…</option></select></Field>
               {catalogPreset === "__custom__" && <Field label="New catalogue section"><input value={customCatalogSection} onChange={(e) => setCustomCatalogSection(e.target.value)} placeholder="e.g. School of Design" className={inputClass} /></Field>}
               <Field label="Description"><input value={courseForm.description} onChange={(e) => setCourseForm({ ...courseForm, description: e.target.value })} placeholder="Optional" className={inputClass} /></Field>
             </div>

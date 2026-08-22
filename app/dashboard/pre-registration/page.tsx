@@ -157,7 +157,7 @@ type EffectiveOfferingCategory = {
 
 const CATEGORY_LABEL: Record<string, string> = {
   IC: "IC", IC_BASKET: "IC", DC: "DC", DE: "DE",
-  HSS: "HSS+IKS", IKS: "HSS+IKS", FE: "FE", MTP: "MTP", ISTP: "ISTP", AUDIT: "Audit",
+  HSS: "HSS+IKS", IKS: "HSS+IKS", FE: "FE", MTP: "MTP", ISTP: "ISTP", YIF: "YIF", AUDIT: "Audit",
   NOT_IN_DEGREE: "Not in degree",
 };
 
@@ -171,6 +171,7 @@ const CATEGORY_COLOR: Record<string, string> = {
   FE: "bg-success/10 text-success border-success/20",
   MTP: "bg-error/10 text-error border-error/20",
   ISTP: "bg-accent/10 text-accent border-accent/20",
+  YIF: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/20",
   AUDIT: "bg-warning/10 text-warning border-warning/20",
   NOT_IN_DEGREE: "bg-foreground-secondary/10 text-foreground-secondary border-foreground-secondary/20",
 };
@@ -178,7 +179,7 @@ const CATEGORY_COLOR: Record<string, string> = {
 const CATEGORY_BAR_COLOR: Record<string, string> = {
   DC: "bg-primary", IC: "bg-info", IC_BASKET: "bg-info",
   DE: "bg-secondary", HSS: "bg-warning", IKS: "bg-warning",
-  FE: "bg-success", MTP: "bg-error", ISTP: "bg-accent", AUDIT: "bg-warning",
+  FE: "bg-success", MTP: "bg-error", ISTP: "bg-accent", YIF: "bg-cyan-500", AUDIT: "bg-warning",
   NOT_IN_DEGREE: "bg-foreground-secondary",
 };
 
@@ -767,7 +768,7 @@ function ProgressPanel({ programRequirements, completedBreakdown, categoryBreakd
       <div className="rounded-xl border border-border bg-surface p-4">
         <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wide mb-3">Remaining</p>
         <div className="space-y-2">
-          {(["IC","IC_BASKET","DC","DE","HSS","FE","MTP","ISTP","NOT_IN_DEGREE"] as const).map((key) => {
+          {(["IC","IC_BASKET","DC","DE","HSS","FE","MTP","ISTP","YIF","NOT_IN_DEGREE"] as const).map((key) => {
             const req  = programRequirements[key] ?? 0;
             const done = completedBreakdown[key] ?? 0;
             if (!req && !done) return null;
@@ -1362,7 +1363,7 @@ export default function PreRegistrationPage() {
     for (const c of extraCourses) {
       if (selectedExtra.has(c.id)) add(c.category, c.credits);
     }
-    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "MTP", "ISTP", "NOT_IN_DEGREE", "AUDIT"]; // IKS merged into HSS
+    const ORDER = ["IC", "IC_BASKET", "DC", "DE", "HSS", "FE", "YIF", "MTP", "ISTP", "NOT_IN_DEGREE", "AUDIT"]; // IKS merged into HSS
     return ORDER.filter((cat) => map.has(cat)).map((cat) => ({ cat, ...map.get(cat)! }));
   }, [data, selected, selectedExtra, internshipCourses, mtp1Course, regTypes, effectiveOfferingCategories]);
 

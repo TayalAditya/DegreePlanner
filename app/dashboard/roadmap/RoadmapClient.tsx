@@ -63,6 +63,7 @@ export type RoadmapData = {
       freeElective: number;
       mtp: number;
       istp: number;
+      yif: number;
       pe: number;
     };
   } | null;
@@ -102,6 +103,7 @@ const categoryStyle: Record<string, string> = {
   IKS: "bg-warning/10 text-warning border-warning/15",
   MTP: "bg-error/10 text-error border-error/15",
   ISTP: "bg-accent/10 text-accent border-accent/15",
+  YIF: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border-cyan-500/20",
 };
 
 const COURSE_FILTERS: Array<{ value: CourseFilter; label: string }> = [
@@ -691,6 +693,7 @@ export default function RoadmapClient({ data }: { data: RoadmapData | null }) {
     { label: "FE", credits: adjustedCreditBuckets?.freeElective ?? data.creditSummary?.byBucket.freeElective ?? 0 },
     { label: "MTP", credits: adjustedCreditBuckets?.mtp ?? data.creditSummary?.byBucket.mtp ?? 0 },
     { label: "ISTP", credits: adjustedCreditBuckets?.istp ?? data.creditSummary?.byBucket.istp ?? 0 },
+    { label: "YIF", credits: data.creditSummary?.byBucket.yif ?? 0 },
   ];
 
   return (

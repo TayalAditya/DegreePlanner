@@ -43,6 +43,7 @@ export default async function ProgramsPage() {
           doingMTP: true,
           doingMTP2: true,
           doingISTP: true,
+          doingYIF: true,
           totalPassFailCredits: true,
         },
       }),
