@@ -245,7 +245,10 @@ export default function ProgressPage() {
     const isIkCourse = /^IK\d/.test(normalizedCode);
     const credits = enrollment.course.credits || 0;
 
-    if (user?.doingYIF && yifComponentForCourse(enrollment.course.code, inferredBatch, credits)) return "YIF";
+    const yifBatch = typeof user?.batch === "number"
+      ? user.batch
+      : /B23/i.test(String(user?.enrollmentId || "")) ? 2023 : null;
+    if (user?.doingYIF && yifComponentForCourse(enrollment.course.code, yifBatch, credits)) return "YIF";
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && user?.branch) {
