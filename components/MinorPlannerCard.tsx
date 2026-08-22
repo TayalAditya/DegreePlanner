@@ -735,6 +735,12 @@ export function MinorPlannerCard({ enrollments, isLoading = false, batchYear = n
                                 </span>
                               </>
                             ) : null}
+                            {progress.minor.minimumGpa ? (
+                              <>
+                                {" "}
+                                {"\u2022"} Min. GPA: {progress.minor.minimumGpa.toFixed(1)}
+                              </>
+                            ) : null}
                           </div>
 
                           <details className="group mt-3 rounded-lg border border-border bg-surface">

@@ -1,23 +1,12 @@
 import { GraduationCap } from "lucide-react";
+import { MINORS } from "@/lib/minors";
 
 export default function MinorsSection() {
-  const minors = [
-    { name: "Computer Science Engineering", courses: "9+ credits", cgpa: "7.0" },
-    { name: "Intelligent Systems", courses: "9+ credits", cgpa: "7.0" },
-    { name: "Management", courses: "12+ credits", cgpa: "7.0" },
-    { name: "Power Engineering", courses: "9+ credits", cgpa: "7.0" },
-    { name: "Thermo-Fluid Systems", courses: "9+ credits", cgpa: "7.0" },
-    { name: "Electronics Engineering", courses: "9+ credits", cgpa: "7.0" },
-    { name: "Communication Engineering", courses: "9+ credits", cgpa: "7.0" },
-    { name: "Mechanical Design", courses: "9+ credits", cgpa: "7.0" },
-    { name: "Measurement and Instrumentation", courses: "9+ credits", cgpa: "7.0" },
-    { name: "Device/Structural Materials", courses: "9+ credits", cgpa: "7.0" },
-    { name: "Control Engineering", courses: "9+ credits", cgpa: "7.0" },
-    { name: "Applied Physics", courses: "12+ credits", cgpa: "7.0" },
-    { name: "Robotics", courses: "12+ credits", cgpa: "7.0" },
-    { name: "German Language", courses: "9+ credits", cgpa: "7.0" },
-    { name: "Quantum Technologies", courses: "12+ credits", cgpa: "7.0" },
-  ];
+  const minors = MINORS.map((minor) => ({
+    ...minor,
+    courses: minor.totalCreditsRequired ? `${minor.totalCreditsRequired}+ credits` : "See requirements",
+    cgpa: minor.minimumGpa?.toFixed(1) ?? "7.0",
+  }));
 
   return (
     <div className="space-y-6">
@@ -27,7 +16,7 @@ export default function MinorsSection() {
           <h3 className="font-semibold text-2xl">Minor Degrees</h3>
         </div>
         <p className="text-muted-foreground">
-          Gain expertise in an area outside your major discipline. 15 different minor programs available.
+          Gain expertise in an area outside your major discipline. {minors.length} current Minor and specialization tracks are listed below.
         </p>
       </div>
 
@@ -60,9 +49,9 @@ export default function MinorsSection() {
       <div className="bg-card p-6 rounded-xl border">
         <h3 className="font-semibold text-xl mb-4">Available Minor Programs</h3>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {minors.map((minor, idx) => (
+          {minors.map((minor) => (
             <div
-              key={idx}
+              key={minor.code}
               className="p-4 rounded-lg bg-gradient-to-br from-purple-500/5 to-pink-500/5 dark:from-purple-500/10 dark:to-pink-500/10 border border-border/60"
             >
               <p className="font-semibold">{minor.name}</p>

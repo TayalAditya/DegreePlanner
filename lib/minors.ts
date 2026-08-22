@@ -19,10 +19,14 @@ export type MinorDefinition = {
   code: string;
   name: string;
   totalCreditsRequired?: number;
+  /** Minimum GPA required across the courses counted toward this minor. */
+  minimumGpa?: number;
   /** If set, this can also be pursued as a Specialization requiring this many credits (≥ minor). */
   specializationCreditsRequired?: number;
   /** If set, only students from these batch years see this minor. */
   eligibleBatches?: number[];
+  /** If set, students from this batch and every later batch can see this minor. */
+  eligibleFromBatch?: number;
   groups: MinorRequirementGroup[];
 };
 
@@ -123,6 +127,31 @@ export const MINORS: MinorDefinition[] = [
         ],
         countsTowardMinor: true,
         note: "Any 2 elective courses (6 credits). Sem 7-8 recommended, after core completion.",
+      },
+    ],
+  },
+  {
+    code: "ENTREPRENEURSHIP",
+    name: "Minor in Entrepreneurship",
+    totalCreditsRequired: 11,
+    minimumGpa: 7.0,
+    eligibleFromBatch: 2023,
+    groups: [
+      {
+        id: "core",
+        title: "Compulsory Core Courses (both required)",
+        requiredCount: 2,
+        courseCodes: ["IC-202P", "DP-302P"],
+        countsTowardMinor: true,
+        note: "IC-202P Design Practicum-I (3 cr) and DP-302P Design Practicum-II (2 cr): 5 core credits in total.",
+      },
+      {
+        id: "electives",
+        title: "Entrepreneurship Electives (pick 2)",
+        requiredCount: 2,
+        courseCodes: ["GE-523", "HS-510", "ME-523", "AR-527"],
+        countsTowardMinor: true,
+        note: "Choose any 2 electives (minimum 6 credits). Maintain a minimum GPA of 7.0 across the 11 Minor credits.",
       },
     ],
   },
@@ -593,9 +622,9 @@ function normalizeMinorCourseCode(code: string): string {
  * could appear in one and not the other. Routing both through this helper is what
  * keeps them in step.
  *
- * A minor with no `eligibleBatches` is open to every batch; where a minor is only
- * offered from a given batch onward, that belongs in its `name` (e.g. "(B25
- * onwards)") so students still see it exists rather than silently losing it.
+ * A minor with neither eligibility property is open to every batch. Use
+ * `eligibleBatches` for a closed set of batches and `eligibleFromBatch` when an
+ * approval applies to that batch and all future batches.
  *
  * `batchYear` may be null when a profile has no batch and no parseable roll
  * number; in that case show the unrestricted minors rather than an empty list.
@@ -603,7 +632,11 @@ function normalizeMinorCourseCode(code: string): string {
 export function getEligibleMinors(batchYear?: number | string | null): MinorDefinition[] {
   const batch = normalizeBatchYear(batchYear);
   return MINORS.filter(
-    (minor) => !minor.eligibleBatches || (batch != null && minor.eligibleBatches.includes(batch))
+    (minor) => {
+      if (minor.eligibleBatches) return batch != null && minor.eligibleBatches.includes(batch);
+      if (minor.eligibleFromBatch != null) return batch != null && batch >= minor.eligibleFromBatch;
+      return true;
+    }
   );
 }
 

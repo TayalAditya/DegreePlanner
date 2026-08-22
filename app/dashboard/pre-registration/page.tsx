@@ -1975,6 +1975,9 @@ export default function PreRegistrationPage() {
                   {minorData.minor.specializationCreditsRequired && (
                     <> · Specialization: {minorData.minor.specializationCreditsRequired}+ cr</>
                   )}
+                  {minorData.minor.minimumGpa && (
+                    <> · Min. GPA: {minorData.minor.minimumGpa.toFixed(1)}</>
+                  )}
                 </p>
               )}
             </div>
