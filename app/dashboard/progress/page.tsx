@@ -235,8 +235,14 @@ export default function ProgressPage() {
   const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any, hssUsed?: { credits: number }): CourseCategory => {
     const passFailCode = enrollment.course.code.toUpperCase();
     const passFailNormalizedCode = normalizeCode(passFailCode);
+    const yifBatch = typeof user?.batch === "number" && user.batch > 2000
+      ? user.batch
+      : (() => {
+          const match = /B(\d{2})/i.exec(String(user?.enrollmentId || ""));
+          return match ? 2000 + Number.parseInt(match[1], 10) : null;
+        })();
     const yifComponent = user?.doingYIF
-      ? yifComponentForCourse(enrollment.course.code, inferredBatch, enrollment.course.credits)
+      ? yifComponentForCourse(enrollment.course.code, yifBatch, enrollment.course.credits)
       : null;
     if (yifComponent && yifComponent !== "vacation") return "YIF";
     if (yifComponent === "vacation") {
