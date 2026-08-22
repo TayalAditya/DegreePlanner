@@ -430,6 +430,7 @@ export async function POST(req: NextRequest) {
             year: semYear,
             term,
             status,
+            grade: normalizedGrade,
             isPassFail,
             passFailCredits: nextPassFailCredits,
             course: { code: course.code },
