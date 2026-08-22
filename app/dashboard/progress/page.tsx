@@ -235,6 +235,8 @@ export default function ProgressPage() {
   const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any, hssUsed?: { credits: number }): CourseCategory => {
     const passFailCode = enrollment.course.code.toUpperCase();
     const passFailNormalizedCode = normalizeCode(passFailCode);
+    const code = passFailCode;
+    const normalizedCode = passFailNormalizedCode;
     const yifBatch = typeof user?.batch === "number" && user.batch > 2000
       ? user.batch
       : (() => {
@@ -250,6 +252,13 @@ export default function ProgressPage() {
       // FE basket. The accumulator also records its YIF component.
       return getCurriculumBranchCode(user?.branch || "") === "BSCS" ? "FE" : "IC";
     }
+
+    // Major Technical Project is a dedicated degree requirement. It must be
+    // resolved before P/F, internship and branch-mapping fallbacks.
+    if (enrollment.courseType === "MTP" || getMtpComponent(normalizedCode) !== null) {
+      return "MTP";
+    }
+
     const passFailHssIks =
       passFailNormalizedCode.startsWith("HS") ||
       /^IK\d/.test(passFailNormalizedCode) ||
@@ -259,18 +268,10 @@ export default function ProgressPage() {
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course.code)) return "FE";
 
-    const code = enrollment.course.code.toUpperCase();
-    const normalizedCode = normalizeCode(code);
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
     const isIkCourse = /^IK\d/.test(normalizedCode);
     const credits = enrollment.course.credits || 0;
-
-    // MTP is a distinct degree requirement. A broad CS/DS DE mapping must
-    // never relabel an MTP enrollment as a Discipline Elective.
-    if (enrollment.courseType === "MTP" || getMtpComponent(normalizedCode) !== null) {
-      return "MTP";
-    }
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && user?.branch) {
@@ -625,6 +626,12 @@ export default function ProgressPage() {
         );
         return;
       }
+      const normalizedCode = normalizeCode(e.course.code);
+      // Do not allow an accidental split mapping to route MTP into FE/DE.
+      if (e.courseType === "MTP" || getMtpComponent(normalizedCode) !== null) {
+        map.MTP = addCredits(map.MTP ?? 0, e.course.credits);
+        return;
+      }
       const mapping = pickRelevantBranchMapping(user?.branch, e.course.branchMappings);
       if (mapping?.splitCategory && mapping.splitAmount != null && mapping.splitAmount > 0) {
         const mainCr = subtractCredits(e.course.credits, mapping.splitAmount);
@@ -635,7 +642,7 @@ export default function ProgressPage() {
         return;
       }
       // IKS courses go through same HSS+IKS basket: 0–coreCap → HSS, coreCap–20 → FE, >20 → Not in Degree
-      const eCode = normalizeCode(e.course.code);
+      const eCode = normalizedCode;
       const isIksType = eCode === "IC181" || eCode === "IK593" || /^IK\d/.test(eCode) ||
         (eCode === "IC182" && inferredBatch != null && inferredBatch >= 2024);
       if (isIksType) {
@@ -887,8 +894,9 @@ export default function ProgressPage() {
       }
 
       // Check for branch-mapping-defined splits (e.g. 12.45308: 3cr DC + 1.67cr FE)
+      const isMtp = e.courseType === "MTP" || getMtpComponent(e.course.code) !== null;
       const mapping = pickRelevantBranchMapping(user?.branch, e.course.branchMappings);
-      if (mapping?.splitCategory && mapping.splitAmount != null && mapping.splitAmount > 0) {
+      if (!isMtp && mapping?.splitCategory && mapping.splitAmount != null && mapping.splitAmount > 0) {
         const mainCr = subtractCredits(e.course.credits, mapping.splitAmount);
         const mainCat = (mapping.courseCategory in categoryLabels ? mapping.courseCategory : "FE") as CourseCategory;
         const splitCat = (mapping.splitCategory in categoryLabels ? mapping.splitCategory : "FE") as string;

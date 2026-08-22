@@ -744,6 +744,13 @@ export class CreditCalculator {
         passFailSourceCategory === "HSS" ||
         passFailSourceCategory === "IKS";
 
+      // MTP is a separate requirement. Resolve it before P/F handling or a
+      // branch mapping so its credits never inflate FE/DE progress.
+      if (enrollment.courseType === CourseType.MTP || getSpecialDpCategory(normalizedCode) === "MTP") {
+        addBreakdownCredits("mtp", credits);
+        return;
+      }
+
       // P/F always consumes the P/F allowance. HSS/IKS P/F courses also keep
       // their place in the shared 20-credit HSS+IKS degree basket; only a
       // portion beyond that cap is excluded from the degree total.
@@ -973,9 +980,6 @@ export class CreditCalculator {
           break;
         case CourseType.FREE_ELECTIVE:
           addBreakdownCredits("freeElective", credits);
-          break;
-        case CourseType.MTP:
-          addBreakdownCredits("mtp", credits);
           break;
         case CourseType.ISTP:
           addBreakdownCredits("istp", credits);

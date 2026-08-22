@@ -3,6 +3,7 @@ import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { pickBranchMapping, getHssIksDegreeCap, hssIksCountsAsDe, routeHssIksSplit, type BranchMapping } from "@/lib/courseCategory";
 import { addCredits, minCredits, subtractCredits } from "@/lib/utils";
 import { getEnrollmentCredits } from "@/lib/enrollmentCredits";
+import { getMtpComponent } from "@/lib/mtpConfig";
 import { yifComponentForCourse, YIF_VACATION_INTERNSHIP_CREDITS } from "@/lib/yif";
 
 type CategoryKey = "IC" | "IC_BASKET" | "DC" | "DE" | "FE" | "HSS" | "IKS" | "MTP" | "ISTP" | "YIF" | "NOT_IN_DEGREE";
@@ -202,6 +203,9 @@ export function computeEnrollmentCreditBreakdown({
   const getCourseCategory = (enrollment: EnrollmentLike): CategoryKey => {
     const courseCode = enrollment.course?.code ?? "";
     const normalizedCode = normalizeCourseCode(courseCode);
+    // MTP is a dedicated requirement. Check it before P/F treatment and
+    // branch mapping so a stale or broad mapping cannot turn it into FE/DE.
+    if (enrollment.courseType === "MTP" || getMtpComponent(normalizedCode) !== null) return "MTP";
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
     const isIkCourse = /^IK\d/.test(normalizedCode);
@@ -347,6 +351,7 @@ export function computeEnrollmentCreditBreakdown({
       splitAmount < credits &&
       splitCategory &&
       splitCategory in categoryCredits &&
+      category !== "MTP" &&
       category !== "HSS" &&
       category !== "IKS";
 

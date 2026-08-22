@@ -246,8 +246,14 @@ export function ProgressChart({
   const isBSProgram = Number(progress?.creditsRequiredByCategory?.HSS ?? HSS_CORE_CAP_DEFAULT) <= 12;
 
   const getCourseCategory = (enrollment: any, icBasketUsed?: any, branch?: string, hssUsed?: { credits: number }): keyof typeof categoryCredits => {
-    const passFailCode = enrollment.course?.code?.toUpperCase() || "";
-    const passFailNormalizedCode = passFailCode.replace(/[^A-Z0-9]/g, "");
+    const code = enrollment.course?.code?.toUpperCase() || "";
+    const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
+
+    // Major Technical Project is a dedicated requirement. It must take
+    // precedence over a generic CS/DS mapping or an imported P/F flag.
+    if (enrollment.courseType === "MTP" || getMtpComponent(normalizedCode) !== null) return "MTP";
+
+    const passFailNormalizedCode = normalizedCode;
     const passFailHssIks =
       passFailNormalizedCode.startsWith("HS") ||
       /^IK\d/.test(passFailNormalizedCode) ||
@@ -257,8 +263,6 @@ export function ProgressChart({
     // Internship courses (XX-399P / XX-396P) are always P/F FE for all branches
     if (enrollment.isInternship || /39[69]P$/i.test(enrollment.course?.code ?? "")) return "FE";
 
-    const code = enrollment.course?.code?.toUpperCase() || "";
-    const normalizedCode = code.replace(/[^A-Z0-9]/g, "");
     const isICB1 = ICB1_CODES.has(normalizedCode);
     const isICB2 = ICB2_CODES.has(normalizedCode);
     const isIkCourse = /^IK\d/.test(normalizedCode);
@@ -433,6 +437,7 @@ export function ProgressChart({
     sortedEnrollments.forEach((e: any) => {
       const code = String(e.course?.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
       const credits = e.course?.credits || 0;
+      const isMtp = e.courseType === "MTP" || getMtpComponent(code) !== null;
 
       if (doingYIF) {
         const yifComponent = yifComponentForCourse(e.course?.code, userBatch, credits);
@@ -450,7 +455,7 @@ export function ProgressChart({
 
       // Check for branch-mapping-defined splits (e.g. 12.45308: 3cr DC + 1.67cr FE)
       const mappings: any[] = e.course?.branchMappings || [];
-      if (mappings.length > 0 && userBranch) {
+      if (!isMtp && mappings.length > 0 && userBranch) {
         const splitMapping = pickBranchMapping(
           mappings as BranchMapping[],
           userBranch,
