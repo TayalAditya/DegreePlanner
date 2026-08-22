@@ -266,10 +266,11 @@ export default function ProgressPage() {
     const isIkCourse = /^IK\d/.test(normalizedCode);
     const credits = enrollment.course.credits || 0;
 
-    const yifBatch = typeof user?.batch === "number"
-      ? user.batch
-      : /B23/i.test(String(user?.enrollmentId || "")) ? 2023 : null;
-    if (user?.doingYIF && yifComponentForCourse(enrollment.course.code, yifBatch, credits)) return "YIF";
+    // MTP is a distinct degree requirement. A broad CS/DS DE mapping must
+    // never relabel an MTP enrollment as a Discipline Elective.
+    if (enrollment.courseType === "MTP" || getMtpComponent(normalizedCode) !== null) {
+      return "MTP";
+    }
 
     // IC Basket compulsion logic - check BEFORE branchMappings
     if ((isICB1 || isICB2) && user?.branch) {
@@ -319,7 +320,7 @@ export default function ProgressPage() {
     }
 
     // Hard overrides (batch-sensitive)
-    const inferredBatch = (() => {
+    const batchForIc182 = (() => {
       const batch = user?.batch;
       if (typeof batch === "number" && batch > 2000) return batch;
       const enrollmentId = String(user?.enrollmentId || "").toUpperCase();
@@ -327,7 +328,7 @@ export default function ProgressPage() {
       if (match) return 2000 + Number.parseInt(match[1], 10);
       return null;
     })();
-    const usesIc182AsIks = inferredBatch != null && inferredBatch >= 2024;
+    const usesIc182AsIks = batchForIc182 != null && batchForIc182 >= 2024;
 
     // IKS courses (IC-181, IC-182, IK-xxx) → HSS+IKS basket WITHOUT consuming HS cap space.
     // HS cap (0-15 core, 15-20 FE, 20+ ignored) applies only to HS-xxx; IKS always count fully.
