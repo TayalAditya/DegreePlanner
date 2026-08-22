@@ -2,13 +2,17 @@ import { getBranchCandidates, isDataScienceBranch } from "@/lib/branchInfo";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { pickBranchMapping, getHssIksDegreeCap, hssIksCountsAsDe, routeHssIksSplit, type BranchMapping } from "@/lib/courseCategory";
 import { addCredits, minCredits, subtractCredits } from "@/lib/utils";
-import { yifComponentForCourse } from "@/lib/yif";
+import { getEnrollmentCredits } from "@/lib/enrollmentCredits";
+import { yifComponentForCourse, YIF_VACATION_INTERNSHIP_CREDITS } from "@/lib/yif";
 
 type CategoryKey = "IC" | "IC_BASKET" | "DC" | "DE" | "FE" | "HSS" | "IKS" | "MTP" | "ISTP" | "YIF" | "NOT_IN_DEGREE";
 
 export type CategoryCreditBreakdown = Record<CategoryKey, number>;
 
 export type CountedCreditBreakdown = {
+  ic: number;
+  icBasket: number;
+  hssIks: number;
   institutionalCore: number;
   dc: number;
   core: number;
@@ -119,7 +123,10 @@ const normalizeBranchForIcBasket = (branch?: string | null) => {
   return upper;
 };
 
-const countedFromCategories = (categoryCredits: CategoryCreditBreakdown): CountedCreditBreakdown => {
+const countedFromCategories = (
+  categoryCredits: CategoryCreditBreakdown,
+  yifVacationOverlapCredits = 0,
+): CountedCreditBreakdown => {
   const institutionalCore = addCredits(
     categoryCredits.IC,
     categoryCredits.IC_BASKET,
@@ -128,11 +135,21 @@ const countedFromCategories = (categoryCredits: CategoryCreditBreakdown): Counte
   );
   const core = addCredits(institutionalCore, categoryCredits.DC);
   // NOT_IN_DEGREE credits are excluded from the degree total.
-  const total = Object.entries(categoryCredits)
+  const totalBeforeYifOverlap = Object.entries(categoryCredits)
     .filter(([key]) => key !== "NOT_IN_DEGREE")
     .reduce((sum, [, value]) => addCredits(sum, value), 0);
+  const total = Math.max(
+    0,
+    subtractCredits(
+      totalBeforeYifOverlap,
+      minCredits(yifVacationOverlapCredits, categoryCredits.YIF),
+    ),
+  );
 
   return {
+    ic: categoryCredits.IC,
+    icBasket: categoryCredits.IC_BASKET,
+    hssIks: addCredits(categoryCredits.HSS, categoryCredits.IKS),
     institutionalCore,
     dc: categoryCredits.DC,
     core,
@@ -157,8 +174,9 @@ export function computeEnrollmentCreditBreakdown({
 }: Options) {
   const categoryCredits = emptyCategoryCredits();
   const icBasketUsed = { ic1: false, ic2: false };
-  let yifSp1Used = false;
   const hssUsed = { credits: 0 };
+  let yifSp1Used = false;
+  let yifVacationOverlapCredits = 0;
   const hssCoreCap = (programIcCredits ?? 60) <= 52 ? 12 : 15;
   // B23 BOA relaxation: HSS+IKS degree cap raised from 20 → 30.
   const hssFeCap = getHssIksDegreeCap(userBatch);
@@ -296,6 +314,20 @@ export function computeEnrollmentCreditBreakdown({
           categoryCredits.YIF = addCredits(categoryCredits.YIF, credits);
           if (yifComponent === "sp1") yifSp1Used = true;
         }
+        if (yifComponent !== "vacation") return;
+
+        // The compulsory vacation internship remains in its normal basket as
+        // well as satisfying the YIF vacation component. Count it only once
+        // in the degree total below.
+        yifVacationOverlapCredits = minCredits(
+          YIF_VACATION_INTERNSHIP_CREDITS,
+          addCredits(yifVacationOverlapCredits, credits),
+        );
+        if ((programIcCredits ?? 60) <= 52) {
+          categoryCredits.FE = addCredits(categoryCredits.FE, credits);
+        } else {
+          categoryCredits.IC = addCredits(categoryCredits.IC, credits);
+        }
         return;
       }
     }
@@ -351,6 +383,6 @@ export function computeEnrollmentCreditBreakdown({
 
   return {
     categoryCredits,
-    counted: countedFromCategories(categoryCredits),
+    counted: countedFromCategories(categoryCredits, yifVacationOverlapCredits),
   };
 }

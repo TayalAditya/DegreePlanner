@@ -16,6 +16,8 @@ import {
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
 import { getMtpComponent, MTP_COMPONENT_CREDITS } from "@/lib/mtpConfig";
 import { IC_BASKET_COMPULSIONS } from "@/lib/icBasketConfig";
+import { getEnrollmentCredits } from "@/lib/enrollmentCredits";
+import { yifComponentForCourse } from "@/lib/yif";
 
 interface ProgressChartProps {
   progress: any;
@@ -142,7 +144,7 @@ const INCLUDE_CURRENT_SEM_KEY = "degreePlanner.progress.includeCurrentSemesterCr
 export function ProgressChart({
   progress,
   isLoading,
-  enrollments,
+  enrollments: rawEnrollments,
   userBranch,
   userBatch,
   doingMTP,
@@ -150,6 +152,16 @@ export function ProgressChart({
   doingYIF,
   disableMinorPlanner,
 }: ProgressChartProps) {
+  const enrollments = useMemo(
+    () => (rawEnrollments || []).map((enrollment: any) => ({
+      ...enrollment,
+      course: {
+        ...enrollment.course,
+        credits: getEnrollmentCredits(enrollment, userBranch),
+      },
+    })),
+    [rawEnrollments, userBranch],
+  );
   const includeCurrentSemesterCredits = useSyncExternalStore(
     (callback) => {
       if (typeof window === "undefined") return () => {};
@@ -229,7 +241,9 @@ export function ProgressChart({
     NOT_IN_DEGREE: 0,
     MTP: 0,
     ISTP: 0,
+    YIF: 0,
   };
+  const isBSProgram = Number(progress?.creditsRequiredByCategory?.HSS ?? HSS_CORE_CAP_DEFAULT) <= 12;
 
   const getCourseCategory = (enrollment: any, icBasketUsed?: any, branch?: string, hssUsed?: { credits: number }): keyof typeof categoryCredits => {
     const passFailCode = enrollment.course?.code?.toUpperCase() || "";
@@ -420,6 +434,20 @@ export function ProgressChart({
       const code = String(e.course?.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
       const credits = e.course?.credits || 0;
 
+      if (doingYIF) {
+        const yifComponent = yifComponentForCourse(e.course?.code, userBatch, credits);
+        if (yifComponent) {
+          categoryCredits.YIF = addCredits(categoryCredits.YIF, credits);
+          if (yifComponent !== "vacation") return;
+
+          // The vacation internship retains its original B.Tech IC / B.S. FE
+          // basket and is simultaneously the 2-credit YIF component.
+          const basket = isBSProgram ? "FE" : "IC";
+          categoryCredits[basket] = addCredits(categoryCredits[basket], credits);
+          return;
+        }
+      }
+
       // Check for branch-mapping-defined splits (e.g. 12.45308: 3cr DC + 1.67cr FE)
       const mappings: any[] = e.course?.branchMappings || [];
       if (mappings.length > 0 && userBranch) {
@@ -488,7 +516,7 @@ export function ProgressChart({
   }
 
   const DISPLAY_NAMES: Record<string, string> = { HSS: "HSS+IKS", IKS: "HSS+IKS", IC_BASKET: "IC Basket", NOT_IN_DEGREE: "Not in Degree" };
-  const categoryData = (doingYIF ? [] : Object.entries(categoryCredits))
+  const categoryData = Object.entries(categoryCredits)
     .filter(([, value]) => value > 0)
     .map(([name, value]) => ({
       name: DISPLAY_NAMES[name] ?? name,
@@ -532,7 +560,7 @@ export function ProgressChart({
       ].filter((item) => item.total > 0);
 
   const breakdownFromEnrollments = (() => {
-    if (doingYIF || !enrollments || enrollments.length === 0) return null;
+    if (!enrollments || enrollments.length === 0) return null;
 
     const requiredDE = Number(progress?.required?.de || 0);
 
@@ -549,8 +577,8 @@ export function ProgressChart({
     const icBasketUsed = { ic1: false, ic2: false };
     const hssUsed = { credits: 0 };
 
-    const completed = { core: 0, ic: 0, dc: 0, hss: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, notInDegree: 0, total: 0 };
-    const inProgress = { core: 0, ic: 0, dc: 0, hss: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, notInDegree: 0, total: 0 };
+    const completed = { core: 0, ic: 0, icBasket: 0, dc: 0, hss: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, yif: 0, notInDegree: 0, total: 0 };
+    const inProgress = { core: 0, ic: 0, icBasket: 0, dc: 0, hss: 0, de: 0, freeElective: 0, mtp: 0, istp: 0, yif: 0, notInDegree: 0, total: 0 };
 
     const add = (bucket: typeof completed, category: keyof typeof categoryCredits, credits: number) => {
       const c = Number(credits || 0);
@@ -564,9 +592,12 @@ export function ProgressChart({
         // Split "core" into IC (institute core + basket), DC and HSS+IKS so the
         // remaining breakdown can show each separately instead of one clubbed row.
         case "IC":
-        case "IC_BASKET":
           bucket.core = addCredits(bucket.core, c);
           bucket.ic = addCredits(bucket.ic, c);
+          break;
+        case "IC_BASKET":
+          bucket.core = addCredits(bucket.core, c);
+          bucket.icBasket = addCredits(bucket.icBasket, c);
           break;
         case "DC":
           bucket.core = addCredits(bucket.core, c);
@@ -589,6 +620,9 @@ export function ProgressChart({
         case "ISTP":
           bucket.istp = addCredits(bucket.istp, c);
           break;
+        case "YIF":
+          bucket.yif = addCredits(bucket.yif, c);
+          break;
         default:
           break;
       }
@@ -597,6 +631,20 @@ export function ProgressChart({
     const addEnrollment = (bucket: typeof completed, e: any) => {
       const code = String(e.course?.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
       const credits = e.course?.credits || 0;
+
+      if (doingYIF) {
+        const yifComponent = yifComponentForCourse(e.course?.code, userBatch, credits);
+        if (yifComponent) {
+          add(bucket, "YIF", credits);
+          if (yifComponent !== "vacation") return;
+
+          // The vacation internship remains an IC/FE course as well as the
+          // YIF vacation component. The overall total still comes from the
+          // server-side overlap-safe calculation.
+          add(bucket, isBSProgram ? "FE" : "IC", credits);
+          return;
+        }
+      }
 
       const mappings: any[] = e.course?.branchMappings || [];
       if (mappings.length > 0 && userBranch) {
@@ -677,6 +725,7 @@ export function ProgressChart({
           ...completedServer,
           core: breakdownFromEnrollments.completed.core,
           ic: breakdownFromEnrollments.completed.ic,
+          icBasket: breakdownFromEnrollments.completed.icBasket,
           dc: breakdownFromEnrollments.completed.dc,
           hss: breakdownFromEnrollments.completed.hss,
           de: breakdownFromEnrollments.completed.de,
@@ -692,6 +741,7 @@ export function ProgressChart({
           ...inProgressServer,
           core: breakdownFromEnrollments.inProgress.core,
           ic: breakdownFromEnrollments.inProgress.ic,
+          icBasket: breakdownFromEnrollments.inProgress.icBasket,
           dc: breakdownFromEnrollments.inProgress.dc,
           hss: breakdownFromEnrollments.inProgress.hss,
           de: breakdownFromEnrollments.inProgress.de,
@@ -712,9 +762,16 @@ export function ProgressChart({
           {
             key: "ic",
             label: "Institute Core (IC)",
-            required: Number(reqByCat.IC || 0) + Number(reqByCat.IC_BASKET || 0),
+            required: Number(reqByCat.IC || 0),
             completed: (completed as any).ic,
             inProgress: (inProgress as any).ic,
+          },
+          {
+            key: "icBasket",
+            label: "IC Basket (ICB)",
+            required: Number(reqByCat.IC_BASKET || 0),
+            completed: (completed as any).icBasket,
+            inProgress: (inProgress as any).icBasket,
           },
           {
             key: "dc",
@@ -726,7 +783,7 @@ export function ProgressChart({
           {
             key: "hss",
             label: "Humanities & Social Sciences + IKS",
-            required: Number(reqByCat.HSS || 0),
+            required: Number(reqByCat.HSS || 0) + Number(reqByCat.IKS || 0),
             completed: (completed as any).hss,
             inProgress: (inProgress as any).hss,
           },

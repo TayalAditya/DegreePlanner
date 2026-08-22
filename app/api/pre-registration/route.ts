@@ -281,7 +281,10 @@ export async function GET() {
       let resolvedCategory = icBasketFulfilled && baseCat === "IC_BASKET" ? "FE" : baseCat;
 
       const normalizedCodeEarly = o.courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
-      if (doingYIF && yifComponentForCourse(o.courseCode, batchYear, o.credits)) {
+      // The vacation internship retains its normal degree basket. The Startup
+      // Practica are the YIF-labelled offerings; the vacation record is
+      // tracked as the overlapping YIF component after it is completed.
+      if (doingYIF && yifComponentForCourse(o.courseCode, batchYear, o.credits) !== "vacation") {
         resolvedCategory = "YIF";
       }
 

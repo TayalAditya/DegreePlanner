@@ -198,7 +198,7 @@ export function DashboardOverview({ userId, initialUserSettings, initialAcademic
     })();
     const isBatch24Or25 = inferredBatch === 2024 || inferredBatch === 2025;
 
-    if (userSettings?.doingYIF && yifComponentForCourse(enrollment.course?.code, inferredBatch, credits)) {
+    if (userSettings?.doingYIF && yifComponentForCourse(enrollment.course?.code, inferredBatch, enrollment.course?.credits) !== "vacation") {
       return "YIF";
     }
 

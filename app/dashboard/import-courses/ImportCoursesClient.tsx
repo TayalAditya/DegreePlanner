@@ -26,7 +26,7 @@ import { courseIdentityKey } from "@/lib/courseIdentity";
 import { inferAcademicState, inferBatchYear } from "@/lib/academicCalendar";
 import { isMtp1CourseCode, isMtp2CourseCode } from "@/lib/mtpConfig";
 import { IC_BASKET_COMPULSIONS, normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
-import { isYifVacationInternship, YIF_STARTUP_PRACTICUMS } from "@/lib/yif";
+import { YIF_STARTUP_PRACTICUMS } from "@/lib/yif";
 
 type RegistrationType = "REGULAR" | "PASS_FAIL" | "AUDIT";
 
@@ -427,16 +427,12 @@ export default function ImportCoursesPage({
     const effectiveBranch = (branch === "GE" || branch.startsWith("GE-")) ? geSubBranch : branch;
     const pathCourses = getAllDefaultCourses(effectiveBranch, currentSemester, userBatch)
       .filter((course) => !course.unpublished);
-    const vacationYifCourses: DefaultCourse[] = doingYIF
-      ? pathCourses
-          .filter((course) => isYifVacationInternship(course.code, course.credits))
-          .map((course) => ({ ...course, category: "FE", optional: true, tag: "YIF" }))
-      : [];
-    const defaultCourses = pathCourses
-      .filter((course) => !(doingYIF && isYifVacationInternship(course.code, course.credits)));
+    // The compulsory vacation internship keeps its standard IC/FE basket even
+    // for YIF students; it is also recognised as the YIF vacation component
+    // by the shared credit engine.
+    const defaultCourses = pathCourses;
     const yifCourses: DefaultCourse[] = doingYIF
       ? [
-          ...vacationYifCourses,
           ...YIF_STARTUP_PRACTICUMS.map((component, index) => ({
           code: component.code,
           name: component.name,

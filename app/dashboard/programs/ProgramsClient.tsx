@@ -351,7 +351,7 @@ export default function ProgramsClient({
     if (checked) {
       const ok = await confirm({
         title: "Switch to YIF?",
-        message: "YIF replaces the vacation internship, ISTP, MTP-1, MTP-2 and 8 FE credits with its 22-credit fellowship basket. Any in-progress ISTP/MTP enrollment will be removed; B23 DP-301P is kept as the SP-501 equivalent.",
+        message: "YIF keeps the compulsory vacation internship in its normal degree basket while also recording it as the YIF vacation component. It replaces ISTP, MTP-1, MTP-2 and 8 FE credits. Any in-progress ISTP/MTP enrollment will be removed; B23 DP-301P is kept as the SP-501 equivalent.",
         confirmText: "Enable YIF",
         cancelText: "Keep regular path",
         variant: "warning",
@@ -400,9 +400,20 @@ export default function ProgramsClient({
 
     const countedFromEnrollments = (key: keyof typeof enrollmentBreakdown.counted, required: number) =>
       minCredits(required, Number(enrollmentBreakdown.counted[key] ?? 0));
+    const categoryRequired = (category: string, fallback = 0) =>
+      Number(progressData?.creditsRequiredByCategory?.[category] ?? fallback);
+    const countedCategory = (category: string, fallback = 0) =>
+      minCredits(
+        categoryRequired(category, fallback),
+        Number(enrollmentBreakdown.categoryCredits[category as keyof typeof enrollmentBreakdown.categoryCredits] ?? 0),
+      );
+    const hssIksRequired = addCredits(categoryRequired("HSS"), categoryRequired("IKS"));
 
     return {
       institutionalCore: countedFromEnrollments("institutionalCore", primaryProgram?.program.icCredits ?? 0),
+      ic: countedCategory("IC"),
+      icBasket: countedCategory("IC_BASKET"),
+      hssIks: minCredits(hssIksRequired, Number(enrollmentBreakdown.counted.hssIks ?? 0)),
       dc: countedFromEnrollments("dc", displayedDcRequirement),
       core: countedFromEnrollments("core", Number(progressData?.required?.core ?? 0)),
       de: countedFromEnrollments("de", Number(progressData?.required?.de ?? 0)),
@@ -558,27 +569,22 @@ export default function ProgramsClient({
                     </p>
                   </div>
 
-                  {/* IC + DC combined block */}
+                  {/* Keep every degree basket visible. Never collapse IC, IC
+                      Basket and HSS+IKS into one opaque “Core” number. */}
                   <div className="rounded-xl border border-border bg-surface/50 p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">Core Courses</p>
-                      {progressData && (
-                        <p className="text-xs text-foreground-secondary">
-                          {formatCredits(displayProgress?.core ?? progressData.completed.core)} / {formatCredits(progressData.required.core)} cr
-                          {includeCurrentSemesterCredits ? " (incl. current sem)" : ""}
-                        </p>
-                      )}
+                    <div className="mb-3">
+                      <p className="text-xs font-semibold text-foreground-secondary uppercase tracking-wider">Degree requirement breakdown</p>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                       <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
                         <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">IC</p>
-                        <p className="text-xs text-foreground-secondary mb-1">Institutional Core</p>
+                        <p className="text-xs text-foreground-secondary mb-1">Institute Core</p>
                         <p className="text-2xl font-bold text-foreground">
                           {progressData ? (
                             <>
-                              {formatCredits(displayProgress?.institutionalCore ?? 0)}
+                              {formatCredits(displayProgress?.ic ?? 0)}
                               <span className="text-xs font-normal text-foreground-secondary ml-1">
-                                / {formatCredits(primaryProgram.program.icCredits)} cr
+                                / {formatCredits(progressData.creditsRequiredByCategory?.IC ?? 0)} cr
                               </span>
                             </>
                           ) : (
@@ -587,6 +593,37 @@ export default function ProgramsClient({
                               <span className="text-xs font-normal text-foreground-secondary ml-1">cr</span>
                             </>
                           )}
+                        </p>
+                      </div>
+                      <div className="bg-cyan-500/10 rounded-lg p-3 border border-cyan-500/20">
+                        <p className="text-[11px] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wider">ICB</p>
+                        <p className="text-xs text-foreground-secondary mb-1">IC Basket</p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {progressData ? (
+                            <>
+                              {formatCredits(displayProgress?.icBasket ?? 0)}
+                              <span className="text-xs font-normal text-foreground-secondary ml-1">
+                                / {formatCredits(progressData.creditsRequiredByCategory?.IC_BASKET ?? 0)} cr
+                              </span>
+                            </>
+                          ) : <>{formatCredits(6)}<span className="text-xs font-normal text-foreground-secondary ml-1">cr</span></>}
+                        </p>
+                      </div>
+                      <div className="bg-amber-500/10 rounded-lg p-3 border border-amber-500/20">
+                        <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">HSS+IKS</p>
+                        <p className="text-xs text-foreground-secondary mb-1">Humanities &amp; IKS</p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {progressData ? (
+                            <>
+                              {formatCredits(displayProgress?.hssIks ?? 0)}
+                              <span className="text-xs font-normal text-foreground-secondary ml-1">
+                                / {formatCredits(addCredits(
+                                  progressData.creditsRequiredByCategory?.HSS ?? 0,
+                                  progressData.creditsRequiredByCategory?.IKS ?? 0,
+                                ))} cr
+                              </span>
+                            </>
+                          ) : <>&mdash;</>}
                         </p>
                       </div>
                       <div className="bg-indigo-500/10 rounded-lg p-3 border border-indigo-500/20">
@@ -681,7 +718,7 @@ export default function ProgramsClient({
                     </div>
 
                     {/* MTP */}
-                    {progressData && progressData.required.mtp > 0 && (
+                    {progressData && (progressData.required.mtp > 0 || doingYIF) && (
                       <div className="bg-orange-500/10 rounded-xl p-3 border border-orange-500/20">
                         <p className="text-[11px] font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider">MTP</p>
                         <p className="text-xs text-foreground-secondary mb-2">Major Tech Project</p>
@@ -690,13 +727,31 @@ export default function ProgramsClient({
                           <span className="text-xs font-normal text-foreground-secondary"> / {formatCredits(progressData.required.mtp)} cr</span>
                         </p>
                         <div className="mt-2 h-1 bg-orange-500/20 rounded-full overflow-hidden">
-                          <div className="h-full bg-orange-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.mtp ?? progressData.completed.mtp) / progressData.required.mtp) * 100)}%` }} />
+                          <div className="h-full bg-orange-500 rounded-full transition-all duration-700" style={{ width: `${progressData.required.mtp > 0 ? Math.min(100, ((displayProgress?.mtp ?? progressData.completed.mtp) / progressData.required.mtp) * 100) : 0}%` }} />
+                        </div>
+                        {doingYIF && progressData.required.mtp === 0 && (
+                          <p className="mt-2 text-[11px] text-foreground-secondary">Replaced by YIF</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Young Innovators' Fellowship */}
+                    {progressData && progressData.required.yif > 0 && (
+                      <div className="bg-cyan-500/10 rounded-xl p-3 border border-cyan-500/20">
+                        <p className="text-[11px] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wider">YIF</p>
+                        <p className="text-xs text-foreground-secondary mb-2">Young Innovators&apos; Fellowship</p>
+                        <p className="text-xl font-bold text-foreground">
+                          {formatCredits(displayProgress?.yif ?? progressData.completed.yif)}
+                          <span className="text-xs font-normal text-foreground-secondary"> / {formatCredits(progressData.required.yif)} cr</span>
+                        </p>
+                        <div className="mt-2 h-1 bg-cyan-500/20 rounded-full overflow-hidden">
+                          <div className="h-full bg-cyan-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.yif ?? progressData.completed.yif) / progressData.required.yif) * 100)}%` }} />
                         </div>
                       </div>
                     )}
 
                     {/* ISTP */}
-                    {progressData && progressData.required.istp > 0 && (
+                    {progressData && (progressData.required.istp > 0 || doingYIF) && (
                       <div className="bg-rose-500/10 rounded-xl p-3 border border-rose-500/20">
                         <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">ISTP</p>
                         <p className="text-xs text-foreground-secondary mb-2">Socio-Tech Practicum</p>
@@ -705,8 +760,11 @@ export default function ProgramsClient({
                           <span className="text-xs font-normal text-foreground-secondary"> / {formatCredits(progressData.required.istp)} cr</span>
                         </p>
                         <div className="mt-2 h-1 bg-rose-500/20 rounded-full overflow-hidden">
-                          <div className="h-full bg-rose-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.istp ?? progressData.completed.istp) / progressData.required.istp) * 100)}%` }} />
+                          <div className="h-full bg-rose-500 rounded-full transition-all duration-700" style={{ width: `${progressData.required.istp > 0 ? Math.min(100, ((displayProgress?.istp ?? progressData.completed.istp) / progressData.required.istp) * 100) : 0}%` }} />
                         </div>
+                        {doingYIF && progressData.required.istp === 0 && (
+                          <p className="mt-2 text-[11px] text-foreground-secondary">Replaced by YIF</p>
+                        )}
                       </div>
                     )}
 
@@ -724,41 +782,81 @@ export default function ProgramsClient({
                         </div>
                       </div>
                     )}
-
-                    {progressData && progressData.required.yif > 0 && (
-                      <div className="bg-cyan-500/10 rounded-xl p-3 border border-cyan-500/20">
-                        <p className="text-[11px] font-bold text-cyan-700 dark:text-cyan-300 uppercase tracking-wider">YIF</p>
-                        <p className="text-xs text-foreground-secondary mb-2">Young Innovators&apos; Fellowship</p>
-                        <p className="text-xl font-bold text-foreground">{formatCredits(displayProgress?.yif ?? progressData.completed.yif)}<span className="text-xs font-normal text-foreground-secondary"> / {formatCredits(progressData.required.yif)} cr</span></p>
-                        <div className="mt-2 h-1 bg-cyan-500/20 rounded-full overflow-hidden"><div className="h-full bg-cyan-500 rounded-full transition-all duration-700" style={{ width: `${Math.min(100, ((displayProgress?.yif ?? progressData.completed.yif) / progressData.required.yif) * 100)}%` }} /></div>
-                      </div>
-                    )}
                   </div>
                 </div>
 
-                {/* MTP/ISTP Preferences */}
-                <div className="mt-6 pt-6 border-t border-border">
-                  <details open={doingYIF} className="group rounded-xl border border-cyan-500/30 bg-cyan-500/5">
-                    <summary className="flex cursor-pointer list-none items-start justify-between gap-4 p-4 marker:content-none">
-                      <div className="flex min-w-0 items-start gap-3"><BriefcaseBusiness className="mt-0.5 h-5 w-5 shrink-0 text-cyan-600 dark:text-cyan-300" /><div className="min-w-0"><h4 className="font-semibold text-foreground">Young Innovators&apos; Fellowship (YIF)</h4><p className="mt-0.5 text-xs text-foreground-secondary">Replaces Vacation Internship, ISTP, MTP-1, MTP-2 and 8 FE credits with a 22-credit fellowship basket.</p></div></div>
-                      <div className="flex shrink-0 items-center gap-3"><input type="checkbox" aria-label="Enable Young Innovators' Fellowship" checked={doingYIF} onClick={(event) => event.stopPropagation()} onChange={(event) => void handleYIFChange(event.target.checked)} disabled={savingPrefs} className="mt-0.5 h-5 w-5 accent-cyan-600 disabled:cursor-not-allowed" /><ChevronDown className="mt-0.5 h-5 w-5 text-foreground-secondary transition-transform group-open:rotate-180" /></div>
-                    </summary>
-                    <div className="border-t border-cyan-500/20 px-4 pb-4 pt-3">
-                      <div className="grid gap-3 md:grid-cols-3">
-                        {YIF_STARTUP_PRACTICUMS.map((component, index) => {
-                          const key = `sp${index + 1}` as "sp1" | "sp2" | "sp3";
-                          const state = yifComponentStatus[key];
-                          const prerequisite = index === 0 ? inferredBatch === 2023 ? "B23: DP-301P may fulfil this component" : "First component" : index === 1 ? "Requires SP-501" : "Requires SP-501 and SP-502";
-                          return <div key={component.code} className="rounded-lg border border-border bg-background/70 p-3"><div className="flex items-start justify-between gap-2"><div><p className="text-sm font-semibold text-foreground">{component.code}</p><p className="text-xs text-foreground-secondary">{component.name} · {component.credits} cr</p></div>{state === "completed" ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" /> : state === "in-progress" ? <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-semibold text-cyan-700 dark:text-cyan-300">In progress</span> : <LockKeyhole className="h-4 w-4 shrink-0 text-foreground-muted" />}</div><p className="mt-2 text-[11px] text-foreground-secondary">{prerequisite}</p></div>;
-                        })}
+                {/* Young Innovators' Fellowship */}
+                {primaryProgram.program.mtpIstpCredits > 0 && (
+                  <div className="mt-6 pt-6 border-t border-border">
+                    <details open={doingYIF} className="group rounded-xl border border-cyan-500/30 bg-cyan-500/5">
+                      <summary className="flex cursor-pointer list-none items-start justify-between gap-4 p-4 marker:content-none">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <BriefcaseBusiness className="mt-0.5 h-5 w-5 shrink-0 text-cyan-600 dark:text-cyan-300" />
+                          <div className="min-w-0">
+                            <h4 className="font-semibold text-foreground">Young Innovators&apos; Fellowship (YIF)</h4>
+                            <p className="mt-0.5 text-xs text-foreground-secondary">
+                              Keeps the vacation internship in its normal basket and records it as the YIF vacation component; replaces ISTP, MTP-1, MTP-2 and 8 FE credits.
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-3">
+                          <input
+                            type="checkbox"
+                            aria-label="Enable Young Innovators' Fellowship"
+                            checked={doingYIF}
+                            onClick={(event) => event.stopPropagation()}
+                            onChange={(event) => void handleYIFChange(event.target.checked)}
+                            disabled={savingPrefs}
+                            className="mt-0.5 h-5 w-5 accent-cyan-600 disabled:cursor-not-allowed"
+                          />
+                          <ChevronDown className="mt-0.5 h-5 w-5 text-foreground-secondary transition-transform group-open:rotate-180" />
+                        </div>
+                      </summary>
+
+                      <div className="border-t border-cyan-500/20 px-4 pb-4 pt-3">
+                        <div className="grid gap-3 md:grid-cols-3">
+                          {YIF_STARTUP_PRACTICUMS.map((component, index) => {
+                            const key = `sp${index + 1}` as "sp1" | "sp2" | "sp3";
+                            const state = yifComponentStatus[key];
+                            const prerequisite = index === 0
+                              ? inferredBatch === 2023 ? "B23: DP-301P may fulfil this component" : "First component"
+                              : index === 1 ? "Requires SP-501" : "Requires SP-501 and SP-502";
+                            return (
+                              <div key={component.code} className="rounded-lg border border-border bg-background/70 p-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div>
+                                    <p className="text-sm font-semibold text-foreground">{component.code}</p>
+                                    <p className="text-xs text-foreground-secondary">{component.name} · {component.credits} cr</p>
+                                  </div>
+                                  {state === "completed" ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" /> : state === "in-progress" ? <span className="rounded-full bg-cyan-500/15 px-2 py-0.5 text-[10px] font-semibold text-cyan-700 dark:text-cyan-300">In progress</span> : <LockKeyhole className="h-4 w-4 shrink-0 text-foreground-muted" />}
+                                </div>
+                                <p className="mt-2 text-[11px] text-foreground-secondary">{prerequisite}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <p className="mt-3 text-xs text-foreground-secondary">
+                          Vacation Internship (2 cr) is counted inside YIF when your branch&apos;s 010 internship record is present.
+                        </p>
+                        {yifComponentStatus.vacation === "completed" && <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">Vacation Internship recorded.</p>}
+                        {yifComponentStatus.vacation === "in-progress" && <p className="mt-1 text-xs font-medium text-cyan-700 dark:text-cyan-300">Vacation Internship is in progress.</p>}
+
+                        <div className="mt-4 rounded-lg border border-border bg-background/70 p-3">
+                          <p className="text-sm font-semibold text-foreground">Entrepreneurship specialization eligibility</p>
+                          <p className="mt-1 text-xs text-foreground-secondary">Complete the YIF sequence together with HS-510 and GE-523.</p>
+                          {entrepreneurshipSpecialization.eligible ? (
+                            <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">Eligible based on the recorded courses.</p>
+                          ) : (
+                            <p className="mt-2 text-xs text-foreground-secondary">Remaining: {entrepreneurshipSpecialization.missing.join(", ")}</p>
+                          )}
+                        </div>
                       </div>
-                      <p className="mt-3 text-xs text-foreground-secondary">Vacation Internship (2 cr) is counted inside YIF when your branch&apos;s 010 internship record is present.</p>
-                      {yifComponentStatus.vacation === "completed" && <p className="mt-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">Vacation Internship recorded.</p>}
-                      {yifComponentStatus.vacation === "in-progress" && <p className="mt-1 text-xs font-medium text-cyan-700 dark:text-cyan-300">Vacation Internship is in progress.</p>}
-                      <div className="mt-4 rounded-lg border border-border bg-background/70 p-3"><p className="text-sm font-semibold text-foreground">Entrepreneurship specialization eligibility</p><p className="mt-1 text-xs text-foreground-secondary">Complete the YIF sequence together with HS-510 and GE-523.</p>{entrepreneurshipSpecialization.eligible ? <p className="mt-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400">Eligible based on the recorded courses.</p> : <p className="mt-2 text-xs text-foreground-secondary">Remaining: {entrepreneurshipSpecialization.missing.join(", ")}</p>}</div>
-                    </div>
-                  </details>
-                </div>
+                    </details>
+                  </div>
+                )}
+
+                {/* MTP/ISTP Preferences */}
                 {!doingYIF && primaryProgram.program.mtpIstpCredits > 0 && (
                   <div className="mt-6 pt-6 border-t border-border">
                     <>

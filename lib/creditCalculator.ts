@@ -4,6 +4,7 @@ import { normalizeBranchForIcBasket } from "@/lib/icBasketConfig";
 import { getBranchCandidates, isDataScienceBranch, normalizeBranchCode } from "@/lib/branchInfo";
 import { getBatchAdjustedCredits } from "@/lib/branches";
 import { getSpecialDpCategory } from "@/lib/specialCourseCategories";
+import { getEnrollmentCredits } from "@/lib/enrollmentCredits";
 import { pickBranchMapping, pickBranchMappingCategory, getHssIksDegreeCap, hssIksCountsAsDe, routeHssIksSplit } from "@/lib/courseCategory";
 import {
   isMtp1CourseCode,
@@ -11,7 +12,12 @@ import {
   MTP_COMPONENT_CREDITS,
   MTP_TOTAL_CREDITS,
 } from "@/lib/mtpConfig";
-import { yifComponentForCourse, YIF_FREE_ELECTIVE_REDUCTION, YIF_TOTAL_CREDITS } from "@/lib/yif";
+import {
+  yifComponentForCourse,
+  YIF_FREE_ELECTIVE_REDUCTION,
+  YIF_TOTAL_CREDITS,
+  YIF_VACATION_INTERNSHIP_CREDITS,
+} from "@/lib/yif";
 import {
   addCredits,
   formatCredits,
@@ -261,10 +267,11 @@ export class CreditCalculator {
       }
     }
 
-    const requiredCoreCredits = Math.max(
-      0,
-      subtractCredits(program.icCredits + effectiveDcCredits, doingYIF && !isBSProgram ? 2 : 0),
-    );
+    // YIF changes FE, ISTP and MTP requirements only. The compulsory vacation
+    // internship remains part of the student's normal IC/FE basket *and* is
+    // recorded as the 2-credit YIF vacation component. It is an overlap, not
+    // a reduction in Core requirements.
+    const requiredCoreCredits = Math.max(0, program.icCredits + effectiveDcCredits);
 
     const required: CreditBreakdown = {
       core: requiredCoreCredits,
@@ -336,10 +343,43 @@ export class CreditCalculator {
       inProgress[key] = minCredits(remainingCapacity, inProgress[key]);
     }
 
-    const degreeCountedTotal = (breakdown: CreditBreakdown) =>
-      countedKeys.reduce((sum, key) => addCredits(sum, breakdown[key]), 0);
-    completed.total = degreeCountedTotal(completed);
-    inProgress.total = degreeCountedTotal(inProgress);
+    const yifVacationOverlapCredits = (records: typeof enrollments) => {
+      if (!doingYIF) return 0;
+      const credits = records
+        .filter((enrollment) =>
+          yifComponentForCourse(
+            enrollment.course.code,
+            inferredBatch,
+            getEnrollmentCredits(enrollment, user?.branch ?? undefined),
+          ) === "vacation"
+        )
+        .reduce(
+          (sum, enrollment) =>
+            addCredits(sum, getEnrollmentCredits(enrollment, user?.branch ?? undefined)),
+          0,
+        );
+      return minCredits(YIF_VACATION_INTERNSHIP_CREDITS, credits);
+    };
+    const degreeCountedTotal = (breakdown: CreditBreakdown, vacationOverlap: number) =>
+      Math.max(
+        0,
+        subtractCredits(
+          countedKeys.reduce((sum, key) => addCredits(sum, breakdown[key]), 0),
+          // The vacation internship satisfies its normal basket and the YIF
+          // component, but is still one course in the 160-credit total.
+          minCredits(vacationOverlap, breakdown.yif),
+        ),
+      );
+    completed.total = degreeCountedTotal(
+      completed,
+      yifVacationOverlapCredits(
+        enrollments.filter((e) => e.status === EnrollmentStatus.COMPLETED && (!e.grade || e.grade !== "F")),
+      ),
+    );
+    inProgress.total = degreeCountedTotal(
+      inProgress,
+      yifVacationOverlapCredits(enrollments.filter((e) => e.status === EnrollmentStatus.IN_PROGRESS)),
+    );
 
     const remaining: CreditBreakdown = {
       core: Math.max(0, subtractCredits(required.core, completed.core)),
@@ -674,6 +714,16 @@ export class CreditCalculator {
           if (yifComponent !== "sp1" || !state.yifSp1Used) {
             addBreakdownCredits("yif", credits);
             if (yifComponent === "sp1") state.yifSp1Used = true;
+          }
+          if (yifComponent !== "vacation") return;
+
+          // The compulsory vacation internship keeps its ordinary degree
+          // basket. It is also displayed under YIF, but must not make Core
+          // shrink or turn into a generic FE merely because YIF is enabled.
+          if ((programIcCredits ?? 60) <= 52) {
+            addBreakdownCredits("freeElective", credits);
+          } else {
+            addBreakdownCredits("core", credits);
           }
           return;
         }

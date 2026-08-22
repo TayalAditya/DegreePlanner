@@ -372,7 +372,7 @@ export default async function RoadmapPage() {
         batchYear
       )
     );
-    if (user?.doingYIF && yifComponentForCourse(course.code, batchYear, course.credits)) {
+    if (user?.doingYIF && yifComponentForCourse(course.code, batchYear, course.credits) !== "vacation") {
       category = "YIF";
     }
     if (user?.doingYIF && (category === "MTP" || category === "ISTP")) continue;

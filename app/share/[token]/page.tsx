@@ -91,7 +91,7 @@ function resolveCourseCategory(
   const courseCode = enrollment.course?.code ?? "";
 
   const normalizedCode = courseCode.toUpperCase().replace(/[^A-Z0-9]/g, "");
-  if (doingYIF && yifComponentForCourse(courseCode, userBatch, enrollment.course?.credits)) return "YIF";
+  if (doingYIF && yifComponentForCourse(courseCode, userBatch, enrollment.course?.credits) !== "vacation") return "YIF";
   const isHssIks =
     normalizedCode.startsWith("HS") ||
     /^IK\d/.test(normalizedCode) ||

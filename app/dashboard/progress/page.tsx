@@ -24,7 +24,13 @@ import {
   MTP_TOTAL_CREDITS,
 } from "@/lib/mtpConfig";
 import { getHssIksDegreeCap, HSS_IKS_DEGREE_CAP_DEFAULT } from "@/lib/courseCategory";
-import { yifComponentForCourse, YIF_FREE_ELECTIVE_REDUCTION, YIF_TOTAL_CREDITS } from "@/lib/yif";
+import { getEnrollmentCredits } from "@/lib/enrollmentCredits";
+import {
+  yifComponentForCourse,
+  YIF_FREE_ELECTIVE_REDUCTION,
+  YIF_TOTAL_CREDITS,
+  YIF_VACATION_INTERNSHIP_CREDITS,
+} from "@/lib/yif";
 
 interface Enrollment {
   id: string;
@@ -229,6 +235,15 @@ export default function ProgressPage() {
   const getCourseCategory = (enrollment: Enrollment, icBasketUsed?: any, hssUsed?: { credits: number }): CourseCategory => {
     const passFailCode = enrollment.course.code.toUpperCase();
     const passFailNormalizedCode = normalizeCode(passFailCode);
+    const yifComponent = user?.doingYIF
+      ? yifComponentForCourse(enrollment.course.code, inferredBatch, enrollment.course.credits)
+      : null;
+    if (yifComponent && yifComponent !== "vacation") return "YIF";
+    if (yifComponent === "vacation") {
+      // A vacation internship is still part of the normal B.Tech IC / B.S.
+      // FE basket. The accumulator also records its YIF component.
+      return getCurriculumBranchCode(user?.branch || "") === "BSCS" ? "FE" : "IC";
+    }
     const passFailHssIks =
       passFailNormalizedCode.startsWith("HS") ||
       /^IK\d/.test(passFailNormalizedCode) ||
@@ -573,6 +588,7 @@ export default function ProgressPage() {
       YIF: 0,
       NOT_IN_DEGREE: 0,
     };
+    const yifVacationOverlap = { completed: 0, inProgress: 0 };
 
     // HSS+IKS combined basket: BTech = 15, BSCS = 12 — must be declared before accumulateSplitAware uses it
     const HSS_CORE_CAP = (programCredits.icCredits ?? 60) <= 52 ? 12 : 15;
@@ -584,6 +600,24 @@ export default function ProgressPage() {
       icBkt?: any,
       hssU?: { credits: number }
     ) => {
+      const yifComponent = user?.doingYIF
+        ? yifComponentForCourse(e.course.code, inferredBatch, e.course.credits)
+        : null;
+      if (yifComponent) {
+        map.YIF = addCredits(map.YIF ?? 0, e.course.credits);
+        if (yifComponent !== "vacation") return;
+
+        const overlapKey = map === creditsByCategory ? "completed" : "inProgress";
+        yifVacationOverlap[overlapKey] = minCredits(
+          YIF_VACATION_INTERNSHIP_CREDITS,
+          addCredits(yifVacationOverlap[overlapKey], e.course.credits),
+        );
+        map[getCurriculumBranchCode(user?.branch || "") === "BSCS" ? "FE" : "IC"] = addCredits(
+          map[getCurriculumBranchCode(user?.branch || "") === "BSCS" ? "FE" : "IC"] ?? 0,
+          e.course.credits,
+        );
+        return;
+      }
       const mapping = pickRelevantBranchMapping(user?.branch, e.course.branchMappings);
       if (mapping?.splitCategory && mapping.splitAmount != null && mapping.splitAmount > 0) {
         const mainCr = subtractCredits(e.course.credits, mapping.splitAmount);
@@ -693,7 +727,7 @@ export default function ProgressPage() {
     );
 
     const creditsRequiredByCategory = {
-      IC: Math.max(0, icCredits - icBasketRequired - HSS_CORE_CAP - iksRequired - (user?.doingYIF && !isBSProgram ? 2 : 0)),
+      IC: Math.max(0, icCredits - icBasketRequired - HSS_CORE_CAP - iksRequired),
       IC_BASKET: icBasketRequired,
       DC: batchAdjustedCredits.dcCredits,
       DE: batchAdjustedCredits.deCredits + deAdjustment,
@@ -772,12 +806,20 @@ export default function ProgressPage() {
     const yifStillNeeded = Math.max(0, subtractCredits(yifRequired, creditsByCategory.YIF));
     creditsInProgressByCategory.YIF = minCredits(yifStillNeeded, creditsInProgressByCategory.YIF);
 
-    const countedCategoryTotal = (categories: Record<string, number>) =>
-      Object.entries(categories)
-        .filter(([category]) => category !== "NOT_IN_DEGREE")
-        .reduce((sum, [, credits]) => addCredits(sum, Number(credits || 0)), 0);
-    const totalCreditsEarned = countedCategoryTotal(creditsByCategory);
-    const totalCreditsInProgress = countedCategoryTotal(creditsInProgressByCategory);
+    const countedCategoryTotal = (categories: Record<string, number>, vacationOverlap: number) =>
+      Math.max(
+        0,
+        subtractCredits(
+          Object.entries(categories)
+            .filter(([category]) => category !== "NOT_IN_DEGREE")
+            .reduce((sum, [, credits]) => addCredits(sum, Number(credits || 0)), 0),
+          // The vacation internship appears in its normal basket and YIF, but
+          // remains one course in the degree-total numerator.
+          minCredits(vacationOverlap, Number(categories.YIF ?? 0)),
+        ),
+      );
+    const totalCreditsEarned = countedCategoryTotal(creditsByCategory, yifVacationOverlap.completed);
+    const totalCreditsInProgress = countedCategoryTotal(creditsInProgressByCategory, yifVacationOverlap.inProgress);
 
     return {
       totalCreditsEarned,
